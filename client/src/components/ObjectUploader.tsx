@@ -54,7 +54,7 @@ export function ObjectUploader({
 
   return (
     <div>
-      <Button onClick={() => setShowModal(true)} className={buttonClassName} data-testid="button-upload">
+      <Button type="button" onClick={() => setShowModal(true)} className={buttonClassName} data-testid="button-upload">
         {children}
       </Button>
 
