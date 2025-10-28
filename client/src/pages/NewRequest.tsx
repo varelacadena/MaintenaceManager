@@ -374,10 +374,6 @@ export default function NewRequest() {
                   {/* Left side - Upload area */}
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                     <Upload className="w-12 h-12 text-primary" strokeWidth={1.5} />
-                    <div>
-                      <p className="text-lg font-medium">Drag and Drop file</p>
-                      <p className="text-sm text-muted-foreground">or</p>
-                    </div>
                     <ObjectUploader
                       maxNumberOfFiles={5}
                       maxFileSize={10485760}
