@@ -564,8 +564,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Request not found" });
       }
 
-      // Only requester or admin can delete
-      if (request.requesterId !== userId && currentUser?.role !== "admin") {
+      // Requester, maintenance, or admin can delete
+      const canDelete = 
+        request.requesterId === userId || 
+        currentUser?.role === "admin" || 
+        currentUser?.role === "maintenance";
+
+      if (!canDelete) {
         return res.status(403).json({ message: "Forbidden: Cannot delete this request" });
       }
 

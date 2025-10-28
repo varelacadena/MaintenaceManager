@@ -207,6 +207,7 @@ export default function Requests() {
                       </Button>
                     )}
 
+                    {/* Staff can edit/delete their own submitted requests */}
                     {(isStaff && request.requesterId === user?.id && request.status === "submitted") && (
                       <>
                         <Button
@@ -246,6 +247,38 @@ export default function Requests() {
                           </AlertDialogContent>
                         </AlertDialog>
                       </>
+                    )}
+                    
+                    {/* Maintenance and admin can delete any request */}
+                    {isMaintenanceOrAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`button-delete-${request.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete this service request. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteRequestMutation.mutate(request.id)}
+                              data-testid={`button-confirm-delete-${request.id}`}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                   </div>
                 </div>
