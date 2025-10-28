@@ -1,8 +1,9 @@
+
 import express, { type Request, Response, NextFunction } from "express";
 import { log, setupVite, serveStatic } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { registerRoutes } from "./routes";
-import { applyInventoryTriggers } from "./applyMigrations";
+import { applyMigrations } from "./applyMigrations";
 import { db, pool } from "./db";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
@@ -25,8 +26,8 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 const PgSession = pgSession(session);
-const store = new PgSession({ 
-  pool, 
+const store = new PgSession({
+  pool,
   createTableIfMissing: true,
   tableName: 'sessions'
 });
@@ -96,8 +97,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Apply database migrations for inventory triggers
-  await applyInventoryTriggers();
+  // Apply all database migrations
+  await applyMigrations();
   
   const server = await registerRoutes(app);
 
@@ -110,7 +111,7 @@ app.use((req, res, next) => {
   });
 
   // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
+  // setting up all the routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);

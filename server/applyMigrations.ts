@@ -1,3 +1,4 @@
+
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { readFileSync } from "fs";
@@ -27,17 +28,25 @@ export async function applyMigrations() {
   ];
 
   try {
-    const currentSchemaVersion = await db.execute(sql.raw("PRAGMA user_version;"));
-    let schemaVersion = 0;
+    // Create migrations tracking table if it doesn't exist (PostgreSQL)
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `));
 
-    if (currentSchemaVersion && Array.isArray(currentSchemaVersion) && currentSchemaVersion.length > 0) {
-      schemaVersion = currentSchemaVersion[0].user_version;
-    }
-
-    console.log(`Current schema version: ${schemaVersion}`);
+    console.log("Checking for pending migrations...");
 
     for (const migration of migrations) {
-      if (parseInt(migration.name.split('_')[0]) > schemaVersion) {
+      const version = parseInt(migration.name.split('_')[0]);
+      
+      // Check if migration was already applied
+      const result = await db.execute(sql.raw(`
+        SELECT version FROM schema_migrations WHERE version = ${version};
+      `));
+
+      if (!result || result.length === 0) {
         console.log(`Applying migration: ${migration.name}...`);
         try {
           const migrationSQL = readFileSync(
@@ -45,19 +54,21 @@ export async function applyMigrations() {
             "utf-8"
           );
           await db.execute(sql.raw(migrationSQL));
-          await db.execute(sql.raw(`PRAGMA user_version = ${parseInt(migration.name.split('_')[0])};`));
+          await db.execute(sql.raw(`
+            INSERT INTO schema_migrations (version) VALUES (${version});
+          `));
           console.log(`✓ Migration ${migration.name} applied successfully`);
         } catch (error) {
           console.error(`Error applying migration ${migration.name}:`, error);
-          // Re-throw the error to stop the migration process if a critical migration fails
           throw error;
         }
+      } else {
+        console.log(`Migration ${migration.name} already applied, skipping`);
       }
     }
     console.log("All migrations applied successfully.");
   } catch (error) {
     console.error("Error applying migrations:", error);
-    // Ensure we don't proceed if migrations fail
     throw error;
   }
 }

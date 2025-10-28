@@ -11,6 +11,7 @@ interface ObjectUploaderProps {
     url: string;
   }>;
   onComplete?: (result: any) => void;
+  onError?: (error: Error) => void;
   buttonClassName?: string;
   children: ReactNode;
 }
@@ -20,6 +21,7 @@ export function ObjectUploader({
   maxFileSize = 10485760, // 10MB default
   onGetUploadParameters,
   onComplete,
+  onError,
   buttonClassName,
   children,
 }: ObjectUploaderProps) {
@@ -67,10 +69,16 @@ export function ObjectUploader({
           uploadURL: url.split("?")[0], // Remove query params
         });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Upload failed";
         failed.push({
           file,
-          error: error instanceof Error ? error.message : "Upload failed",
+          error: errorMessage,
         });
+        
+        // Call onError for each failed upload
+        if (onError) {
+          onError(error instanceof Error ? error : new Error(errorMessage));
+        }
       }
     }
 
