@@ -267,9 +267,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { endTime, durationMinutes } = req.body;
+      
+      // Validate endTime is provided and valid
+      if (!endTime) {
+        return res.status(400).json({ message: "endTime is required" });
+      }
+      
+      const parsedEndTime = new Date(endTime);
+      if (isNaN(parsedEndTime.getTime())) {
+        return res.status(400).json({ message: "Invalid endTime format" });
+      }
+      
       const entry = await storage.updateTimeEntry(
         req.params.id,
-        new Date(endTime),
+        parsedEndTime,
         durationMinutes
       );
       res.json(entry);
