@@ -3,11 +3,11 @@ import type { RequestHandler } from "express";
 // Middleware to check if user has specific role
 export function requireRole(...allowedRoles: string[]): RequestHandler {
   return async (req: any, res, next) => {
-    if (!req.user || !req.user.claims) {
+    const userId = req.userId;
+    
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
 
     // Get user from database to check current role
     const { storage } = await import("./storage");
@@ -81,9 +81,9 @@ export async function canAccessRequest(userId: string, requestId: string, requir
 export function requireRequestAccess(requireAssignedOrRequester: boolean = false): RequestHandler {
   return async (req: any, res, next) => {
     // Get user if not already set by requireRole middleware
-    if (!req.currentUser && req.user?.claims?.sub) {
+    if (!req.currentUser && req.userId) {
       const { storage } = await import("./storage");
-      req.currentUser = await storage.getUser(req.user.claims.sub);
+      req.currentUser = await storage.getUser(req.userId);
     }
 
     if (!req.currentUser) {
