@@ -89,7 +89,9 @@ export default function TaskDetail() {
   const [selectedInventoryItem, setSelectedInventoryItem] = useState("");
   const [partQuantity, setPartQuantity] = useState("");
   const [partNotes, setPartNotes] = useState("");
-  
+  const [pendingUploads, setPendingUploads] = useState<
+    { name: string; url: string; type: string }[]
+  >([]);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -261,19 +263,18 @@ export default function TaskDetail() {
 
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
-      // Save each file to the database immediately
-      for (const file of result.successful) {
-        try {
-          await addUploadMutation.mutateAsync({
-            fileName: file.name,
-            fileType: file.type || "application/octet-stream",
-            objectUrl: file.uploadURL,
-          });
-        } catch (error) {
-          console.error("Error saving upload:", error);
-        }
-      }
+      const newUploads = result.successful.map((file: any) => ({
+        name: file.name,
+        url: file.uploadURL,
+        type: file.type || "application/octet-stream",
+      }));
+
+      setPendingUploads((prev) => [...prev, ...newUploads]);
     }
+  };
+
+  const removePendingUpload = (index: number) => {
+    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
   };
 
   const deleteTaskMutation = useMutation({
@@ -657,12 +658,36 @@ export default function TaskDetail() {
                     href={upload.objectPath}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded hover:bg-muted transition-colors border"
+                    className="flex items-center gap-2 p-2 rounded hover-elevate active-elevate-2 border"
                     data-testid={`link-attachment-${upload.id}`}
                   >
                     <Paperclip className="w-4 h-4" />
                     <span className="text-sm">{upload.fileName}</span>
                   </a>
+                ))}
+              </div>
+            )}
+
+            {pendingUploads.length > 0 && (
+              <div className="grid gap-2 mb-4 border-t pt-4">
+                {pendingUploads.map((upload, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 rounded border"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">{upload.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePendingUpload(index)}
+                      data-testid={`button-remove-pending-upload-${index}`}
+                    >
+                      <X className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             )}

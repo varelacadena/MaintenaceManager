@@ -23,7 +23,6 @@ import {
   insertVendorSchema,
   insertInventoryItemSchema,
 } from "@shared/schema";
-import { db, uploads, eq } from "@shared/db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -248,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await storage.updateUserPassword(id, hashedPassword);
-
+      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -269,14 +268,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting user:", error);
-
+      
       // Check if it's a foreign key constraint violation
       if (error.code === '23503') {
         return res.status(409).json({ 
           message: "Cannot delete user because they have associated data (service requests, messages, or time entries). You can change their role or password instead." 
         });
       }
-
+      
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
@@ -590,13 +589,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { status, rejectionReason } = req.body;
-
+        
         const request = await storage.updateServiceRequestStatus(
           req.params.id,
           status,
           rejectionReason
         );
-
+        
         res.json(request);
       } catch (error) {
         console.error("Error updating service request status:", error);
@@ -666,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : undefined,
       });
       const task = await storage.createTask(taskData);
-
+      
       // If request was linked, update its status to converted_to_task
       if (task.requestId) {
         try {
@@ -675,7 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error updating request status:", err);
         }
       }
-
+      
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -714,16 +713,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tasks/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
       const { status, onHoldReason } = req.body;
-
+      
       const actualCompletionDate = status === 'completed' ? new Date() : undefined;
-
+      
       const task = await storage.updateTaskStatus(
         req.params.id,
         status,
         onHoldReason,
         actualCompletionDate
       );
-
+      
       res.json(task);
     } catch (error) {
       console.error("Error updating task status:", error);
@@ -1022,26 +1021,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Get uploads for a task
-  app.get("/api/uploads/task/:taskId", async (req, res) => {
-    const { taskId } = req.params;
-
-    const taskUploads = await db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        uploadedAt: uploads.uploadedAt,
-        uploadedBy: uploads.uploadedBy,
-      })
-      .from(uploads)
-      .where(eq(uploads.taskId, taskId));
-
-    res.json(taskUploads);
-  });
+  app.get(
+    "/api/uploads/task/:taskId",
+    isAuthenticated,
+    requireMaintenanceOrAdmin,
+    async (req, res) => {
+      try {
+        const uploads = await storage.getUploadsByTask(req.params.taskId);
+        res.json(uploads);
+      } catch (error) {
+        console.error("Error fetching uploads:", error);
+        res.status(500).json({ message: "Failed to fetch uploads" });
+      }
+    }
+  );
 
   // Task notes routes (for tasks)
   app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
