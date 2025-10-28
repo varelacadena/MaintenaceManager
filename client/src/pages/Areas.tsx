@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { MapPin, Plus, Trash2, FolderTree } from "lucide-react";
+import { MapPin, Plus, Trash2, FolderTree, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Area, Subdivision } from "@shared/schema";
@@ -20,8 +20,10 @@ export default function Areas() {
   const { toast } = useToast();
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
+  const [isEditAreaOpen, setIsEditAreaOpen] = useState(false);
   const [isAddSubdivisionOpen, setIsAddSubdivisionOpen] = useState(false);
   const [newArea, setNewArea] = useState({ name: "", description: "" });
+  const [editArea, setEditArea] = useState<Area | null>(null);
   const [newSubdivision, setNewSubdivision] = useState({ name: "" });
 
   const { data: areas = [], isLoading: areasLoading } = useQuery<Area[]>({
@@ -53,6 +55,25 @@ export default function Areas() {
       toast({
         title: "Error",
         description: error.message || "Failed to create area",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateAreaMutation = useMutation({
+    mutationFn: async (data: { id: string; name: string; description: string }) => {
+      return await apiRequest("PUT", `/api/areas/${data.id}`, { name: data.name, description: data.description });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/areas"] });
+      setIsEditAreaOpen(false);
+      setEditArea(null);
+      toast({ title: "Success", description: "Area updated successfully." });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update area",
         variant: "destructive",
       });
     },
@@ -160,6 +181,44 @@ export default function Areas() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditAreaOpen} onOpenChange={setIsEditAreaOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Area</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Name</label>
+                <Input
+                  value={editArea?.name || ""}
+                  onChange={(e) => setEditArea(editArea ? { ...editArea, name: e.target.value } : null)}
+                  placeholder="e.g., Grounds & Landscaping"
+                  data-testid="input-edit-area-name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={editArea?.description || ""}
+                  onChange={(e) =>
+                    setEditArea(editArea ? { ...editArea, description: e.target.value } : null)
+                  }
+                  placeholder="Brief description of this area"
+                  data-testid="textarea-edit-area-description"
+                />
+              </div>
+              <Button
+                onClick={() => editArea && updateAreaMutation.mutate(editArea)}
+                disabled={!editArea?.name || updateAreaMutation.isPending}
+                className="w-full"
+                data-testid="button-submit-edit-area"
+              >
+                Update Area
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -188,17 +247,31 @@ export default function Areas() {
                         {area.description}
                       </p>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteAreaMutation.mutate(area.id);
-                      }}
-                      data-testid={`button-delete-area-${area.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditArea(area);
+                          setIsEditAreaOpen(true);
+                        }}
+                        data-testid={`button-edit-area-${area.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteAreaMutation.mutate(area.id);
+                        }}
+                        data-testid={`button-delete-area-${area.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
