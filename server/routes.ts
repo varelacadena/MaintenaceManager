@@ -175,6 +175,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const requestData = insertServiceRequestSchema.parse({
         ...req.body,
+        requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : new Date(),
+        scheduledDate: req.body.scheduledDate ? new Date(req.body.scheduledDate) : undefined,
         requesterId: userId,
       });
       const request = await storage.createServiceRequest(requestData);
@@ -235,6 +237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const entry = await storage.createTimeEntry({
         ...req.body,
+        startTime: req.body.startTime ? new Date(req.body.startTime) : new Date(),
+        endTime: req.body.endTime ? new Date(req.body.endTime) : undefined,
         userId,
       });
       res.json(entry);
