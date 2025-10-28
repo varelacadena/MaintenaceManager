@@ -11,9 +11,12 @@ import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Requests from "@/pages/Requests";
+import RequestDetail from "@/pages/RequestDetail";
 import NewRequest from "@/pages/NewRequest";
 import Messages from "@/pages/Messages";
 import Calendar from "@/pages/Calendar";
+import Users from "@/pages/Users";
+import Areas from "@/pages/Areas";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -37,11 +40,14 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/requests" component={Requests} />
+          <Route path="/requests/:id" component={RequestDetail} />
           <Route path="/my-requests" component={Requests} />
           <Route path="/new-request" component={NewRequest} />
           <Route path="/messages" component={Messages} />
           <Route path="/calendar" component={Calendar} />
           <Route path="/tasks" component={Requests} />
+          <Route path="/users" component={Users} />
+          <Route path="/areas" component={Areas} />
         </>
       )}
       <Route component={NotFound} />

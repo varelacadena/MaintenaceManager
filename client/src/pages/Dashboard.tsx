@@ -1,123 +1,257 @@
-import { useState } from "react";
-import StatCard from "@/components/StatCard";
-import TaskCard from "@/components/TaskCard";
-import TaskDetailPanel from "@/components/TaskDetailPanel";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ClipboardList, Clock, CheckCircle, AlertCircle, Search, Plus } from "lucide-react";
-
-//todo: remove mock functionality
-const mockStats = [
-  { icon: ClipboardList, label: "Active Requests", value: 23, trend: "+12% from last week", trendUp: true },
-  { icon: Clock, label: "In Progress", value: 15, trend: "+5% from last week", trendUp: true },
-  { icon: AlertCircle, label: "High Priority", value: 8, trend: "-3% from last week", trendUp: false },
-  { icon: CheckCircle, label: "Completed Today", value: 12, trend: "+20% from yesterday", trendUp: true },
-];
-
-const mockTasks = [
-  {
-    id: "1001",
-    title: "Fix leaking faucet in Building A, Room 204",
-    category: "Plumbing",
-    urgency: "high" as const,
-    status: "in_progress" as const,
-    assignedTo: { name: "John Smith", initials: "JS" },
-    dueDate: "Oct 30, 2025",
-  },
-  {
-    id: "1002",
-    title: "Replace broken light fixtures in Library",
-    category: "Electrical",
-    urgency: "medium" as const,
-    status: "pending" as const,
-    assignedTo: { name: "Sarah Davis", initials: "SD" },
-    dueDate: "Nov 2, 2025",
-  },
-  {
-    id: "1003",
-    title: "HVAC system maintenance check",
-    category: "HVAC",
-    urgency: "low" as const,
-    status: "in_progress" as const,
-    assignedTo: { name: "Mike Johnson", initials: "MJ" },
-    dueDate: "Nov 5, 2025",
-  },
-  {
-    id: "1004",
-    title: "Repair damaged flooring in Cafeteria",
-    category: "Renovation",
-    urgency: "high" as const,
-    status: "pending" as const,
-    dueDate: "Oct 29, 2025",
-  },
-];
-
-const mockTaskDetail = {
-  id: "1001",
-  title: "Fix leaking faucet in Building A, Room 204",
-  category: "Plumbing",
-  urgency: "high" as const,
-  status: "in_progress",
-  description: "Water is continuously dripping from the main faucet in the science lab. This is causing water waste and needs immediate attention. The leak appears to be coming from the valve assembly.",
-  assignedTo: "John Smith",
-  dueDate: "Oct 30, 2025",
-};
+import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
+import {
+  ClipboardList,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Users,
+  Wrench,
+  Plus,
+  MapPin,
+} from "lucide-react";
+import type { ServiceRequest } from "@shared/schema";
 
 export default function Dashboard() {
-  const [selectedTask, setSelectedTask] = useState<typeof mockTaskDetail | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
+  const { data: requests = [], isLoading } = useQuery<ServiceRequest[]>({
+    queryKey: ["/api/service-requests"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const pendingCount = requests.filter((r) => r.status === "pending").length;
+  const inProgressCount = requests.filter((r) => r.status === "in_progress").length;
+  const completedCount = requests.filter((r) => r.status === "completed").length;
+  const onHoldCount = requests.filter((r) => r.status === "on_hold").length;
+
+  const highUrgencyCount = requests.filter(
+    (r) => r.urgency === "high" && r.status !== "completed"
+  ).length;
+
+  const recentRequests = requests
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
+    .slice(0, 5);
+
+  const getUrgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case "high":
+        return "bg-destructive text-destructive-foreground";
+      case "medium":
+        return "bg-yellow-500 text-white";
+      case "low":
+        return "bg-blue-500 text-white";
+      default:
+        return "bg-muted";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-500";
+      case "in_progress":
+        return "bg-blue-500";
+      case "completed":
+        return "bg-green-500";
+      case "on_hold":
+        return "bg-orange-500";
+      default:
+        return "bg-muted";
+    }
+  };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Overview of maintenance operations</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {mockStats.map((stat, idx) => (
-          <StatCard key={idx} {...stat} />
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h2 className="text-xl font-semibold">Recent Requests</h2>
-          <div className="flex gap-2 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search requests..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search"
-              />
-            </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold" data-testid="text-dashboard-title">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.firstName || "User"}
+          </p>
+        </div>
+        {user?.role === "staff" && (
+          <Link href="/new-request">
             <Button data-testid="button-new-request">
               <Plus className="w-4 h-4 mr-2" />
               New Request
             </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {mockTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              {...task}
-              onView={() => setSelectedTask(mockTaskDetail)}
-            />
-          ))}
-        </div>
+          </Link>
+        )}
       </div>
 
-      {selectedTask && (
-        <TaskDetailPanel
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-        />
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold" data-testid="stat-pending">
+              {pendingCount}
+            </div>
+            <p className="text-xs text-muted-foreground">Awaiting assignment</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <Wrench className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold" data-testid="stat-in-progress">
+              {inProgressCount}
+            </div>
+            <p className="text-xs text-muted-foreground">Currently active</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold" data-testid="stat-completed">
+              {completedCount}
+            </div>
+            <p className="text-xs text-muted-foreground">Tasks finished</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">High Priority</CardTitle>
+            <AlertCircle className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold" data-testid="stat-high-priority">
+              {highUrgencyCount}
+            </div>
+            <p className="text-xs text-muted-foreground">Urgent attention needed</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Requests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentRequests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No requests yet
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentRequests.map((request) => (
+                  <Link
+                    key={request.id}
+                    href={`/requests/${request.id}`}
+                  >
+                    <div className="flex items-start gap-3 p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-request-${request.id}`}>
+                      <div
+                        className={`w-2 h-2 rounded-full mt-2 ${getStatusColor(
+                          request.status
+                        )}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-medium truncate">
+                            {request.title}
+                          </span>
+                          <Badge
+                            className={`${getUrgencyColor(request.urgency)} no-default-hover-elevate`}
+                          >
+                            {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {request.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-xs text-muted-foreground">
+                            {request.category}
+                          </span>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground">
+                            {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {user?.role === "staff" && (
+              <Link href="/new-request">
+                <Button className="w-full justify-start" variant="outline" data-testid="button-create-request">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Request
+                </Button>
+              </Link>
+            )}
+            <Link href="/requests">
+              <Button className="w-full justify-start" variant="outline" data-testid="button-view-all">
+                <ClipboardList className="w-4 h-4 mr-2" />
+                {user?.role === "staff" ? "View My Requests" : "View All Tasks"}
+              </Button>
+            </Link>
+            {user?.role === "admin" && (
+              <>
+                <Link href="/users">
+                  <Button className="w-full justify-start" variant="outline" data-testid="button-manage-users">
+                    <Users className="w-4 h-4 mr-2" />
+                    Manage Users
+                  </Button>
+                </Link>
+                <Link href="/areas">
+                  <Button className="w-full justify-start" variant="outline" data-testid="button-manage-areas">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Manage Areas
+                  </Button>
+                </Link>
+              </>
+            )}
+            <Link href="/calendar">
+              <Button className="w-full justify-start" variant="outline" data-testid="button-view-calendar">
+                <Clock className="w-4 h-4 mr-2" />
+                View Calendar
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

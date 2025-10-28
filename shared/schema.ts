@@ -9,6 +9,7 @@ import {
   jsonb,
   index,
   boolean,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -117,6 +118,7 @@ export const partsUsed = pgTable("parts_used", {
   requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
   partName: varchar("part_name", { length: 200 }).notNull(),
   quantity: integer("quantity").notNull(),
+  cost: doublePrecision("cost").notNull().default(0),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
