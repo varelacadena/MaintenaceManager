@@ -92,6 +92,13 @@ export default function TaskDetail() {
   const [pendingUploads, setPendingUploads] = useState<
     { name: string; url: string; type: string }[]
   >([]);
+  const [isAddPartDialogOpen, setIsAddPartDialogOpen] = useState(false);
+  const [isQuickAddInventoryOpen, setIsQuickAddInventoryOpen] = useState(false);
+  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>("");
+  const [quickInventoryName, setQuickInventoryName] = useState("");
+  const [quickInventoryQuantity, setQuickInventoryQuantity] = useState(0);
+  const [quickInventoryUnit, setQuickInventoryUnit] = useState("");
+
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -112,7 +119,7 @@ export default function TaskDetail() {
     enabled: !!id,
   });
 
-  const { data: inventory = [] } = useQuery<InventoryItem[]>({
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
     queryKey: ["/api/inventory"],
   });
 
@@ -174,33 +181,83 @@ export default function TaskDetail() {
     },
   });
 
+  const quickAddInventoryMutation = useMutation({
+    mutationFn: async () => {
+      if (!quickInventoryName || quickInventoryQuantity <= 0) {
+        throw new Error("Please enter item name and quantity");
+      }
+
+      const itemData = {
+        name: quickInventoryName,
+        quantity: quickInventoryQuantity,
+        unit: quickInventoryUnit || undefined,
+      };
+
+      const response = await apiRequest("POST", "/api/inventory", itemData);
+      return response.json();
+    },
+    onSuccess: (newItem) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      setIsQuickAddInventoryOpen(false);
+      setSelectedInventoryItemId(newItem.id);
+      setQuickInventoryName("");
+      setQuickInventoryQuantity(0);
+      setQuickInventoryUnit("");
+      toast({
+        title: "Inventory Item Created",
+        description: "The item has been added to inventory and selected.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create inventory item",
+        variant: "destructive",
+      });
+    },
+  });
+
   const addPartMutation = useMutation({
     mutationFn: async () => {
-      const inventoryItem = inventory.find(item => item.id === selectedInventoryItem);
-      if (!inventoryItem) {
+      if (!selectedInventoryItemId) {
+        throw new Error("Please select an inventory item");
+      }
+
+      const selectedItem = inventoryItems?.find(item => item.id === selectedInventoryItemId);
+      if (!selectedItem) {
         throw new Error("Inventory item not found");
       }
 
-      const quantity = parseInt(partQuantity);
-      const cost = inventoryItem.cost ? parseFloat(inventoryItem.cost) * quantity : 0;
-
-      return await apiRequest("POST", "/api/parts", {
+      const partData = {
         taskId: id,
-        inventoryItemId: selectedInventoryItem,
-        partName: inventoryItem.name,
-        quantity,
-        cost,
-        notes: partNotes,
-      });
+        inventoryItemId: selectedInventoryItemId,
+        partName: selectedItem.name,
+        quantity: parseInt(partQuantity),
+        cost: selectedItem.cost ? parseFloat(selectedItem.cost) * parseInt(partQuantity) : 0,
+        notes: partNotes || undefined,
+      };
+
+      const response = await apiRequest("POST", "/api/parts", partData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      setShowAddPart(false);
-      setSelectedInventoryItem("");
-      setPartQuantity("");
+      setIsAddPartDialogOpen(false);
+      setSelectedInventoryItemId("");
       setPartNotes("");
-      toast({ title: "Part added successfully" });
+      setPartQuantity("");
+      toast({
+        title: "Part Added",
+        description: "The part has been added to the task.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add part",
+        variant: "destructive",
+      });
     },
   });
 
@@ -574,26 +631,107 @@ export default function TaskDetail() {
                 <Package className="w-5 h-5" />
                 Parts Used
               </CardTitle>
-              <Dialog open={showAddPart} onOpenChange={setShowAddPart}>
+              <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
                 <DialogTrigger asChild>
                   <Button data-testid="button-add-part">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Part
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+
+                {/* Quick Add Inventory Dialog */}
+                <Dialog open={isQuickAddInventoryOpen} onOpenChange={setIsQuickAddInventoryOpen}>
+                  <DialogContent data-testid="dialog-quick-add-inventory">
+                    <DialogHeader>
+                      <DialogTitle>Create New Inventory Item</DialogTitle>
+                      <DialogDescription>
+                        Add a new item to inventory that will be immediately available
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="quick-item-name">Item Name</Label>
+                        <Input
+                          id="quick-item-name"
+                          placeholder="e.g., PVC Pipe, Light Bulbs"
+                          value={quickInventoryName}
+                          onChange={(e) => setQuickInventoryName(e.target.value)}
+                          data-testid="input-quick-item-name"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="quick-item-quantity">Quantity</Label>
+                          <Input
+                            id="quick-item-quantity"
+                            type="number"
+                            min="1"
+                            value={quickInventoryQuantity}
+                            onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
+                            data-testid="input-quick-item-quantity"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="quick-item-unit">Unit (Optional)</Label>
+                          <Input
+                            id="quick-item-unit"
+                            placeholder="e.g., pcs, boxes"
+                            value={quickInventoryUnit}
+                            onChange={(e) => setQuickInventoryUnit(e.target.value)}
+                            data-testid="input-quick-item-unit"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsQuickAddInventoryOpen(false);
+                          setQuickInventoryName("");
+                          setQuickInventoryQuantity(0);
+                          setQuickInventoryUnit("");
+                        }}
+                        data-testid="button-cancel-quick-add"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => quickAddInventoryMutation.mutate()}
+                        disabled={quickAddInventoryMutation.isPending || !quickInventoryName || quickInventoryQuantity <= 0}
+                        data-testid="button-submit-quick-add"
+                      >
+                        {quickAddInventoryMutation.isPending ? "Creating..." : "Create & Select"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <DialogContent data-testid="dialog-add-part">
                   <DialogHeader>
                     <DialogTitle>Add Part to Task</DialogTitle>
+                    <DialogDescription>
+                      Select an inventory item to add to this task
+                    </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
                       <Label>Inventory Item</Label>
-                      <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
+                      <Select value={selectedInventoryItemId} onValueChange={(value) => {
+                        if (value === "__new_item__") {
+                          setIsQuickAddInventoryOpen(true);
+                        } else {
+                          setSelectedInventoryItemId(value);
+                        }
+                      }}>
                         <SelectTrigger data-testid="select-inventory-item">
                           <SelectValue placeholder="Select item" />
                         </SelectTrigger>
                         <SelectContent>
-                          {inventory.map((item) => (
+                          <SelectItem value="__new_item__" className="font-semibold text-primary">
+                            + New Item
+                          </SelectItem>
+                          {inventoryItems?.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.name} (Available: {item.quantity})
                             </SelectItem>
@@ -601,17 +739,18 @@ export default function TaskDetail() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
+                    <div className="space-y-2">
                       <Label>Quantity</Label>
                       <Input
                         type="number"
+                        min="1"
                         value={partQuantity}
                         onChange={(e) => setPartQuantity(e.target.value)}
                         placeholder="Enter quantity"
                         data-testid="input-part-quantity"
                       />
                     </div>
-                    <div>
+                    <div className="space-y-2">
                       <Label>Notes (Optional)</Label>
                       <Textarea
                         value={partNotes}
@@ -620,15 +759,28 @@ export default function TaskDetail() {
                         data-testid="textarea-part-notes"
                       />
                     </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddPartDialogOpen(false);
+                        setSelectedInventoryItemId("");
+                        setPartNotes("");
+                        setPartQuantity("");
+                      }}
+                      data-testid="button-cancel-add-part"
+                    >
+                      Cancel
+                    </Button>
                     <Button
                       onClick={() => addPartMutation.mutate()}
-                      disabled={!selectedInventoryItem || !partQuantity || addPartMutation.isPending}
-                      className="w-full"
+                      disabled={!selectedInventoryItemId || !partQuantity || addPartMutation.isPending}
                       data-testid="button-submit-part"
                     >
-                      Add Part
+                      {addPartMutation.isPending ? "Adding..." : "Add Part"}
                     </Button>
-                  </div>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
