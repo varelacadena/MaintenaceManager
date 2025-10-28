@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import type { User } from "@shared/schema";
 
 // Middleware to check if user has specific role
 export function requireRole(...allowedRoles: string[]): RequestHandler {
@@ -36,6 +37,7 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
   try {
     const userId = req.userId;
     if (!userId) return null;
+    const { storage } = await import("./storage");
     return await storage.getUser(userId);
   } catch (error) {
     return null;
