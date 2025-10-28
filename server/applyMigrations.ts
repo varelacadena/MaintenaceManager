@@ -1,4 +1,3 @@
-
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { readFileSync } from "fs";
@@ -23,8 +22,9 @@ export async function applyInventoryTriggers() {
 
 export async function applyMigrations() {
   const migrations = [
-    { name: '001_inventory_triggers', file: '001_inventory_triggers.sql' },
-    { name: '002_nullable_request_id', file: '002_nullable_request_id.sql' }
+    { file: "001_inventory_triggers.sql", name: "001_inventory_triggers" },
+    { file: "002_nullable_request_id.sql", name: "002_nullable_request_id" },
+    { file: "003_note_type.sql", name: "003_note_type" },
   ];
 
   try {
@@ -40,7 +40,7 @@ export async function applyMigrations() {
 
     for (const migration of migrations) {
       const version = parseInt(migration.name.split('_')[0]);
-      
+
       // Check if migration was already applied
       const result = await db.execute(sql.raw(`
         SELECT version FROM schema_migrations WHERE version = ${version};

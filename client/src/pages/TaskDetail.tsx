@@ -102,6 +102,8 @@ export default function TaskDetail() {
   const [isStopTimerDialogOpen, setIsStopTimerDialogOpen] = useState(false);
   const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
   const [holdReason, setHoldReason] = useState("");
+  const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
+  const [noteType, setNoteType] = useState<"job_note" | "recommendation">("job_note");
 
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -316,12 +318,14 @@ export default function TaskDetail() {
   });
 
   const addNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", "/api/task-notes", { taskId: id, content });
+    mutationFn: async ({ content, noteType }: { content: string, noteType: string }) => {
+      return await apiRequest("POST", "/api/task-notes", { taskId: id, content, noteType });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       setNewNote("");
+      setNoteType("job_note");
+      setIsAddNoteDialogOpen(false);
       toast({ title: "Note added" });
     },
   });
@@ -1140,9 +1144,14 @@ export default function TaskDetail() {
               return (
                 <div key={note.id} className="p-3 bg-muted rounded-md">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">
-                      {noteUser?.firstName} {noteUser?.lastName}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {noteUser?.firstName} {noteUser?.lastName}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {note.noteType === "job_note" ? "Job Note" : "Recommendation"}
+                      </Badge>
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
                     </span>
@@ -1152,21 +1161,73 @@ export default function TaskDetail() {
               );
             })}
             {isMaintenanceOrAdmin && (
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="Add a note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  data-testid="textarea-new-note"
-                />
-                <Button
-                  onClick={() => addNoteMutation.mutate(newNote)}
-                  disabled={!newNote.trim() || addNoteMutation.isPending}
-                  data-testid="button-add-note"
-                >
-                  Add Note
-                </Button>
-              </div>
+              <Dialog open={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" data-testid="button-add-note">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Note
+                  </Button>
+                </DialogTrigger>
+                <DialogContent data-testid="dialog-add-note">
+                  <DialogHeader>
+                    <DialogTitle>Add Task Note</DialogTitle>
+                    <DialogDescription>
+                      Choose the type of note and add your content
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Note Type</Label>
+                      <Select value={noteType} onValueChange={(value: "job_note" | "recommendation") => setNoteType(value)}>
+                        <SelectTrigger data-testid="select-note-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="job_note">Job Note</SelectItem>
+                          <SelectItem value="recommendation">Recommendation</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {noteType === "job_note" 
+                          ? "Document work performed, parts used, or issues encountered"
+                          : "Provide suggestions for future maintenance or improvements"}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Note Content</Label>
+                      <Textarea
+                        placeholder={noteType === "job_note" 
+                          ? "Describe the work performed..." 
+                          : "Provide your recommendation..."}
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        rows={6}
+                        data-testid="textarea-new-note"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddNoteDialogOpen(false);
+                        setNewNote("");
+                        setNoteType("job_note");
+                      }}
+                      data-testid="button-cancel-add-note"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => addNoteMutation.mutate({ content: newNote, noteType })}
+                      disabled={!newNote.trim() || addNoteMutation.isPending}
+                      data-testid="button-submit-note"
+                    >
+                      {addNoteMutation.isPending ? "Adding..." : "Add Note"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
         </CardContent>

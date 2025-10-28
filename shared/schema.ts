@@ -227,11 +227,14 @@ export type InsertUpload = z.infer<typeof insertUploadSchema>;
 export type Upload = typeof uploads.$inferSelect;
 
 // Task notes (linked to tasks, not requests)
+export const noteTypeEnum = pgEnum("note_type", ["job_note", "recommendation"]);
+
 export const taskNotes = pgTable("task_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
+  noteType: noteTypeEnum("note_type").notNull().default("job_note"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
