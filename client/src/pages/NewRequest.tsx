@@ -27,6 +27,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertServiceRequestSchema } from "@shared/schema";
 import type { Area, Subdivision } from "@shared/schema";
 import { z } from "zod";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useAuth } from "@/hooks/useAuth";
+import { Paperclip, Upload } from "lucide-react";
 
 const categories = [
   "Indoor Renovation",
@@ -48,7 +51,10 @@ type FormData = z.infer<typeof formSchema>;
 export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
+  const [uploads, setUploads] = useState<Array<{ name: string; url: string }>>([]);
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
   const { data: areas = [] } = useQuery<Area[]>({
     queryKey: ["/api/areas"],
@@ -85,11 +91,15 @@ export default function NewRequest() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      toast({
-        title: "Request Submitted",
-        description: "Your maintenance request has been submitted successfully.",
-      });
-      navigate(`/requests/${data.id}`);
+      setPendingRequestId(data.id);
+      
+      if (uploads.length === 0) {
+        toast({
+          title: "Request Submitted",
+          description: "Your maintenance request has been submitted successfully.",
+        });
+        navigate(`/requests/${data.id}`);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -99,6 +109,49 @@ export default function NewRequest() {
       });
     },
   });
+
+  const handleFileUpload = async (result: any) => {
+    if (!pendingRequestId) return;
+
+    try {
+      for (const file of result.successful) {
+        const uploadUrl = file.uploadURL;
+        const fileName = file.name;
+        const fileType = file.type || "application/octet-stream";
+
+        await apiRequest("POST", "/api/uploads", {
+          requestId: pendingRequestId,
+          fileName,
+          fileType,
+          objectUrl: uploadUrl,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
+      toast({
+        title: "Request Submitted",
+        description: "Your maintenance request and attachments have been submitted successfully.",
+      });
+      navigate(`/requests/${pendingRequestId}`);
+    } catch (error: any) {
+      toast({
+        title: "Upload Error",
+        description: error.message || "Failed to upload files",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getUploadParameters = async () => {
+    const response = await apiRequest("POST", "/api/object-storage/upload-url", {
+      fileName: "upload",
+    });
+    const data = await response.json();
+    return {
+      method: "PUT" as const,
+      url: data.uploadUrl,
+    };
+  };
 
   const handleSubmit = (data: FormData) => {
     createRequestMutation.mutate(data);
@@ -289,6 +342,35 @@ export default function NewRequest() {
                 </FormItem>
               )}
             />
+
+            <div className="space-y-3">
+              <FormLabel className="flex items-center gap-2">
+                <Paperclip className="w-4 h-4" />
+                Attachments (Optional)
+              </FormLabel>
+              <p className="text-sm text-muted-foreground">
+                Upload photos or documents related to this request
+              </p>
+              
+              {pendingRequestId && (
+                <ObjectUploader
+                  maxNumberOfFiles={5}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={getUploadParameters}
+                  onComplete={handleFileUpload}
+                  buttonClassName="w-full"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Files
+                </ObjectUploader>
+              )}
+              
+              {!pendingRequestId && (
+                <div className="p-4 border border-dashed rounded-md text-center text-sm text-muted-foreground">
+                  Submit the request first, then you can upload files
+                </div>
+              )}
+            </div>
 
             <Button
               type="submit"
