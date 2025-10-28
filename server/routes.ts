@@ -133,12 +133,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User management routes (admin only)
-  app.get("/api/users", isAuthenticated, requireAdmin, async (req, res) => {
+  // User management routes
+  app.get("/api/users", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+
       const users = await storage.getAllUsers();
+      
       // Remove passwords from response
-      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      let usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      
+      // If maintenance role, filter to only show maintenance and admin users
+      if (currentUser?.role === "maintenance") {
+        usersWithoutPasswords = usersWithoutPasswords.filter(
+          u => u.role === "maintenance" || u.role === "admin"
+        );
+      }
+      // Admin sees all users (already handled above)
+      // Staff should not access this endpoint at all
+      else if (currentUser?.role === "staff") {
+        return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
+      }
+      
       res.json(usersWithoutPasswords);
     } catch (error) {
       console.error("Error fetching users:", error);
