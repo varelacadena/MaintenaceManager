@@ -22,10 +22,8 @@ import {
   insertSubdivisionSchema,
   insertVendorSchema,
   insertInventoryItemSchema,
-  uploads,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { db, uploads, eq } from "@shared/db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
