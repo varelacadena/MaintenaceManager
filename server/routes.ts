@@ -232,8 +232,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       await storage.deleteUser(id);
       res.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
+      
+      // Check if it's a foreign key constraint violation
+      if (error.code === '23503') {
+        return res.status(409).json({ 
+          message: "Cannot delete user because they have associated data (service requests, messages, or time entries). You can change their role or password instead." 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
