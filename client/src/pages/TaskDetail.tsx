@@ -234,6 +234,28 @@ export default function TaskDetail() {
     },
   });
 
+  const getUploadParameters = async () => {
+    try {
+      const response = await fetch("/api/objects/upload", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+      
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+      };
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      throw error;
+    }
+  };
+
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       const file = result.successful[0];
@@ -638,6 +660,9 @@ export default function TaskDetail() {
 
             <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center">
               <ObjectUploader
+                maxNumberOfFiles={5}
+                maxFileSize={10485760}
+                onGetUploadParameters={getUploadParameters}
                 onComplete={handleFileUpload}
                 onError={(error) => {
                   console.error("Upload error:", error);
