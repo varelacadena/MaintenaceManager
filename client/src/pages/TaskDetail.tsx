@@ -48,6 +48,7 @@ import {
   Edit,
   Trash2,
   Paperclip,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -88,6 +89,9 @@ export default function TaskDetail() {
   const [selectedInventoryItem, setSelectedInventoryItem] = useState("");
   const [partQuantity, setPartQuantity] = useState("");
   const [partNotes, setPartNotes] = useState("");
+  const [pendingUploads, setPendingUploads] = useState<
+    { name: string; url: string; type: string }[]
+  >([]);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -134,8 +138,8 @@ export default function TaskDetail() {
 
   const startTimerMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/time-entries", { 
-        taskId: id, 
+      const response = await apiRequest("POST", "/api/time-entries", {
+        taskId: id,
         userId: user?.id,
         startTime: new Date().toISOString()
       });
@@ -241,11 +245,11 @@ export default function TaskDetail() {
         method: "POST",
         credentials: "include",
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to get upload URL");
       }
-      
+
       const data = await response.json();
       return {
         method: "PUT" as const,
@@ -259,13 +263,18 @@ export default function TaskDetail() {
 
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
-      const file = result.successful[0];
-      addUploadMutation.mutate({
-        fileName: file.name,
-        fileType: file.type,
-        objectUrl: file.uploadURL,
-      });
+      const newUploads = result.successful.map((file: any) => ({
+        name: file.name,
+        url: file.uploadURL,
+        type: file.type || "application/octet-stream",
+      }));
+
+      setPendingUploads((prev) => [...prev, ...newUploads]);
     }
+  };
+
+  const removePendingUpload = (index: number) => {
+    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
   };
 
   const deleteTaskMutation = useMutation({
@@ -655,6 +664,30 @@ export default function TaskDetail() {
                     <Paperclip className="w-4 h-4" />
                     <span className="text-sm">{upload.fileName}</span>
                   </a>
+                ))}
+              </div>
+            )}
+
+            {pendingUploads.length > 0 && (
+              <div className="grid gap-2 mb-4 border-t pt-4">
+                {pendingUploads.map((upload, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 rounded border"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">{upload.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePendingUpload(index)}
+                      data-testid={`button-remove-pending-upload-${index}`}
+                    >
+                      <X className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             )}
