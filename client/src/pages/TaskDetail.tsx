@@ -15,11 +15,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   ArrowLeft,
@@ -32,6 +41,9 @@ import {
   Package,
   FileText,
   ExternalLink,
+  Trash2,
+  Pencil,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,13 +75,15 @@ export default function TaskDetail() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [newNote, setNewNote] = useState("");
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showAddPart, setShowAddPart] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState("");
   const [partQuantity, setPartQuantity] = useState("");
   const [partNotes, setPartNotes] = useState("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -129,7 +143,7 @@ export default function TaskDetail() {
     mutationFn: async (timerId: string) => {
       const entry = timeEntries.find((e) => e.id === timerId);
       if (!entry?.startTime) return;
-      
+
       const endTime = new Date();
       const durationMinutes = Math.floor(
         (endTime.getTime() - new Date(entry.startTime).getTime()) / (1000 * 60)
@@ -192,6 +206,18 @@ export default function TaskDetail() {
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", `/api/tasks/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Task deleted successfully" });
+      navigate("/tasks");
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -247,6 +273,28 @@ export default function TaskDetail() {
             {task.status.replace("_", " ")}
           </Badge>
         </div>
+        {isMaintenanceOrAdmin && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditDialogOpen(true)}
+              data-testid="button-edit-task"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              data-testid="button-delete-task"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -535,6 +583,49 @@ export default function TaskDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This action cannot be undone.
+              All associated time entries, parts, notes, and messages will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTaskMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground mb-4">
+            To edit this task, please navigate to the task creation page with pre-filled data.
+            <Button
+              className="mt-2 w-full"
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                navigate(`/tasks/edit/${id}`);
+              }}
+            >
+              Go to Edit Page
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
