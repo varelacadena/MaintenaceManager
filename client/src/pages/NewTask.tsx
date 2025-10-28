@@ -61,9 +61,13 @@ export default function NewTask() {
     enabled: !!selectedAreaId,
   });
 
-  const { data: users = [] } = useQuery<User[]>({
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
+    enabled: (user?.role === "admin" || user?.role === "maintenance"),
   });
+
+  // Filter to only show maintenance and admin users
+  const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
 
   const { data: vendors = [] } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
@@ -130,14 +134,14 @@ export default function NewTask() {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      
+
       if (requestId) {
         await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
           status: "converted_to_task",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       }
-      
+
       toast({
         title: "Task Created",
         description: "The task has been created successfully.",
@@ -164,8 +168,6 @@ export default function NewTask() {
       </div>
     );
   }
-
-  const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 p-6">
