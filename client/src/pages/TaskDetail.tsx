@@ -239,6 +239,25 @@ export default function TaskDetail() {
     },
   });
 
+  const deleteUploadMutation = useMutation({
+    mutationFn: async (uploadId: string) => {
+      return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
+      toast({ title: "Attachment deleted successfully" });
+    },
+    onError: (error: any) => {
+      console.error("Error deleting upload:", error);
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete attachment",
+        variant: "destructive",
+      });
+    },
+  });
+
+
   const getUploadParameters = async () => {
     try {
       const response = await fetch("/api/objects/upload", {
@@ -641,7 +660,7 @@ export default function TaskDetail() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Paperclip className="w-5 h-5" />
-            Attachments (Optional)
+            Attachments
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -653,17 +672,49 @@ export default function TaskDetail() {
             {uploads.length > 0 && (
               <div className="grid gap-2 mb-4">
                 {uploads.map((upload) => (
-                  <a
+                  <div
                     key={upload.id}
-                    href={upload.objectPath}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded hover-elevate active-elevate-2 border"
-                    data-testid={`link-attachment-${upload.id}`}
+                    className="flex items-center justify-between p-2 rounded border"
                   >
-                    <Paperclip className="w-4 h-4" />
-                    <span className="text-sm">{upload.fileName}</span>
-                  </a>
+                    <a
+                      href={upload.objectPath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                      data-testid={`link-attachment-${upload.id}`}
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      <span className="text-sm">{upload.fileName}</span>
+                    </a>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          data-testid={`button-delete-attachment-${upload.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this attachment? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteUploadMutation.mutate(upload.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 ))}
               </div>
             )}

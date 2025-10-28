@@ -1036,6 +1036,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  app.delete("/api/uploads/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      const upload = await storage.getUpload(req.params.id);
+
+      if (!upload) {
+        return res.status(404).json({ message: "Upload not found" });
+      }
+
+      // Verify user has permission to delete
+      if (upload.requestId) {
+        const request = await storage.getServiceRequest(upload.requestId);
+        if (!request) {
+          return res.status(404).json({ message: "Request not found" });
+        }
+
+        // Only requester or admin can delete from requests
+        const canDelete =
+          currentUser?.role === "admin" ||
+          request.requesterId === userId;
+
+        if (!canDelete) {
+          return res.status(403).json({ message: "Forbidden: Cannot delete this attachment" });
+        }
+      } else if (upload.taskId) {
+        const task = await storage.getTask(upload.taskId);
+        if (!task) {
+          return res.status(404).json({ message: "Task not found" });
+        }
+
+        // Only assigned staff, maintenance, or admin can delete from tasks
+        const canDelete =
+          currentUser?.role === "admin" ||
+          currentUser?.role === "maintenance" ||
+          task.assignedToId === userId;
+
+        if (!canDelete) {
+          return res.status(403).json({ message: "Forbidden: Cannot delete this attachment" });
+        }
+      }
+
+      await storage.deleteUpload(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting upload:", error);
+      res.status(500).json({ message: "Failed to delete upload" });
+    }
+  });
+
   // Task notes routes (for tasks)
   app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {

@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Paperclip,
   Send,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -68,10 +69,28 @@ export default function RequestDetail() {
     },
   });
 
+  const deleteUploadMutation = useMutation({
+    mutationFn: async (uploadId: string) => {
+      await apiRequest("DELETE", `/api/uploads/${uploadId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
+      toast({ title: "File deleted successfully" });
+    },
+    onError: (error) => {
+      console.error("Error deleting upload:", error);
+      toast({
+        title: "Deletion failed",
+        description: "Could not delete the file.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       const file = result.successful[0];
-      
+
       try {
         await apiRequest("PUT", "/api/uploads", {
           requestId: id,
@@ -79,15 +98,15 @@ export default function RequestDetail() {
           url: file.uploadURL,
           type: file.type,
         });
-        
+
         queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
         toast({ title: "File uploaded successfully" });
       } catch (error) {
         console.error("Error saving upload:", error);
-        toast({ 
-          title: "Upload failed", 
+        toast({
+          title: "Upload failed",
           description: "File uploaded but couldn't be saved to database",
-          variant: "destructive" 
+          variant: "destructive",
         });
       }
     }
@@ -104,7 +123,7 @@ export default function RequestDetail() {
   const requester = users.find(u => u.id === request.requesterId);
   const area = areas.find(a => a.id === request.areaId);
   const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
-  
+
   const canConvertToTask = (user?.role === "admin" || user?.role === "maintenance") &&
     (request.status === "submitted" || request.status === "under_review" || request.status === "pending");
 
@@ -231,17 +250,28 @@ export default function RequestDetail() {
                 {uploads.length > 0 && (
                   <div className="grid gap-2">
                     {uploads.map((upload) => (
-                      <a
-                        key={upload.id}
-                        href={upload.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 rounded hover-elevate active-elevate-2 border"
-                        data-testid={`link-attachment-${upload.id}`}
-                      >
-                        <Paperclip className="h-4 w-4" />
-                        <span className="text-sm">{upload.name}</span>
-                      </a>
+                      <div key={upload.id} className="flex items-center justify-between p-2 rounded border">
+                        <a
+                          href={upload.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 hover-elevate active-elevate-2"
+                          data-testid={`link-attachment-${upload.id}`}
+                        >
+                          <Paperclip className="h-4 w-4" />
+                          <span className="text-sm">{upload.name}</span>
+                        </a>
+                        {user?.role === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteUploadMutation.mutate(upload.id)}
+                            data-testid={`button-delete-attachment-${upload.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -250,10 +280,10 @@ export default function RequestDetail() {
                   onComplete={handleFileUpload}
                   onError={(error) => {
                     console.error("Upload error:", error);
-                    toast({ 
-                      title: "Upload failed", 
+                    toast({
+                      title: "Upload failed",
                       description: error.message,
-                      variant: "destructive" 
+                      variant: "destructive",
                     });
                   }}
                 />
@@ -275,8 +305,8 @@ export default function RequestDetail() {
                     {messages.map((message) => {
                       const sender = users.find(u => u.id === message.userId);
                       return (
-                        <div 
-                          key={message.id} 
+                        <div
+                          key={message.id}
                           className="border rounded-lg p-3"
                           data-testid={`message-${message.id}`}
                         >
