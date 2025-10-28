@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await storage.updateUserPassword(id, hashedPassword);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -268,14 +268,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      
+
       // Check if it's a foreign key constraint violation
       if (error.code === '23503') {
         return res.status(409).json({ 
           message: "Cannot delete user because they have associated data (service requests, messages, or time entries). You can change their role or password instead." 
         });
       }
-      
+
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
@@ -589,13 +589,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { status, rejectionReason } = req.body;
-        
+
         const request = await storage.updateServiceRequestStatus(
           req.params.id,
           status,
           rejectionReason
         );
-        
+
         res.json(request);
       } catch (error) {
         console.error("Error updating service request status:", error);
@@ -665,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : undefined,
       });
       const task = await storage.createTask(taskData);
-      
+
       // If request was linked, update its status to converted_to_task
       if (task.requestId) {
         try {
@@ -674,7 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error updating request status:", err);
         }
       }
-      
+
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -713,16 +713,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tasks/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
       const { status, onHoldReason } = req.body;
-      
+
       const actualCompletionDate = status === 'completed' ? new Date() : undefined;
-      
+
       const task = await storage.updateTaskStatus(
         req.params.id,
         status,
         onHoldReason,
         actualCompletionDate
       );
-      
+
       res.json(task);
     } catch (error) {
       console.error("Error updating task status:", error);

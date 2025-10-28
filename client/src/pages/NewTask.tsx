@@ -61,9 +61,8 @@ export default function NewTask() {
     enabled: !!selectedAreaId,
   });
 
-  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+  const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    enabled: (user?.role === "admin" || user?.role === "maintenance"),
   });
 
   // Filter to only show maintenance and admin users

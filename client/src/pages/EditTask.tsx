@@ -61,9 +61,9 @@ export default function EditTask() {
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    enabled: (user?.role === "admin" || user?.role === "maintenance"),
   });
 
+  // Filter to only show maintenance and admin users
   const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
 
   const { data: vendors = [] } = useQuery<Vendor[]>({
