@@ -4,7 +4,37 @@
 
 This is a web-based maintenance management platform designed for college facilities departments. The system enables three distinct user roles (administrators, maintenance staff, and college staff) to collaborate on service requests, task tracking, and facility maintenance across multiple areas including grounds, housing, utilities, and building systems.
 
-The platform provides role-based dashboards with workflows optimized for daily operations: college staff submit and track service requests, maintenance workers manage tasks with time tracking and parts logging, and administrators oversee all operations with user management and reporting capabilities.
+The platform provides role-based dashboards with workflows optimized for daily operations: college staff submit and track service requests, maintenance workers manage tasks with time tracking and parts logging, and administrators oversee all operations with user management, vendor management, inventory tracking, and reporting capabilities.
+
+## Recent Updates (October 28, 2025)
+
+**User Management Enhancements:**
+- Added phone number field to users table for contact information
+- Enhanced Credentials page with full user editing (username, email, phone, first/last name)
+- Separate dialogs for editing user information vs changing passwords
+- User profile preview dialog showing complete user information
+- All backend routes and validation implemented
+
+**Vendor Management System:**
+- Complete vendors schema (name, email, phone, address, contactPerson, notes)
+- Full CRUD backend with proper validation and role-based access
+- Vendors management page accessible to admin and maintenance roles
+- Create, edit, delete, and view vendor details
+- Vendor assignment field added to service requests
+
+**Inventory Management System:**
+- Inventory items schema (name, description, quantity, unit, location, minQuantity, cost)
+- Complete backend with CRUD operations
+- Real-time quantity tracking with dedicated update endpoint
+- Role-based access control (maintenance and admin can manage inventory)
+- Low stock tracking via minQuantity field
+
+**Pending Features:**
+- Inventory management frontend page
+- Link inventory to tasks for automatic quantity updates
+- Email/SMS notification integrations
+- Task status notification triggers
+- Workflow modifications (remove completion date for staff, add review/scheduling workflow)
 
 ## User Preferences
 
@@ -77,15 +107,17 @@ Preferred communication style: Simple, everyday language.
 ### Data Model
 
 **Core Entities:**
-1. **Users** - Authentication identity with role assignment (admin/maintenance/staff)
-2. **Areas** - Top-level maintenance categories (8 default: Grounds, Housing, Water Treatment, etc.)
-3. **Subdivisions** - Hierarchical organization within areas (e.g., Houses → Rooms)
-4. **Service Requests** - Work orders with title, description, urgency, status, and scheduling
-5. **Time Entries** - Work duration tracking for maintenance tasks
-6. **Parts Used** - Inventory logging with cost and quantity
-7. **Messages** - Communication threads attached to service requests
-8. **Uploads** - File attachments (photos, invoices) with GCS storage
-9. **Task Notes** - Maintenance staff work logs and status updates
+1. **Users** - Authentication identity with role assignment, phone numbers, and full contact information (admin/maintenance/staff)
+2. **Vendors** - Service providers and contractors with contact information, address, and notes
+3. **Inventory Items** - Stock tracking with quantities, units, locations, and cost information
+4. **Areas** - Top-level maintenance categories (8 default: Grounds, Housing, Water Treatment, etc.)
+5. **Subdivisions** - Hierarchical organization within areas (e.g., Houses → Rooms)
+6. **Service Requests** - Work orders with title, description, urgency, status, scheduling, and optional vendor assignment
+7. **Time Entries** - Work duration tracking for maintenance tasks
+8. **Parts Used** - Inventory logging with cost and quantity
+9. **Messages** - Communication threads attached to service requests
+10. **Uploads** - File attachments (photos, invoices) with GCS storage
+11. **Task Notes** - Maintenance staff work logs and status updates
 
 **Key Relationships:**
 - Service requests link to areas/subdivisions, requesters, and assigned staff

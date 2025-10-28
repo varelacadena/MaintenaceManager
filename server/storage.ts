@@ -1,6 +1,7 @@
 import {
   users,
   vendors,
+  inventoryItems,
   areas,
   subdivisions,
   serviceRequests,
@@ -13,6 +14,8 @@ import {
   type UpsertUser,
   type Vendor,
   type InsertVendor,
+  type InventoryItem,
+  type InsertInventoryItem,
   type Area,
   type InsertArea,
   type Subdivision,
@@ -65,6 +68,14 @@ export interface IStorage {
   createVendor(vendor: InsertVendor): Promise<Vendor>;
   updateVendor(id: string, vendor: Partial<InsertVendor>): Promise<Vendor | undefined>;
   deleteVendor(id: string): Promise<void>;
+
+  // Inventory operations
+  getInventoryItems(): Promise<InventoryItem[]>;
+  getInventoryItem(id: string): Promise<InventoryItem | undefined>;
+  createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
+  updateInventoryItem(id: string, item: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined>;
+  deleteInventoryItem(id: string): Promise<void>;
+  updateInventoryQuantity(id: string, quantityChange: number): Promise<InventoryItem | undefined>;
 
   // Area operations
   getAreas(): Promise<Area[]>;
@@ -235,6 +246,46 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendor(id: string): Promise<void> {
     await db.delete(vendors).where(eq(vendors.id, id));
+  }
+
+  // Inventory operations
+  async getInventoryItems(): Promise<InventoryItem[]> {
+    return await db.select().from(inventoryItems);
+  }
+
+  async getInventoryItem(id: string): Promise<InventoryItem | undefined> {
+    const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
+    return item;
+  }
+
+  async createInventoryItem(itemData: InsertInventoryItem): Promise<InventoryItem> {
+    const [item] = await db.insert(inventoryItems).values(itemData).returning();
+    return item;
+  }
+
+  async updateInventoryItem(id: string, itemData: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined> {
+    const [item] = await db
+      .update(inventoryItems)
+      .set({ ...itemData, updatedAt: new Date() })
+      .where(eq(inventoryItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteInventoryItem(id: string): Promise<void> {
+    await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+  }
+
+  async updateInventoryQuantity(id: string, quantityChange: number): Promise<InventoryItem | undefined> {
+    const [item] = await db
+      .update(inventoryItems)
+      .set({ 
+        quantity: sql`${inventoryItems.quantity} + ${quantityChange}`,
+        updatedAt: new Date()
+      })
+      .where(eq(inventoryItems.id, id))
+      .returning();
+    return item;
   }
 
   // Area operations

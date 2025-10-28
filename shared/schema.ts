@@ -59,6 +59,24 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({ id: true, c
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
 export type Vendor = typeof vendors.$inferSelect;
 
+// Inventory items
+export const inventoryItems = pgTable("inventory_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  quantity: integer("quantity").notNull().default(0),
+  unit: varchar("unit", { length: 50 }), // e.g., "pcs", "boxes", "gallons"
+  location: varchar("location", { length: 200 }), // storage location
+  minQuantity: integer("min_quantity").default(0), // for low stock alerts
+  cost: varchar("cost", { length: 20 }), // cost per unit
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+
 // Maintenance areas (predefined categories)
 export const areas = pgTable("areas", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -100,6 +118,7 @@ export const serviceRequests = pgTable("service_requests", {
   requestedDate: timestamp("requested_date").notNull(),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
   assignedToId: varchar("assigned_to_id").references(() => users.id),
+  vendorId: varchar("vendor_id").references(() => vendors.id),
   areaId: varchar("area_id").references(() => areas.id),
   subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
   onHoldReason: text("on_hold_reason"),

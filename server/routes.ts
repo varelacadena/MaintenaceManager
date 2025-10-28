@@ -19,6 +19,7 @@ import {
   insertAreaSchema,
   insertSubdivisionSchema,
   insertVendorSchema,
+  insertInventoryItemSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -333,6 +334,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting vendor:", error);
       res.status(500).json({ message: "Failed to delete vendor" });
+    }
+  });
+
+  // Inventory routes
+  app.get("/api/inventory", isAuthenticated, async (req, res) => {
+    try {
+      const items = await storage.getInventoryItems();
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching inventory items:", error);
+      res.status(500).json({ message: "Failed to fetch inventory items" });
+    }
+  });
+
+  app.get("/api/inventory/:id", isAuthenticated, async (req, res) => {
+    try {
+      const item = await storage.getInventoryItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching inventory item:", error);
+      res.status(500).json({ message: "Failed to fetch inventory item" });
+    }
+  });
+
+  app.post("/api/inventory", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const itemData = insertInventoryItemSchema.parse(req.body);
+      const item = await storage.createInventoryItem(itemData);
+      res.json(item);
+    } catch (error) {
+      console.error("Error creating inventory item:", error);
+      res.status(500).json({ message: "Failed to create inventory item" });
+    }
+  });
+
+  app.patch("/api/inventory/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const itemData = insertInventoryItemSchema.partial().parse(req.body);
+      const item = await storage.updateInventoryItem(req.params.id, itemData);
+      if (!item) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating inventory item:", error);
+      res.status(500).json({ message: "Failed to update inventory item" });
+    }
+  });
+
+  app.patch("/api/inventory/:id/quantity", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const { change } = req.body;
+      if (typeof change !== 'number') {
+        return res.status(400).json({ message: "Quantity change must be a number" });
+      }
+      const item = await storage.updateInventoryQuantity(req.params.id, change);
+      if (!item) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating inventory quantity:", error);
+      res.status(500).json({ message: "Failed to update inventory quantity" });
+    }
+  });
+
+  app.delete("/api/inventory/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteInventoryItem(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting inventory item:", error);
+      res.status(500).json({ message: "Failed to delete inventory item" });
     }
   });
 
