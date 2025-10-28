@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess } from "./middleware";
 import bcrypt from "bcryptjs";
 import {
@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Logout endpoint
-  app.post("/api/logout", requireAuth, (req, res) => {
+  app.post("/api/logout", isAuthenticated, (req, res) => {
     req.logout(() => {
       res.json({ success: true });
     });
