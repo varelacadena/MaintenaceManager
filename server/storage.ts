@@ -5,6 +5,7 @@ import {
   areas,
   subdivisions,
   serviceRequests,
+  tasks,
   timeEntries,
   partsUsed,
   messages,
@@ -22,6 +23,8 @@ import {
   type InsertSubdivision,
   type ServiceRequest,
   type InsertServiceRequest,
+  type Task,
+  type InsertTask,
   type TimeEntry,
   type InsertTimeEntry,
   type PartUsed,
@@ -87,25 +90,35 @@ export interface IStorage {
   createSubdivision(subdivision: InsertSubdivision): Promise<Subdivision>;
   deleteSubdivision(id: string): Promise<void>;
 
-  // Service request operations
+  // Service request operations (simplified - requests are just submissions)
   getServiceRequests(filters?: {
     userId?: string;
-    assignedToId?: string;
     status?: string;
   }): Promise<ServiceRequest[]>;
   getServiceRequest(id: string): Promise<ServiceRequest | undefined>;
   createServiceRequest(request: InsertServiceRequest): Promise<ServiceRequest>;
+  updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined>;
+  deleteServiceRequest(id: string): Promise<void>;
   updateServiceRequestStatus(
     id: string,
     status: string,
-    onHoldReason?: string
-  ): Promise<ServiceRequest | undefined>;
-  updateServiceRequestAssignment(
-    id: string,
-    assignedToId: string
+    rejectionReason?: string
   ): Promise<ServiceRequest | undefined>;
 
-  // Time entry operations
+  // Task operations (tasks are created from requests and managed by admin/maintenance)
+  getTasks(filters?: {
+    assignedToId?: string;
+    assignedVendorId?: string;
+    status?: string;
+    areaId?: string;
+  }): Promise<Task[]>;
+  getTask(id: string): Promise<Task | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined>;
+  deleteTask(id: string): Promise<void>;
+  updateTaskStatus(id: string, status: string, onHoldReason?: string, actualCompletionDate?: Date): Promise<Task | undefined>;
+
+  // Time entry operations (linked to tasks)
   createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
   getTimeEntry(id: string): Promise<TimeEntry | undefined>;
   updateTimeEntry(
@@ -113,23 +126,26 @@ export interface IStorage {
     endTime: Date,
     durationMinutes: number
   ): Promise<TimeEntry | undefined>;
-  getTimeEntriesByRequest(requestId: string): Promise<TimeEntry[]>;
+  getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]>;
 
-  // Parts used operations
+  // Parts used operations (linked to tasks)
   createPartUsed(part: InsertPartUsed): Promise<PartUsed>;
-  getPartsByRequest(requestId: string): Promise<PartUsed[]>;
+  deletePartUsed(id: string): Promise<void>;
+  getPartsByTask(taskId: string): Promise<PartUsed[]>;
 
-  // Message operations
+  // Message operations (can be on requests or tasks)
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesByRequest(requestId: string): Promise<Message[]>;
+  getMessagesByTask(taskId: string): Promise<Message[]>;
 
-  // Upload operations
+  // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
   getUploadsByRequest(requestId: string): Promise<Upload[]>;
+  getUploadsByTask(taskId: string): Promise<Upload[]>;
 
-  // Task note operations
+  // Task note operations (linked to tasks)
   createTaskNote(note: InsertTaskNote): Promise<TaskNote>;
-  getNotesByRequest(requestId: string): Promise<TaskNote[]>;
+  getNotesByTask(taskId: string): Promise<TaskNote[]>;
 }
 
 export class DatabaseStorage implements IStorage {
