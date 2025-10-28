@@ -349,7 +349,6 @@ export class DatabaseStorage implements IStorage {
   // Service request operations
   async getServiceRequests(filters?: {
     userId?: string;
-    assignedToId?: string;
     status?: string;
   }): Promise<ServiceRequest[]> {
     let query = db.select().from(serviceRequests);
@@ -357,9 +356,6 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     if (filters?.userId) {
       conditions.push(eq(serviceRequests.requesterId, filters.userId));
-    }
-    if (filters?.assignedToId) {
-      conditions.push(eq(serviceRequests.assignedToId, filters.assignedToId));
     }
     if (filters?.status) {
       conditions.push(eq(serviceRequests.status, filters.status as any));
@@ -390,29 +386,116 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async updateServiceRequestStatus(
-    id: string,
-    status: string,
-    onHoldReason?: string
-  ): Promise<ServiceRequest | undefined> {
+  async updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined> {
     const [request] = await db
       .update(serviceRequests)
-      .set({ status: status as any, onHoldReason, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(serviceRequests.id, id))
       .returning();
     return request;
   }
 
-  async updateServiceRequestAssignment(
+  async deleteServiceRequest(id: string): Promise<void> {
+    await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
+  }
+
+  async updateServiceRequestStatus(
     id: string,
-    assignedToId: string
+    status: string,
+    rejectionReason?: string
   ): Promise<ServiceRequest | undefined> {
     const [request] = await db
       .update(serviceRequests)
-      .set({ assignedToId, updatedAt: new Date() })
+      .set({ status: status as any, rejectionReason, updatedAt: new Date() })
       .where(eq(serviceRequests.id, id))
       .returning();
     return request;
+  }
+
+  // Task operations
+  async getTasks(filters?: {
+    assignedToId?: string;
+    assignedVendorId?: string;
+    status?: string;
+    areaId?: string;
+  }): Promise<Task[]> {
+    let query = db.select().from(tasks);
+
+    const conditions = [];
+    if (filters?.assignedToId) {
+      conditions.push(eq(tasks.assignedToId, filters.assignedToId));
+    }
+    if (filters?.assignedVendorId) {
+      conditions.push(eq(tasks.assignedVendorId, filters.assignedVendorId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(tasks.status, filters.status as any));
+    }
+    if (filters?.areaId) {
+      conditions.push(eq(tasks.areaId, filters.areaId));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+
+    return await query.orderBy(desc(tasks.initialDate));
+  }
+
+  async getTask(id: string): Promise<Task | undefined> {
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, id));
+    return task;
+  }
+
+  async createTask(taskData: InsertTask): Promise<Task> {
+    const [task] = await db
+      .insert(tasks)
+      .values(taskData)
+      .returning();
+    return task;
+  }
+
+  async updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined> {
+    const [task] = await db
+      .update(tasks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return task;
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async updateTaskStatus(
+    id: string,
+    status: string,
+    onHoldReason?: string,
+    actualCompletionDate?: Date
+  ): Promise<Task | undefined> {
+    const updateData: any = { 
+      status: status as any, 
+      updatedAt: new Date() 
+    };
+    
+    if (onHoldReason !== undefined) {
+      updateData.onHoldReason = onHoldReason;
+    }
+    
+    if (actualCompletionDate !== undefined) {
+      updateData.actualCompletionDate = actualCompletionDate;
+    }
+    
+    const [task] = await db
+      .update(tasks)
+      .set(updateData)
+      .where(eq(tasks.id, id))
+      .returning();
+    return task;
   }
 
   // Time entry operations
@@ -442,11 +525,11 @@ export class DatabaseStorage implements IStorage {
     return entry;
   }
 
-  async getTimeEntriesByRequest(requestId: string): Promise<TimeEntry[]> {
+  async getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]> {
     return await db
       .select()
       .from(timeEntries)
-      .where(eq(timeEntries.requestId, requestId));
+      .where(eq(timeEntries.taskId, taskId));
   }
 
   // Parts used operations
@@ -456,11 +539,16 @@ export class DatabaseStorage implements IStorage {
     return part;
   }
 
-  async getPartsByRequest(requestId: string): Promise<PartUsed[]> {
+  async deletePartUsed(id: string): Promise<void> {
+    // Database trigger will automatically restore inventory quantity
+    await db.delete(partsUsed).where(eq(partsUsed.id, id));
+  }
+
+  async getPartsByTask(taskId: string): Promise<PartUsed[]> {
     return await db
       .select()
       .from(partsUsed)
-      .where(eq(partsUsed.requestId, requestId));
+      .where(eq(partsUsed.taskId, taskId));
   }
 
   // Message operations
@@ -477,6 +565,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(messages.createdAt);
   }
 
+  async getMessagesByTask(taskId: string): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.taskId, taskId))
+      .orderBy(messages.createdAt);
+  }
+
   // Upload operations
   async createUpload(uploadData: InsertUpload): Promise<Upload> {
     const [upload] = await db.insert(uploads).values(uploadData).returning();
@@ -490,17 +586,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(uploads.requestId, requestId));
   }
 
+  async getUploadsByTask(taskId: string): Promise<Upload[]> {
+    return await db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.taskId, taskId));
+  }
+
   // Task note operations
   async createTaskNote(noteData: InsertTaskNote): Promise<TaskNote> {
     const [note] = await db.insert(taskNotes).values(noteData).returning();
     return note;
   }
 
-  async getNotesByRequest(requestId: string): Promise<TaskNote[]> {
+  async getNotesByTask(taskId: string): Promise<TaskNote[]> {
     return await db
       .select()
       .from(taskNotes)
-      .where(eq(taskNotes.requestId, requestId))
+      .where(eq(taskNotes.taskId, taskId))
       .orderBy(taskNotes.createdAt);
   }
 }

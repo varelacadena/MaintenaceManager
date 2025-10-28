@@ -1,5 +1,5 @@
 -- Migration: Add database triggers for automatic inventory management
--- This ensures inventory quantities are automatically updated when parts are used
+-- This ensures inventory quantities are automatically updated when parts are used on tasks
 
 -- Create function to update inventory when parts are used
 CREATE OR REPLACE FUNCTION update_inventory_on_parts_used()
