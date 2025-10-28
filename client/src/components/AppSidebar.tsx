@@ -20,6 +20,7 @@ import {
   Users,
   MapPin,
   Wrench,
+  KeyRound,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -36,6 +37,7 @@ const roleMenus = {
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "User Management", url: "/users", icon: Users },
+    { title: "Credentials", url: "/credentials", icon: KeyRound },
     { title: "Areas & Subdivisions", url: "/areas", icon: MapPin },
     { title: "Settings", url: "/settings", icon: Settings },
   ],

@@ -18,6 +18,7 @@ import Messages from "@/pages/Messages";
 import Calendar from "@/pages/Calendar";
 import Users from "@/pages/Users";
 import Areas from "@/pages/Areas";
+import Credentials from "@/pages/Credentials";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -85,6 +86,7 @@ function AuthenticatedApp() {
                 <Route path="/tasks" component={Requests} />
                 <Route path="/users" component={Users} />
                 <Route path="/areas" component={Areas} />
+                <Route path="/credentials" component={Credentials} />
                 <Route component={NotFound} />
               </Switch>
             </main>

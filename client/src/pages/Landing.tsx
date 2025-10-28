@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useNavigate } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,6 @@ export default function Landing() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [, navigate] = useNavigate();
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -71,6 +69,7 @@ export default function Landing() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={isLoading}
+                data-testid="input-username"
               />
             </div>
             <div className="space-y-2">
@@ -83,9 +82,10 @@ export default function Landing() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                data-testid="input-password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
