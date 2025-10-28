@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, User as UserIcon, Lock } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -33,23 +33,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Credentials() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Form states
+  // Create form states
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPhoneNumber, setNewPhoneNumber] = useState("");
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
   const [newRole, setNewRole] = useState("staff");
 
+  // Edit form states
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhoneNumber, setEditPhoneNumber] = useState("");
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+
+  // Password edit state
   const [editPassword, setEditPassword] = useState("");
-  const [editRole, setEditRole] = useState("");
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -60,6 +71,7 @@ export default function Credentials() {
       username: string;
       password: string;
       email?: string;
+      phoneNumber?: string;
       firstName?: string;
       lastName?: string;
       role: string;
@@ -82,6 +94,25 @@ export default function Credentials() {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, userData }: { userId: string; userData: any }) => {
+      const response = await apiRequest("PATCH", `/api/users/${userId}`, userData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsEditDialogOpen(false);
+      toast({ title: "User updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update user",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updatePasswordMutation = useMutation({
     mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
       const response = await apiRequest("PATCH", `/api/credentials/${userId}/password`, {
@@ -91,7 +122,7 @@ export default function Credentials() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      setIsEditDialogOpen(false);
+      setIsPasswordDialogOpen(false);
       setEditPassword("");
       toast({ title: "Password updated successfully" });
     },
@@ -144,6 +175,7 @@ export default function Credentials() {
     setNewUsername("");
     setNewPassword("");
     setNewEmail("");
+    setNewPhoneNumber("");
     setNewFirstName("");
     setNewLastName("");
     setNewRole("staff");
@@ -155,10 +187,27 @@ export default function Credentials() {
       username: newUsername,
       password: newPassword,
       email: newEmail || undefined,
+      phoneNumber: newPhoneNumber || undefined,
       firstName: newFirstName || undefined,
       lastName: newLastName || undefined,
       role: newRole,
     });
+  };
+
+  const handleUpdateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedUser) {
+      updateUserMutation.mutate({
+        userId: selectedUser.id,
+        userData: {
+          username: editUsername,
+          email: editEmail,
+          phoneNumber: editPhoneNumber,
+          firstName: editFirstName,
+          lastName: editLastName,
+        },
+      });
+    }
   };
 
   const handleUpdatePassword = (e: React.FormEvent) => {
@@ -176,9 +225,30 @@ export default function Credentials() {
   };
 
   const handleDeleteUser = (userId: string) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
+    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone if the user has associated data.")) {
       deleteUserMutation.mutate(userId);
     }
+  };
+
+  const openEditDialog = (user: User) => {
+    setSelectedUser(user);
+    setEditUsername(user.username || "");
+    setEditEmail(user.email || "");
+    setEditPhoneNumber(user.phoneNumber || "");
+    setEditFirstName(user.firstName || "");
+    setEditLastName(user.lastName || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const openPasswordDialog = (user: User) => {
+    setSelectedUser(user);
+    setEditPassword("");
+    setIsPasswordDialogOpen(true);
+  };
+
+  const openProfileDialog = (user: User) => {
+    setSelectedUser(user);
+    setIsProfileDialogOpen(true);
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -212,7 +282,7 @@ export default function Credentials() {
               Create User
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
               <DialogDescription>
@@ -220,36 +290,50 @@ export default function Credentials() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateUser} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username *</Label>
-                <Input
-                  id="username"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  required
-                  data-testid="input-new-username"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username *</Label>
+                  <Input
+                    id="username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    required
+                    data-testid="input-new-username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    data-testid="input-new-password"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  data-testid="input-new-password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  data-testid="input-new-email"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    data-testid="input-new-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    value={newPhoneNumber}
+                    onChange={(e) => setNewPhoneNumber(e.target.value)}
+                    data-testid="input-new-phone"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -316,6 +400,7 @@ export default function Credentials() {
                 <TableHead>Username</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -328,6 +413,7 @@ export default function Credentials() {
                     {user.firstName} {user.lastName}
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.phoneNumber || "-"}</TableCell>
                   <TableCell>
                     <Select
                       value={user.role}
@@ -350,14 +436,29 @@ export default function Credentials() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setEditRole(user.role);
-                          setIsEditDialogOpen(true);
-                        }}
+                        onClick={() => openProfileDialog(user)}
+                        data-testid={`button-view-${user.id}`}
+                        title="View Profile"
+                      >
+                        <UserIcon className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditDialog(user)}
                         data-testid={`button-edit-${user.id}`}
+                        title="Edit Info"
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openPasswordDialog(user)}
+                        data-testid={`button-password-${user.id}`}
+                        title="Change Password"
+                      >
+                        <Lock className="w-4 h-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -376,8 +477,89 @@ export default function Credentials() {
         </CardContent>
       </Card>
 
-      {/* Edit Password Dialog */}
+      {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit User Information</DialogTitle>
+            <DialogDescription>
+              Update information for {selectedUser?.username}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editUsername">Username</Label>
+                <Input
+                  id="editUsername"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  data-testid="input-edit-username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editEmail">Email</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  data-testid="input-edit-email"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editPhoneNumber">Phone Number</Label>
+                <Input
+                  id="editPhoneNumber"
+                  type="tel"
+                  value={editPhoneNumber}
+                  onChange={(e) => setEditPhoneNumber(e.target.value)}
+                  data-testid="input-edit-phone"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editFirstName">First Name</Label>
+                <Input
+                  id="editFirstName"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  data-testid="input-edit-firstname"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editLastName">Last Name</Label>
+              <Input
+                id="editLastName"
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+                data-testid="input-edit-lastname"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateUserMutation.isPending}
+                data-testid="button-submit-edit-user"
+              >
+                {updateUserMutation.isPending ? "Updating..." : "Update User"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
@@ -401,7 +583,7 @@ export default function Credentials() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
+                onClick={() => setIsPasswordDialogOpen(false)}
               >
                 Cancel
               </Button>
@@ -414,6 +596,69 @@ export default function Credentials() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Profile Dialog */}
+      <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>User Profile</DialogTitle>
+            <DialogDescription>
+              Complete information for {selectedUser?.username}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Username</p>
+                  <p className="font-medium">{selectedUser.username}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Role</p>
+                  <Badge className={getRoleBadgeColor(selectedUser.role)}>
+                    {selectedUser.role}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">First Name</p>
+                  <p className="font-medium">{selectedUser.firstName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Last Name</p>
+                  <p className="font-medium">{selectedUser.lastName || "-"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{selectedUser.email || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Phone Number</p>
+                <p className="font-medium">{selectedUser.phoneNumber || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">User ID</p>
+                <p className="font-mono text-sm">{selectedUser.id}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Created</p>
+                  <p className="text-sm">{selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Last Updated</p>
+                  <p className="text-sm">{selectedUser.updatedAt ? new Date(selectedUser.updatedAt).toLocaleString() : "-"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsProfileDialogOpen(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

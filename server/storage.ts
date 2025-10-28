@@ -1,5 +1,6 @@
 import {
   users,
+  vendors,
   areas,
   subdivisions,
   serviceRequests,
@@ -10,6 +11,8 @@ import {
   taskNotes,
   type User,
   type UpsertUser,
+  type Vendor,
+  type InsertVendor,
   type Area,
   type InsertArea,
   type Subdivision,
@@ -36,6 +39,13 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   updateUserPassword(id: string, hashedPassword: string): Promise<User | undefined>;
+  updateUser(id: string, userData: {
+    username?: string;
+    email?: string;
+    phoneNumber?: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -43,10 +53,18 @@ export interface IStorage {
     username: string;
     password: string;
     email?: string;
+    phoneNumber?: string;
     firstName?: string;
     lastName?: string;
     role: string;
   }): Promise<User>;
+
+  // Vendor operations
+  getVendors(): Promise<Vendor[]>;
+  getVendor(id: string): Promise<Vendor | undefined>;
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  updateVendor(id: string, vendor: Partial<InsertVendor>): Promise<Vendor | undefined>;
+  deleteVendor(id: string): Promise<void>;
 
   // Area operations
   getAreas(): Promise<Area[]>;
@@ -143,6 +161,21 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async updateUser(id: string, userData: {
+    username?: string;
+    email?: string;
+    phoneNumber?: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
   async deleteUser(id: string): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
   }
@@ -163,6 +196,7 @@ export class DatabaseStorage implements IStorage {
     username: string;
     password: string;
     email?: string;
+    phoneNumber?: string;
     firstName?: string;
     lastName?: string;
     role: string;
@@ -174,6 +208,34 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+
+  // Vendor operations
+  async getVendors(): Promise<Vendor[]> {
+    return await db.select().from(vendors);
+  }
+
+  async getVendor(id: string): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id));
+    return vendor;
+  }
+
+  async createVendor(vendorData: InsertVendor): Promise<Vendor> {
+    const [vendor] = await db.insert(vendors).values(vendorData).returning();
+    return vendor;
+  }
+
+  async updateVendor(id: string, vendorData: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    const [vendor] = await db
+      .update(vendors)
+      .set({ ...vendorData, updatedAt: new Date() })
+      .where(eq(vendors.id, id))
+      .returning();
+    return vendor;
+  }
+
+  async deleteVendor(id: string): Promise<void> {
+    await db.delete(vendors).where(eq(vendors.id, id));
+  }
 
   // Area operations
   async getAreas(): Promise<Area[]> {

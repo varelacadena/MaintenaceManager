@@ -160,10 +160,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/users/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { username, email, phoneNumber, firstName, lastName } = req.body;
+
+      const user = await storage.updateUser(id, {
+        username,
+        email,
+        phoneNumber,
+        firstName,
+        lastName,
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      if (error.code === "23505") {
+        return res.status(400).json({ message: "Username or email already exists" });
+      }
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
   // Credential management routes (admin only)
   app.post("/api/credentials/create", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { username, password, email, firstName, lastName, role } = req.body;
+      const { username, password, email, phoneNumber, firstName, lastName, role } = req.body;
 
       if (!username || !password || !role) {
         return res.status(400).json({ message: "Username, password, and role are required" });
@@ -181,6 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         password: hashedPassword,
         email,
+        phoneNumber,
         firstName,
         lastName,
         role,
@@ -243,6 +273,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Vendor routes
+  app.get("/api/vendors", isAuthenticated, async (req, res) => {
+    try {
+      const vendors = await storage.getVendors();
+      res.json(vendors);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+      res.status(500).json({ message: "Failed to fetch vendors" });
+    }
+  });
+
+  app.get("/api/vendors/:id", isAuthenticated, async (req, res) => {
+    try {
+      const vendor = await storage.getVendor(req.params.id);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error fetching vendor:", error);
+      res.status(500).json({ message: "Failed to fetch vendor" });
+    }
+  });
+
+  app.post("/api/vendors", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const vendor = await storage.createVendor(req.body);
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error creating vendor:", error);
+      res.status(500).json({ message: "Failed to create vendor" });
+    }
+  });
+
+  app.patch("/api/vendors/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const vendor = await storage.updateVendor(req.params.id, req.body);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error updating vendor:", error);
+      res.status(500).json({ message: "Failed to update vendor" });
+    }
+  });
+
+  app.delete("/api/vendors/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteVendor(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      res.status(500).json({ message: "Failed to delete vendor" });
     }
   });
 
