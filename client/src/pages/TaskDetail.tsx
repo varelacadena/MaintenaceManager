@@ -669,26 +669,45 @@ export default function TaskDetail() {
             )}
 
             {pendingUploads.length > 0 && (
-              <div className="grid gap-2 mb-4 border-t pt-4">
-                {pendingUploads.map((upload, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 rounded border"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Paperclip className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">{upload.name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removePendingUpload(index)}
-                      data-testid={`button-remove-pending-upload-${index}`}
+              <div className="space-y-3 mb-4 border-t pt-4">
+                <div className="grid gap-2">
+                  {pendingUploads.map((upload, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 rounded border"
                     >
-                      <X className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-2">
+                        <Paperclip className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{upload.name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removePendingUpload(index)}
+                        data-testid={`button-remove-pending-upload-${index}`}
+                      >
+                        <X className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={async () => {
+                    for (const upload of pendingUploads) {
+                      await addUploadMutation.mutateAsync({
+                        fileName: upload.name,
+                        fileType: upload.type,
+                        objectUrl: upload.url,
+                      });
+                    }
+                    setPendingUploads([]);
+                  }}
+                  disabled={addUploadMutation.isPending}
+                  className="w-full"
+                  data-testid="button-save-attachments"
+                >
+                  {addUploadMutation.isPending ? "Saving..." : "Save Attachments"}
+                </Button>
               </div>
             )}
 
