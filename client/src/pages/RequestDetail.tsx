@@ -1,29 +1,15 @@
 import { useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
-  Clock,
-  User,
   MessageSquare,
   Paperclip,
-  Plus,
-  Play,
-  Square,
-  Wrench,
+  Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,11 +17,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import type {
   ServiceRequest,
-  TimeEntry,
-  PartUsed,
   Message,
   Upload,
-  TaskNote,
+  Area,
+  Subdivision,
   User as UserType,
 } from "@shared/schema";
 
@@ -45,22 +30,9 @@ export default function RequestDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
-  const [newNote, setNewNote] = useState("");
-  const [newPart, setNewPart] = useState({ name: "", cost: "", quantity: "" });
-  const [activeTimer, setActiveTimer] = useState<string | null>(null);
 
   const { data: request, isLoading } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", id],
-  });
-
-  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
-    queryKey: ["/api/time-entries/request", id],
-    enabled: !!id,
-  });
-
-  const { data: parts = [] } = useQuery<PartUsed[]>({
-    queryKey: ["/api/parts/request", id],
-    enabled: !!id,
   });
 
   const { data: messages = [] } = useQuery<Message[]>({
@@ -73,77 +45,16 @@ export default function RequestDetail() {
     enabled: !!id,
   });
 
-  const { data: notes = [] } = useQuery<TaskNote[]>({
-    queryKey: ["/api/task-notes/request", id],
-    enabled: !!id,
+  const { data: areas = [] } = useQuery<Area[]>({
+    queryKey: ["/api/areas"],
+  });
+
+  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
+    queryKey: ["/api/subdivisions"],
   });
 
   const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
-    enabled: user?.role === "admin",
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ status, onHoldReason }: { status: string; onHoldReason?: string }) => {
-      return await apiRequest("PATCH", `/api/service-requests/${id}/status`, { status, onHoldReason });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      toast({ title: "Status updated successfully" });
-    },
-  });
-
-  const assignMutation = useMutation({
-    mutationFn: async (assignedToId: string) => {
-      return await apiRequest("PATCH", `/api/service-requests/${id}/assign`, { assignedToId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
-      toast({ title: "Task assigned successfully" });
-    },
-  });
-
-  const startTimerMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/time-entries", { requestId: id, startTime: new Date() });
-      return response.json();
-    },
-    onSuccess: (data: TimeEntry) => {
-      setActiveTimer(data.id);
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/request", id] });
-      toast({ title: "Timer started" });
-    },
-  });
-
-  const stopTimerMutation = useMutation({
-    mutationFn: async (timerId: string) => {
-      const entry = timeEntries.find((e) => e.id === timerId);
-      if (!entry?.startTime) return;
-      
-      const endTime = new Date();
-      const durationMinutes = Math.floor(
-        (endTime.getTime() - new Date(entry.startTime).getTime()) / 60000
-      );
-      
-      return await apiRequest("PATCH", `/api/time-entries/${timerId}`, { endTime, durationMinutes });
-    },
-    onSuccess: () => {
-      setActiveTimer(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/request", id] });
-      toast({ title: "Timer stopped" });
-    },
-  });
-
-  const addPartMutation = useMutation({
-    mutationFn: async (part: { requestId: string; partName: string; cost: number; quantity: number }) => {
-      return await apiRequest("POST", "/api/parts", part);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/parts/request", id] });
-      setNewPart({ name: "", cost: "", quantity: "" });
-      toast({ title: "Part added successfully" });
-    },
   });
 
   const sendMessageMutation = useMutation({
@@ -153,17 +64,7 @@ export default function RequestDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/request", id] });
       setNewMessage("");
-    },
-  });
-
-  const addNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", "/api/task-notes", { requestId: id, content });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/request", id] });
-      setNewNote("");
-      toast({ title: "Note added successfully" });
+      toast({ title: "Message sent" });
     },
   });
 
@@ -174,370 +75,251 @@ export default function RequestDetail() {
       try {
         await apiRequest("PUT", "/api/uploads", {
           requestId: id,
-          objectUrl: file.uploadURL,
-          fileName: file.name,
-          fileType: file.type,
+          name: file.name,
+          url: file.uploadURL,
+          type: file.type,
         });
         
         queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
         toast({ title: "File uploaded successfully" });
       } catch (error) {
-        toast({
-          title: "Upload failed",
-          description: "Failed to save file metadata",
-          variant: "destructive",
+        console.error("Error saving upload:", error);
+        toast({ 
+          title: "Upload failed", 
+          description: "File uploaded but couldn't be saved to database",
+          variant: "destructive" 
         });
       }
     }
   };
 
-  if (isLoading || !request) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading request...</p>
-        </div>
-      </div>
-    );
+  if (isLoading) {
+    return <div className="p-8">Loading...</div>;
   }
 
-  const totalTime = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
-  const totalCost = parts.reduce((sum, part) => sum + part.cost * part.quantity, 0);
+  if (!request) {
+    return <div className="p-8">Request not found</div>;
+  }
+
+  const requester = users.find(u => u.id === request.requesterId);
+  const area = areas.find(a => a.id === request.areaId);
+  const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
+  
+  const canConvertToTask = (user?.role === "admin" || user?.role === "maintenance") &&
+    (request.status === "submitted" || request.status === "under_review" || request.status === "pending");
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending": return "bg-yellow-500";
-      case "in_progress": return "bg-blue-500";
-      case "completed": return "bg-green-500";
-      case "on_hold": return "bg-orange-500";
-      default: return "bg-muted";
+      case "submitted":
+        return "bg-blue-500";
+      case "under_review":
+        return "bg-yellow-500";
+      case "converted_to_task":
+        return "bg-green-500";
+      case "rejected":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
     }
   };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
-      case "high": return "bg-destructive text-destructive-foreground";
-      case "medium": return "bg-yellow-500 text-white";
-      case "low": return "bg-blue-500 text-white";
-      default: return "bg-muted";
+      case "low":
+        return "bg-green-500";
+      case "medium":
+        return "bg-yellow-500";
+      case "high":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/requests")} data-testid="button-back">
-          <ArrowLeft className="w-4 h-4" />
+    <div className="flex flex-col h-full">
+      <div className="border-b p-4 flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/requests")}
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-semibold" data-testid="text-request-title">{request.title}</h1>
-          <p className="text-muted-foreground">Request #{request.id}</p>
+          <h1 className="text-2xl font-bold" data-testid="text-request-title">{request.title}</h1>
+          <p className="text-sm text-muted-foreground" data-testid="text-request-id">Request #{request.id}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className={`${getStatusColor(request.status)} text-white no-default-hover-elevate`}>
-            {request.status.replace("_", " ").toUpperCase()}
-          </Badge>
-          <Badge className={`${getUrgencyColor(request.urgency)} no-default-hover-elevate`}>
-            {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
-          </Badge>
-        </div>
+        <Badge className={getStatusColor(request.status)} data-testid="badge-status">
+          {request.status.replace("_", " ").toUpperCase()}
+        </Badge>
+        <Badge className={getUrgencyColor(request.urgency)} data-testid="badge-urgency">
+          {request.urgency.toUpperCase()}
+        </Badge>
+        {canConvertToTask && (
+          <Link href={`/tasks/new?requestId=${id}`}>
+            <Button data-testid="button-convert-to-task">
+              Convert to Task
+            </Button>
+          </Link>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="grid gap-6 max-w-6xl mx-auto">
           <Card>
             <CardHeader>
               <CardTitle>Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Description</label>
-                <p className="mt-1">{request.description}</p>
+                <h3 className="font-medium mb-2">Description</h3>
+                <p className="text-muted-foreground" data-testid="text-description">{request.description}</p>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Category</label>
-                  <p className="mt-1">{request.category}</p>
+                  <h3 className="font-medium mb-2">Requester</h3>
+                  <p className="text-muted-foreground" data-testid="text-requester">
+                    {requester ? `${requester.firstName} ${requester.lastName}` : "Unknown"}
+                  </p>
                 </div>
+
+                {area && (
+                  <div>
+                    <h3 className="font-medium mb-2">Area</h3>
+                    <p className="text-muted-foreground" data-testid="text-area">{area.name}</p>
+                  </div>
+                )}
+
+                {subdivision && (
+                  <div>
+                    <h3 className="font-medium mb-2">Subdivision</h3>
+                    <p className="text-muted-foreground" data-testid="text-subdivision">{subdivision.name}</p>
+                  </div>
+                )}
+
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Area</label>
-                  <p className="mt-1">{request.areaId || "N/A"}</p>
+                  <h3 className="font-medium mb-2">Created</h3>
+                  <p className="text-muted-foreground" data-testid="text-created-at">
+                    {new Date(request.createdAt!).toLocaleString()}
+                  </p>
                 </div>
               </div>
+
+              {request.status === "rejected" && request.rejectionReason && (
+                <div>
+                  <h3 className="font-medium mb-2 text-destructive">Rejection Reason</h3>
+                  <p className="text-muted-foreground" data-testid="text-rejection-reason">
+                    {request.rejectionReason}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {(user?.role === "maintenance" || user?.role === "admin") && (
-            <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between gap-2">
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Time Tracking
-                  </CardTitle>
-                  {!activeTimer ? (
-                    <Button
-                      size="sm"
-                      onClick={() => startTimerMutation.mutate()}
-                      disabled={startTimerMutation.isPending}
-                      data-testid="button-start-timer"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Start Timer
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => stopTimerMutation.mutate(activeTimer)}
-                      disabled={stopTimerMutation.isPending}
-                      data-testid="button-stop-timer"
-                    >
-                      <Square className="w-4 h-4 mr-2" />
-                      Stop Timer
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-semibold mb-4">
-                    {Math.floor(totalTime / 60)}h {totalTime % 60}m
-                  </div>
-                  {timeEntries.length > 0 && (
-                    <div className="space-y-2">
-                      {timeEntries.map((entry) => (
-                        <div key={entry.id} className="text-sm text-muted-foreground">
-                          {entry.startTime && new Date(entry.startTime).toLocaleString()} -{" "}
-                          {entry.durationMinutes || 0} minutes
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Wrench className="w-4 h-4" />
-                    Parts Used
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-2xl font-semibold">${totalCost.toFixed(2)}</div>
-                  <div className="space-y-2">
-                    {parts.map((part) => (
-                      <div key={part.id} className="flex items-center justify-between p-2 border rounded">
-                        <span>{part.partName}</span>
-                        <span className="text-muted-foreground">
-                          {part.quantity}x ${part.cost.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      placeholder="Part name"
-                      value={newPart.name}
-                      onChange={(e) => setNewPart({ ...newPart, name: e.target.value })}
-                      data-testid="input-part-name"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Cost"
-                      value={newPart.cost}
-                      onChange={(e) => setNewPart({ ...newPart, cost: e.target.value })}
-                      data-testid="input-part-cost"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      value={newPart.quantity}
-                      onChange={(e) => setNewPart({ ...newPart, quantity: e.target.value })}
-                      data-testid="input-part-quantity"
-                    />
-                  </div>
-                  <Button
-                    onClick={() =>
-                      addPartMutation.mutate({
-                        requestId: id!,
-                        partName: newPart.name,
-                        cost: parseFloat(newPart.cost),
-                        quantity: parseInt(newPart.quantity),
-                      })
-                    }
-                    disabled={!newPart.name || !newPart.cost || !newPart.quantity}
-                    className="w-full"
-                    data-testid="button-add-part"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Part
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Paperclip className="w-4 h-4" />
-                    Attachments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {uploads.map((upload) => (
-                    <div key={upload.id} className="flex items-center gap-2 p-2 border rounded">
-                      <Paperclip className="w-4 h-4" />
-                      <a
-                        href={`/objects/${upload.objectPath}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 truncate hover:underline"
-                      >
-                        {upload.fileName}
-                      </a>
-                    </div>
-                  ))}
-                  <ObjectUploader
-                    onGetUploadParameters={async () => {
-                      const response = await fetch("/api/objects/upload", { method: "POST" });
-                      const data = await response.json();
-                      return { method: "PUT" as const, url: data.uploadURL };
-                    }}
-                    onComplete={handleFileUpload}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Upload File
-                  </ObjectUploader>
-                </CardContent>
-              </Card>
-            </>
-          )}
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                Messages
+                <Paperclip className="h-5 w-5" />
+                Attachments ({uploads.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {messages.map((message) => (
-                  <div key={message.id} className="flex gap-3">
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback>U</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="text-sm text-muted-foreground">
-                        {message.createdAt && new Date(message.createdAt).toLocaleString()}
-                      </div>
-                      <p className="mt-1">{message.content}</p>
-                    </div>
+            <CardContent>
+              <div className="space-y-4">
+                {uploads.length > 0 && (
+                  <div className="grid gap-2">
+                    {uploads.map((upload) => (
+                      <a
+                        key={upload.id}
+                        href={upload.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 rounded hover-elevate active-elevate-2 border"
+                        data-testid={`link-attachment-${upload.id}`}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        <span className="text-sm">{upload.name}</span>
+                      </a>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="Write a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  data-testid="textarea-message"
+                )}
+
+                <ObjectUploader
+                  onComplete={handleFileUpload}
+                  onError={(error) => {
+                    console.error("Upload error:", error);
+                    toast({ 
+                      title: "Upload failed", 
+                      description: error.message,
+                      variant: "destructive" 
+                    });
+                  }}
                 />
-                <Button
-                  onClick={() => sendMessageMutation.mutate(newMessage)}
-                  disabled={!newMessage || sendMessageMutation.isPending}
-                  data-testid="button-send-message"
-                >
-                  Send
-                </Button>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        <div className="space-y-6">
-          {user?.role === "admin" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Assignment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select
-                  value={request.assignedToId || ""}
-                  onValueChange={(value) => assignMutation.mutate(value)}
-                >
-                  <SelectTrigger data-testid="select-assign">
-                    <SelectValue placeholder="Assign to..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users
-                      .filter((u) => u.role === "maintenance" || u.role === "admin")
-                      .map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.firstName} {u.lastName}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-          )}
-
-          {(user?.role === "maintenance" || user?.role === "admin") && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select
-                  value={request.status}
-                  onValueChange={(status) => updateStatusMutation.mutate({ status })}
-                >
-                  <SelectTrigger data-testid="select-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="on_hold">On Hold</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-          )}
-
-          {(user?.role === "maintenance" || user?.role === "admin") && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Task Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {notes.map((note) => (
-                  <div key={note.id} className="p-3 border rounded bg-muted/50">
-                    <p className="text-sm">{note.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {note.createdAt && new Date(note.createdAt).toLocaleString()}
-                    </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Messages ({messages.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {messages.length > 0 && (
+                  <div className="space-y-3 mb-4">
+                    {messages.map((message) => {
+                      const sender = users.find(u => u.id === message.userId);
+                      return (
+                        <div 
+                          key={message.id} 
+                          className="border rounded-lg p-3"
+                          data-testid={`message-${message.id}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm" data-testid={`text-sender-${message.id}`}>
+                              {sender ? `${sender.firstName} ${sender.lastName}` : "Unknown User"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(message.createdAt!).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-sm" data-testid={`text-content-${message.id}`}>
+                            {message.content}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-                <Textarea
-                  placeholder="Add a note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  data-testid="textarea-note"
-                />
-                <Button
-                  onClick={() => addNoteMutation.mutate(newNote)}
-                  disabled={!newNote || addNoteMutation.isPending}
-                  className="w-full"
-                  data-testid="button-add-note"
-                >
-                  Add Note
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+                )}
+
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="flex-1"
+                    data-testid="textarea-message"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (newMessage.trim()) {
+                        sendMessageMutation.mutate(newMessage);
+                      }
+                    }}
+                    disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                    data-testid="button-send-message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

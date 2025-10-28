@@ -400,7 +400,6 @@ export default function NewTask() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Unassigned</SelectItem>
                         {maintenanceUsers.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.firstName} {user.lastName}
@@ -429,7 +428,6 @@ export default function NewTask() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No Vendor</SelectItem>
                         {vendors.map((vendor) => (
                           <SelectItem key={vendor.id} value={vendor.id}>
                             {vendor.name}
