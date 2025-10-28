@@ -13,6 +13,7 @@ import { seedDatabase } from "./seed";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "./notifications";
 import {
   insertServiceRequestSchema,
+  insertTaskSchema,
   insertPartUsedSchema,
   insertMessageSchema,
   insertUploadSchema,
@@ -481,10 +482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Role-based filtering
       if (currentUser?.role === "staff") {
         filters.userId = userId; // Only see own requests
-      } else if (currentUser?.role === "maintenance") {
-        filters.assignedToId = userId; // Only see assigned tasks
       }
-      // Admin sees all
+      // Admin and maintenance see all requests
 
       // Optional status filter
       if (req.query.status) {
@@ -522,25 +521,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const requestData = insertServiceRequestSchema.parse({
         ...req.body,
-        requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : new Date(),
-        scheduledDate: req.body.scheduledDate ? new Date(req.body.scheduledDate) : undefined,
         requesterId: userId,
       });
       const request = await storage.createServiceRequest(requestData);
-      
-      // Send notifications to admin and maintenance staff
-      try {
-        const requester = await storage.getUser(userId);
-        const adminAndMaintenance = await storage.getUsersByRoles(['admin', 'maintenance']);
-        
-        if (requester && adminAndMaintenance.length > 0) {
-          await notifyTaskCreated(request, requester, adminAndMaintenance, notificationService);
-        }
-      } catch (notifError) {
-        console.error("Error sending notifications:", notifError);
-        // Don't fail the request if notifications fail
-      }
-      
       res.json(request);
     } catch (error) {
       console.error("Error creating service request:", error);
@@ -548,36 +531,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/service-requests/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      const request = await storage.getServiceRequest(req.params.id);
+
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Only requester or admin can edit
+      if (request.requesterId !== userId && currentUser?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Cannot edit this request" });
+      }
+
+      const updatedRequest = await storage.updateServiceRequest(req.params.id, req.body);
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error updating service request:", error);
+      res.status(500).json({ message: "Failed to update service request" });
+    }
+  });
+
+  app.delete("/api/service-requests/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      const request = await storage.getServiceRequest(req.params.id);
+
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Only requester or admin can delete
+      if (request.requesterId !== userId && currentUser?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Cannot delete this request" });
+      }
+
+      await storage.deleteServiceRequest(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting service request:", error);
+      res.status(500).json({ message: "Failed to delete service request" });
+    }
+  });
+
   app.patch(
     "/api/service-requests/:id/status",
     isAuthenticated,
     requireMaintenanceOrAdmin,
-    requireRequestAccess(true),
     async (req, res) => {
       try {
-        const { status, onHoldReason } = req.body;
-        
-        // Get old status for notification
-        const oldRequest = await storage.getServiceRequest(req.params.id);
-        const oldStatus = oldRequest?.status || 'unknown';
+        const { status, rejectionReason } = req.body;
         
         const request = await storage.updateServiceRequestStatus(
           req.params.id,
           status,
-          onHoldReason
+          rejectionReason
         );
-        
-        // Send notification to requester about status change
-        try {
-          if (request && request.requesterId && oldStatus !== status) {
-            const requester = await storage.getUser(request.requesterId);
-            if (requester) {
-              await notifyStatusChange(request, requester, oldStatus, status, notificationService);
-            }
-          }
-        } catch (notifError) {
-          console.error("Error sending status change notification:", notifError);
-        }
         
         res.json(request);
       } catch (error) {
@@ -589,42 +601,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  app.patch(
-    "/api/service-requests/:id/assign",
-    isAuthenticated,
-    requireAdmin,
-    async (req, res) => {
-      try {
-        const { assignedToId } = req.body;
-        const request = await storage.updateServiceRequestAssignment(
-          req.params.id,
-          assignedToId
-        );
-        
-        // Send notification to assigned user
-        try {
-          if (request && assignedToId) {
-            const assignedTo = await storage.getUser(assignedToId);
-            if (assignedTo) {
-              await notifyTaskAssigned(request, assignedTo, notificationService);
-            }
-          }
-        } catch (notifError) {
-          console.error("Error sending assignment notification:", notifError);
-        }
-        
-        res.json(request);
-      } catch (error) {
-        console.error("Error assigning service request:", error);
-        res
-          .status(500)
-          .json({ message: "Failed to assign service request" });
-      }
-    }
-  );
+  // Task routes (admin and maintenance only)
+  app.get("/api/tasks", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
 
-  // Time tracking routes
-  app.post("/api/time-entries", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req: any, res) => {
+      let filters: any = {};
+
+      // Role-based filtering
+      if (currentUser?.role === "maintenance") {
+        filters.assignedToId = userId; // Only see assigned tasks
+      }
+      // Admin sees all
+
+      // Optional filters from query params
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.assignedToId) {
+        filters.assignedToId = req.query.assignedToId;
+      }
+      if (req.query.assignedVendorId) {
+        filters.assignedVendorId = req.query.assignedVendorId;
+      }
+      if (req.query.areaId) {
+        filters.areaId = req.query.areaId;
+      }
+
+      const tasks = await storage.getTasks(filters);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get("/api/tasks/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  app.post("/api/tasks", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const taskData = insertTaskSchema.parse({
+        ...req.body,
+        createdById: userId,
+        initialDate: req.body.initialDate ? new Date(req.body.initialDate) : new Date(),
+        estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : undefined,
+      });
+      const task = await storage.createTask(taskData);
+      
+      // If request was linked, update its status to converted_to_task
+      if (task.requestId) {
+        try {
+          await storage.updateServiceRequestStatus(task.requestId, 'converted_to_task');
+        } catch (err) {
+          console.error("Error updating request status:", err);
+        }
+      }
+      
+      res.json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/tasks/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const taskData = {
+        ...req.body,
+        initialDate: req.body.initialDate ? new Date(req.body.initialDate) : undefined,
+        estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : undefined,
+      };
+      const task = await storage.updateTask(req.params.id, taskData);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/tasks/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteTask(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  app.patch("/api/tasks/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const { status, onHoldReason } = req.body;
+      
+      const actualCompletionDate = status === 'completed' ? new Date() : undefined;
+      
+      const task = await storage.updateTaskStatus(
+        req.params.id,
+        status,
+        onHoldReason,
+        actualCompletionDate
+      );
+      
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      res.status(500).json({ message: "Failed to update task status" });
+    }
+  });
+
+  // Time tracking routes (for tasks)
+  app.post("/api/time-entries", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const entry = await storage.createTimeEntry({
@@ -683,13 +785,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get(
-    "/api/time-entries/request/:requestId",
+    "/api/time-entries/task/:taskId",
     isAuthenticated,
-    requireRequestAccess(),
+    requireMaintenanceOrAdmin,
     async (req, res) => {
       try {
-        const entries = await storage.getTimeEntriesByRequest(
-          req.params.requestId
+        const entries = await storage.getTimeEntriesByTask(
+          req.params.taskId
         );
         res.json(entries);
       } catch (error) {
@@ -699,8 +801,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Parts routes
-  app.post("/api/parts", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req, res) => {
+  // Parts routes (for tasks)
+  app.post("/api/parts", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
       const partData = insertPartUsedSchema.parse(req.body);
       const part = await storage.createPartUsed(partData);
@@ -711,13 +813,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/parts/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      await storage.deletePartUsed(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting part:", error);
+      res.status(500).json({ message: "Failed to delete part" });
+    }
+  });
+
   app.get(
-    "/api/parts/request/:requestId",
+    "/api/parts/task/:taskId",
     isAuthenticated,
-    requireRequestAccess(),
+    requireMaintenanceOrAdmin,
     async (req, res) => {
       try {
-        const parts = await storage.getPartsByRequest(req.params.requestId);
+        const parts = await storage.getPartsByTask(req.params.taskId);
         res.json(parts);
       } catch (error) {
         console.error("Error fetching parts:", error);
@@ -726,8 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Message routes
-  app.post("/api/messages", isAuthenticated, requireRequestAccess(true), async (req: any, res) => {
+  // Message routes (can be on requests or tasks)
+  app.post("/api/messages", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
       const messageData = insertMessageSchema.parse({
@@ -745,11 +857,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/messages/request/:requestId",
     isAuthenticated,
-    requireRequestAccess(),
     async (req, res) => {
       try {
         const messages = await storage.getMessagesByRequest(
           req.params.requestId
+        );
+        res.json(messages);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        res.status(500).json({ message: "Failed to fetch messages" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/messages/task/:taskId",
+    isAuthenticated,
+    requireMaintenanceOrAdmin,
+    async (req, res) => {
+      try {
+        const messages = await storage.getMessagesByTask(
+          req.params.taskId
         );
         res.json(messages);
       } catch (error) {
@@ -780,20 +908,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
 
-      // Verify user has access to this request
-      const request = await storage.getServiceRequest(req.body.requestId);
-      if (!request) {
-        return res.status(404).json({ error: "Request not found" });
-      }
+      // Verify user has access to upload (either to request or task)
+      if (req.body.requestId) {
+        const request = await storage.getServiceRequest(req.body.requestId);
+        if (!request) {
+          return res.status(404).json({ error: "Request not found" });
+        }
 
-      // Only assigned maintenance staff, requester, or admin can upload
-      const canUpload =
-        currentUser?.role === "admin" ||
-        request.assignedToId === userId ||
-        request.requesterId === userId;
+        // Only requester or admin can upload to requests
+        const canUpload =
+          currentUser?.role === "admin" ||
+          request.requesterId === userId;
 
-      if (!canUpload) {
-        return res.status(403).json({ error: "Forbidden: Cannot upload to this request" });
+        if (!canUpload) {
+          return res.status(403).json({ error: "Forbidden: Cannot upload to this request" });
+        }
+      } else if (req.body.taskId) {
+        const task = await storage.getTask(req.body.taskId);
+        if (!task) {
+          return res.status(404).json({ error: "Task not found" });
+        }
+
+        // Only assigned staff or admin can upload to tasks
+        const canUpload =
+          currentUser?.role === "admin" ||
+          currentUser?.role === "maintenance" ||
+          task.assignedToId === userId;
+
+        if (!canUpload) {
+          return res.status(403).json({ error: "Forbidden: Cannot upload to this task" });
+        }
+      } else {
+        return res.status(400).json({ error: "Either requestId or taskId is required" });
       }
 
       const objectStorageService = new ObjectStorageService();
@@ -807,7 +953,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const uploadData = insertUploadSchema.parse({
-        requestId: req.body.requestId,
+        requestId: req.body.requestId || null,
+        taskId: req.body.taskId || null,
         uploadedById: userId,
         fileName: req.body.fileName,
         fileType: req.body.fileType,
@@ -850,7 +997,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/uploads/request/:requestId",
     isAuthenticated,
-    requireRequestAccess(),
     async (req, res) => {
       try {
         const uploads = await storage.getUploadsByRequest(req.params.requestId);
@@ -862,8 +1008,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Task notes routes
-  app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req: any, res) => {
+  app.get(
+    "/api/uploads/task/:taskId",
+    isAuthenticated,
+    requireMaintenanceOrAdmin,
+    async (req, res) => {
+      try {
+        const uploads = await storage.getUploadsByTask(req.params.taskId);
+        res.json(uploads);
+      } catch (error) {
+        console.error("Error fetching uploads:", error);
+        res.status(500).json({ message: "Failed to fetch uploads" });
+      }
+    }
+  );
+
+  // Task notes routes (for tasks)
+  app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const noteData = insertTaskNoteSchema.parse({
@@ -879,12 +1040,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get(
-    "/api/task-notes/request/:requestId",
+    "/api/task-notes/task/:taskId",
     isAuthenticated,
-    requireRequestAccess(),
+    requireMaintenanceOrAdmin,
     async (req, res) => {
       try {
-        const notes = await storage.getNotesByRequest(req.params.requestId);
+        const notes = await storage.getNotesByTask(req.params.taskId);
         res.json(notes);
       } catch (error) {
         console.error("Error fetching task notes:", error);
