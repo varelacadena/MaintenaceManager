@@ -140,10 +140,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = await storage.getUser(userId);
 
       const users = await storage.getAllUsers();
-      
+
       // Remove passwords from response
       let usersWithoutPasswords = users.map(({ password, ...user }) => user);
-      
+
       // If maintenance role, filter to only show maintenance and admin users
       if (currentUser?.role === "maintenance") {
         usersWithoutPasswords = usersWithoutPasswords.filter(
@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (currentUser?.role === "staff") {
         return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
       }
-      
+
       res.json(usersWithoutPasswords);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -699,17 +699,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/tasks/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
-      const taskData = {
-        ...req.body,
-        initialDate: req.body.initialDate ? new Date(req.body.initialDate) : undefined,
-        estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : undefined,
-      };
-      const task = await storage.updateTask(req.params.id, taskData);
-      if (!task) {
-        return res.status(404).json({ message: "Task not found" });
+      const updateData: any = { ...req.body };
+
+      // Handle actualCompletionDate if provided
+      if (updateData.actualCompletionDate) {
+        updateData.actualCompletionDate = new Date(updateData.actualCompletionDate);
       }
+
+      const task = await storage.updateTask(req.params.id, updateData);
       res.json(task);
     } catch (error) {
       console.error("Error updating task:", error);

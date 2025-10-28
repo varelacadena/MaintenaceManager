@@ -98,6 +98,9 @@ export default function TaskDetail() {
   const [quickInventoryName, setQuickInventoryName] = useState("");
   const [quickInventoryQuantity, setQuickInventoryQuantity] = useState(0);
   const [quickInventoryUnit, setQuickInventoryUnit] = useState("");
+  const [isStopTimerDialogOpen, setIsStopTimerDialogOpen] = useState(false);
+  const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
+  const [holdReason, setHoldReason] = useState("");
 
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -172,7 +175,7 @@ export default function TaskDetail() {
   });
 
   const stopTimerMutation = useMutation({
-    mutationFn: async (timerId: string) => {
+    mutationFn: async ({ timerId, newStatus, onHoldReason }: { timerId: string, newStatus?: string, onHoldReason?: string }) => {
       const entry = timeEntries.find((e) => e.id === timerId);
       if (!entry?.startTime) return;
 
@@ -181,14 +184,31 @@ export default function TaskDetail() {
         (endTime.getTime() - new Date(entry.startTime).getTime()) / (1000 * 60)
       );
 
-      return await apiRequest("PATCH", `/api/time-entries/${timerId}`, {
+      await apiRequest("PATCH", `/api/time-entries/${timerId}`, {
         endTime: endTime.toISOString(),
         durationMinutes,
       });
+
+      // Update task status if specified
+      if (newStatus) {
+        const payload: any = { status: newStatus };
+        if (newStatus === "on_hold" && onHoldReason) {
+          payload.onHoldReason = onHoldReason;
+        }
+        if (newStatus === "completed") {
+          payload.actualCompletionDate = new Date().toISOString();
+        }
+        await apiRequest("PATCH", `/api/tasks/${id}`, payload);
+      }
     },
     onSuccess: () => {
       setActiveTimer(null);
+      setIsStopTimerDialogOpen(false);
+      setIsHoldReasonDialogOpen(false);
+      setHoldReason("");
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Timer stopped" });
     },
   });
@@ -595,7 +615,7 @@ export default function TaskDetail() {
               ) : (
                 <Button
                   variant="destructive"
-                  onClick={() => stopTimerMutation.mutate(activeTimer)}
+                  onClick={() => setIsStopTimerDialogOpen(true)}
                   disabled={stopTimerMutation.isPending}
                   data-testid="button-stop-timer"
                 >
@@ -819,6 +839,105 @@ export default function TaskDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Stop Timer Dialog */}
+      <Dialog open={isStopTimerDialogOpen} onOpenChange={setIsStopTimerDialogOpen}>
+        <DialogContent data-testid="dialog-stop-timer">
+          <DialogHeader>
+            <DialogTitle>Stop Timer</DialogTitle>
+            <DialogDescription>
+              What would you like to do with this task?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                setIsStopTimerDialogOpen(false);
+                setIsHoldReasonDialogOpen(true);
+              }}
+              data-testid="button-hold-task"
+            >
+              Hold Task
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                if (activeTimer) {
+                  stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
+                }
+              }}
+              disabled={stopTimerMutation.isPending}
+              data-testid="button-complete-task"
+            >
+              {stopTimerMutation.isPending ? "Completing..." : "Task Completed"}
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                if (activeTimer) {
+                  stopTimerMutation.mutate({ timerId: activeTimer });
+                }
+              }}
+              disabled={stopTimerMutation.isPending}
+              data-testid="button-stop-only"
+            >
+              Just Stop Timer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hold Reason Dialog */}
+      <Dialog open={isHoldReasonDialogOpen} onOpenChange={setIsHoldReasonDialogOpen}>
+        <DialogContent data-testid="dialog-hold-reason">
+          <DialogHeader>
+            <DialogTitle>Hold Task</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for putting this task on hold
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter reason for holding the task..."
+              value={holdReason}
+              onChange={(e) => setHoldReason(e.target.value)}
+              rows={4}
+              data-testid="textarea-hold-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsHoldReasonDialogOpen(false);
+                setHoldReason("");
+              }}
+              data-testid="button-cancel-hold"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (activeTimer) {
+                  stopTimerMutation.mutate({ 
+                    timerId: activeTimer, 
+                    newStatus: "on_hold",
+                    onHoldReason: holdReason 
+                  });
+                }
+              }}
+              disabled={!holdReason.trim() || stopTimerMutation.isPending}
+              data-testid="button-submit-hold"
+            >
+              {stopTimerMutation.isPending ? "Holding..." : "Hold Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
