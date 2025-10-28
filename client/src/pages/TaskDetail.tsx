@@ -137,11 +137,15 @@ export default function TaskDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      return await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: newStatus });
+      const response = await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: newStatus });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedTask) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      if (updatedTask.requestId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/messages/request", updatedTask.requestId] });
+      }
       toast({ title: "Status updated successfully" });
     },
   });

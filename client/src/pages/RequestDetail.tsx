@@ -35,6 +35,7 @@ import type {
   Area,
   Subdivision,
   User as UserType,
+  Task,
 } from "@shared/schema";
 
 export default function RequestDetail() {
@@ -59,6 +60,13 @@ export default function RequestDetail() {
   const { data: uploads = [] } = useQuery<Upload[]>({
     queryKey: ["/api/uploads/request", id],
     enabled: !!id,
+  });
+
+  // Fetch linked task if request has been converted
+  const { data: linkedTask } = useQuery({
+    queryKey: ["/api/tasks"],
+    enabled: request?.status === "converted_to_task",
+    select: (tasks: any[]) => tasks.find((t: any) => t.requestId === id),
   });
 
   const { data: areas = [] } = useQuery<Area[]>({
@@ -225,6 +233,23 @@ export default function RequestDetail() {
         <Badge className={getStatusColor(request.status)} data-testid="badge-status">
           {request.status.replace("_", " ").toUpperCase()}
         </Badge>
+        {linkedTask && (
+          <Badge 
+            variant="outline" 
+            className={
+              linkedTask.status === "completed" 
+                ? "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20"
+                : linkedTask.status === "in_progress"
+                ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
+                : linkedTask.status === "on_hold"
+                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20"
+                : "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20"
+            }
+            data-testid="badge-task-status"
+          >
+            Task: {linkedTask.status.replace("_", " ").toUpperCase()}
+          </Badge>
+        )}
         <Badge className={getUrgencyColor(request.urgency)} data-testid="badge-urgency">
           {request.urgency.toUpperCase()}
         </Badge>
