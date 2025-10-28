@@ -957,16 +957,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       );
 
-      const uploadData = insertUploadSchema.parse({
-        requestId: req.body.requestId || null,
-        taskId: req.body.taskId || null,
+      const uploadData: any = {
         uploadedById: userId,
         fileName: req.body.fileName,
         fileType: req.body.fileType,
         objectPath: objectPath,
-      });
+      };
 
-      const upload = await storage.createUpload(uploadData);
+      // Set either requestId or taskId, but not both
+      if (req.body.requestId) {
+        uploadData.requestId = req.body.requestId;
+        uploadData.taskId = null;
+      } else {
+        uploadData.requestId = null;
+        uploadData.taskId = req.body.taskId;
+      }
+
+      const validatedUploadData = insertUploadSchema.parse(uploadData);
+      const upload = await storage.createUpload(validatedUploadData);
       res.json(upload);
     } catch (error) {
       console.error("Error creating upload:", error);

@@ -213,12 +213,13 @@ export default function TaskDetail() {
 
   const addUploadMutation = useMutation({
     mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
-      return await apiRequest("PUT", "/api/uploads", {
+      const response = await apiRequest("PUT", "/api/uploads", {
         taskId: id,
         fileName,
         fileType,
         objectUrl,
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
