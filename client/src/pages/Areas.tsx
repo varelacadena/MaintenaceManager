@@ -182,41 +182,44 @@ export default function Areas() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isEditAreaOpen} onOpenChange={setIsEditAreaOpen}>
+        <Dialog open={isEditAreaOpen} onOpenChange={(open) => {
+          setIsEditAreaOpen(open);
+          if (!open) setEditArea(null);
+        }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Area</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Name</label>
-                <Input
-                  value={editArea?.name || ""}
-                  onChange={(e) => setEditArea(editArea ? { ...editArea, name: e.target.value } : null)}
-                  placeholder="e.g., Grounds & Landscaping"
-                  data-testid="input-edit-area-name"
-                />
+            {editArea && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Name</label>
+                  <Input
+                    value={editArea.name}
+                    onChange={(e) => setEditArea({ ...editArea, name: e.target.value })}
+                    placeholder="e.g., Grounds & Landscaping"
+                    data-testid="input-edit-area-name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    value={editArea.description}
+                    onChange={(e) => setEditArea({ ...editArea, description: e.target.value })}
+                    placeholder="Brief description of this area"
+                    data-testid="textarea-edit-area-description"
+                  />
+                </div>
+                <Button
+                  onClick={() => updateAreaMutation.mutate(editArea)}
+                  disabled={!editArea.name || updateAreaMutation.isPending}
+                  className="w-full"
+                  data-testid="button-submit-edit-area"
+                >
+                  Update Area
+                </Button>
               </div>
-              <div>
-                <label className="text-sm font-medium">Description</label>
-                <Textarea
-                  value={editArea?.description || ""}
-                  onChange={(e) =>
-                    setEditArea(editArea ? { ...editArea, description: e.target.value } : null)
-                  }
-                  placeholder="Brief description of this area"
-                  data-testid="textarea-edit-area-description"
-                />
-              </div>
-              <Button
-                onClick={() => editArea && updateAreaMutation.mutate(editArea)}
-                disabled={!editArea?.name || updateAreaMutation.isPending}
-                className="w-full"
-                data-testid="button-submit-edit-area"
-              >
-                Update Area
-              </Button>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
