@@ -29,7 +29,7 @@ import type { Area, Subdivision } from "@shared/schema";
 import { z } from "zod";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useAuth } from "@/hooks/useAuth";
-import { Paperclip, Upload } from "lucide-react";
+import { Paperclip, Upload, X } from "lucide-react";
 
 const categories = [
   "Indoor Renovation",
@@ -53,8 +53,7 @@ export default function NewRequest() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
-  const [uploads, setUploads] = useState<Array<{ name: string; url: string }>>([]);
-  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+  const [pendingUploads, setPendingUploads] = useState<Array<{ name: string; url: string; type: string }>>([]);
 
   const { data: areas = [] } = useQuery<Area[]>({
     queryKey: ["/api/areas"],
@@ -89,17 +88,35 @@ export default function NewRequest() {
       });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      setPendingRequestId(data.id);
-      
-      if (uploads.length === 0) {
-        toast({
-          title: "Request Submitted",
-          description: "Your maintenance request has been submitted successfully.",
-        });
-        navigate(`/requests/${data.id}`);
+
+      // Upload files if any
+      if (pendingUploads.length > 0) {
+        try {
+          for (const upload of pendingUploads) {
+            await apiRequest("PUT", "/api/uploads", {
+              requestId: data.id,
+              fileName: upload.name,
+              fileType: upload.type,
+              objectUrl: upload.url,
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
+        } catch (error: any) {
+          toast({
+            title: "Upload Error",
+            description: error.message || "Request created but some files failed to upload",
+            variant: "destructive",
+          });
+        }
       }
+
+      toast({
+        title: "Request Submitted",
+        description: "Your maintenance request has been submitted successfully.",
+      });
+      navigate(`/requests/${data.id}`);
     },
     onError: (error: any) => {
       toast({
@@ -111,35 +128,24 @@ export default function NewRequest() {
   });
 
   const handleFileUpload = async (result: any) => {
-    if (!pendingRequestId) return;
+    if (result.successful?.length > 0) {
+      const newUploads = result.successful.map((file: any) => ({
+        name: file.name,
+        url: file.uploadURL,
+        type: file.type || "application/octet-stream",
+      }));
 
-    try {
-      for (const file of result.successful) {
-        const uploadUrl = file.uploadURL;
-        const fileName = file.name;
-        const fileType = file.type || "application/octet-stream";
+      setPendingUploads((prev) => [...prev, ...newUploads]);
 
-        await apiRequest("POST", "/api/uploads", {
-          requestId: pendingRequestId,
-          fileName,
-          fileType,
-          objectUrl: uploadUrl,
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
       toast({
-        title: "Request Submitted",
-        description: "Your maintenance request and attachments have been submitted successfully.",
-      });
-      navigate(`/requests/${pendingRequestId}`);
-    } catch (error: any) {
-      toast({
-        title: "Upload Error",
-        description: error.message || "Failed to upload files",
-        variant: "destructive",
+        title: "Files Ready",
+        description: `${newUploads.length} file(s) ready to upload with your request.`,
       });
     }
+  };
+
+  const removeUpload = (index: number) => {
+    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getUploadParameters = async () => {
@@ -351,23 +357,40 @@ export default function NewRequest() {
               <p className="text-sm text-muted-foreground">
                 Upload photos or documents related to this request
               </p>
-              
-              {pendingRequestId && (
-                <ObjectUploader
-                  maxNumberOfFiles={5}
-                  maxFileSize={10485760}
-                  onGetUploadParameters={getUploadParameters}
-                  onComplete={handleFileUpload}
-                  buttonClassName="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Files
-                </ObjectUploader>
-              )}
-              
-              {!pendingRequestId && (
-                <div className="p-4 border border-dashed rounded-md text-center text-sm text-muted-foreground">
-                  Submit the request first, then you can upload files
+
+              <ObjectUploader
+                maxNumberOfFiles={5}
+                maxFileSize={10485760}
+                onGetUploadParameters={getUploadParameters}
+                onComplete={handleFileUpload}
+                buttonClassName="w-full"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Files
+              </ObjectUploader>
+
+              {pendingUploads.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <p className="text-sm font-medium">Pending uploads:</p>
+                  {pendingUploads.map((upload, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted rounded-md"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Paperclip className="w-4 h-4" />
+                        <span className="text-sm">{upload.name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeUpload(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
