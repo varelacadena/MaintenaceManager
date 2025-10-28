@@ -372,8 +372,7 @@ export default function NewRequest() {
               <div className="bg-muted/30 rounded-lg border-2 border-dashed p-8">
                 <div className="flex gap-8">
                   {/* Left side - Upload area */}
-                  <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                    <Upload className="w-12 h-12 text-primary" strokeWidth={1.5} />
+                  <div className="flex-1 flex items-center justify-center">
                     <ObjectUploader
                       maxNumberOfFiles={5}
                       maxFileSize={10485760}
