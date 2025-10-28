@@ -21,11 +21,32 @@ The platform provides role-based dashboards with workflows optimized for daily o
 - All routes updated: service request PATCH/DELETE, task CRUD, status updates
 - Database trigger migration updated to work with taskId
 
-**Frontend Implementation (IN PROGRESS):**
+**Frontend Implementation (COMPLETED):**
 - Updated AppSidebar: "Service Requests" and "Tasks" navigation for admin/maintenance
-- Created Tasks.tsx page for viewing/managing tasks
-- Task routing added to App.tsx
-- Remaining work: TaskDetail page, task creation workflow, update Calendar/Requests pages
+- Created Tasks.tsx page for viewing/managing tasks with filters by status and urgency
+- Created TaskDetail.tsx page with:
+  - Full task information display (name, description, urgency, status, dates, area, assignment)
+  - Time tracking with start/stop timer functionality
+  - Parts used management with inventory item selection
+  - Task notes for work log documentation
+  - Status update controls for maintenance/admin users
+  - Link to original service request if task was converted
+- Created NewTask.tsx page for:
+  - Creating new tasks from scratch (admin/maintenance only)
+  - Converting service requests to tasks with pre-filled data
+  - Full task configuration (dates, assignment, urgency, type, area/subdivision)
+  - Automatic request status update when converting to task
+- Updated Requests.tsx page with:
+  - Simplified view for new request model (submitted/under_review/converted_to_task/rejected statuses)
+  - Edit/delete buttons for request authors (staff) on submitted requests
+  - Convert to Task button for admin/maintenance on under_review requests
+  - Role-based UI (different views for staff vs admin/maintenance)
+- Updated Calendar.tsx page to:
+  - Display tasks instead of requests based on initialDate
+  - Show task urgency indicators and status badges
+  - Navigate to task detail pages
+  - Include New Task button for admin/maintenance users
+- Full routing configured in App.tsx for all task-related pages
 
 **Previous Features:**
 - User Management: phone numbers, full editing, credentials management
@@ -35,9 +56,9 @@ The platform provides role-based dashboards with workflows optimized for daily o
 - Database Triggers: automatic inventory updates when parts used on tasks
 
 **Next Steps:**
-- Complete frontend task management pages
-- Data migration for existing service_requests
-- End-to-end testing of request-to-task workflow
+- Data migration script for existing service_requests (if any exist)
+- End-to-end testing of complete request-to-task workflow
+- Optional enhancements: request edit functionality, vendor task history
 
 ## User Preferences
 

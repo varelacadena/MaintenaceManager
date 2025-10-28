@@ -4,20 +4,34 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-import type { ServiceRequest } from "@shared/schema";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import type { Task } from "@shared/schema";
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+const statusColors: Record<string, string> = {
+  not_started: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",
+  in_progress: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  on_hold: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
+  completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
+};
+
+const urgencyColors = {
+  low: "bg-blue-500",
+  medium: "bg-yellow-500",
+  high: "bg-red-500",
+};
+
 export default function Calendar() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { data: requests = [] } = useQuery<ServiceRequest[]>({
-    queryKey: ["/api/service-requests"],
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
   });
 
-  // Get the current month's days
   const monthDays = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -28,12 +42,10 @@ export default function Calendar() {
 
     const days: (number | null)[] = [];
     
-    // Add empty slots for days before the month starts
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(null);
     }
     
-    // Add all days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(i);
     }
@@ -41,26 +53,25 @@ export default function Calendar() {
     return days;
   }, [currentDate]);
 
-  // Group requests by date
-  const requestsByDate = useMemo(() => {
-    const map = new Map<string, ServiceRequest[]>();
+  const tasksByDate = useMemo(() => {
+    const map = new Map<string, Task[]>();
     
-    requests.forEach((request) => {
-      if (request.requestedDate) {
-        const dateKey = new Date(request.requestedDate).toDateString();
+    tasks.forEach((task) => {
+      if (task.initialDate) {
+        const dateKey = new Date(task.initialDate).toDateString();
         if (!map.has(dateKey)) {
           map.set(dateKey, []);
         }
-        map.get(dateKey)?.push(request);
+        map.get(dateKey)?.push(task);
       }
     });
     
     return map;
-  }, [requests]);
+  }, [tasks]);
 
-  const getRequestsForDay = (day: number): ServiceRequest[] => {
+  const getTasksForDay = (day: number): Task[] => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    return requestsByDate.get(date.toDateString()) || [];
+    return tasksByDate.get(date.toDateString()) || [];
   };
 
   const goToPreviousMonth = () => {
@@ -73,34 +84,6 @@ export default function Calendar() {
 
   const goToToday = () => {
     setCurrentDate(new Date());
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-500";
-      case "in_progress":
-        return "bg-blue-500";
-      case "on_hold":
-        return "bg-orange-500";
-      case "completed":
-        return "bg-green-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "high":
-        return "bg-red-500";
-      case "medium":
-        return "bg-yellow-500";
-      case "low":
-        return "bg-green-500";
-      default:
-        return "bg-gray-500";
-    }
   };
 
   const monthYear = currentDate.toLocaleDateString("en-US", {
@@ -117,22 +100,23 @@ export default function Calendar() {
     );
   };
 
-  // Get today's scheduled requests
-  const todayRequests = useMemo(() => {
+  const todayTasks = useMemo(() => {
     const todayKey = today.toDateString();
-    return requestsByDate.get(todayKey) || [];
-  }, [requestsByDate]);
+    return tasksByDate.get(todayKey) || [];
+  }, [tasksByDate]);
+
+  const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold">Calendar</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            View and manage scheduled maintenance
+          <h1 className="text-3xl font-bold" data-testid="text-page-title">Task Calendar</h1>
+          <p className="text-muted-foreground mt-1">
+            View and manage scheduled maintenance tasks
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="icon"
@@ -156,6 +140,12 @@ export default function Calendar() {
           <Button onClick={goToToday} data-testid="button-today">
             Today
           </Button>
+          {isMaintenanceOrAdmin && (
+            <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
+              <Plus className="w-4 h-4 mr-2" />
+              New Task
+            </Button>
+          )}
         </div>
       </div>
 
@@ -177,7 +167,7 @@ export default function Calendar() {
               return <div key={`empty-${index}`} className="min-h-[100px]" />;
             }
 
-            const dayRequests = getRequestsForDay(day);
+            const dayTasks = getTasksForDay(day);
             const isTodayDate = isToday(day);
 
             return (
@@ -196,26 +186,24 @@ export default function Calendar() {
                   {day}
                 </div>
                 <div className="space-y-1">
-                  {dayRequests.slice(0, 3).map((request) => (
+                  {dayTasks.slice(0, 3).map((task) => (
                     <div
-                      key={request.id}
-                      onClick={() => navigate(`/requests/${request.id}`)}
+                      key={task.id}
+                      onClick={() => navigate(`/tasks/${task.id}`)}
                       className="text-xs p-1 rounded cursor-pointer hover-elevate bg-muted"
-                      data-testid={`request-${request.id}`}
+                      data-testid={`task-${task.id}`}
                     >
                       <div className="flex items-center gap-1">
                         <div
-                          className={`w-2 h-2 rounded-full ${getUrgencyColor(
-                            request.urgency
-                          )}`}
+                          className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`}
                         />
-                        <span className="truncate flex-1">{request.title}</span>
+                        <span className="truncate flex-1">{task.name}</span>
                       </div>
                     </div>
                   ))}
-                  {dayRequests.length > 3 && (
+                  {dayTasks.length > 3 && (
                     <div className="text-xs text-muted-foreground">
-                      +{dayRequests.length - 3} more
+                      +{dayTasks.length - 3} more
                     </div>
                   )}
                 </div>
@@ -225,33 +213,35 @@ export default function Calendar() {
         </div>
       </Card>
 
-      {todayRequests.length > 0 && (
+      {todayTasks.length > 0 && (
         <Card className="p-6">
-          <h3 className="font-medium mb-4">Today's Scheduled Tasks</h3>
+          <h3 className="font-semibold text-lg mb-4">Today's Tasks</h3>
           <div className="space-y-3">
-            {todayRequests.map((request) => (
+            {todayTasks.map((task) => (
               <div
-                key={request.id}
-                onClick={() => navigate(`/requests/${request.id}`)}
-                className="flex items-center justify-between p-3 rounded-md bg-muted hover-elevate cursor-pointer"
-                data-testid={`today-request-${request.id}`}
+                key={task.id}
+                onClick={() => navigate(`/tasks/${task.id}`)}
+                className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
+                data-testid={`today-task-${task.id}`}
               >
-                <div className="flex-1">
-                  <h4 className="font-medium">{request.title}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {request.category}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium">{task.name}</h4>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {task.description}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge
-                    className={`${getStatusColor(request.status)} text-white no-default-hover-elevate`}
+                    variant="outline"
+                    className={statusColors[task.status]}
                   >
-                    {request.status.replace("_", " ").toUpperCase()}
+                    {task.status.replace("_", " ")}
                   </Badge>
                   <Badge
-                    className={`${getUrgencyColor(request.urgency)} text-white no-default-hover-elevate`}
+                    variant="outline"
+                    className={urgencyColors[task.urgency]}
                   >
-                    {request.urgency.toUpperCase()}
+                    {task.urgency}
                   </Badge>
                 </div>
               </div>
