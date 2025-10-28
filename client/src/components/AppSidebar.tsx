@@ -22,6 +22,7 @@ import {
   Wrench,
   KeyRound,
   Building2,
+  Package,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -40,6 +41,7 @@ const roleMenus = {
     { title: "User Management", url: "/users", icon: Users },
     { title: "Credentials", url: "/credentials", icon: KeyRound },
     { title: "Vendors", url: "/vendors", icon: Building2 },
+    { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Areas & Subdivisions", url: "/areas", icon: MapPin },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
@@ -49,6 +51,7 @@ const roleMenus = {
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Vendors", url: "/vendors", icon: Building2 },
+    { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   staff: [

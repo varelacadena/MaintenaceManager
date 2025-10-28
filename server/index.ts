@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { log, setupVite, serveStatic } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { registerRoutes } from "./routes";
+import { applyInventoryTriggers } from "./applyMigrations";
 import { db, pool } from "./db";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
@@ -95,6 +96,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Apply database migrations for inventory triggers
+  await applyInventoryTriggers();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -10,6 +10,7 @@ import {
 } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { seedDatabase } from "./seed";
+import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "./notifications";
 import {
   insertServiceRequestSchema,
   insertPartUsedSchema,
@@ -526,6 +527,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requesterId: userId,
       });
       const request = await storage.createServiceRequest(requestData);
+      
+      // Send notifications to admin and maintenance staff
+      try {
+        const requester = await storage.getUser(userId);
+        const adminAndMaintenance = await storage.getUsersByRoles(['admin', 'maintenance']);
+        
+        if (requester && adminAndMaintenance.length > 0) {
+          await notifyTaskCreated(request, requester, adminAndMaintenance, notificationService);
+        }
+      } catch (notifError) {
+        console.error("Error sending notifications:", notifError);
+        // Don't fail the request if notifications fail
+      }
+      
       res.json(request);
     } catch (error) {
       console.error("Error creating service request:", error);
@@ -541,11 +556,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { status, onHoldReason } = req.body;
+        
+        // Get old status for notification
+        const oldRequest = await storage.getServiceRequest(req.params.id);
+        const oldStatus = oldRequest?.status || 'unknown';
+        
         const request = await storage.updateServiceRequestStatus(
           req.params.id,
           status,
           onHoldReason
         );
+        
+        // Send notification to requester about status change
+        try {
+          if (request && request.requesterId && oldStatus !== status) {
+            const requester = await storage.getUser(request.requesterId);
+            if (requester) {
+              await notifyStatusChange(request, requester, oldStatus, status, notificationService);
+            }
+          }
+        } catch (notifError) {
+          console.error("Error sending status change notification:", notifError);
+        }
+        
         res.json(request);
       } catch (error) {
         console.error("Error updating service request status:", error);
@@ -567,6 +600,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.params.id,
           assignedToId
         );
+        
+        // Send notification to assigned user
+        try {
+          if (request && assignedToId) {
+            const assignedTo = await storage.getUser(assignedToId);
+            if (assignedTo) {
+              await notifyTaskAssigned(request, assignedTo, notificationService);
+            }
+          }
+        } catch (notifError) {
+          console.error("Error sending assignment notification:", notifError);
+        }
+        
         res.json(request);
       } catch (error) {
         console.error("Error assigning service request:", error);

@@ -29,12 +29,32 @@ The platform provides role-based dashboards with workflows optimized for daily o
 - Role-based access control (maintenance and admin can manage inventory)
 - Low stock tracking via minQuantity field
 
-**Pending Features:**
-- Inventory management frontend page
-- Link inventory to tasks for automatic quantity updates
-- Email/SMS notification integrations
-- Task status notification triggers
-- Workflow modifications (remove completion date for staff, add review/scheduling workflow)
+**Notification System:**
+- Complete notification service infrastructure (server/notifications.ts)
+- Email notification support (ready for Resend, SendGrid, or Gmail integration)
+- SMS notification support (ready for Twilio integration)
+- Automated notification triggers:
+  - New task creation → notifies all admin and maintenance users
+  - Status changes → notifies requester with previous and new status
+  - Task assignment → notifies assigned maintenance worker
+- Console logging (production services can be integrated via environment setup)
+- Integration IDs available for user setup:
+  - Email: connector:ccfg_sendgrid, connector:ccfg_resend, connector:ccfg_google-mail
+  - SMS: connector:ccfg_twilio
+
+**Database Triggers for Inventory Management:**
+- PostgreSQL trigger function: `update_inventory_on_parts_used()`
+- Automatically decrements inventory when parts are used on tasks
+- Handles INSERT, UPDATE, and DELETE operations on parts_used table
+- CHECK constraint prevents negative inventory quantities
+- Thread-safe concurrent update handling at database level
+- Migration file: server/migrations/001_inventory_triggers.sql
+- Applied automatically on server startup via applyMigrations.ts
+
+**Pending Enhancements:**
+- Production integration of email/SMS services (infrastructure ready)
+- Advanced workflow features (priority-based auto-scheduling, review queue)
+- Enhanced reporting and analytics dashboard
 
 ## User Preferences
 

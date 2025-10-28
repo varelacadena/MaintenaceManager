@@ -203,6 +203,12 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUsersByRoles(roles: string[]): Promise<User[]> {
+    return await db.select().from(users).where(
+      or(...roles.map(role => eq(users.role, role)))
+    );
+  }
+
   async createUser(userData: {
     username: string;
     password: string;
@@ -429,6 +435,7 @@ export class DatabaseStorage implements IStorage {
 
   // Parts used operations
   async createPartUsed(partData: InsertPartUsed): Promise<PartUsed> {
+    // Database trigger automatically updates inventory quantities
     const [part] = await db.insert(partsUsed).values(partData).returning();
     return part;
   }

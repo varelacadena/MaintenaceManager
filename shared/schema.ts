@@ -154,6 +154,7 @@ export type TimeEntry = typeof timeEntries.$inferSelect;
 export const partsUsed = pgTable("parts_used", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id), // Link to inventory
   partName: varchar("part_name", { length: 200 }).notNull(),
   quantity: integer("quantity").notNull(),
   cost: doublePrecision("cost").notNull().default(0),

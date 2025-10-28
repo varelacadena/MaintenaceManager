@@ -20,6 +20,7 @@ import Users from "@/pages/Users";
 import Areas from "@/pages/Areas";
 import Credentials from "@/pages/Credentials";
 import Vendors from "@/pages/Vendors";
+import Inventory from "@/pages/Inventory";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -89,6 +90,7 @@ function AuthenticatedApp() {
                 <Route path="/areas" component={Areas} />
                 <Route path="/credentials" component={Credentials} />
                 <Route path="/vendors" component={Vendors} />
+                <Route path="/inventory" component={Inventory} />
                 <Route component={NotFound} />
               </Switch>
             </main>
