@@ -62,6 +62,7 @@ import type {
   InventoryItem,
   User as UserType,
   Upload,
+  ServiceRequest
 } from "@shared/schema";
 
 const urgencyColors = {
@@ -135,6 +136,17 @@ export default function TaskDetail() {
     enabled: !!id,
   });
 
+  const { data: request } = useQuery<ServiceRequest>({
+    queryKey: ["/api/service-requests", task?.requestId],
+    enabled: !!task?.requestId,
+  });
+
+  const { data: requester } = useQuery<UserType>({
+    queryKey: ["/api/users", request?.requesterId],
+    enabled: !!request?.requesterId,
+  });
+
+
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
       const response = await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: newStatus });
@@ -162,7 +174,7 @@ export default function TaskDetail() {
     onSuccess: async (data: TimeEntry) => {
       setActiveTimer(data.id);
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
-      
+
       // Auto-update status to in_progress if currently not_started
       if (task?.status === "not_started") {
         try {
@@ -173,7 +185,7 @@ export default function TaskDetail() {
           console.error("Error updating task status:", error);
         }
       }
-      
+
       toast({ title: "Timer started" });
     },
   });
@@ -200,7 +212,7 @@ export default function TaskDetail() {
           payload.actualCompletionDate = new Date().toISOString();
         }
         await apiRequest("PATCH", `/api/tasks/${id}`, payload);
-        
+
         // Create a task note if hold reason was provided
         if (newStatus === "on_hold" && onHoldReason) {
           await apiRequest("POST", "/api/task-notes", { 
@@ -511,6 +523,42 @@ export default function TaskDetail() {
           )}
         </div>
       </div>
+
+      {requester && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Requestor Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
+                <p className="text-base" data-testid="text-requester-name">
+                  {requester.firstName} {requester.lastName}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
+                <p className="text-base" data-testid="text-requester-email">
+                  {requester.email || "Not provided"}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
+                <p className="text-base" data-testid="text-requester-phone">
+                  {requester.phoneNumber || "Not provided"}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Username</h3>
+                <p className="text-base" data-testid="text-requester-username">
+                  {requester.username}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -823,7 +871,7 @@ export default function TaskDetail() {
                       {addPartMutation.isPending ? "Adding..." : "Add Part"}
                     </Button>
                   </DialogFooter>
-                </DialogContent>
+                </Dialog>
               </Dialog>
             </div>
           </CardHeader>
@@ -933,10 +981,10 @@ export default function TaskDetail() {
             <Button
               onClick={() => {
                 if (activeTimer) {
-                  stopTimerMutation.mutate({ 
-                    timerId: activeTimer, 
+                  stopTimerMutation.mutate({
+                    timerId: activeTimer,
                     newStatus: "on_hold",
-                    onHoldReason: holdReason 
+                    onHoldReason: holdReason
                   });
                 }
               }}
