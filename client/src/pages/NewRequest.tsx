@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ import type { Area, Subdivision } from "@shared/schema";
 import { z } from "zod";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useAuth } from "@/hooks/useAuth";
-import { Paperclip, Upload, X } from "lucide-react";
+import { Upload, X, Check } from "lucide-react";
 
 const categories = [
   "Indoor Renovation",
@@ -161,6 +162,19 @@ export default function NewRequest() {
 
   const handleSubmit = (data: FormData) => {
     createRequestMutation.mutate(data);
+  };
+
+  const getFileExtension = (filename: string) => {
+    const ext = filename.split('.').pop()?.toUpperCase();
+    return ext || 'FILE';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 KB';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -350,49 +364,68 @@ export default function NewRequest() {
             />
 
             <div className="space-y-3">
-              <FormLabel className="flex items-center gap-2">
-                <Paperclip className="w-4 h-4" />
-                Attachments (Optional)
-              </FormLabel>
+              <FormLabel>Attachments (Optional)</FormLabel>
               <p className="text-sm text-muted-foreground">
                 Upload photos or documents related to this request
               </p>
 
-              <ObjectUploader
-                maxNumberOfFiles={5}
-                maxFileSize={10485760}
-                onGetUploadParameters={getUploadParameters}
-                onComplete={handleFileUpload}
-                buttonClassName="w-full"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Files
-              </ObjectUploader>
-
-              {pendingUploads.length > 0 && (
-                <div className="space-y-2 mt-3">
-                  <p className="text-sm font-medium">Pending uploads:</p>
-                  {pendingUploads.map((upload, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-muted rounded-md"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Paperclip className="w-4 h-4" />
-                        <span className="text-sm">{upload.name}</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeUpload(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+              <div className="bg-muted/30 rounded-lg border-2 border-dashed p-8">
+                <div className="flex gap-8">
+                  {/* Left side - Upload area */}
+                  <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                    <Upload className="w-12 h-12 text-primary" strokeWidth={1.5} />
+                    <div>
+                      <p className="text-lg font-medium">Drag and Drop file</p>
+                      <p className="text-sm text-muted-foreground">or</p>
                     </div>
-                  ))}
+                    <ObjectUploader
+                      maxNumberOfFiles={5}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={handleFileUpload}
+                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 px-12"
+                    >
+                      Browse
+                    </ObjectUploader>
+                  </div>
+
+                  {/* Right side - File list */}
+                  {pendingUploads.length > 0 && (
+                    <div className="flex-1 space-y-2 max-h-64 overflow-y-auto pr-2">
+                      {pendingUploads.map((upload, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-2 bg-background rounded-md border"
+                        >
+                          {/* File type icon */}
+                          <div className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-semibold text-primary">
+                              {getFileExtension(upload.name)}
+                            </span>
+                          </div>
+                          
+                          {/* File info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{upload.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {upload.type.split('/')[1]?.toUpperCase() || 'FILE'}
+                            </p>
+                          </div>
+
+                          {/* Status/Remove button */}
+                          <button
+                            type="button"
+                            onClick={() => removeUpload(index)}
+                            className="p-1 hover:bg-muted rounded-full transition-colors flex-shrink-0"
+                          >
+                            <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             <Button
