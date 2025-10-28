@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { requireRole, getCurrentUser } from "./middleware";
+import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess } from "./middleware";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes (admin only)
-  app.get("/api/users", isAuthenticated, requireRole("admin"), async (req, res) => {
+  app.get("/api/users", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -49,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/users/:id/role", isAuthenticated, requireRole("admin"), async (req, res) => {
+  app.patch("/api/users/:id/role", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const { role } = req.body;
@@ -78,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/areas", isAuthenticated, requireRole("admin"), async (req, res) => {
+  app.post("/api/areas", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const areaData = insertAreaSchema.parse(req.body);
       const area = await storage.createArea(areaData);
@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/areas/:id", isAuthenticated, requireRole("admin"), async (req, res) => {
+  app.delete("/api/areas/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       await storage.deleteArea(req.params.id);
       res.status(204).send();
@@ -112,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/subdivisions", isAuthenticated, requireRole("admin"), async (req, res) => {
+  app.post("/api/subdivisions", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const subdivisionData = insertSubdivisionSchema.parse(req.body);
       const subdivision = await storage.createSubdivision(subdivisionData);
@@ -155,6 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/service-requests/:id",
     isAuthenticated,
+    requireRequestAccess(),
     async (req, res) => {
       try {
         const request = await storage.getServiceRequest(req.params.id);
@@ -187,6 +188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch(
     "/api/service-requests/:id/status",
     isAuthenticated,
+    requireMaintenanceOrAdmin,
+    requireRequestAccess(true),
     async (req, res) => {
       try {
         const { status, onHoldReason } = req.body;
@@ -208,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch(
     "/api/service-requests/:id/assign",
     isAuthenticated,
-    requireRole("admin"),
+    requireAdmin,
     async (req, res) => {
       try {
         const { assignedToId } = req.body;
@@ -227,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Time tracking routes
-  app.post("/api/time-entries", isAuthenticated, async (req: any, res) => {
+  app.post("/api/time-entries", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const entry = await storage.createTimeEntry({
@@ -241,8 +244,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/time-entries/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/time-entries/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const timeEntry = await storage.getTimeEntry(req.params.id);
+      
+      if (!timeEntry) {
+        return res.status(404).json({ message: "Time entry not found" });
+      }
+      
+      // Verify ownership - only the user who created the entry can update it
+      if (timeEntry.userId !== userId) {
+        // Get current user to check if admin
+        const currentUser = await storage.getUser(userId);
+        if (currentUser?.role !== "admin") {
+          return res.status(403).json({ message: "Forbidden: You can only update your own time entries" });
+        }
+      }
+      
       const { endTime, durationMinutes } = req.body;
       const entry = await storage.updateTimeEntry(
         req.params.id,
@@ -259,6 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/time-entries/request/:requestId",
     isAuthenticated,
+    requireRequestAccess(),
     async (req, res) => {
       try {
         const entries = await storage.getTimeEntriesByRequest(
@@ -273,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Parts routes
-  app.post("/api/parts", isAuthenticated, async (req, res) => {
+  app.post("/api/parts", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req, res) => {
     try {
       const partData = insertPartUsedSchema.parse(req.body);
       const part = await storage.createPartUsed(partData);
@@ -287,6 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/parts/request/:requestId",
     isAuthenticated,
+    requireRequestAccess(),
     async (req, res) => {
       try {
         const parts = await storage.getPartsByRequest(req.params.requestId);
@@ -299,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Message routes
-  app.post("/api/messages", isAuthenticated, async (req: any, res) => {
+  app.post("/api/messages", isAuthenticated, requireRequestAccess(true), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const messageData = insertMessageSchema.parse({
@@ -317,6 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/messages/request/:requestId",
     isAuthenticated,
+    requireRequestAccess(),
     async (req, res) => {
       try {
         const messages = await storage.getMessagesByRequest(
@@ -421,6 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/uploads/request/:requestId",
     isAuthenticated,
+    requireRequestAccess(),
     async (req, res) => {
       try {
         const uploads = await storage.getUploadsByRequest(req.params.requestId);
@@ -433,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Task notes routes
-  app.post("/api/task-notes", isAuthenticated, async (req: any, res) => {
+  app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const noteData = insertTaskNoteSchema.parse({
@@ -451,6 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/task-notes/request/:requestId",
     isAuthenticated,
+    requireRequestAccess(),
     async (req, res) => {
       try {
         const notes = await storage.getNotesByRequest(req.params.requestId);

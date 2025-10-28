@@ -67,6 +67,7 @@ export interface IStorage {
 
   // Time entry operations
   createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
+  getTimeEntry(id: string): Promise<TimeEntry | undefined>;
   updateTimeEntry(
     id: string,
     endTime: Date,
@@ -234,6 +235,14 @@ export class DatabaseStorage implements IStorage {
   // Time entry operations
   async createTimeEntry(entryData: InsertTimeEntry): Promise<TimeEntry> {
     const [entry] = await db.insert(timeEntries).values(entryData).returning();
+    return entry;
+  }
+
+  async getTimeEntry(id: string): Promise<TimeEntry | undefined> {
+    const [entry] = await db
+      .select()
+      .from(timeEntries)
+      .where(eq(timeEntries.id, id));
     return entry;
   }
 
