@@ -17,6 +17,7 @@ import NewRequest from "@/pages/NewRequest";
 import Tasks from "@/pages/Tasks";
 import TaskDetail from "@/pages/TaskDetail";
 import NewTask from "@/pages/NewTask";
+import EditTask from "@/pages/EditTask";
 import Messages from "@/pages/Messages";
 import Calendar from "@/pages/Calendar";
 import Users from "@/pages/Users";
@@ -86,6 +87,7 @@ function AuthenticatedApp() {
                 <Route path="/requests/:id" component={RequestDetail} />
                 <Route path="/new-request" component={NewRequest} />
                 <Route path="/tasks/new" component={NewTask} />
+                <Route path="/tasks/:id/edit" component={EditTask} />
                 <Route path="/tasks" component={Tasks} />
                 <Route path="/tasks/:id" component={TaskDetail} />
                 <Route path="/messages" component={Messages} />
