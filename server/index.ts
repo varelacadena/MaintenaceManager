@@ -24,7 +24,11 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 const PgSession = pgSession(session);
-const store = new PgSession({ pool, createTableIfMissing: true });
+const store = new PgSession({ 
+  pool, 
+  createTableIfMissing: true,
+  tableName: 'sessions'
+});
 
 app.use(
   session({
@@ -56,6 +60,9 @@ passport.deserializeUser(async (id: string, done) => {
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Setup authentication routes
+setupAuth(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
