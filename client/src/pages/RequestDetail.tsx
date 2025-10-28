@@ -85,11 +85,7 @@ export default function RequestDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ status, onHoldReason }: { status: string; onHoldReason?: string }) => {
-      return await apiRequest(`/api/service-requests/${id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, onHoldReason }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("PATCH", `/api/service-requests/${id}/status`, { status, onHoldReason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
@@ -100,11 +96,7 @@ export default function RequestDetail() {
 
   const assignMutation = useMutation({
     mutationFn: async (assignedToId: string) => {
-      return await apiRequest(`/api/service-requests/${id}/assign`, {
-        method: "PATCH",
-        body: JSON.stringify({ assignedToId }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("PATCH", `/api/service-requests/${id}/assign`, { assignedToId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
@@ -114,11 +106,8 @@ export default function RequestDetail() {
 
   const startTimerMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/time-entries", {
-        method: "POST",
-        body: JSON.stringify({ requestId: id, startTime: new Date() }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest("POST", "/api/time-entries", { requestId: id, startTime: new Date() });
+      return response.json();
     },
     onSuccess: (data: TimeEntry) => {
       setActiveTimer(data.id);
@@ -137,11 +126,7 @@ export default function RequestDetail() {
         (endTime.getTime() - new Date(entry.startTime).getTime()) / 60000
       );
       
-      return await apiRequest(`/api/time-entries/${timerId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ endTime, durationMinutes }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("PATCH", `/api/time-entries/${timerId}`, { endTime, durationMinutes });
     },
     onSuccess: () => {
       setActiveTimer(null);
@@ -152,11 +137,7 @@ export default function RequestDetail() {
 
   const addPartMutation = useMutation({
     mutationFn: async (part: { requestId: string; partName: string; cost: number; quantity: number }) => {
-      return await apiRequest("/api/parts", {
-        method: "POST",
-        body: JSON.stringify(part),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/parts", part);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parts/request", id] });
@@ -167,11 +148,7 @@ export default function RequestDetail() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest("/api/messages", {
-        method: "POST",
-        body: JSON.stringify({ requestId: id, content }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/messages", { requestId: id, content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/request", id] });
@@ -180,12 +157,8 @@ export default function RequestDetail() {
   });
 
   const addNoteMutation = useMutation({
-    mutationFn: async (note: string) => {
-      return await apiRequest("/api/task-notes", {
-        method: "POST",
-        body: JSON.stringify({ requestId: id, note }),
-        headers: { "Content-Type": "application/json" },
-      });
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/task-notes", { requestId: id, content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/request", id] });
@@ -199,15 +172,11 @@ export default function RequestDetail() {
       const file = result.successful[0];
       
       try {
-        await apiRequest("/api/uploads", {
-          method: "PUT",
-          body: JSON.stringify({
-            requestId: id,
-            objectUrl: file.uploadURL,
-            fileName: file.name,
-            fileType: file.type,
-          }),
-          headers: { "Content-Type": "application/json" },
+        await apiRequest("PUT", "/api/uploads", {
+          requestId: id,
+          objectUrl: file.uploadURL,
+          fileName: file.name,
+          fileType: file.type,
         });
         
         queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
@@ -292,8 +261,8 @@ export default function RequestDetail() {
                   <p className="mt-1">{request.category}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Location</label>
-                  <p className="mt-1">{request.location || "N/A"}</p>
+                  <label className="text-sm font-medium text-muted-foreground">Area</label>
+                  <p className="mt-1">{request.areaId || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
@@ -546,7 +515,7 @@ export default function RequestDetail() {
               <CardContent className="space-y-4">
                 {notes.map((note) => (
                   <div key={note.id} className="p-3 border rounded bg-muted/50">
-                    <p className="text-sm">{note.note}</p>
+                    <p className="text-sm">{note.content}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {note.createdAt && new Date(note.createdAt).toLocaleString()}
                     </p>

@@ -1,75 +1,63 @@
 import { useState } from "react";
-import MessageThread from "@/components/MessageThread";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
-
-//todo: remove mock functionality
-const mockConversations = [
-  {
-    id: "1",
-    requestId: "1001",
-    title: "Leaking faucet - Building A",
-    lastMessage: "I'll check it out this afternoon",
-    timestamp: "2 hours ago",
-    unread: 2,
-    participant: { name: "John Smith", initials: "JS", role: "Maintenance Staff" },
-  },
-  {
-    id: "2",
-    requestId: "1002",
-    title: "Light fixtures - Library",
-    lastMessage: "Parts have been ordered",
-    timestamp: "1 day ago",
-    unread: 0,
-    participant: { name: "Sarah Davis", initials: "SD", role: "Maintenance Staff" },
-  },
-  {
-    id: "3",
-    requestId: "1003",
-    title: "HVAC maintenance check",
-    lastMessage: "Scheduled for next week",
-    timestamp: "3 days ago",
-    unread: 1,
-    participant: { name: "Mike Johnson", initials: "MJ", role: "Maintenance Staff" },
-  },
-];
-
-const mockMessages = [
-  {
-    id: "1",
-    sender: { name: "Sarah Johnson", initials: "SJ", role: "College Staff" },
-    content: "The water heater in Building C needs immediate attention. It's not producing hot water.",
-    timestamp: "Oct 28, 10:30 AM",
-    isOwn: false,
-  },
-  {
-    id: "2",
-    sender: { name: "John Smith", initials: "JS", role: "Maintenance Staff" },
-    content: "I'll check it out this afternoon. Should have it fixed by end of day.",
-    timestamp: "Oct 28, 11:15 AM",
-    isOwn: true,
-  },
-  {
-    id: "3",
-    sender: { name: "Sarah Johnson", initials: "SJ", role: "College Staff" },
-    content: "Thank you! Students are complaining about cold showers.",
-    timestamp: "Oct 28, 11:20 AM",
-    isOwn: false,
-  },
-];
+import { Search, Send } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { ServiceRequest, Message } from "@shared/schema";
 
 export default function Messages() {
-  const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
+  const [, navigate] = useLocation();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+
+  const { data: requests = [] } = useQuery<ServiceRequest[]>({
+    queryKey: ["/api/service-requests"],
+  });
+
+  const { data: messages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages/request", selectedRequestId],
+    enabled: !!selectedRequestId,
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/messages", {
+        requestId: selectedRequestId,
+        content,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages/request", selectedRequestId],
+      });
+      setNewMessage("");
+    },
+  });
+
+  const requestsWithMessages = requests.filter(
+    (req) =>
+      req.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.id.includes(searchQuery)
+  );
+
+  const selectedRequest = requests.find((r) => r.id === selectedRequestId);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Messages</h1>
-        <p className="text-sm text-muted-foreground mt-1">Communicate about maintenance requests</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Communicate about maintenance requests
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
@@ -78,7 +66,7 @@ export default function Messages() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search conversations..."
+                placeholder="Search requests..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -87,66 +75,138 @@ export default function Messages() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {mockConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                onClick={() => setSelectedConversation(conversation)}
-                className={`p-4 border-b cursor-pointer hover-elevate ${
-                  selectedConversation.id === conversation.id ? 'bg-muted' : ''
-                }`}
-                data-testid={`conversation-${conversation.id}`}
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage />
-                    <AvatarFallback>{conversation.participant.initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-medium text-sm truncate">{conversation.title}</h3>
-                      {conversation.unread > 0 && (
-                        <Badge variant="default" className="rounded-full px-2">
-                          {conversation.unread}
+            {requestsWithMessages.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                No requests found
+              </div>
+            ) : (
+              requestsWithMessages.map((request) => (
+                <div
+                  key={request.id}
+                  onClick={() => setSelectedRequestId(request.id)}
+                  className={`p-4 border-b cursor-pointer hover-elevate ${
+                    selectedRequestId === request.id ? "bg-muted" : ""
+                  }`}
+                  data-testid={`request-${request.id}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback>
+                        {request.title.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="font-medium text-sm truncate">
+                          {request.title}
+                        </h3>
+                        <Badge
+                          variant="outline"
+                          className="text-xs no-default-hover-elevate"
+                        >
+                          {request.status.replace("_", " ")}
                         </Badge>
-                      )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Request #{request.id.substring(0, 8)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {request.category}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {conversation.participant.name} • #{conversation.requestId}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {conversation.lastMessage}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">{conversation.timestamp}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 
-        <Card className="lg:col-span-2 overflow-hidden">
-          <div className="h-full">
-            <div className="p-4 border-b">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage />
-                  <AvatarFallback>{selectedConversation.participant.initials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">{selectedConversation.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedConversation.participant.name} • Request #{selectedConversation.requestId}
-                  </p>
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+          {selectedRequest ? (
+            <>
+              <div className="p-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold">{selectedRequest.title}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Request #{selectedRequest.id.substring(0, 8)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/requests/${selectedRequest.id}`)}
+                    data-testid="button-view-request"
+                  >
+                    View Request
+                  </Button>
                 </div>
               </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-12">
+                    No messages yet. Start the conversation!
+                  </div>
+                ) : (
+                  messages.map((message) => {
+                    const isOwn = message.userId === user?.id;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                        data-testid={`message-${message.id}`}
+                      >
+                        <div
+                          className={`max-w-[70%] rounded-lg p-3 ${
+                            isOwn
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          }`}
+                        >
+                          <p className="text-sm">{message.content}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              isOwn
+                                ? "text-primary-foreground/70"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {message.createdAt &&
+                              new Date(message.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <div className="p-4 border-t">
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Type your message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="resize-none"
+                    rows={2}
+                    data-testid="textarea-new-message"
+                  />
+                  <Button
+                    onClick={() => sendMessageMutation.mutate(newMessage)}
+                    disabled={
+                      !newMessage.trim() || sendMessageMutation.isPending
+                    }
+                    data-testid="button-send-message"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              Select a request to view messages
             </div>
-            <div className="h-[calc(100%-80px)]">
-              <MessageThread
-                messages={mockMessages}
-                onSendMessage={(msg) => console.log('Sent message:', msg)}
-              />
-            </div>
-          </div>
+          )}
         </Card>
       </div>
     </div>
