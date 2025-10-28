@@ -36,6 +36,15 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(userData: {
+    username: string;
+    password: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    role: string;
+  }): Promise<User>;
 
   // Area operations
   getAreas(): Promise<Area[]>;
@@ -126,6 +135,30 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: {
+    username: string;
+    password: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    role: string;
+  }): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .returning();
+    return user;
+  }
+
 
   // Area operations
   async getAreas(): Promise<Area[]> {

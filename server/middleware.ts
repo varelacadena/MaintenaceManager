@@ -8,7 +8,7 @@ export function requireRole(...allowedRoles: string[]): RequestHandler {
     }
 
     const userId = req.user.claims.sub;
-    
+
     // Get user from database to check current role
     const { storage } = await import("./storage");
     const user = await storage.getUser(userId);
@@ -32,9 +32,15 @@ export function requireRole(...allowedRoles: string[]): RequestHandler {
 }
 
 // Helper to get current user from request
-export function getCurrentUser(req: any) {
-  return req.currentUser;
-}
+export const getCurrentUser = async (req: any): Promise<User | null> => {
+  try {
+    const userId = req.userId;
+    if (!userId) return null;
+    return await storage.getUser(userId);
+  } catch (error) {
+    return null;
+  }
+};
 
 // Specific role middleware wrappers
 export const requireAdmin = requireRole("admin");
@@ -44,16 +50,16 @@ export const requireStaffOrHigher = requireRole("staff", "maintenance", "admin")
 // Helper to check if user can access a specific request
 export async function canAccessRequest(userId: string, requestId: string, requireAssignedOrRequester: boolean = false): Promise<boolean> {
   const { storage } = await import("./storage");
-  
+
   const user = await storage.getUser(userId);
   if (!user) return false;
-  
+
   // Admins can access all requests
   if (user.role === "admin") return true;
-  
+
   const request = await storage.getServiceRequest(requestId);
   if (!request) return false;
-  
+
   // Maintenance can access all requests
   if (user.role === "maintenance") {
     if (requireAssignedOrRequester) {
@@ -62,12 +68,12 @@ export async function canAccessRequest(userId: string, requestId: string, requir
     }
     return true;
   }
-  
+
   // Staff can only access their own requests
   if (user.role === "staff") {
     return request.requesterId === userId;
   }
-  
+
   return false;
 }
 
@@ -79,23 +85,23 @@ export function requireRequestAccess(requireAssignedOrRequester: boolean = false
       const { storage } = await import("./storage");
       req.currentUser = await storage.getUser(req.user.claims.sub);
     }
-    
+
     if (!req.currentUser) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    
+
     const requestId = req.params.id || req.params.requestId || req.body.requestId;
     if (!requestId) {
       return res.status(400).json({ message: "Request ID required" });
     }
-    
+
     const hasAccess = await canAccessRequest(req.currentUser.id, requestId, requireAssignedOrRequester);
     if (!hasAccess) {
       return res.status(403).json({
         message: "Forbidden: You don't have access to this request"
       });
     }
-    
+
     next();
   };
 }

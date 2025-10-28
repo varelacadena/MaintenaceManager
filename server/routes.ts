@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess } from "./middleware";
+import bcrypt from "bcryptjs";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -29,12 +30,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const user = await storage.getUser(userId);
-      res.json(user);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Create new user (admin only)
+  app.post("/api/users", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { username, password, email, firstName, lastName, role } = req.body;
+
+      if (!username || !password || !role) {
+        return res.status(400).json({ message: "Username, password, and role are required" });
+      }
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        email,
+        firstName,
+        lastName,
+        role,
+      });
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
     }
   });
 
@@ -126,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Service request routes
   app.get("/api/service-requests", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const currentUser = await storage.getUser(userId);
 
       let filters: any = {};
@@ -172,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/service-requests", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const requestData = insertServiceRequestSchema.parse({
         ...req.body,
         requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : new Date(),
@@ -234,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Time tracking routes
   app.post("/api/time-entries", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const entry = await storage.createTimeEntry({
         ...req.body,
         startTime: req.body.startTime ? new Date(req.body.startTime) : new Date(),
@@ -337,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Message routes
   app.post("/api/messages", isAuthenticated, requireRequestAccess(true), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const messageData = insertMessageSchema.parse({
         ...req.body,
         senderId: userId,
@@ -385,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "objectUrl is required" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const currentUser = await storage.getUser(userId);
       
       // Verify user has access to this request
@@ -473,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task notes routes
   app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, requireRequestAccess(true), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const noteData = insertTaskNoteSchema.parse({
         ...req.body,
         userId,

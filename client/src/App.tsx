@@ -95,7 +95,10 @@ function AuthenticatedApp() {
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <button
-                  onClick={() => (window.location.href = "/api/logout")}
+                  onClick={async () => {
+                    await fetch("/api/logout", { method: "POST" });
+                    window.location.href = "/";
+                  }}
                   className="text-sm text-muted-foreground hover:text-foreground"
                   data-testid="button-logout"
                 >

@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,25 @@ import { Users as UsersIcon, Mail, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState } from "react";
+import { UserPlus } from "lucide-react";
 
 export default function Users() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: "",
+    password: "",
+    email: "",
+    firstName: "",
+    lastName: "",
+    role: "staff",
+  });
+
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
@@ -41,6 +57,35 @@ export default function Users() {
     },
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: async (newUser: typeof newUser) => {
+      return await apiRequest("POST", "/api/users", newUser);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setNewUser({
+        username: "",
+        password: "",
+        email: "",
+        firstName: "",
+        lastName: "",
+        role: "staff",
+      });
+      setIsDialogOpen(false);
+      toast({
+        title: "User Created",
+        description: "A new user has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
@@ -57,11 +102,11 @@ export default function Users() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "admin":
-        return "Admin Maintenance";
+        return "Admin";
       case "maintenance":
-        return "Maintenance Staff";
+        return "Maintenance";
       case "staff":
-        return "College Staff";
+        return "Staff";
       default:
         return role;
     }
@@ -80,13 +125,92 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold" data-testid="text-users-title">
-          User Management
-        </h1>
-        <p className="text-muted-foreground">
-          Manage user roles and permissions
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold mb-2">User Management</h1>
+          <p className="text-muted-foreground">Manage user roles and permissions</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Create User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              createUserMutation.mutate(newUser);
+            }} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username *</Label>
+                <Input
+                  id="username"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={newUser.firstName}
+                  onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={newUser.lastName}
+                  onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
+                <Select
+                  value={newUser.role}
+                  onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full" disabled={createUserMutation.isPending}>
+                {createUserMutation.isPending ? "Creating..." : "Create User"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -135,12 +259,7 @@ export default function Users() {
               const initials =
                 user.firstName && user.lastName
                   ? `${user.firstName[0]}${user.lastName[0]}`
-                  : user.email?.[0]?.toUpperCase() || "U";
-
-              const displayName =
-                user.firstName && user.lastName
-                  ? `${user.firstName} ${user.lastName}`
-                  : user.email || "Unknown User";
+                  : user.username?.[0]?.toUpperCase() || "U";
 
               return (
                 <div
@@ -154,7 +273,11 @@ export default function Users() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-medium">{displayName}</span>
+                      <span className="font-medium">
+                        {user.firstName && user.lastName
+                          ? `${user.firstName} ${user.lastName}`
+                          : user.username}
+                      </span>
                       <Badge
                         className={`${getRoleBadgeColor(user.role)} no-default-hover-elevate`}
                       >
@@ -163,7 +286,7 @@ export default function Users() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Mail className="w-3 h-3" />
-                      <span>{user.email}</span>
+                      <span>{user.email || user.username}</span>
                     </div>
                   </div>
 
@@ -178,9 +301,9 @@ export default function Users() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="staff">College Staff</SelectItem>
-                      <SelectItem value="maintenance">Maintenance Staff</SelectItem>
-                      <SelectItem value="admin">Admin Maintenance</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
