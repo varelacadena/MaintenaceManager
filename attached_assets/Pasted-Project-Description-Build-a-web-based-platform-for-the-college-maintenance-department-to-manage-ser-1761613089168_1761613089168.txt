@@ -1,0 +1,68 @@
+Project Description:
+Build a web-based platform for the college maintenance department to manage service requests, track tasks, and organize maintenance operations across multiple areas. The system will have role-based access for Admin Maintenance, Maintenance Staff, and College Staff.
+
+Features & Requirements:
+
+1. User Roles & Permissions:
+
+Admin Maintenance: Full access. Can create/modify subdivisions, manage users, assign tasks, and view all reports.
+
+Maintenance Staff: View tasks, update status, track work time, communicate with staff, log parts used, upload invoices/photos.
+
+College Staff: Submit service requests (indoor renovation, electrical, plumbing, HVAC, appliances), set date and urgency, communicate with maintenance.
+
+2. Maintenance Areas & Subdivisions:
+
+Areas: Grounds & landscaping, staff housing, water treatment, renovations, building cleaning, auto shop, kitchen appliances, others.
+
+Admin can create subdivisions (e.g., Staff Housing → Houses → Rooms). Include GPS mapping for houses.
+
+3. Service Requests & Dynamic Scheduling:
+
+Requests include type, date, urgency (Low, Medium, High), and notes.
+
+Calendar auto-prioritizes urgent tasks considering staff availability (8:00 AM–4:30 PM).
+
+Messaging portal for staff communication.
+
+4. Maintenance Staff Dashboard:
+
+Daily/weekly work overview, tasks, deadlines, messages.
+
+Task features: Start/Finish button (track time), notes with photo upload, status update (In Progress, On Hold with reason), parts logging, optional invoice upload.
+
+5. Admin Dashboard:
+
+Full visibility of all areas, subdivisions, requests, messages, and staff activities.
+
+User management, task assignment, subdivision management, reporting.
+
+6. Additional Requirements:
+
+Role-based login/authentication
+
+Mobile-friendly interface
+
+Secure handling of sensitive data
+
+Optional map integration for housing locations
+
+Optional file uploads (photos, invoices)
+
+Suggested Stack:
+
+Frontend: React / Vue / Angular
+
+Backend: Node.js / Express
+
+Database: PostgreSQL / MySQL (or NoSQL if needed)
+
+Deliverables:
+
+Fully functional web app with dashboards for all roles
+
+Dynamic scheduling & task management
+
+Messaging portal
+
+Admin panel with user & subdivision management
