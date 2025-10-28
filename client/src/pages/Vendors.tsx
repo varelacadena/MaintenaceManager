@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Vendor, Task } from "@shared/schema";
+import type { Vendor } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -482,34 +482,6 @@ export default function Vendors() {
                 <p className="text-sm text-muted-foreground">Notes</p>
                 <p className="font-medium whitespace-pre-wrap">{selectedVendor.notes || "-"}</p>
               </div>
-
-              {/* Job History Section */}
-              <div className="pt-4 border-t">
-                <h3 className="text-lg font-semibold mb-2">Job History</h3>
-                {vendorTasks && vendorTasks.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Task Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Due Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {vendorTasks.map((task) => (
-                        <TableRow key={task.id}>
-                          <TableCell>{task.name}</TableCell>
-                          <TableCell>{task.status}</TableCell>
-                          <TableCell>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-muted-foreground">No job history found for this vendor.</p>
-                )}
-              </div>
-
               <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                 <div>
                   <p className="text-sm text-muted-foreground">Created</p>
