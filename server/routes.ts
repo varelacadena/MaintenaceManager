@@ -728,14 +728,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/tasks/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
-      const { status, onHoldReason } = req.body;
+      const { status } = req.body;
 
       const actualCompletionDate = status === 'completed' ? new Date() : undefined;
 
       const task = await storage.updateTaskStatus(
         req.params.id,
         status,
-        onHoldReason,
+        undefined,
         actualCompletionDate
       );
 

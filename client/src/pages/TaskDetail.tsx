@@ -192,13 +192,18 @@ export default function TaskDetail() {
       // Update task status if specified
       if (newStatus) {
         const payload: any = { status: newStatus };
-        if (newStatus === "on_hold" && onHoldReason) {
-          payload.onHoldReason = onHoldReason;
-        }
         if (newStatus === "completed") {
           payload.actualCompletionDate = new Date().toISOString();
         }
         await apiRequest("PATCH", `/api/tasks/${id}`, payload);
+        
+        // Create a task note if hold reason was provided
+        if (newStatus === "on_hold" && onHoldReason) {
+          await apiRequest("POST", "/api/task-notes", { 
+            taskId: id, 
+            content: `Task placed on hold: ${onHoldReason}` 
+          });
+        }
       }
     },
     onSuccess: () => {
@@ -209,6 +214,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       toast({ title: "Timer stopped" });
     },
   });
