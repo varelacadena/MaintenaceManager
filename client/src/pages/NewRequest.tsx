@@ -277,7 +277,7 @@ export default function NewRequest() {
               name="requestedDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Requested Completion Date</FormLabel>
+                  <FormLabel>Date</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
