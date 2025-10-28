@@ -391,14 +391,14 @@ export default function NewTask() {
                 name="assignedToId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assign To Staff (Optional)</FormLabel>
+                    <FormLabel>Assign To Maintenance Staff (Optional)</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value || ""}
                     >
                       <FormControl>
                         <SelectTrigger data-testid="select-assigned-user">
-                          <SelectValue placeholder="Select staff member" />
+                          <SelectValue placeholder="Select maintenance staff member" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
