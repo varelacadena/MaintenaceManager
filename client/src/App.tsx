@@ -19,45 +19,8 @@ import Calendar from "@/pages/Calendar";
 import Users from "@/pages/Users";
 import Areas from "@/pages/Areas";
 
-function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/requests" component={Requests} />
-          <Route path="/requests/:id" component={RequestDetail} />
-          <Route path="/my-requests" component={Requests} />
-          <Route path="/new-request" component={NewRequest} />
-          <Route path="/messages" component={Messages} />
-          <Route path="/calendar" component={Calendar} />
-          <Route path="/tasks" component={Requests} />
-          <Route path="/users" component={Users} />
-          <Route path="/areas" component={Areas} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
 function AuthenticatedApp() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
 
   const style = {
     "--sidebar-width": "16rem",
@@ -72,7 +35,7 @@ function AuthenticatedApp() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Landing />;
   }
 
@@ -111,7 +74,19 @@ function AuthenticatedApp() {
               </div>
             </header>
             <main className="flex-1 overflow-auto p-8">
-              <Router />
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/requests" component={Requests} />
+                <Route path="/requests/:id" component={RequestDetail} />
+                <Route path="/my-requests" component={Requests} />
+                <Route path="/new-request" component={NewRequest} />
+                <Route path="/messages" component={Messages} />
+                <Route path="/calendar" component={Calendar} />
+                <Route path="/tasks" component={Requests} />
+                <Route path="/users" component={Users} />
+                <Route path="/areas" component={Areas} />
+                <Route component={NotFound} />
+              </Switch>
             </main>
           </div>
         </div>
