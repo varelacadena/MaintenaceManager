@@ -749,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/time-entries/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const timeEntry = await storage.getTimeEntry(req.params.id);
 
       if (!timeEntry) {
@@ -984,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const objectStorageService = new ObjectStorageService();
       const objectFile = await objectStorageService.getObjectEntityFile(
         req.path
