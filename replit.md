@@ -8,53 +8,36 @@ The platform provides role-based dashboards with workflows optimized for daily o
 
 ## Recent Updates (October 28, 2025)
 
-**User Management Enhancements:**
-- Added phone number field to users table for contact information
-- Enhanced Credentials page with full user editing (username, email, phone, first/last name)
-- Separate dialogs for editing user information vs changing passwords
-- User profile preview dialog showing complete user information
-- All backend routes and validation implemented
+**MAJOR ARCHITECTURAL REFACTORING - Request/Task Separation:**
 
-**Vendor Management System:**
-- Complete vendors schema (name, email, phone, address, contactPerson, notes)
-- Full CRUD backend with proper validation and role-based access
-- Vendors management page accessible to admin and maintenance roles
-- Create, edit, delete, and view vendor details
-- Vendor assignment field added to service requests
+**Backend Implementation (COMPLETED):**
+- Created separate `tasks` table distinct from `service_requests`
+- Service requests are now simple submissions (submitted/under_review/converted_to_task/rejected)
+- Tasks contain all scheduling/assignment fields (initialDate, estimatedCompletionDate, assignedToId, assignedVendorId)
+- Task types: one-time, recurring, reminder
+- Updated all related tables (timeEntries, partsUsed, taskNotes) to reference tasks
+- Messages and uploads can reference either requests or tasks
+- Complete storage layer with task CRUD methods
+- All routes updated: service request PATCH/DELETE, task CRUD, status updates
+- Database trigger migration updated to work with taskId
 
-**Inventory Management System:**
-- Inventory items schema (name, description, quantity, unit, location, minQuantity, cost)
-- Complete backend with CRUD operations
-- Real-time quantity tracking with dedicated update endpoint
-- Role-based access control (maintenance and admin can manage inventory)
-- Low stock tracking via minQuantity field
+**Frontend Implementation (IN PROGRESS):**
+- Updated AppSidebar: "Service Requests" and "Tasks" navigation for admin/maintenance
+- Created Tasks.tsx page for viewing/managing tasks
+- Task routing added to App.tsx
+- Remaining work: TaskDetail page, task creation workflow, update Calendar/Requests pages
 
-**Notification System:**
-- Complete notification service infrastructure (server/notifications.ts)
-- Email notification support (ready for Resend, SendGrid, or Gmail integration)
-- SMS notification support (ready for Twilio integration)
-- Automated notification triggers:
-  - New task creation → notifies all admin and maintenance users
-  - Status changes → notifies requester with previous and new status
-  - Task assignment → notifies assigned maintenance worker
-- Console logging (production services can be integrated via environment setup)
-- Integration IDs available for user setup:
-  - Email: connector:ccfg_sendgrid, connector:ccfg_resend, connector:ccfg_google-mail
-  - SMS: connector:ccfg_twilio
+**Previous Features:**
+- User Management: phone numbers, full editing, credentials management
+- Vendor Management: complete CRUD with task assignment capability
+- Inventory Management: real-time tracking, low stock alerts, automatic updates via DB triggers
+- Notification System: email/SMS infrastructure (ready for production integrations)
+- Database Triggers: automatic inventory updates when parts used on tasks
 
-**Database Triggers for Inventory Management:**
-- PostgreSQL trigger function: `update_inventory_on_parts_used()`
-- Automatically decrements inventory when parts are used on tasks
-- Handles INSERT, UPDATE, and DELETE operations on parts_used table
-- CHECK constraint prevents negative inventory quantities
-- Thread-safe concurrent update handling at database level
-- Migration file: server/migrations/001_inventory_triggers.sql
-- Applied automatically on server startup via applyMigrations.ts
-
-**Pending Enhancements:**
-- Production integration of email/SMS services (infrastructure ready)
-- Advanced workflow features (priority-based auto-scheduling, review queue)
-- Enhanced reporting and analytics dashboard
+**Next Steps:**
+- Complete frontend task management pages
+- Data migration for existing service_requests
+- End-to-end testing of request-to-task workflow
 
 ## User Preferences
 

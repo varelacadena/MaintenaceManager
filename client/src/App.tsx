@@ -14,6 +14,7 @@ import Dashboard from "@/pages/Dashboard";
 import Requests from "@/pages/Requests";
 import RequestDetail from "@/pages/RequestDetail";
 import NewRequest from "@/pages/NewRequest";
+import Tasks from "@/pages/Tasks";
 import Messages from "@/pages/Messages";
 import Calendar from "@/pages/Calendar";
 import Users from "@/pages/Users";
@@ -81,11 +82,10 @@ function AuthenticatedApp() {
                 <Route path="/" component={Dashboard} />
                 <Route path="/requests" component={Requests} />
                 <Route path="/requests/:id" component={RequestDetail} />
-                <Route path="/my-requests" component={Requests} />
                 <Route path="/new-request" component={NewRequest} />
+                <Route path="/tasks" component={Tasks} />
                 <Route path="/messages" component={Messages} />
                 <Route path="/calendar" component={Calendar} />
-                <Route path="/tasks" component={Requests} />
                 <Route path="/users" component={Users} />
                 <Route path="/areas" component={Areas} />
                 <Route path="/credentials" component={Credentials} />

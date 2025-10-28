@@ -35,7 +35,8 @@ interface AppSidebarProps {
 const roleMenus = {
   admin: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    { title: "All Requests", url: "/requests", icon: ClipboardList },
+    { title: "Service Requests", url: "/requests", icon: ClipboardList },
+    { title: "Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "User Management", url: "/users", icon: Users },
@@ -47,6 +48,7 @@ const roleMenus = {
   ],
   maintenance: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "My Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
@@ -56,7 +58,7 @@ const roleMenus = {
   ],
   staff: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    { title: "My Requests", url: "/my-requests", icon: ClipboardList },
+    { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
