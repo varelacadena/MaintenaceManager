@@ -54,6 +54,18 @@ export default function Requests() {
     queryKey: ["/api/service-requests"],
   });
 
+  const { data: areas = [] } = useQuery<any[]>({
+    queryKey: ["/api/areas"],
+  });
+
+  const { data: subdivisions = [] } = useQuery<any[]>({
+    queryKey: ["/api/subdivisions"],
+  });
+
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+  });
+
   const deleteRequestMutation = useMutation({
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/service-requests/${id}`);
@@ -79,113 +91,129 @@ export default function Requests() {
   const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
   const isStaff = user?.role === "staff";
 
+  const getRequesterName = (requesterId: string) => {
+    const requester = users.find((u: any) => u.id === requesterId);
+    return requester ? `${requester.firstName} ${requester.lastName}` : "Unknown";
+  };
+
+  const getAreaName = (areaId: string | null) => {
+    if (!areaId) return "Not specified";
+    const area = areas.find((a: any) => a.id === areaId);
+    return area?.name || "Unknown";
+  };
+
+  const getSubdivisionName = (subdivisionId: string | null) => {
+    if (!subdivisionId) return null;
+    const subdivision = subdivisions.find((s: any) => s.id === subdivisionId);
+    return subdivision?.name || null;
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading requests...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading requests...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            {isStaff ? "My Service Requests" : "All Service Requests"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {isStaff 
-              ? "Submit and track your maintenance requests"
-              : "Review and manage service requests"}
-          </p>
-        </div>
-        <Button onClick={() => navigate("/new-request")} data-testid="button-new-request">
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Service Requests</h1>
+        <Button onClick={() => navigate("/requests/new")} data-testid="button-new-request">
           <Plus className="w-4 h-4 mr-2" />
           New Request
         </Button>
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="flex gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search requests..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            data-testid="input-search-requests"
+            className="pl-10"
+            data-testid="input-search"
           />
         </div>
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="submitted">Submitted</SelectItem>
             <SelectItem value="under_review">Under Review</SelectItem>
             <SelectItem value="converted_to_task">Converted to Task</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
+
         <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
           <SelectTrigger className="w-[180px]" data-testid="select-urgency-filter">
             <SelectValue placeholder="Filter by urgency" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Urgency</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="all">All Urgencies</SelectItem>
             <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {filteredRequests.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="flex items-center justify-center py-12">
             <p className="text-muted-foreground">No requests found</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {filteredRequests.map((request) => (
-            <Card key={request.id} data-testid={`card-request-${request.id}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg mb-2" data-testid={`text-request-title-${request.id}`}>
-                      {request.title}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {request.description}
-                    </p>
+          {filteredRequests.map((request) => {
+            const subdivisionName = getSubdivisionName(request.subdivisionId);
+
+            return (
+              <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-1">{request.title}</CardTitle>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Badge variant="outline" className={urgencyColors[request.urgency]} data-testid={`badge-urgency-${request.id}`}>
+                        {request.urgency}
+                      </Badge>
+                      <Badge variant="outline" className={statusColors[request.status]} data-testid={`badge-status-${request.id}`}>
+                        {request.status.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Badge 
-                      variant="outline" 
-                      className={urgencyColors[request.urgency]}
-                      data-testid={`badge-urgency-${request.id}`}
-                    >
-                      {request.urgency}
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className={statusColors[request.status]}
-                      data-testid={`badge-status-${request.id}`}
-                    >
-                      {request.status.replace("_", " ")}
-                    </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Submitted by</p>
+                      <p className="font-medium">{getRequesterName(request.requesterId)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Submitted</p>
+                      <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Area</p>
+                      <p className="font-medium">{getAreaName(request.areaId)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Location</p>
+                      <p className="font-medium">{subdivisionName || "—"}</p>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="text-sm text-muted-foreground">
-                    Submitted: {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t">
                     <Button
                       variant="outline"
                       size="sm"
@@ -193,21 +221,40 @@ export default function Requests() {
                       data-testid={`button-view-${request.id}`}
                     >
                       View Details
+                      <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
-                    
-                    {isMaintenanceOrAdmin && request.status === "under_review" && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => navigate(`/tasks/new?requestId=${request.id}`)}
-                        data-testid={`button-convert-${request.id}`}
-                      >
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        Convert to Task
-                      </Button>
+
+                    {isMaintenanceOrAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`button-delete-${request.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete this service request. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteRequestMutation.mutate(request.id)}
+                              data-testid={`button-confirm-delete-${request.id}`}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
 
-                    {/* Staff can edit/delete their own submitted requests */}
                     {(isStaff && request.requesterId === user?.id && request.status === "submitted") && (
                       <>
                         <Button
@@ -248,43 +295,11 @@ export default function Requests() {
                         </AlertDialog>
                       </>
                     )}
-                    
-                    {/* Maintenance and admin can delete any request */}
-                    {isMaintenanceOrAdmin && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            data-testid={`button-delete-${request.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete this service request. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteRequestMutation.mutate(request.id)}
-                              data-testid={`button-confirm-delete-${request.id}`}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
