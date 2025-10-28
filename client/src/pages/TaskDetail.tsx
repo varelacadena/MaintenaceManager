@@ -152,9 +152,21 @@ export default function TaskDetail() {
       });
       return response.json();
     },
-    onSuccess: (data: TimeEntry) => {
+    onSuccess: async (data: TimeEntry) => {
       setActiveTimer(data.id);
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+      
+      // Auto-update status to in_progress if currently not_started
+      if (task?.status === "not_started") {
+        try {
+          await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: "in_progress" });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        } catch (error) {
+          console.error("Error updating task status:", error);
+        }
+      }
+      
       toast({ title: "Timer started" });
     },
   });
