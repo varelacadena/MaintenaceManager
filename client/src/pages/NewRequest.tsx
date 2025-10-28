@@ -48,7 +48,6 @@ type FormData = z.infer<typeof formSchema>;
 export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
 
   const { data: areas = [] } = useQuery<Area[]>({
@@ -68,7 +67,7 @@ export default function NewRequest() {
       category: "",
       urgency: "medium",
       requestedDate: new Date().toISOString().split("T")[0],
-      requesterId: user?.id || "",
+      requesterId: "",
       areaId: null,
       subdivisionId: null,
       assignedToId: null,
