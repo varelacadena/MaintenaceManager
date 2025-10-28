@@ -52,7 +52,7 @@ export default function Tasks() {
             {user?.role === "admin" ? "All Tasks" : "My Tasks"}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {user?.role === "admin" 
+            {user?.role === "admin"
               ? "Manage and monitor all maintenance tasks"
               : "View and manage your assigned tasks"}
           </p>
@@ -90,15 +90,15 @@ export default function Tasks() {
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={urgencyColors[task.urgency]}
                         data-testid={`badge-urgency-${task.id}`}
                       >
                         {task.urgency}
                       </Badge>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={statusColors[task.status]}
                         data-testid={`badge-status-${task.id}`}
                       >

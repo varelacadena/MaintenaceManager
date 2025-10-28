@@ -187,7 +187,7 @@ export default function Requests() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => navigate(`/requests/${request.id}`)}
                       data-testid={`button-view-${request.id}`}
