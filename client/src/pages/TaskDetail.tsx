@@ -47,10 +47,12 @@ import {
   ExternalLink,
   Edit,
   Trash2,
+  Paperclip,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import type {
   Task,
   TimeEntry,
@@ -58,6 +60,7 @@ import type {
   TaskNote,
   InventoryItem,
   User as UserType,
+  Upload,
 } from "@shared/schema";
 
 const urgencyColors = {
@@ -78,7 +81,7 @@ export default function TaskDetail() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [newNote, setNewNote] = useState("");
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showAddPart, setShowAddPart] = useState(false);
@@ -113,6 +116,11 @@ export default function TaskDetail() {
     queryKey: ["/api/users"],
   });
 
+  const { data: uploads = [] } = useQuery<Upload[]>({
+    queryKey: ["/api/uploads/task", id],
+    enabled: !!id,
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
       return await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: newStatus });
@@ -144,7 +152,7 @@ export default function TaskDetail() {
     mutationFn: async (timerId: string) => {
       const entry = timeEntries.find((e) => e.id === timerId);
       if (!entry?.startTime) return;
-      
+
       const endTime = new Date();
       const durationMinutes = Math.floor(
         (endTime.getTime() - new Date(entry.startTime).getTime()) / (1000 * 60)
@@ -193,19 +201,49 @@ export default function TaskDetail() {
   });
 
   const addNoteMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/task-notes", {
-        taskId: id,
-        userId: user?.id,
-        content: newNote,
-      });
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/task-notes", { taskId: id, content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       setNewNote("");
-      toast({ title: "Note added successfully" });
+      toast({ title: "Note added" });
     },
   });
+
+  const addUploadMutation = useMutation({
+    mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
+      return await apiRequest("PUT", "/api/uploads", {
+        taskId: id,
+        fileName,
+        fileType,
+        objectUrl,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
+      toast({ title: "File uploaded successfully" });
+    },
+    onError: (error: any) => {
+      console.error("Error saving upload:", error);
+      toast({
+        title: "Upload failed",
+        description: "File uploaded but couldn't be saved to database",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileUpload = async (result: any) => {
+    if (result.successful?.length > 0) {
+      const file = result.successful[0];
+      addUploadMutation.mutate({
+        fileName: file.name,
+        fileType: file.type,
+        objectUrl: file.uploadURL,
+      });
+    }
+  };
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
@@ -570,44 +608,88 @@ export default function TaskDetail() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <Paperclip className="w-5 h-5" />
+            Attachments ({uploads.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {uploads.length > 0 && (
+              <div className="grid gap-2">
+                {uploads.map((upload) => (
+                  <a
+                    key={upload.id}
+                    href={upload.objectPath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-2 rounded hover-elevate active-elevate-2 border"
+                    data-testid={`link-attachment-${upload.id}`}
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    <span className="text-sm">{upload.fileName}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <ObjectUploader
+              onComplete={handleFileUpload}
+              onError={(error) => {
+                console.error("Upload error:", error);
+                toast({
+                  title: "Upload failed",
+                  description: error.message,
+                  variant: "destructive"
+                });
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Task Notes
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {notes.map((note) => {
-            const noteUser = users.find(u => u.id === note.userId);
-            return (
-              <div key={note.id} className="p-3 bg-muted rounded-md">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">
-                    {noteUser?.firstName} {noteUser?.lastName}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
-                  </span>
+        <CardContent>
+          <div className="space-y-4">
+            {notes.map((note) => {
+              const noteUser = users.find(u => u.id === note.userId);
+              return (
+                <div key={note.id} className="p-3 bg-muted rounded-md">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">
+                      {noteUser?.firstName} {noteUser?.lastName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
+                    </span>
+                  </div>
+                  <p className="text-sm">{note.content}</p>
                 </div>
-                <p className="text-sm">{note.content}</p>
+              );
+            })}
+            {isMaintenanceOrAdmin && (
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Add a note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  data-testid="textarea-new-note"
+                />
+                <Button
+                  onClick={() => addNoteMutation.mutate(newNote)}
+                  disabled={!newNote.trim() || addNoteMutation.isPending}
+                  data-testid="button-add-note"
+                >
+                  Add Note
+                </Button>
               </div>
-            );
-          })}
-          {isMaintenanceOrAdmin && (
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Add a note..."
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                data-testid="textarea-new-note"
-              />
-              <Button
-                onClick={() => addNoteMutation.mutate()}
-                disabled={!newNote.trim() || addNoteMutation.isPending}
-                data-testid="button-add-note"
-              >
-                Add Note
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
