@@ -609,13 +609,17 @@ export default function TaskDetail() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Paperclip className="w-5 h-5" />
-            Attachments ({uploads.length})
+            Attachments (Optional)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Upload photos or documents related to this task
+            </p>
+
             {uploads.length > 0 && (
-              <div className="grid gap-2">
+              <div className="grid gap-2 mb-4">
                 {uploads.map((upload) => (
                   <a
                     key={upload.id}
@@ -632,17 +636,22 @@ export default function TaskDetail() {
               </div>
             )}
 
-            <ObjectUploader
-              onComplete={handleFileUpload}
-              onError={(error) => {
-                console.error("Upload error:", error);
-                toast({
-                  title: "Upload failed",
-                  description: error.message,
-                  variant: "destructive"
-                });
-              }}
-            />
+            <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center">
+              <ObjectUploader
+                onComplete={handleFileUpload}
+                onError={(error) => {
+                  console.error("Upload error:", error);
+                  toast({
+                    title: "Upload failed",
+                    description: error.message,
+                    variant: "destructive"
+                  });
+                }}
+                buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Browse
+              </ObjectUploader>
+            </div>
           </div>
         </CardContent>
       </Card>
