@@ -104,24 +104,45 @@ export const insertSubdivisionSchema = createInsertSchema(subdivisions).omit({ i
 export type InsertSubdivision = z.infer<typeof insertSubdivisionSchema>;
 export type Subdivision = typeof subdivisions.$inferSelect;
 
-// Service requests
+// Service requests (simplified - staff submissions that need review)
 export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
-export const statusEnum = pgEnum("status", ["pending", "in_progress", "on_hold", "completed"]);
+export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
-  category: varchar("category", { length: 100 }).notNull(),
   urgency: urgencyEnum("urgency").notNull(),
-  status: statusEnum("status").notNull().default("pending"),
-  requestedDate: timestamp("requested_date").notNull(),
+  status: requestStatusEnum("status").notNull().default("submitted"),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
-  vendorId: varchar("vendor_id").references(() => vendors.id),
   areaId: varchar("area_id").references(() => areas.id),
   subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tasks (created from reviewed requests, managed by admin/maintenance)
+export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "reminder"]);
+export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
+
+export const tasks = pgTable("tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").references(() => serviceRequests.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  urgency: urgencyEnum("urgency").notNull(),
+  areaId: varchar("area_id").references(() => areas.id),
+  subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
+  initialDate: timestamp("initial_date").notNull(),
+  estimatedCompletionDate: timestamp("estimated_completion_date"),
+  actualCompletionDate: timestamp("actual_completion_date"),
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  assignedVendorId: varchar("assigned_vendor_id").references(() => vendors.id),
+  taskType: taskTypeEnum("task_type").notNull().default("one_time"),
+  status: taskStatusEnum("status").notNull().default("not_started"),
   onHoldReason: text("on_hold_reason"),
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -135,10 +156,19 @@ export const insertServiceRequestSchema = createInsertSchema(serviceRequests).om
 export type InsertServiceRequest = z.infer<typeof insertServiceRequestSchema>;
 export type ServiceRequest = typeof serviceRequests.$inferSelect;
 
-// Time tracking
+export const insertTaskSchema = createInsertSchema(tasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  actualCompletionDate: true,
+});
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type Task = typeof tasks.$inferSelect;
+
+// Time tracking (linked to tasks, not requests)
 export const timeEntries = pgTable("time_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
@@ -150,10 +180,10 @@ export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({ id: 
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
 export type TimeEntry = typeof timeEntries.$inferSelect;
 
-// Parts used
+// Parts used (linked to tasks, not requests)
 export const partsUsed = pgTable("parts_used", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
   inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id), // Link to inventory
   partName: varchar("part_name", { length: 200 }).notNull(),
   quantity: integer("quantity").notNull(),
@@ -166,10 +196,11 @@ export const insertPartUsedSchema = createInsertSchema(partsUsed).omit({ id: tru
 export type InsertPartUsed = z.infer<typeof insertPartUsedSchema>;
 export type PartUsed = typeof partsUsed.$inferSelect;
 
-// Messages
+// Messages (can be on requests OR tasks for communication)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -179,10 +210,11 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
-// File uploads
+// File uploads (can be attached to tasks OR requests)
 export const uploads = pgTable("uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
@@ -194,10 +226,10 @@ export const insertUploadSchema = createInsertSchema(uploads).omit({ id: true, c
 export type InsertUpload = z.infer<typeof insertUploadSchema>;
 export type Upload = typeof uploads.$inferSelect;
 
-// Task notes
+// Task notes (linked to tasks, not requests)
 export const taskNotes = pgTable("task_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -210,16 +242,22 @@ export type TaskNote = typeof taskNotes.$inferSelect;
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   requestsCreated: many(serviceRequests, { relationName: "requester" }),
-  requestsAssigned: many(serviceRequests, { relationName: "assignee" }),
+  tasksCreated: many(tasks, { relationName: "task_creator" }),
+  tasksAssigned: many(tasks, { relationName: "task_assignee" }),
   timeEntries: many(timeEntries),
   messages: many(messages),
   uploads: many(uploads),
   taskNotes: many(taskNotes),
 }));
 
+export const vendorsRelations = relations(vendors, ({ many }) => ({
+  tasks: many(tasks),
+}));
+
 export const areasRelations = relations(areas, ({ many }) => ({
   subdivisions: many(subdivisions),
   serviceRequests: many(serviceRequests),
+  tasks: many(tasks),
 }));
 
 export const subdivisionsRelations = relations(subdivisions, ({ one, many }) => ({
@@ -234,6 +272,7 @@ export const subdivisionsRelations = relations(subdivisions, ({ one, many }) => 
   }),
   children: many(subdivisions, { relationName: "subdivision_parent" }),
   serviceRequests: many(serviceRequests),
+  tasks: many(tasks),
 }));
 
 export const serviceRequestsRelations = relations(serviceRequests, ({ one, many }) => ({
@@ -242,17 +281,44 @@ export const serviceRequestsRelations = relations(serviceRequests, ({ one, many 
     references: [users.id],
     relationName: "requester",
   }),
-  assignedTo: one(users, {
-    fields: [serviceRequests.assignedToId],
-    references: [users.id],
-    relationName: "assignee",
-  }),
   area: one(areas, {
     fields: [serviceRequests.areaId],
     references: [areas.id],
   }),
   subdivision: one(subdivisions, {
     fields: [serviceRequests.subdivisionId],
+    references: [subdivisions.id],
+  }),
+  tasks: many(tasks),
+  messages: many(messages),
+  uploads: many(uploads),
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  request: one(serviceRequests, {
+    fields: [tasks.requestId],
+    references: [serviceRequests.id],
+  }),
+  creator: one(users, {
+    fields: [tasks.createdById],
+    references: [users.id],
+    relationName: "task_creator",
+  }),
+  assignedTo: one(users, {
+    fields: [tasks.assignedToId],
+    references: [users.id],
+    relationName: "task_assignee",
+  }),
+  assignedVendor: one(vendors, {
+    fields: [tasks.assignedVendorId],
+    references: [vendors.id],
+  }),
+  area: one(areas, {
+    fields: [tasks.areaId],
+    references: [areas.id],
+  }),
+  subdivision: one(subdivisions, {
+    fields: [tasks.subdivisionId],
     references: [subdivisions.id],
   }),
   timeEntries: many(timeEntries),
@@ -263,9 +329,9 @@ export const serviceRequestsRelations = relations(serviceRequests, ({ one, many 
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
-  request: one(serviceRequests, {
-    fields: [timeEntries.requestId],
-    references: [serviceRequests.id],
+  task: one(tasks, {
+    fields: [timeEntries.taskId],
+    references: [tasks.id],
   }),
   user: one(users, {
     fields: [timeEntries.userId],
@@ -274,13 +340,21 @@ export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
 }));
 
 export const partsUsedRelations = relations(partsUsed, ({ one }) => ({
-  request: one(serviceRequests, {
-    fields: [partsUsed.requestId],
-    references: [serviceRequests.id],
+  task: one(tasks, {
+    fields: [partsUsed.taskId],
+    references: [tasks.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [partsUsed.inventoryItemId],
+    references: [inventoryItems.id],
   }),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
+  task: one(tasks, {
+    fields: [messages.taskId],
+    references: [tasks.id],
+  }),
   request: one(serviceRequests, {
     fields: [messages.requestId],
     references: [serviceRequests.id],
@@ -292,6 +366,10 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 }));
 
 export const uploadsRelations = relations(uploads, ({ one }) => ({
+  task: one(tasks, {
+    fields: [uploads.taskId],
+    references: [tasks.id],
+  }),
   request: one(serviceRequests, {
     fields: [uploads.requestId],
     references: [serviceRequests.id],
@@ -303,9 +381,9 @@ export const uploadsRelations = relations(uploads, ({ one }) => ({
 }));
 
 export const taskNotesRelations = relations(taskNotes, ({ one }) => ({
-  request: one(serviceRequests, {
-    fields: [taskNotes.requestId],
-    references: [serviceRequests.id],
+  task: one(tasks, {
+    fields: [taskNotes.taskId],
+    references: [tasks.id],
   }),
   user: one(users, {
     fields: [taskNotes.userId],
