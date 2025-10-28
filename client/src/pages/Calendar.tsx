@@ -1,12 +1,24 @@
+
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Task } from "@shared/schema";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  useDraggable,
+  useDroppable,
+  closestCenter,
+} from "@dnd-kit/core";
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -23,13 +35,110 @@ const urgencyColors = {
   high: "bg-red-500",
 };
 
+function DraggableTask({ task, onClick }: { task: Task; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+    data: { task },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={onClick}
+      className={`text-xs p-1 rounded cursor-move hover-elevate bg-muted ${
+        isDragging ? "opacity-50" : ""
+      }`}
+      data-testid={`task-${task.id}`}
+    >
+      <div className="flex items-center gap-1">
+        <div className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`} />
+        <span className="truncate flex-1">{task.name}</span>
+      </div>
+    </div>
+  );
+}
+
+function DroppableDay({
+  date,
+  day,
+  tasks,
+  isToday,
+  onTaskClick,
+}: {
+  date: Date;
+  day: number;
+  tasks: Task[];
+  isToday: boolean;
+  onTaskClick: (taskId: string) => void;
+}) {
+  const dateKey = date.toDateString();
+  const { setNodeRef, isOver } = useDroppable({
+    id: dateKey,
+    data: { date },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-[100px] border rounded-md p-2 ${
+        isToday ? "border-primary border-2" : ""
+      } ${isOver ? "bg-primary/5 border-primary" : ""}`}
+      data-testid={`calendar-day-${day}`}
+    >
+      <div className={`text-sm font-medium mb-2 ${isToday ? "text-primary" : ""}`}>
+        {day}
+      </div>
+      <div className="space-y-1">
+        {tasks.slice(0, 3).map((task) => (
+          <DraggableTask
+            key={task.id}
+            task={task}
+            onClick={() => onTaskClick(task.id)}
+          />
+        ))}
+        {tasks.length > 3 && (
+          <div className="text-xs text-muted-foreground">
+            +{tasks.length - 3} more
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Calendar() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+  });
+
+  const updateTaskDateMutation = useMutation({
+    mutationFn: async ({ taskId, newDate }: { taskId: string; newDate: Date }) => {
+      return await apiRequest("PATCH", `/api/tasks/${taskId}`, {
+        initialDate: newDate.toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task updated",
+        description: "Task date has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task date",
+        variant: "destructive",
+      });
+    },
   });
 
   const monthDays = useMemo(() => {
@@ -41,21 +150,21 @@ export default function Calendar() {
     const startDayOfWeek = firstDay.getDay();
 
     const days: (number | null)[] = [];
-    
+
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(i);
     }
-    
+
     return days;
   }, [currentDate]);
 
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>();
-    
+
     tasks.forEach((task) => {
       if (task.initialDate) {
         const dateKey = new Date(task.initialDate).toDateString();
@@ -65,7 +174,7 @@ export default function Calendar() {
         map.get(dateKey)?.push(task);
       }
     });
-    
+
     return map;
   }, [tasks]);
 
@@ -107,148 +216,174 @@ export default function Calendar() {
 
   const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = event.active.data.current?.task as Task;
+    setActiveTask(task);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over || !isMaintenanceOrAdmin) return;
+
+    const taskId = active.id as string;
+    const newDateKey = over.id as string;
+    const newDate = new Date(newDateKey);
+
+    // Get the task's current date
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const currentDateKey = new Date(task.initialDate).toDateString();
+
+    // Only update if the date changed
+    if (currentDateKey !== newDateKey) {
+      updateTaskDateMutation.mutate({ taskId, newDate });
+    }
+  };
+
+  const handleTaskClick = (taskId: string) => {
+    if (!activeTask) {
+      navigate(`/tasks/${taskId}`);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">Task Calendar</h1>
-          <p className="text-muted-foreground mt-1">
-            View and manage scheduled maintenance tasks
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={goToPreviousMonth}
-            data-testid="button-prev-month"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted min-w-[200px] justify-center">
-            <CalendarIcon className="w-4 h-4" />
-            <span className="font-medium text-sm">{monthYear}</span>
+    <DndContext
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+              Task Calendar
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {isMaintenanceOrAdmin
+                ? "Drag tasks to reschedule them"
+                : "View scheduled maintenance tasks"}
+            </p>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={goToNextMonth}
-            data-testid="button-next-month"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-          <Button onClick={goToToday} data-testid="button-today">
-            Today
-          </Button>
-          {isMaintenanceOrAdmin && (
-            <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
-              <Plus className="w-4 h-4 mr-2" />
-              New Task
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Card className="p-6">
-        <div className="grid grid-cols-7 gap-2 mb-4">
-          {daysOfWeek.map((day) => (
-            <div
-              key={day}
-              className="text-sm font-medium text-center text-muted-foreground py-2"
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToPreviousMonth}
+              data-testid="button-prev-month"
             >
-              {day.substring(0, 3)}
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted min-w-[200px] justify-center">
+              <CalendarIcon className="w-4 h-4" />
+              <span className="font-medium text-sm">{monthYear}</span>
             </div>
-          ))}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNextMonth}
+              data-testid="button-next-month"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Button onClick={goToToday} data-testid="button-today">
+              Today
+            </Button>
+            {isMaintenanceOrAdmin && (
+              <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
+                <Plus className="w-4 h-4 mr-2" />
+                New Task
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
-          {monthDays.map((day, index) => {
-            if (day === null) {
-              return <div key={`empty-${index}`} className="min-h-[100px]" />;
-            }
-
-            const dayTasks = getTasksForDay(day);
-            const isTodayDate = isToday(day);
-
-            return (
+        <Card className="p-6">
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className={`min-h-[100px] border rounded-md p-2 ${
-                  isTodayDate ? "border-primary border-2" : ""
-                }`}
-                data-testid={`calendar-day-${day}`}
+                className="text-sm font-medium text-center text-muted-foreground py-2"
               >
-                <div
-                  className={`text-sm font-medium mb-2 ${
-                    isTodayDate ? "text-primary" : ""
-                  }`}
-                >
-                  {day}
-                </div>
-                <div className="space-y-1">
-                  {dayTasks.slice(0, 3).map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="text-xs p-1 rounded cursor-pointer hover-elevate bg-muted"
-                      data-testid={`task-${task.id}`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <div
-                          className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`}
-                        />
-                        <span className="truncate flex-1">{task.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {dayTasks.length > 3 && (
-                    <div className="text-xs text-muted-foreground">
-                      +{dayTasks.length - 3} more
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {todayTasks.length > 0 && (
-        <Card className="p-6">
-          <h3 className="font-semibold text-lg mb-4">Today's Tasks</h3>
-          <div className="space-y-3">
-            {todayTasks.map((task) => (
-              <div
-                key={task.id}
-                onClick={() => navigate(`/tasks/${task.id}`)}
-                className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
-                data-testid={`today-task-${task.id}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium">{task.name}</h4>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {task.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Badge
-                    variant="outline"
-                    className={statusColors[task.status]}
-                  >
-                    {task.status.replace("_", " ")}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={urgencyColors[task.urgency]}
-                  >
-                    {task.urgency}
-                  </Badge>
-                </div>
+                {day.substring(0, 3)}
               </div>
             ))}
           </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {monthDays.map((day, index) => {
+              if (day === null) {
+                return <div key={`empty-${index}`} className="min-h-[100px]" />;
+              }
+
+              const date = new Date(
+                currentDate.getFullYear(),
+                currentDate.getMonth(),
+                day
+              );
+              const dayTasks = getTasksForDay(day);
+              const isTodayDate = isToday(day);
+
+              return (
+                <DroppableDay
+                  key={day}
+                  date={date}
+                  day={day}
+                  tasks={dayTasks}
+                  isToday={isTodayDate}
+                  onTaskClick={handleTaskClick}
+                />
+              );
+            })}
+          </div>
         </Card>
-      )}
-    </div>
+
+        {todayTasks.length > 0 && (
+          <Card className="p-6">
+            <h3 className="font-semibold text-lg mb-4">Today's Tasks</h3>
+            <div className="space-y-3">
+              {todayTasks.map((task) => (
+                <div
+                  key={task.id}
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                  className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
+                  data-testid={`today-task-${task.id}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium">{task.name}</h4>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {task.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge variant="outline" className={statusColors[task.status]}>
+                      {task.status.replace("_", " ")}
+                    </Badge>
+                    <Badge variant="outline" className={urgencyColors[task.urgency]}>
+                      {task.urgency}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        <DragOverlay>
+          {activeTask ? (
+            <div className="text-xs p-1 rounded bg-muted shadow-lg border">
+              <div className="flex items-center gap-1">
+                <div
+                  className={`w-2 h-2 rounded-full ${urgencyColors[activeTask.urgency]}`}
+                />
+                <span className="truncate">{activeTask.name}</span>
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </div>
+    </DndContext>
   );
 }
