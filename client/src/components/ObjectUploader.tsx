@@ -36,6 +36,12 @@ export function ObjectUploader({
         maxFileSize,
       },
       autoProceed: false,
+      locale: {
+        strings: {
+          dropHereOr: "Drop files here or %{browse}",
+          browse: "click to browse",
+        },
+      },
     })
       .use(AwsS3, {
         shouldUseMultipart: false,
@@ -57,6 +63,7 @@ export function ObjectUploader({
         open={showModal}
         onRequestClose={() => setShowModal(false)}
         proudlyDisplayPoweredByUppy={false}
+        note={`Maximum ${maxNumberOfFiles} file${maxNumberOfFiles > 1 ? 's' : ''}, up to ${(maxFileSize / 1048576).toFixed(0)}MB each`}
       />
     </div>
   );
