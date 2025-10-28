@@ -1,6 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { log, setupVite, serveStatic } from "./vite";
+import { setupAuth } from "./replitAuth";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { db, pool } from "./db";
+import session from "express-session";
+import pgSession from "connect-pg-simple";
+import { seedDatabase } from "./seed";
+import passport from "passport";
+import { storage } from "./storage";
 
 const app = express();
 
@@ -15,6 +22,40 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+const PgSession = pgSession(session);
+const store = new PgSession({ pool, createTableIfMissing: true });
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "default-secret",
+    resave: false,
+    saveUninitialized: false,
+    store,
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    },
+  })
+);
+
+// Configure passport for local authentication
+passport.serializeUser((user: any, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const user = await storage.getUser(id);
+    done(null, user);
+  } catch (error) {
+    done(error);
+  }
+});
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use((req, res, next) => {
   const start = Date.now();

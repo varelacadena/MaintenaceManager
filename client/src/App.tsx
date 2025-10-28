@@ -63,19 +63,22 @@ function AuthenticatedApp() {
     "--sidebar-width-icon": "3rem",
   };
 
-  if (!isAuthenticated || isLoading) {
+  if (isLoading) {
     return (
-      <>
-        <Router />
-        <Toaster />
-      </>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
     );
+  }
+
+  if (!user) {
+    return <Landing />;
   }
 
   const userName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
     : user?.email || "User";
-  
+
   const userInitials = user?.firstName && user?.lastName
     ? `${user.firstName[0]}${user.lastName[0]}`
     : user?.email?.[0].toUpperCase() || "U";

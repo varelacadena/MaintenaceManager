@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireAuth } from "./replitAuth";
 import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess } from "./middleware";
 import bcrypt from "bcryptjs";
 import {
@@ -26,6 +26,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Seed database with default areas
   await seedDatabase();
+
+  // Login endpoint
+  app.post("/api/login", async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+
+    try {
+      const user = await storage.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const bcrypt = await import("bcryptjs");
+      const isValid = await bcrypt.compare(password, user.password);
+
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Set user in session
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.json({ success: true, user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        }});
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Logout endpoint
+  app.post("/api/logout", requireAuth, (req, res) => {
+    req.logout(() => {
+      res.json({ success: true });
+    });
+  });
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -95,12 +144,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { role } = req.body;
-      
+
       // Validate role value
       if (!["admin", "maintenance", "staff"].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
-      
+
       const user = await storage.updateUserRole(id, role);
       res.json(user);
     } catch (error) {
@@ -294,11 +343,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const timeEntry = await storage.getTimeEntry(req.params.id);
-      
+
       if (!timeEntry) {
         return res.status(404).json({ message: "Time entry not found" });
       }
-      
+
       // Verify ownership - only the user who created the entry can update it
       if (timeEntry.userId !== userId) {
         // Get current user to check if admin
@@ -307,19 +356,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Forbidden: You can only update your own time entries" });
         }
       }
-      
+
       const { endTime, durationMinutes } = req.body;
-      
+
       // Validate endTime is provided and valid
       if (!endTime) {
         return res.status(400).json({ message: "endTime is required" });
       }
-      
+
       const parsedEndTime = new Date(endTime);
       if (isNaN(parsedEndTime.getTime())) {
         return res.status(400).json({ message: "Invalid endTime format" });
       }
-      
+
       const entry = await storage.updateTimeEntry(
         req.params.id,
         parsedEndTime,
@@ -429,25 +478,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
-      
+
       // Verify user has access to this request
       const request = await storage.getServiceRequest(req.body.requestId);
       if (!request) {
         return res.status(404).json({ error: "Request not found" });
       }
-      
+
       // Only assigned maintenance staff, requester, or admin can upload
       const canUpload =
         currentUser?.role === "admin" ||
         request.assignedToId === userId ||
         request.requesterId === userId;
-        
+
       if (!canUpload) {
         return res.status(403).json({ error: "Forbidden: Cannot upload to this request" });
       }
 
       const objectStorageService = new ObjectStorageService();
-      
+
       const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
         req.body.objectUrl,
         {
