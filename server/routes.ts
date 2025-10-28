@@ -18,6 +18,7 @@ import {
   insertTaskNoteSchema,
   insertAreaSchema,
   insertSubdivisionSchema,
+  insertVendorSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -302,7 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/vendors", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
-      const vendor = await storage.createVendor(req.body);
+      const vendorData = insertVendorSchema.parse(req.body);
+      const vendor = await storage.createVendor(vendorData);
       res.json(vendor);
     } catch (error) {
       console.error("Error creating vendor:", error);
@@ -312,7 +314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/vendors/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
-      const vendor = await storage.updateVendor(req.params.id, req.body);
+      const vendorData = insertVendorSchema.partial().parse(req.body);
+      const vendor = await storage.updateVendor(req.params.id, vendorData);
       if (!vendor) {
         return res.status(404).json({ message: "Vendor not found" });
       }

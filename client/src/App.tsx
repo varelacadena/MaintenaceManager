@@ -19,6 +19,7 @@ import Calendar from "@/pages/Calendar";
 import Users from "@/pages/Users";
 import Areas from "@/pages/Areas";
 import Credentials from "@/pages/Credentials";
+import Vendors from "@/pages/Vendors";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -87,6 +88,7 @@ function AuthenticatedApp() {
                 <Route path="/users" component={Users} />
                 <Route path="/areas" component={Areas} />
                 <Route path="/credentials" component={Credentials} />
+                <Route path="/vendors" component={Vendors} />
                 <Route component={NotFound} />
               </Switch>
             </main>
