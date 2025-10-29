@@ -105,18 +105,21 @@ export default function Requests() {
   const canManageRequests = isMaintenanceOrAdmin;
 
   const getRequesterName = (requesterId: string) => {
+    if (!users || users.length === 0) return "Unknown";
     const requester = users.find((u: any) => u.id === requesterId);
     return requester ? `${requester.firstName} ${requester.lastName}` : "Unknown";
   };
 
   const getAreaName = (areaId: string | null) => {
     if (!areaId) return "Not specified";
+    if (!areas || areas.length === 0) return "Unknown";
     const area = areas.find((a: any) => a.id === areaId);
     return area?.name || "Unknown";
   };
 
   const getSubdivisionName = (subdivisionId: string | null) => {
     if (!subdivisionId) return null;
+    if (!subdivisions || subdivisions.length === 0) return null;
     const subdivision = subdivisions.find((s: any) => s.id === subdivisionId);
     return subdivision?.name || null;
   };
