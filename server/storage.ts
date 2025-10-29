@@ -137,6 +137,7 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesByRequest(requestId: string): Promise<Message[]>;
   getMessagesByTask(taskId: string): Promise<Message[]>;
+  getMessages(): Promise<Message[]>;
 
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
@@ -485,15 +486,15 @@ export class DatabaseStorage implements IStorage {
       status: status as any, 
       updatedAt: new Date() 
     };
-    
+
     if (onHoldReason !== undefined) {
       updateData.onHoldReason = onHoldReason;
     }
-    
+
     if (actualCompletionDate !== undefined) {
       updateData.actualCompletionDate = actualCompletionDate;
     }
-    
+
     const [task] = await db
       .update(tasks)
       .set(updateData)
@@ -561,6 +562,10 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
+  async getMessagesByRequest(requestId: string): Promise<Message[]>;
+  async getMessagesByTask(taskId: string): Promise<Message[]>;
+  async getMessages(): Promise<Message[]>;
+
   async getMessagesByRequest(requestId: string): Promise<Message[]> {
     return await db
       .select()
@@ -575,6 +580,10 @@ export class DatabaseStorage implements IStorage {
       .from(messages)
       .where(eq(messages.taskId, taskId))
       .orderBy(messages.createdAt);
+  }
+
+  async getMessages(): Promise<Message[]> {
+    return await db.select().from(messages).orderBy(desc(messages.createdAt));
   }
 
   // Upload operations

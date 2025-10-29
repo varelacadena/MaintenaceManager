@@ -13,13 +13,18 @@ import {
   Wrench,
   Plus,
   MapPin,
+  MessageSquare,
 } from "lucide-react";
-import type { ServiceRequest } from "@shared/schema";
+import type { ServiceRequest, Message } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: requests = [], isLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
+  });
+
+  const { data: allMessages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages"],
   });
 
   if (isLoading) {
@@ -43,6 +48,14 @@ export default function Dashboard() {
   ).length;
 
   const recentRequests = requests
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
+    .slice(0, 5);
+
+  const recentMessages = allMessages
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -210,48 +223,95 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Recent Messages
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {user?.role === "staff" && (
-              <Link href="/new-request">
-                <Button className="w-full justify-start" variant="outline" data-testid="button-create-request">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create New Request
-                </Button>
-              </Link>
+          <CardContent>
+            {recentMessages.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No messages yet
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentMessages.map((message) => {
+                  const request = requests.find(r => r.id === message.requestId);
+                  return (
+                    <Link
+                      key={message.id}
+                      href={`/messages`}
+                    >
+                      <div className="flex items-start gap-3 p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-message-${message.id}`}>
+                        <MessageSquare className="w-4 h-4 text-muted-foreground mt-1" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="font-medium text-sm truncate">
+                              {request?.title || 'Unknown Request'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {message.content}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {message.createdAt ? new Date(message.createdAt).toLocaleString() : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             )}
-            <Link href="/requests">
-              <Button className="w-full justify-start" variant="outline" data-testid="button-view-all">
-                <ClipboardList className="w-4 h-4 mr-2" />
-                {user?.role === "staff" ? "View My Requests" : "View All Tasks"}
-              </Button>
-            </Link>
-            {user?.role === "admin" && (
-              <>
-                <Link href="/users">
-                  <Button className="w-full justify-start" variant="outline" data-testid="button-manage-users">
-                    <Users className="w-4 h-4 mr-2" />
-                    Manage Users
-                  </Button>
-                </Link>
-                <Link href="/areas">
-                  <Button className="w-full justify-start" variant="outline" data-testid="button-manage-areas">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    Manage Areas
-                  </Button>
-                </Link>
-              </>
-            )}
-            <Link href="/calendar">
-              <Button className="w-full justify-start" variant="outline" data-testid="button-view-calendar">
-                <Clock className="w-4 h-4 mr-2" />
-                View Calendar
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {user?.role === "staff" && (
+            <Link href="/new-request">
+              <Button className="w-full justify-start" variant="outline" data-testid="button-create-request">
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Request
+              </Button>
+            </Link>
+          )}
+          <Link href="/requests">
+            <Button className="w-full justify-start" variant="outline" data-testid="button-view-all">
+              <ClipboardList className="w-4 h-4 mr-2" />
+              {user?.role === "staff" ? "View My Requests" : "View All Tasks"}
+            </Button>
+          </Link>
+          {user?.role === "admin" && (
+            <>
+              <Link href="/users">
+                <Button className="w-full justify-start" variant="outline" data-testid="button-manage-users">
+                  <Users className="w-4 h-4 mr-2" />
+                  Manage Users
+                </Button>
+              </Link>
+              <Link href="/areas">
+                <Button className="w-full justify-start" variant="outline" data-testid="button-manage-areas">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Manage Areas
+                </Button>
+              </Link>
+            </>
+          )}
+          <Link href="/calendar">
+            <Button className="w-full justify-start" variant="outline" data-testid="button-view-calendar">
+              <Clock className="w-4 h-4 mr-2" />
+              View Calendar
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }

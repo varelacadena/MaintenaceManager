@@ -24,6 +24,21 @@ import {
   insertInventoryItemSchema,
 } from "@shared/schema";
 
+// Helper function to get authenticated user
+async function getAuthUser(req: any) {
+  if (!req.isAuthenticated()) {
+    return null;
+  }
+  try {
+    const userId = req.userId;
+    const user = await storage.getUser(userId);
+    return user;
+  } catch (error) {
+    console.error("Error fetching authenticated user:", error);
+    return null;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -288,8 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if it's a foreign key constraint violation
       if (error.code === '23503') {
-        return res.status(409).json({ 
-          message: "Cannot delete user because they have associated data (service requests, messages, or time entries). You can change their role or password instead." 
+        return res.status(409).json({
+          message: "Cannot delete user because they have associated data (service requests, messages, or time entries). You can change their role or password instead."
         });
       }
 
@@ -582,9 +597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Requester, maintenance, or admin can delete
-      const canDelete = 
-        request.requesterId === userId || 
-        currentUser?.role === "admin" || 
+      const canDelete =
+        request.requesterId === userId ||
+        currentUser?.role === "admin" ||
         currentUser?.role === "maintenance";
 
       if (!canDelete) {
@@ -757,8 +772,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create a task note if hold reason was provided
       if (status === "on_hold" && onHoldReason) {
-        await storage.createTaskNote({ 
-          taskId, 
+        await storage.createTaskNote({
+          taskId,
           userId: (req as any).userId,
           content: `Task placed on hold: ${onHoldReason}`,
           noteType: "job_note"
@@ -917,21 +932,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get(
-    "/api/messages/request/:requestId",
-    isAuthenticated,
-    async (req, res) => {
-      try {
-        const messages = await storage.getMessagesByRequest(
-          req.params.requestId
-        );
-        res.json(messages);
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-        res.status(500).json({ message: "Failed to fetch messages" });
+  // Get all messages
+  app.get("/api/messages", async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
+
+      const messages = await storage.getMessages();
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: error.message });
     }
-  );
+  });
+
+  // Get messages for a request
+  app.get("/api/messages/request/:requestId", async (req, res) => {
+    try {
+      const messages = await storage.getMessagesByRequest(
+        req.params.requestId
+      );
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
 
   app.get(
     "/api/messages/task/:taskId",
