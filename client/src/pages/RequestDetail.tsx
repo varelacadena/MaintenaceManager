@@ -486,8 +486,8 @@ export default function RequestDetail() {
                 {messages.length > 0 ? (
                   <div className="space-y-4 mb-4">
                     {messages.map((message) => {
-                      const isOwn = message.userId === user?.id;
-                      const sender = users.find(u => u.id === message.userId);
+                      const isOwn = message.senderId === user?.id;
+                      const sender = users.find(u => u.id === message.senderId);
 
                       let senderName = "Unknown User";
                       if (isOwn) {
