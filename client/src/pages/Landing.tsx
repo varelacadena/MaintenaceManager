@@ -30,17 +30,22 @@ export default function Landing() {
       } else {
         const error = await response.json();
         toast({
-          title: "Login Failed",
-          description: error.message || "Invalid username or password",
+          title: "Authentication Failed",
+          description: error.message || "Invalid username or password. Please check your credentials and try again.",
           variant: "destructive",
+          duration: 5000,
         });
+        // Clear password field on failed login
+        setPassword("");
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "An error occurred during login",
+        title: "Connection Error",
+        description: "Unable to connect to the server. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
+      setPassword("");
     } finally {
       setIsLoading(false);
     }
