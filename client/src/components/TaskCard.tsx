@@ -63,19 +63,19 @@ export default function TaskCard({
               <h3 className="font-medium text-sm line-clamp-2 flex-1" data-testid={`text-task-title-${id}`}>
                 {title}
               </h3>
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 flex flex-col gap-1.5">
                 <UrgencyBadge level={urgency} />
+                <Badge variant="outline" className={`${statusStyle.className} text-xs px-2 py-0.5`}>
+                  {statusStyle.label}
+                </Badge>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">{category}</p>
           </div>
         </div>
 
-        {/* Status and ID */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className={`${statusStyle.className} text-xs px-2 py-0.5`}>
-            {statusStyle.label}
-          </Badge>
+        {/* Task ID */}
+        <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">#{id.slice(0, 8)}</span>
         </div>
 
