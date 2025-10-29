@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -53,6 +54,7 @@ export default function Messages() {
         queryKey: ["/api/messages/request", selectedRequestId],
       });
       setNewMessage("");
+      scrollToBottom();
     },
   });
 
@@ -165,16 +167,13 @@ export default function Messages() {
                     const isOwn = message.senderId === user?.id;
                     const sender = users.find(u => u.id === message.senderId);
                     
-                    // Get the sender's display name based on current user's role
                     let senderName = "Unknown User";
                     if (isOwn) {
                       senderName = "You";
                     } else if (sender) {
-                      // If current user is staff and sender is admin/maintenance, show "Support Team"
                       if (user?.role === "staff" && (sender.role === "admin" || sender.role === "maintenance")) {
                         senderName = "Support Team";
                       } else {
-                        // Show actual sender name
                         const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
                         senderName = fullName || sender.username;
                       }
