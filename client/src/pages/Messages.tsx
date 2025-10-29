@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { ServiceRequest, Message } from "@shared/schema";
+import type { ServiceRequest, Message, User } from "@shared/schema";
 
 export default function Messages() {
   const [, navigate] = useLocation();
@@ -27,6 +27,10 @@ export default function Messages() {
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", selectedRequestId],
     enabled: !!selectedRequestId,
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
   });
 
   const scrollToBottom = () => {
@@ -159,7 +163,12 @@ export default function Messages() {
                 ) : (
                   messages.map((message) => {
                     const isOwn = message.senderId === user?.id;
-                    const senderName = isOwn ? "You" : "Support Team";
+                    const sender = users.find(u => u.id === message.senderId);
+                    const senderName = isOwn 
+                      ? "You" 
+                      : sender 
+                        ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.username
+                        : "Unknown User";
                     return (
                       <div
                         key={message.id}

@@ -86,6 +86,15 @@ describe('Messages Component', () => {
           json: () => Promise.resolve(mockMessages),
         });
       }
+      if (url.includes('/api/users')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([
+            { id: 'user-1', username: 'testuser', firstName: 'Test', lastName: 'User', role: 'staff' },
+            { id: 'admin-1', username: 'admin', firstName: 'Admin', lastName: 'User', role: 'admin' },
+          ]),
+        });
+      }
       return Promise.reject(new Error('Unknown endpoint'));
     }) as any;
   });
@@ -256,6 +265,15 @@ describe('Messages Component', () => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]),
+        });
+      }
+      if (url.includes('/api/users')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([
+            { id: 'user-1', username: 'testuser', firstName: 'Test', lastName: 'User', role: 'staff' },
+            { id: 'admin-1', username: 'admin', firstName: 'Admin', lastName: 'User', role: 'admin' },
+          ]),
         });
       }
       return Promise.reject(new Error('Unknown endpoint'));
