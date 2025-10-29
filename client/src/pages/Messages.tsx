@@ -24,13 +24,13 @@ export default function Messages() {
     queryKey: ["/api/service-requests"],
   });
 
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+  });
+
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", selectedRequestId],
     enabled: !!selectedRequestId,
-  });
-
-  const { data: users = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
   });
 
   const scrollToBottom = () => {
