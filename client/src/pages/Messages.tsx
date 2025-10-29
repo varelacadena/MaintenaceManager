@@ -165,13 +165,19 @@ export default function Messages() {
                     const isOwn = message.senderId === user?.id;
                     const sender = users.find(u => u.id === message.senderId);
                     
-                    // Get the sender's display name
+                    // Get the sender's display name based on current user's role
                     let senderName = "Unknown User";
                     if (isOwn) {
                       senderName = "You";
                     } else if (sender) {
-                      const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
-                      senderName = fullName || sender.username;
+                      // If current user is staff and sender is admin/maintenance, show "Support Team"
+                      if (user?.role === "staff" && (sender.role === "admin" || sender.role === "maintenance")) {
+                        senderName = "Support Team";
+                      } else {
+                        // Show actual sender name
+                        const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
+                        senderName = fullName || sender.username;
+                      }
                     }
                     
                     return (
