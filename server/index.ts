@@ -131,4 +131,24 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    log(`${signal} received, closing server gracefully...`);
+    server.close(() => {
+      log('Server closed');
+    });
+    
+    try {
+      await pool.end();
+      log('Database connections closed');
+      process.exit(0);
+    } catch (err) {
+      console.error('Error during shutdown:', err);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 })();

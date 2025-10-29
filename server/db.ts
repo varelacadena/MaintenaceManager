@@ -9,20 +9,32 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure WebSocket for Neon
+// Configure WebSocket for Neon with better error handling
 neonConfig.webSocketConstructor = ws;
+neonConfig.poolQueryViaFetch = true;
+neonConfig.fetchConnectionCache = true;
 
-// Create connection pool with proper configuration
+// Create connection pool with better configuration for serverless
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  // Allow connections to be established lazily
+  allowExitOnIdle: true,
 });
 
-// Handle pool errors
+// Handle pool errors gracefully
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+  console.error('Database pool error:', err.message);
+  // Don't crash the application on pool errors
+});
+
+// Handle connection errors
+pool.on('connect', (client) => {
+  client.on('error', (err) => {
+    console.error('Database client error:', err.message);
+  });
 });
 
 export const db = drizzle(pool, { schema });
