@@ -330,6 +330,23 @@ export default function TaskDetail() {
     },
   });
 
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      return await apiRequest("DELETE", `/api/task-notes/${noteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
+      toast({ title: "Note deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete note",
+        variant: "destructive",
+      });
+    },
+  });
+
   const addUploadMutation = useMutation({
     mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
       const response = await apiRequest("PUT", "/api/uploads", {
@@ -1141,6 +1158,7 @@ export default function TaskDetail() {
           <div className="space-y-4">
             {notes.map((note) => {
               const noteUser = users.find(u => u.id === note.userId);
+              const canDelete = user?.role === "admin" || note.userId === user?.id;
               return (
                 <div key={note.id} className="p-3 bg-muted rounded-md">
                   <div className="flex items-center justify-between mb-2">
@@ -1152,9 +1170,42 @@ export default function TaskDetail() {
                         {note.noteType === "job_note" ? "Job Note" : "Recommendation"}
                       </Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
+                      </span>
+                      {canDelete && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              data-testid={`button-delete-note-${note.id}`}
+                            >
+                              <Trash2 className="w-3 h-3 text-red-500" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this note? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteNoteMutation.mutate(note.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm">{note.content}</p>
                 </div>

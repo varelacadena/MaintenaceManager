@@ -1156,6 +1156,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  app.delete("/api/task-notes/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      const noteId = req.params.id;
+
+      // Get the note to verify ownership
+      const note = await storage.getTaskNote(noteId);
+      if (!note) {
+        return res.status(404).json({ message: "Task note not found" });
+      }
+
+      // Only the user who created the note or admin can delete it
+      if (note.userId !== userId && currentUser?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: You can only delete your own notes" });
+      }
+
+      await storage.deleteTaskNote(noteId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task note:", error);
+      res.status(500).json({ message: "Failed to delete task note" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

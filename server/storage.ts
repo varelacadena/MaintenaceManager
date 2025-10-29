@@ -147,7 +147,9 @@ export interface IStorage {
 
   // Task note operations (linked to tasks)
   createTaskNote(note: InsertTaskNote): Promise<TaskNote>;
+  getTaskNote(id: string): Promise<TaskNote | undefined>;
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
+  deleteTaskNote(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -610,12 +612,21 @@ export class DatabaseStorage implements IStorage {
     return note;
   }
 
+  async getTaskNote(id: string): Promise<TaskNote | undefined> {
+    const [note] = await db.select().from(taskNotes).where(eq(taskNotes.id, id));
+    return note;
+  }
+
   async getNotesByTask(taskId: string): Promise<TaskNote[]> {
     return await db
       .select()
       .from(taskNotes)
       .where(eq(taskNotes.taskId, taskId))
       .orderBy(taskNotes.createdAt);
+  }
+
+  async deleteTaskNote(id: string): Promise<void> {
+    await db.delete(taskNotes).where(eq(taskNotes.id, id));
   }
 }
 
