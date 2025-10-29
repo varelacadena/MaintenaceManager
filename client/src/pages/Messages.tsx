@@ -20,14 +20,6 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const { data: requests = [] } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
   });
@@ -36,6 +28,14 @@ export default function Messages() {
     queryKey: ["/api/messages/request", selectedRequestId],
     enabled: !!selectedRequestId,
   });
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
