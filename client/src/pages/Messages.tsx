@@ -119,11 +119,16 @@ export default function Messages() {
                         </AvatarFallback>
                       </Avatar>
                       {/* Unread messages notification badge */}
-                      {allMessages.filter(m => m.requestId === request.id && !m.read && m.senderId !== user?.id).length > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                          {allMessages.filter(m => m.requestId === request.id && !m.read && m.senderId !== user?.id).length}
-                        </div>
-                      )}
+                      {(() => {
+                        const unreadCount = allMessages.filter(
+                          m => m.requestId === request.id && m.senderId !== user?.id
+                        ).length;
+                        return unreadCount > 0 && (
+                          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                            {unreadCount}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
