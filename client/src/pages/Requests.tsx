@@ -80,9 +80,19 @@ export default function Requests() {
   });
 
   const filteredRequests = requests.filter((request) => {
+    const query = searchQuery.toLowerCase();
+    const requesterName = getRequesterName(request.requesterId).toLowerCase();
+    const areaName = getAreaName(request.areaId).toLowerCase();
+    const subdivisionName = getSubdivisionName(request.subdivisionId)?.toLowerCase() || "";
+    
     const matchesSearch =
-      request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.description.toLowerCase().includes(searchQuery.toLowerCase());
+      request.id.toLowerCase().includes(query) ||
+      requesterName.includes(query) ||
+      request.title.toLowerCase().includes(query) ||
+      request.description.toLowerCase().includes(query) ||
+      areaName.includes(query) ||
+      subdivisionName.includes(query);
+    
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesUrgency = urgencyFilter === "all" || request.urgency === urgencyFilter;
     return matchesSearch && matchesStatus && matchesUrgency;
