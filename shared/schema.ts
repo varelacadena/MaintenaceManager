@@ -31,7 +31,7 @@ export const users = pgTable("users", {
   username: varchar("username").unique().notNull(),
   password: varchar("password").notNull(), // hashed password
   email: varchar("email"),
-  phoneNumber: varchar("phone_number", { length: 20 }),
+  phoneNumber: varchar("phone__number", { length: 20 }),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   role: varchar("role", { length: 20 }).notNull().default("staff"), // admin, maintenance, staff
