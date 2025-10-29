@@ -21,6 +21,13 @@ const statusColors: Record<string, string> = {
   completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
 };
 
+const statusColors: Record<string, string> = {
+  not_started: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",
+  in_progress: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  on_hold: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
+  completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
+};
+
 export default function Tasks() {
   const { user } = useAuth();
 

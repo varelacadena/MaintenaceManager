@@ -31,10 +31,10 @@ const categoryIcons: Record<string, any> = {
 };
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
-  pending: { label: "Pending", className: "bg-muted text-muted-foreground" },
-  in_progress: { label: "In Progress", className: "bg-primary/10 text-primary border-primary/20" },
-  on_hold: { label: "On Hold", className: "bg-urgency-medium/10 text-urgency-medium border-urgency-medium/20" },
-  completed: { label: "Completed", className: "bg-status-online/10 text-status-online border-status-online/20" },
+  pending: { label: "Not Started", className: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20" },
+  in_progress: { label: "In Progress", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20" },
+  on_hold: { label: "On Hold", className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20" },
+  completed: { label: "Completed", className: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20" },
 };
 
 export default function TaskCard({
