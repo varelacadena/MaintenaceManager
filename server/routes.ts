@@ -703,9 +703,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const updateData: any = { ...req.body };
 
-      // Handle actualCompletionDate if provided
+      // Handle date conversions
       if (updateData.actualCompletionDate) {
         updateData.actualCompletionDate = new Date(updateData.actualCompletionDate);
+      }
+      if (updateData.initialDate) {
+        updateData.initialDate = new Date(updateData.initialDate);
+      }
+      if (updateData.estimatedCompletionDate) {
+        updateData.estimatedCompletionDate = new Date(updateData.estimatedCompletionDate);
       }
 
       const task = await storage.updateTask(req.params.id, updateData);
@@ -729,40 +735,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tasks/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
       const { status, onHoldReason } = req.body;
-      const newStatus = status || null;
+      const taskId = req.params.id;
 
-      // Update task status if specified
-      if (newStatus) {
-        const payload: any = { status: newStatus };
-        if (newStatus === "completed") {
-          payload.actualCompletionDate = new Date().toISOString();
-        }
-        const response = await apiRequest("PATCH", `/api/tasks/${id}`, payload);
-        const updatedTask = await response.json();
-
-        // Create a task note if hold reason was provided
-        if (newStatus === "on_hold" && onHoldReason) {
-          await apiRequest("POST", "/api/task-notes", { 
-            taskId: id, 
-            content: `Task placed on hold: ${onHoldReason}` 
-          });
-
-          // Send message to requester if task is linked to a request
-          if (updatedTask.requestId) {
-            await apiRequest("POST", "/api/messages", {
-              requestId: updatedTask.requestId,
-              content: `Task "${updatedTask.name}" has been placed on hold. Reason: ${onHoldReason}`
-            });
-          }
-        } else if (newStatus === "completed" && updatedTask.requestId) {
-          // Send completion message to requester
-          await apiRequest("POST", "/api/messages", {
-            requestId: updatedTask.requestId,
-            content: `Task "${updatedTask.name}" has been completed.`
-          });
-        }
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
       }
-      res.json(updatedTask); // Assuming you want to return the updated task
+
+      const updateData: any = { status };
+      if (status === "completed") {
+        updateData.actualCompletionDate = new Date();
+      }
+      if (status === "on_hold" && onHoldReason) {
+        updateData.onHoldReason = onHoldReason;
+      }
+
+      const updatedTask = await storage.updateTask(taskId, updateData);
+
+      if (!updatedTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Create a task note if hold reason was provided
+      if (status === "on_hold" && onHoldReason) {
+        await storage.createTaskNote({ 
+          taskId, 
+          userId: (req as any).userId,
+          content: `Task placed on hold: ${onHoldReason}`,
+          noteType: "job_note"
+        });
+
+        // Send message to requester if task is linked to a request
+        if (updatedTask.requestId) {
+          await storage.createMessage({
+            requestId: updatedTask.requestId,
+            senderId: (req as any).userId,
+            content: `Task "${updatedTask.name}" has been placed on hold. Reason: ${onHoldReason}`
+          });
+        }
+      } else if (status === "completed" && updatedTask.requestId) {
+        // Send completion message to requester
+        await storage.createMessage({
+          requestId: updatedTask.requestId,
+          senderId: (req as any).userId,
+          content: `Task "${updatedTask.name}" has been completed.`
+        });
+      }
+
+      res.json(updatedTask);
     } catch (error) {
       console.error("Error updating task status:", error);
       res.status(500).json({ message: "Failed to update task status" });
