@@ -36,7 +36,7 @@ const urgencyColors = {
   high: "bg-red-500",
 };
 
-function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onClick: () => void; assignedUser?: any; area?: any }) {
+function DraggableTask({ task, onClick }: { task: Task; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: { task },
@@ -78,20 +78,13 @@ function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onCl
             <Badge variant="outline" className="capitalize">
               {task.urgency}
             </Badge>
+            <Badge variant="outline" className="capitalize">
+              {task.taskType.replace("_", " ")}
+            </Badge>
           </div>
-          {area && (
-            <p className="text-xs text-muted-foreground">
-              📍 Area: {area.name}
-            </p>
-          )}
-          {assignedUser && (
-            <p className="text-xs text-muted-foreground">
-              👤 Assigned to: {assignedUser.firstName} {assignedUser.lastName}
-            </p>
-          )}
           {task.location && (
             <p className="text-xs text-muted-foreground">
-              📌 Location: {task.location}
+              📍 {task.location}
             </p>
           )}
         </div>
@@ -106,16 +99,12 @@ function DroppableDay({
   tasks,
   isToday,
   onTaskClick,
-  users,
-  areas,
 }: {
   date: Date;
   day: number;
   tasks: Task[];
   isToday: boolean;
   onTaskClick: (taskId: string) => void;
-  users: any[];
-  areas: any[];
 }) {
   const dateKey = date.toDateString();
   const { setNodeRef, isOver } = useDroppable({
@@ -135,19 +124,13 @@ function DroppableDay({
         {day}
       </div>
       <div className="space-y-1">
-        {tasks.slice(0, 3).map((task) => {
-          const assignedUser = users.find((u) => u.id === task.assignedToId);
-          const area = areas.find((a) => a.id === task.areaId);
-          return (
-            <DraggableTask
-              key={task.id}
-              task={task}
-              onClick={() => onTaskClick(task.id)}
-              assignedUser={assignedUser}
-              area={area}
-            />
-          );
-        })}
+        {tasks.slice(0, 3).map((task) => (
+          <DraggableTask
+            key={task.id}
+            task={task}
+            onClick={() => onTaskClick(task.id)}
+          />
+        ))}
         {tasks.length > 3 && (
           <div className="text-xs text-muted-foreground">
             +{tasks.length - 3} more
@@ -167,14 +150,6 @@ export default function Calendar() {
 
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
-  });
-
-  const { data: users = [] } = useQuery<any[]>({
-    queryKey: ["/api/users"],
-  });
-
-  const { data: areas = [] } = useQuery<any[]>({
-    queryKey: ["/api/areas"],
   });
 
   const updateTaskDateMutation = useMutation({
@@ -392,8 +367,6 @@ export default function Calendar() {
                   tasks={dayTasks}
                   isToday={isTodayDate}
                   onTaskClick={handleTaskClick}
-                  users={users}
-                  areas={areas}
                 />
               );
             })}
