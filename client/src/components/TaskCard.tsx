@@ -52,41 +52,66 @@ export default function TaskCard({
 
   return (
     <Card className="p-4 hover-elevate" data-testid={`card-task-${id}`}>
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-md bg-muted">
-          <IconComponent className="w-4 h-4 text-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h3 className="font-medium text-sm line-clamp-2" data-testid={`text-task-title-${id}`}>{title}</h3>
-            <UrgencyBadge level={urgency} />
+      <div className="space-y-3">
+        {/* Header with icon, title, and urgency */}
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-md bg-muted flex-shrink-0">
+            <IconComponent className="w-4 h-4 text-foreground" />
           </div>
-          <div className="flex items-center gap-2 mb-3">
-            <Badge variant="outline" className={statusStyle.className}>
-              {statusStyle.label}
-            </Badge>
-            <span className="text-xs text-muted-foreground">#{id}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              {assignedTo && (
-                <div className="flex items-center gap-1.5">
-                  <Avatar className="w-5 h-5">
-                    <AvatarImage src={assignedTo.avatar} />
-                    <AvatarFallback className="text-xs">{assignedTo.initials}</AvatarFallback>
-                  </Avatar>
-                  <span>{assignedTo.name}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>{dueDate}</span>
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h3 className="font-medium text-sm line-clamp-2" data-testid={`text-task-title-${id}`}>
+                {title}
+              </h3>
+              <UrgencyBadge level={urgency} />
             </div>
-            <Button size="sm" variant="ghost" onClick={onView} data-testid={`button-view-${id}`}>
-              <Eye className="w-3 h-3" />
-            </Button>
+            <p className="text-xs text-muted-foreground">{category}</p>
           </div>
+        </div>
+
+        {/* Status and ID */}
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={statusStyle.className}>
+            {statusStyle.label}
+          </Badge>
+          <span className="text-xs text-muted-foreground">#{id.slice(0, 8)}</span>
+        </div>
+
+        {/* Assignee and dates */}
+        <div className="space-y-2 text-xs">
+          {assignedTo ? (
+            <div className="flex items-center gap-2">
+              <Avatar className="w-5 h-5">
+                <AvatarImage src={assignedTo.avatar} />
+                <AvatarFallback className="text-xs">{assignedTo.initials}</AvatarFallback>
+              </Avatar>
+              <span className="text-muted-foreground">Assigned to:</span>
+              <span className="font-medium">{assignedTo.name}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Not assigned</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Calendar className="w-3 h-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Due:</span>
+            <span className="font-medium">{dueDate}</span>
+          </div>
+        </div>
+
+        {/* View button */}
+        <div className="pt-1">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={onView} 
+            className="w-full"
+            data-testid={`button-view-${id}`}
+          >
+            <Eye className="w-3 h-3 mr-2" />
+            View Details
+          </Button>
         </div>
       </div>
     </Card>

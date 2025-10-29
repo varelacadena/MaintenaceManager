@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { Plus, Calendar, User, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import type { Task } from "@shared/schema";
+import { useLocation } from "wouter";
 
 const urgencyColors = {
   low: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
@@ -31,10 +31,32 @@ const statusConfig = [
 
 export default function Tasks() {
   const { user } = useAuth();
+  const navigate = useLocation()[1];
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  const { data: areas } = useQuery({ queryKey: ["/api/areas"] });
+  const { data: users } = useQuery({ queryKey: ["/api/users"] });
+
+  const getAreaName = (areaId: string | null) => {
+    if (!areaId) return "General";
+    const area = areas?.find((a: any) => a.id === areaId);
+    return area?.name || "General";
+  };
+
+  const getAssigneeName = (userId: string) => {
+    const user = users?.find((u: any) => u.id === userId);
+    if (!user) return "Unknown";
+    return `${user.firstName} ${user.lastName}`;
+  };
+
+  const getAssigneeInitials = (userId: string) => {
+    const user = users?.find((u: any) => u.id === userId);
+    if (!user) return "?";
+    return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`;
+  };
 
   const groupedTasks = tasks?.reduce((acc, task) => {
     const status = task.status;
@@ -85,7 +107,7 @@ export default function Tasks() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statusConfig.map((status) => {
           const tasksInColumn = groupedTasks[status.key] || [];
-          
+
           return (
             <div key={status.key} className="flex flex-col">
               <div className="mb-4">
@@ -96,12 +118,12 @@ export default function Tasks() {
                   </Badge>
                 </h2>
               </div>
-              
+
               <div className="space-y-3 flex-1">
                 {tasksInColumn.map((task) => (
                   <Link key={task.id} href={`/tasks/${task.id}`}>
-                    <Card 
-                      className="hover-elevate cursor-pointer transition-all" 
+                    <Card
+                      className="hover-elevate cursor-pointer transition-all"
                       data-testid={`card-task-${task.id}`}
                     >
                       <CardHeader className="p-4 pb-3">
@@ -131,7 +153,7 @@ export default function Tasks() {
                             {status.label}
                           </Badge>
                         </div>
-                        
+
                         <div className="space-y-1 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -150,7 +172,7 @@ export default function Tasks() {
                           {task.assignedToId && (
                             <div className="flex items-center gap-1">
                               <User className="w-3 h-3" />
-                              <span>Assigned</span>
+                              <span>{getAssigneeName(task.assignedToId)}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1">
@@ -162,7 +184,7 @@ export default function Tasks() {
                     </Card>
                   </Link>
                 ))}
-                
+
                 {tasksInColumn.length === 0 && (
                   <Card className="border-dashed">
                     <CardContent className="py-8">
