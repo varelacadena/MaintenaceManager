@@ -53,30 +53,20 @@ export default function TaskCard({
   return (
     <Card className="p-4 hover-elevate" data-testid={`card-task-${id}`}>
       <div className="space-y-3">
-        {/* Header with icon, title, and urgency */}
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-md bg-muted flex-shrink-0">
-            <IconComponent className="w-4 h-4 text-foreground" />
+        {/* Header with title and badges */}
+        <div className="space-y-2">
+          <h3 className="font-medium text-sm line-clamp-2" data-testid={`text-task-title-${id}`}>
+            {title}
+          </h3>
+          <p className="text-xs text-muted-foreground">{category}</p>
+          
+          {/* Badges row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <UrgencyBadge level={urgency} />
+            <Badge variant="outline" className={`${statusStyle.className} text-xs px-2 py-0.5`}>
+              {statusStyle.label}
+            </Badge>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="font-medium text-sm line-clamp-2 flex-1" data-testid={`text-task-title-${id}`}>
-                {title}
-              </h3>
-              <div className="flex-shrink-0 flex flex-col gap-1.5">
-                <UrgencyBadge level={urgency} />
-                <Badge variant="outline" className={`${statusStyle.className} text-xs px-2 py-0.5`}>
-                  {statusStyle.label}
-                </Badge>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">{category}</p>
-          </div>
-        </div>
-
-        {/* Task ID */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">#{id.slice(0, 8)}</span>
         </div>
 
         {/* Assignee and dates */}
