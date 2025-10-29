@@ -33,6 +33,17 @@ export default function Messages() {
     enabled: !!selectedRequestId,
   });
 
+  const markAsReadMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+    },
+  });
+
   // Fetch all messages for unread count
   const { data: allMessages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
@@ -45,6 +56,12 @@ export default function Messages() {
   useEffect(() => {
     scrollToBottom();
   }, [selectedMessages]);
+
+  useEffect(() => {
+    if (selectedRequestId) {
+      markAsReadMutation.mutate(selectedRequestId);
+    }
+  }, [selectedRequestId]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -121,7 +138,7 @@ export default function Messages() {
                       {/* Unread messages notification badge */}
                       {(() => {
                         const unreadCount = allMessages.filter(
-                          m => m.requestId === request.id && m.senderId !== user?.id
+                          m => m.requestId === request.id && m.senderId !== user?.id && !m.read
                         ).length;
                         return unreadCount > 0 && (
                           <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">

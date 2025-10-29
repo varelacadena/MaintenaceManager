@@ -574,6 +574,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(messages.createdAt);
   }
 
+  async markMessagesAsRead(requestId: string, userId: string): Promise<void> {
+    await db
+      .update(messages)
+      .set({ read: true })
+      .where(
+        and(
+          eq(messages.requestId, requestId),
+          not(eq(messages.senderId, userId))
+        )
+      );
+  }
+
   async getMessagesByTask(taskId: string): Promise<Message[]> {
     return await db
       .select()
