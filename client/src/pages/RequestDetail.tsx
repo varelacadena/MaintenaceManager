@@ -275,13 +275,6 @@ export default function RequestDetail() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium mb-2">Requester</h3>
-                  <p className="text-muted-foreground" data-testid="text-requester">
-                    {requester ? `${requester.firstName} ${requester.lastName}` : "Unknown"}
-                  </p>
-                </div>
-
                 {area && (
                   <div>
                     <h3 className="font-medium mb-2">Area</h3>
@@ -314,6 +307,42 @@ export default function RequestDetail() {
               )}
             </CardContent>
           </Card>
+
+          {requester && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Requester Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
+                    <p className="text-base" data-testid="text-requester-name">
+                      {requester.firstName} {requester.lastName}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
+                    <p className="text-base" data-testid="text-requester-email">
+                      {requester.email || "Not provided"}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
+                    <p className="text-base" data-testid="text-requester-phone">
+                      {requester.phoneNumber || "Not provided"}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Username</h3>
+                    <p className="text-base" data-testid="text-requester-username">
+                      {requester.username}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
