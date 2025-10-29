@@ -26,6 +26,7 @@ export async function applyMigrations() {
     { file: "002_nullable_request_id.sql", name: "002_nullable_request_id" },
     { file: "003_note_type.sql", name: "003_note_type" },
     { file: "004_fix_phone_number_column.sql", name: "004_fix_phone_number_column" },
+    { file: "005_add_note_type_column.sql", name: "005_add_note_type_column" },
   ];
 
   try {
