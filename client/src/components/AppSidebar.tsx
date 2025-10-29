@@ -25,7 +25,6 @@ import {
   Package,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface AppSidebarProps {
   userRole: "admin" | "maintenance" | "staff";
@@ -69,7 +68,6 @@ const roleMenus = {
 export default function AppSidebar({ userRole, userName, userInitials }: AppSidebarProps) {
   const [location] = useLocation();
   const menuItems = roleMenus[userRole];
-  const unreadCount = useUnreadMessages();
 
   return (
     <Sidebar>
@@ -93,15 +91,8 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
                     <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <div className="flex items-center gap-2 flex-1">
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                        {item.title === "Messages" && unreadCount > 0 && (
-                          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white">
-                            {unreadCount > 9 ? "9+" : unreadCount}
-                          </span>
-                        )}
-                      </div>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
