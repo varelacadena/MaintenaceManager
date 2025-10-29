@@ -483,30 +483,54 @@ export default function RequestDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {messages.length > 0 && (
-                  <div className="space-y-3 mb-4">
+                {messages.length > 0 ? (
+                  <div className="space-y-4 mb-4">
                     {messages.map((message) => {
+                      const isOwn = message.userId === user?.id;
                       const sender = users.find(u => u.id === message.userId);
+
+                      let senderName = "Unknown User";
+                      if (isOwn) {
+                        senderName = "You";
+                      } else if (sender) {
+                        const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
+                        senderName = fullName || sender.username;
+                      } else {
+                        senderName = user?.role === "staff" ? "Maintenance Team" : "Unknown User";
+                      }
+
                       return (
                         <div
                           key={message.id}
-                          className="border rounded-lg p-3"
+                          className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm" data-testid={`text-sender-${message.id}`}>
-                              {sender ? `${sender.firstName} ${sender.lastName}` : "Unknown User"}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(message.createdAt!).toLocaleString()}
-                            </span>
+                          <span className="text-xs font-medium text-muted-foreground mb-1" data-testid={`text-sender-${message.id}`}>
+                            {senderName}
+                          </span>
+                          <div
+                            className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                              isOwn
+                                ? "bg-[#1E90FF] text-white rounded-tr-sm"
+                                : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                            }`}
+                          >
+                            <p className="text-sm" data-testid={`text-content-${message.id}`}>{message.content}</p>
                           </div>
-                          <p className="text-sm" data-testid={`text-content-${message.id}`}>
-                            {message.content}
-                          </p>
+                          <span className="text-xs text-muted-foreground mt-1">
+                            {message.createdAt &&
+                              new Date(message.createdAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                          </span>
                         </div>
                       );
                     })}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-12">
+                    No messages yet. Start the conversation!
                   </div>
                 )}
 
@@ -515,7 +539,8 @@ export default function RequestDetail() {
                     placeholder="Type a message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1"
+                    className="flex-1 resize-none"
+                    rows={2}
                     data-testid="textarea-message"
                   />
                   <Button
