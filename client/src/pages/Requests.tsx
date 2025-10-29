@@ -62,7 +62,7 @@ export default function Requests() {
     queryKey: ["/api/subdivisions"],
   });
 
-  const { data: users = [] } = useQuery<any[]>({
+  const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
 
@@ -111,10 +111,10 @@ export default function Requests() {
     return subdivision?.name || null;
   };
 
-  if (isLoading) {
+  if (isLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">Loading requests...</div>
+        <div className="text-center">Loading...</div>
       </div>
     );
   }
@@ -200,7 +200,9 @@ export default function Requests() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs mb-1">Submitted by</p>
-                      <p className="font-medium">{getRequesterName(request.requesterId)}</p>
+                      <p className="font-medium" data-testid={`text-requester-${request.id}`}>
+                        {getRequesterName(request.requesterId)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs mb-1">Submitted</p>

@@ -159,15 +159,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove passwords from response
       let usersWithoutPasswords = users.map(({ password, ...user }) => user);
 
-      // If maintenance role, filter to only show maintenance and admin users
-      if (currentUser?.role === "maintenance") {
-        usersWithoutPasswords = usersWithoutPasswords.filter(
-          u => u.role === "maintenance" || u.role === "admin"
-        );
-      }
-      // Admin sees all users (already handled above)
+      // Maintenance and admin see all users (maintenance needs to see requesters for service requests)
       // Staff should not access this endpoint at all
-      else if (currentUser?.role === "staff") {
+      if (currentUser?.role === "staff") {
         return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
       }
 
