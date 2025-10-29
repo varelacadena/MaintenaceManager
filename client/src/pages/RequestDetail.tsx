@@ -184,7 +184,8 @@ export default function RequestDetail() {
   const area = areas.find(a => a.id === request.areaId);
   const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
 
-  const canConvertToTask = (user?.role === "admin" || user?.role === "maintenance") &&
+  const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
+  const canConvertToTask = isMaintenanceOrAdmin &&
     (request.status === "submitted" || request.status === "under_review" || request.status === "pending");
 
   const getStatusColor = (status: string) => {

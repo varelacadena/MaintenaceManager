@@ -91,6 +91,9 @@ export default function Requests() {
   const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
   const isStaff = user?.role === "staff";
 
+  // Maintenance and admin have same permissions for service requests
+  const canManageRequests = isMaintenanceOrAdmin;
+
   const getRequesterName = (requesterId: string) => {
     const requester = users.find((u: any) => u.id === requesterId);
     return requester ? `${requester.firstName} ${requester.lastName}` : "Unknown";
@@ -224,7 +227,7 @@ export default function Requests() {
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
 
-                    {isMaintenanceOrAdmin && (
+                    {canManageRequests && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
