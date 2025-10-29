@@ -164,11 +164,16 @@ export default function Messages() {
                   messages.map((message) => {
                     const isOwn = message.senderId === user?.id;
                     const sender = users.find(u => u.id === message.senderId);
-                    const senderName = isOwn 
-                      ? "You" 
-                      : sender 
-                        ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.username
-                        : "Unknown User";
+                    
+                    // Get the sender's display name
+                    let senderName = "Unknown User";
+                    if (isOwn) {
+                      senderName = "You";
+                    } else if (sender) {
+                      const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
+                      senderName = fullName || sender.username;
+                    }
+                    
                     return (
                       <div
                         key={message.id}
