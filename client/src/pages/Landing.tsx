@@ -10,11 +10,13 @@ export default function Landing() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
     try {
       const response = await fetch("/api/login", {
@@ -28,10 +30,13 @@ export default function Landing() {
       if (response.ok) {
         window.location.href = "/";
       } else {
-        const error = await response.json();
+        const errorData = await response.json();
+        const errorMessage = errorData.message || "Invalid username or password. Please check your credentials and try again.";
+        
+        setError(errorMessage);
         toast({
           title: "Authentication Failed",
-          description: error.message || "Invalid username or password. Please check your credentials and try again.",
+          description: errorMessage,
           variant: "destructive",
           duration: 5000,
         });
@@ -39,9 +44,11 @@ export default function Landing() {
         setPassword("");
       }
     } catch (error) {
+      const errorMessage = "Unable to connect to the server. Please try again.";
+      setError(errorMessage);
       toast({
         title: "Connection Error",
-        description: "Unable to connect to the server. Please try again.",
+        description: errorMessage,
         variant: "destructive",
         duration: 5000,
       });
@@ -71,7 +78,10 @@ export default function Landing() {
                 type="text"
                 placeholder="Enter your username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setError("");
+                }}
                 required
                 disabled={isLoading}
                 data-testid="input-username"
@@ -84,11 +94,17 @@ export default function Landing() {
                 type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError("");
+                }}
                 required
                 disabled={isLoading}
                 data-testid="input-password"
               />
+              {error && (
+                <p className="text-sm text-red-500 font-medium">{error}</p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
               {isLoading ? "Signing in..." : "Sign In"}
