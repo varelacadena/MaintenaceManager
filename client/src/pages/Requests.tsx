@@ -183,7 +183,10 @@ export default function Requests() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <CardTitle className="text-xl mb-1">{request.title}</CardTitle>
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-xl">{request.title}</CardTitle>
+                        <span className="text-xs text-muted-foreground font-mono">#{request.id.slice(0, 8)}</span>
+                      </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
                     </div>
                     <div className="flex gap-2 shrink-0">
