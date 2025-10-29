@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,15 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const { data: requests = [] } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
@@ -180,6 +189,7 @@ export default function Messages() {
                     );
                   })
                 )}
+                <div ref={messagesEndRef} />
               </div>
               <div className="p-4 border-t">
                 <div className="flex gap-2">
