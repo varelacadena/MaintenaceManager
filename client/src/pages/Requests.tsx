@@ -180,129 +180,153 @@ export default function Requests() {
 
             return (
               <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-xl">{request.title}</CardTitle>
-                        <span className="text-xs text-muted-foreground font-mono">#{request.id.slice(0, 8)}</span>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
+                    {/* Left Column: Requester & Status Info */}
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request ID</p>
+                        <p className="font-mono text-sm font-medium">#{request.id.slice(0, 8)}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
+                      
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
+                        <p className="font-medium" data-testid={`text-requester-${request.id}`}>
+                          {getRequesterName(request.requesterId)}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Date Submitted</p>
+                        <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}</p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Status</p>
+                        <Badge variant="outline" className={statusColors[request.status]} data-testid={`badge-status-${request.id}`}>
+                          {request.status.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Urgency</p>
+                        <Badge variant="outline" className={urgencyColors[request.urgency]} data-testid={`badge-urgency-${request.id}`}>
+                          {request.urgency.toUpperCase()}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                      <Badge variant="outline" className={urgencyColors[request.urgency]} data-testid={`badge-urgency-${request.id}`}>
-                        {request.urgency}
-                      </Badge>
-                      <Badge variant="outline" className={statusColors[request.status]} data-testid={`badge-status-${request.id}`}>
-                        {request.status.replace(/_/g, " ")}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Submitted by</p>
-                      <p className="font-medium" data-testid={`text-requester-${request.id}`}>
-                        {getRequesterName(request.requesterId)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Submitted</p>
-                      <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Area</p>
-                      <p className="font-medium">{getAreaName(request.areaId)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Location</p>
-                      <p className="font-medium">{subdivisionName || "—"}</p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/requests/${request.id}`)}
-                      data-testid={`button-view-${request.id}`}
-                    >
-                      View Details
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-
-                    {canManageRequests && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            data-testid={`button-delete-${request.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete this service request. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteRequestMutation.mutate(request.id)}
-                              data-testid={`button-confirm-delete-${request.id}`}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-
-                    {(isStaff && request.requesterId === user?.id && request.status === "submitted") && (
-                      <>
+                    {/* Right Column: Request Details */}
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request Title</p>
+                        <CardTitle className="text-xl mb-3">{request.title}</CardTitle>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Description</p>
+                        <p className="text-sm text-foreground leading-relaxed">{request.description}</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Area</p>
+                          <p className="font-medium text-sm">{getAreaName(request.areaId)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Location</p>
+                          <p className="font-medium text-sm">{subdivisionName || "Not specified"}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 pt-4">
                         <Button
-                          variant="ghost"
+                          variant="default"
                           size="sm"
-                          onClick={() => navigate(`/requests/${request.id}/edit`)}
-                          data-testid={`button-edit-${request.id}`}
+                          onClick={() => navigate(`/requests/${request.id}`)}
+                          data-testid={`button-view-${request.id}`}
                         >
-                          <Edit className="w-4 h-4" />
+                          View Details
+                          <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
+
+                        {canManageRequests && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                data-testid={`button-delete-${request.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete this service request. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteRequestMutation.mutate(request.id)}
+                                  data-testid={`button-confirm-delete-${request.id}`}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+
+                        {(isStaff && request.requesterId === user?.id && request.status === "submitted") && (
+                          <>
                             <Button
                               variant="ghost"
                               size="sm"
-                              data-testid={`button-delete-${request.id}`}
+                              onClick={() => navigate(`/requests/${request.id}/edit`)}
+                              data-testid={`button-edit-${request.id}`}
                             >
-                              <Trash2 className="w-4 h-4 text-destructive" />
+                              <Edit className="w-4 h-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete this service request. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteRequestMutation.mutate(request.id)}
-                                data-testid={`button-confirm-delete-${request.id}`}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </>
-                    )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  data-testid={`button-delete-${request.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this service request. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteRequestMutation.mutate(request.id)}
+                                    data-testid={`button-confirm-delete-${request.id}`}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
