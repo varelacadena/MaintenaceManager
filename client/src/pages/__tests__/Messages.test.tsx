@@ -340,8 +340,9 @@ describe('Messages Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Leaking Faucet')).toBeInTheDocument();
       // Should show badge with count of 1 (only msg-2 is unread and from admin-1)
-      const badge = screen.getByText('1');
+      const badge = screen.getByTestId('unread-badge-req-1');
       expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('1');
     });
   });
 });

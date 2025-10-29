@@ -119,58 +119,61 @@ export default function Messages() {
                 No requests found
               </div>
             ) : (
-              requestsWithMessages.map((request) => (
-                <div
-                  key={request.id}
-                  onClick={() => setSelectedRequestId(request.id)}
-                  className={`p-4 border-b cursor-pointer hover-elevate relative ${
-                    selectedRequestId === request.id ? "bg-muted" : ""
-                  }`}
-                  data-testid={`request-${request.id}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="relative">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback>
-                          {request.title.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {/* Unread messages notification badge */}
-                      {(() => {
-                        const unreadCount = allMessages.filter(
-                          m => m.requestId === request.id && m.senderId !== user?.id && !m.read
-                        ).length;
-                        return unreadCount > 0 && (
-                          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+              requestsWithMessages.map((request) => {
+                const unreadCount = allMessages.filter(
+                  m => m.requestId === request.id && m.senderId !== user?.id && !m.read
+                ).length;
+
+                return (
+                  <div
+                    key={request.id}
+                    onClick={() => setSelectedRequestId(request.id)}
+                    className={`p-4 border-b cursor-pointer hover-elevate relative ${
+                      selectedRequestId === request.id ? "bg-muted" : ""
+                    }`}
+                    data-testid={`request-${request.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="relative">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback>
+                            {request.title.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {unreadCount > 0 && (
+                          <div 
+                            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold"
+                            data-testid={`unread-badge-${request.id}`}
+                          >
                             {unreadCount}
                           </div>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className="font-semibold text-base truncate">
-                          {request.title}
-                        </h3>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap mt-1">
-                        <Badge
-                          variant="outline"
-                          className="text-xs no-default-hover-elevate bg-muted"
-                        >
-                          #{request.id.substring(0, 8)}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] px-1.5 py-0 no-default-hover-elevate"
-                        >
-                          {request.status.replace("_", " ")}
-                        </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className="font-semibold text-base truncate">
+                            {request.title}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                          <Badge
+                            variant="outline"
+                            className="text-xs no-default-hover-elevate bg-muted"
+                          >
+                            #{request.id.substring(0, 8)}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 no-default-hover-elevate"
+                          >
+                            {request.status.replace("_", " ")}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </Card>
