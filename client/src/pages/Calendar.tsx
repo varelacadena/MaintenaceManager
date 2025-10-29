@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -42,21 +43,53 @@ function DraggableTask({ task, onClick }: { task: Task; onClick: () => void }) {
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={onClick}
-      className={`text-xs p-1 rounded cursor-move hover-elevate bg-muted ${
-        isDragging ? "opacity-50" : ""
-      }`}
-      data-testid={`task-${task.id}`}
-    >
-      <div className="flex items-center gap-1">
-        <div className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`} />
-        <span className="truncate flex-1">{task.name}</span>
-      </div>
-    </div>
+    <HoverCard openDelay={200}>
+      <HoverCardTrigger asChild>
+        <div
+          ref={setNodeRef}
+          {...listeners}
+          {...attributes}
+          onClick={onClick}
+          className={`text-xs p-1 rounded cursor-move hover-elevate bg-muted ${
+            isDragging ? "opacity-50" : ""
+          }`}
+          data-testid={`task-${task.id}`}
+        >
+          <div className="flex items-center gap-1">
+            <div className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`} />
+            <span className="truncate flex-1">{task.name}</span>
+          </div>
+        </div>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-80" side="top">
+        <div className="space-y-2">
+          <div>
+            <h4 className="font-semibold text-sm">{task.name}</h4>
+            {task.description && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                {task.description}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className={statusColors[task.status]}>
+              {task.status.replace("_", " ")}
+            </Badge>
+            <Badge variant="outline" className="capitalize">
+              {task.urgency}
+            </Badge>
+            <Badge variant="outline" className="capitalize">
+              {task.taskType.replace("_", " ")}
+            </Badge>
+          </div>
+          {task.location && (
+            <p className="text-xs text-muted-foreground">
+              📍 {task.location}
+            </p>
+          )}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
