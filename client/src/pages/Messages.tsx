@@ -149,7 +149,7 @@ export default function Messages() {
                   </div>
                 ) : (
                   messages.map((message) => {
-                    const isOwn = message.userId === user?.id;
+                    const isOwn = message.senderId === user?.id;
                     const senderName = isOwn ? "You" : "Support Team";
                     return (
                       <div
