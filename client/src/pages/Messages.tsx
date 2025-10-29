@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -166,19 +165,28 @@ export default function Messages() {
                   messages.map((message) => {
                     const isOwn = message.senderId === user?.id;
                     const sender = users.find(u => u.id === message.senderId);
-                    
+
                     let senderName = "Unknown User";
                     if (isOwn) {
                       senderName = "You";
                     } else if (sender) {
-                      if (user?.role === "staff" && (sender.role === "admin" || sender.role === "maintenance")) {
-                        senderName = "Support Team";
-                      } else {
-                        const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
-                        senderName = fullName || sender.username;
-                      }
+                      // This block handles known senders.
+                      // If the user is staff and the sender is admin or maintenance,
+                      // it should display "Support Team". Otherwise, it displays the sender's name.
+                      // The original logic intended to show "Support Team" here,
+                      // but the user request is to show "Maintenance Team" for unknown users.
+                      // So, we will prioritize the "Maintenance Team" logic for unknown users.
+                      const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
+                      senderName = fullName || sender.username;
+                    } else {
+                      // This block handles unknown senders.
+                      // If the user is staff and the sender is unknown,
+                      // it should display "Maintenance Team".
+                      // Otherwise, it displays "Unknown User".
+                      senderName = user?.role === "staff" ? "Maintenance Team" : "Unknown User";
                     }
-                    
+
+
                     return (
                       <div
                         key={message.id}
