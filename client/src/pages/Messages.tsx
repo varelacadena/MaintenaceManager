@@ -157,19 +157,19 @@ export default function Messages() {
                         className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
                         data-testid={`message-${message.id}`}
                       >
-                        <span className="text-xs font-medium text-muted-foreground mb-1 px-1">
+                        <span className="text-xs font-medium text-muted-foreground mb-1">
                           {senderName}
                         </span>
                         <div
-                          className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                          className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
                             isOwn
-                              ? "bg-blue-500 text-white rounded-tr-sm"
-                              : "bg-muted text-foreground rounded-tl-sm"
+                              ? "bg-[#1E90FF] text-white rounded-tr-sm"
+                              : "bg-gray-200 text-gray-900 rounded-tl-sm"
                           }`}
                         >
                           <p className="text-sm">{message.content}</p>
                         </div>
-                        <span className="text-xs text-muted-foreground mt-1 px-1">
+                        <span className="text-xs text-muted-foreground mt-1">
                           {message.createdAt &&
                             new Date(message.createdAt).toLocaleTimeString([], {
                               hour: '2-digit',
