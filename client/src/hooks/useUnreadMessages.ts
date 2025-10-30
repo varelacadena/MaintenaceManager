@@ -13,9 +13,9 @@ export function useUnreadMessages() {
 
   if (!user) return 0;
 
-  // Count messages where the user is not the sender and message is unread
+  // Count messages where the user is not the sender
   const unreadCount = messages.filter(
-    (msg) => msg.senderId !== user.id && !msg.read
+    (msg) => msg.senderId !== user.id
   ).length;
 
   return unreadCount;

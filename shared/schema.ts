@@ -203,7 +203,6 @@ export const messages = pgTable("messages", {
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   content: text("content").notNull(),
-  read: boolean("read").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
