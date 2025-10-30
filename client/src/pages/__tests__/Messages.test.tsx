@@ -43,16 +43,16 @@ const mockMessages = [
     requestId: 'req-1',
     senderId: 'user-1',
     content: 'The faucet is leaking badly',
-    createdAt: new Date().toISOString(),
     read: true,
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'msg-2',
     requestId: 'req-1',
     senderId: 'admin-1',
     content: 'We will send someone today',
-    createdAt: new Date().toISOString(),
     read: false,
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -278,12 +278,6 @@ describe('Messages Component', () => {
           ]),
         });
       }
-      if (url.includes('/api/messages')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([]),
-        });
-      }
       return Promise.reject(new Error('Unknown endpoint'));
     }) as any;
 
@@ -305,7 +299,38 @@ describe('Messages Component', () => {
     });
   });
 
-  it('displays unread message indicator on message bubbles', async () => {
+  it('shows unread message badge for messages from other users', async () => {
+    global.fetch = vi.fn((url) => {
+      if (url.includes('/api/service-requests')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockRequests),
+        });
+      }
+      if (url.includes('/api/messages') && !url.includes('/api/messages/request')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockMessages),
+        });
+      }
+      if (url.includes('/api/messages/request')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        });
+      }
+      if (url.includes('/api/users')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([
+            { id: 'user-1', username: 'testuser', firstName: 'Test', lastName: 'User', role: 'staff' },
+            { id: 'admin-1', username: 'admin', firstName: 'Admin', lastName: 'User', role: 'admin' },
+          ]),
+        });
+      }
+      return Promise.reject(new Error('Unknown endpoint'));
+    }) as any;
+
     render(
       <QueryClientProvider client={queryClient}>
         <Messages />
@@ -314,49 +339,10 @@ describe('Messages Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Leaking Faucet')).toBeInTheDocument();
-    });
-
-    const request = screen.getByTestId('request-req-1');
-    fireEvent.click(request);
-
-    await waitFor(() => {
-      const unreadMessage = screen.getByTestId('message-msg-2');
-      expect(unreadMessage).toBeInTheDocument();
-      
-      // Should have blue border for unread messages
-      const messageDiv = unreadMessage.querySelector('.border-2.border-blue-500');
-      expect(messageDiv).toBeInTheDocument();
-      
-      // Should show "New" badge
-      expect(screen.getByText('New')).toBeInTheDocument();
-    });
-  });
-
-  it('does not show unread indicator on own messages', async () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Messages />
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Leaking Faucet')).toBeInTheDocument();
-    });
-
-    const request = screen.getByTestId('request-req-1');
-    fireEvent.click(request);
-
-    await waitFor(() => {
-      const ownMessage = screen.getByTestId('message-msg-1');
-      expect(ownMessage).toBeInTheDocument();
-      
-      // Should not have blue border for own messages
-      const messageDiv = ownMessage.querySelector('.border-2.border-blue-500');
-      expect(messageDiv).not.toBeInTheDocument();
-      
-      // Should use blue background for own messages
-      const blueBackground = ownMessage.querySelector('.bg-\\[\\#1E90FF\\]');
-      expect(blueBackground).toBeInTheDocument();
+      // Should show badge with count of 1 (only msg-2 is unread and from admin-1)
+      const badge = screen.getByTestId('unread-badge-req-1');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('1');
     });
   });
 });

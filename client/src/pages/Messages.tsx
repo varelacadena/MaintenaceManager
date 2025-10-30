@@ -28,9 +28,25 @@ export default function Messages() {
     queryKey: ["/api/users"],
   });
 
-  const { data: messages = [] } = useQuery<Message[]>({
+  const { data: selectedMessages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", selectedRequestId],
     enabled: !!selectedRequestId,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+    },
+  });
+
+  // Fetch all messages for unread count
+  const { data: allMessages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages"],
   });
 
   const scrollToBottom = () => {
@@ -39,7 +55,13 @@ export default function Messages() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [selectedMessages]);
+
+  useEffect(() => {
+    if (selectedRequestId) {
+      markAsReadMutation.mutate(selectedRequestId);
+    }
+  }, [selectedRequestId]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -51,6 +73,9 @@ export default function Messages() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["/api/messages/request", selectedRequestId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
       });
       setNewMessage("");
       scrollToBottom();
@@ -94,43 +119,61 @@ export default function Messages() {
                 No requests found
               </div>
             ) : (
-              requestsWithMessages.map((request) => (
-                <div
-                  key={request.id}
-                  onClick={() => setSelectedRequestId(request.id)}
-                  className={`p-4 border-b cursor-pointer hover-elevate ${
-                    selectedRequestId === request.id ? "bg-muted" : ""
-                  }`}
-                  data-testid={`request-${request.id}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback>
-                        {request.title.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className="font-medium text-sm truncate">
-                          {request.title}
-                        </h3>
-                        <Badge
-                          variant="outline"
-                          className="text-xs no-default-hover-elevate"
-                        >
-                          {request.status.replace("_", " ")}
-                        </Badge>
+              requestsWithMessages.map((request) => {
+                const unreadCount = allMessages.filter(
+                  m => m.requestId === request.id && m.senderId !== user?.id && !m.read
+                ).length;
+
+                return (
+                  <div
+                    key={request.id}
+                    onClick={() => setSelectedRequestId(request.id)}
+                    className={`p-4 border-b cursor-pointer hover-elevate relative ${
+                      selectedRequestId === request.id ? "bg-muted" : ""
+                    }`}
+                    data-testid={`request-${request.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="relative">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback>
+                            {request.title.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {unreadCount > 0 && (
+                          <div 
+                            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold"
+                            data-testid={`unread-badge-${request.id}`}
+                          >
+                            {unreadCount}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Request #{request.id.substring(0, 8)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {request.category}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className="font-semibold text-base truncate">
+                            {request.title}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                          <Badge
+                            variant="outline"
+                            className="text-xs no-default-hover-elevate bg-muted"
+                          >
+                            #{request.id.substring(0, 8)}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 no-default-hover-elevate"
+                          >
+                            {request.status.replace("_", " ")}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </Card>
@@ -157,12 +200,12 @@ export default function Messages() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 ? (
+                {selectedMessages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-12">
                     No messages yet. Start the conversation!
                   </div>
                 ) : (
-                  messages.map((message) => {
+                  selectedMessages.map((message) => {
                     const isOwn = message.senderId === user?.id;
                     const sender = users.find(u => u.id === message.senderId);
 
@@ -170,13 +213,22 @@ export default function Messages() {
                     if (isOwn) {
                       senderName = "You";
                     } else if (sender) {
+                      // This block handles known senders.
+                      // If the user is staff and the sender is admin or maintenance,
+                      // it should display "Support Team". Otherwise, it displays the sender's name.
+                      // The original logic intended to show "Support Team" here,
+                      // but the user request is to show "Maintenance Team" for unknown users.
+                      // So, we will prioritize the "Maintenance Team" logic for unknown users.
                       const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
                       senderName = fullName || sender.username;
                     } else {
+                      // This block handles unknown senders.
+                      // If the user is staff and the sender is unknown,
+                      // it should display "Maintenance Team".
+                      // Otherwise, it displays "Unknown User".
                       senderName = user?.role === "staff" ? "Maintenance Team" : "Unknown User";
                     }
 
-                    const isUnread = !isOwn && !message.read;
 
                     return (
                       <div
@@ -191,27 +243,18 @@ export default function Messages() {
                           className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
                             isOwn
                               ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                              : isUnread
-                              ? "bg-blue-100 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100 rounded-tl-sm border-2 border-blue-500"
-                              : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-sm"
+                              : "bg-gray-200 text-gray-900 rounded-tl-sm"
                           }`}
                         >
                           <p className="text-sm">{message.content}</p>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {message.createdAt &&
-                              new Date(message.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                          </span>
-                          {isUnread && (
-                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                              New
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-xs text-muted-foreground mt-1">
+                          {message.createdAt &&
+                            new Date(message.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                        </span>
                       </div>
                     );
                   })

@@ -942,33 +942,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get messages for a specific request
+  // Get messages for a request
   app.get("/api/messages/request/:requestId", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send({ message: "Unauthorized" });
+    try {
+      const messages = await storage.getMessagesByRequest(
+        req.params.requestId
+      );
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
     }
-
-    const messages = await storage.getMessagesByRequestId(req.params.requestId);
-    res.json(messages);
   });
 
-  // Mark messages as read
-  app.patch("/api/messages/mark-read", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send({ message: "Unauthorized" });
-    }
-
-    const { messageIds } = req.body;
-    if (!Array.isArray(messageIds)) {
-      return res.status(400).send({ message: "messageIds must be an array" });
-    }
-
+  // Mark messages as read for a request
+  app.post("/api/messages/request/:requestId/mark-read", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.markMessagesAsRead(messageIds, req.user!.id);
+      const userId = req.userId;
+      await storage.markMessagesAsRead(req.params.requestId, userId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error marking messages as read:", error);
-      res.status(500).send({ message: "Failed to mark messages as read" });
+      res.status(500).json({ message: "Failed to mark messages as read" });
     }
   });
 

@@ -37,7 +37,7 @@ import {
   type InsertTaskNote,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, or, sql, inArray, ne } from "drizzle-orm";
+import { eq, and, desc, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -138,7 +138,6 @@ export interface IStorage {
   getMessagesByRequest(requestId: string): Promise<Message[]>;
   getMessagesByTask(taskId: string): Promise<Message[]>;
   getMessages(): Promise<Message[]>;
-  markMessagesAsRead(messageIds: string[], userId: string): Promise<void>;
 
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
@@ -563,13 +562,28 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
+  async getMessagesByRequest(requestId: string): Promise<Message[]>;
+  async getMessagesByTask(taskId: string): Promise<Message[]>;
+  async getMessages(): Promise<Message[]>;
+
   async getMessagesByRequest(requestId: string): Promise<Message[]> {
-    const result = await db
+    return await db
       .select()
       .from(messages)
       .where(eq(messages.requestId, requestId))
       .orderBy(messages.createdAt);
-    return result;
+  }
+
+  async markMessagesAsRead(requestId: string, userId: string): Promise<void> {
+    await db
+      .update(messages)
+      .set({ read: true })
+      .where(
+        and(
+          eq(messages.requestId, requestId),
+          not(eq(messages.senderId, userId))
+        )
+      );
   }
 
   async getMessagesByTask(taskId: string): Promise<Message[]> {
@@ -582,20 +596,6 @@ export class DatabaseStorage implements IStorage {
 
   async getMessages(): Promise<Message[]> {
     return await db.select().from(messages).orderBy(desc(messages.createdAt));
-  }
-
-  async markMessagesAsRead(messageIds: string[], userId: string): Promise<void> {
-    if (messageIds.length === 0) return;
-
-    await db
-      .update(messages)
-      .set({ read: true })
-      .where(
-        and(
-          inArray(messages.id, messageIds),
-          ne(messages.senderId, userId) // Only mark messages not sent by the user
-        )
-      );
   }
 
   // Upload operations
