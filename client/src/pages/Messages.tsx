@@ -170,22 +170,13 @@ export default function Messages() {
                     if (isOwn) {
                       senderName = "You";
                     } else if (sender) {
-                      // This block handles known senders.
-                      // If the user is staff and the sender is admin or maintenance,
-                      // it should display "Support Team". Otherwise, it displays the sender's name.
-                      // The original logic intended to show "Support Team" here,
-                      // but the user request is to show "Maintenance Team" for unknown users.
-                      // So, we will prioritize the "Maintenance Team" logic for unknown users.
                       const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
                       senderName = fullName || sender.username;
                     } else {
-                      // This block handles unknown senders.
-                      // If the user is staff and the sender is unknown,
-                      // it should display "Maintenance Team".
-                      // Otherwise, it displays "Unknown User".
                       senderName = user?.role === "staff" ? "Maintenance Team" : "Unknown User";
                     }
 
+                    const isUnread = !isOwn && !message.read;
 
                     return (
                       <div
@@ -200,18 +191,27 @@ export default function Messages() {
                           className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
                             isOwn
                               ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                              : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                              : isUnread
+                              ? "bg-blue-100 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100 rounded-tl-sm border-2 border-blue-500"
+                              : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-sm"
                           }`}
                         >
                           <p className="text-sm">{message.content}</p>
                         </div>
-                        <span className="text-xs text-muted-foreground mt-1">
-                          {message.createdAt &&
-                            new Date(message.createdAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {message.createdAt &&
+                              new Date(message.createdAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                          </span>
+                          {isUnread && (
+                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                              New
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })

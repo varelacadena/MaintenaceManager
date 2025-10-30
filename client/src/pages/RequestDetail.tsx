@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -499,40 +499,50 @@ export default function RequestDetail() {
                         senderName = user?.role === "staff" ? "Maintenance Team" : "Unknown User";
                       }
 
+                      const isUnread = !isOwn && !message.read;
+
                       return (
                         <div
                           key={message.id}
                           className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <span className="text-xs font-medium text-muted-foreground mb-1" data-testid={`text-sender-${message.id}`}>
+                          <span className="text-xs font-medium text-muted-foreground mb-1">
                             {senderName}
                           </span>
                           <div
                             className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
                               isOwn
                                 ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                                : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                                : isUnread
+                                ? "bg-blue-100 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100 rounded-tl-sm border-2 border-blue-500"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-sm"
                             }`}
                           >
-                            <p className="text-sm" data-testid={`text-content-${message.id}`}>{message.content}</p>
+                            <p className="text-sm">{message.content}</p>
                           </div>
-                          <span className="text-xs text-muted-foreground mt-1">
-                            {message.createdAt &&
-                              new Date(message.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {message.createdAt &&
+                                new Date(message.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                            </span>
+                            {isUnread && (
+                              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                New
+                              </span>
+                            )}
+                          </div>
                         </div>
                       );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground py-12">
-                    No messages yet. Start the conversation!
-                  </div>
-                )}
+                    })
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      No messages yet. Start the conversation!
+                    </div>
+                  )}
 
                 <div className="flex gap-2">
                   <Textarea
