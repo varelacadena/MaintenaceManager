@@ -537,8 +537,9 @@ export default function RequestDetail() {
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
+                    })}
+                  </div>
+                ) : (
                     <div className="text-center text-muted-foreground py-12">
                       No messages yet. Start the conversation!
                     </div>

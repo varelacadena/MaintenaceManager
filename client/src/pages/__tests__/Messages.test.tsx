@@ -44,6 +44,7 @@ const mockMessages = [
     senderId: 'user-1',
     content: 'The faucet is leaking badly',
     createdAt: new Date().toISOString(),
+    read: true,
   },
   {
     id: 'msg-2',
@@ -51,6 +52,7 @@ const mockMessages = [
     senderId: 'admin-1',
     content: 'We will send someone today',
     createdAt: new Date().toISOString(),
+    read: false,
   },
 ];
 
@@ -276,6 +278,12 @@ describe('Messages Component', () => {
           ]),
         });
       }
+      if (url.includes('/api/messages')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        });
+      }
       return Promise.reject(new Error('Unknown endpoint'));
     }) as any;
 
@@ -294,6 +302,61 @@ describe('Messages Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No messages yet. Start the conversation!')).toBeInTheDocument();
+    });
+  });
+
+  it('displays unread message indicator on message bubbles', async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Messages />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Leaking Faucet')).toBeInTheDocument();
+    });
+
+    const request = screen.getByTestId('request-req-1');
+    fireEvent.click(request);
+
+    await waitFor(() => {
+      const unreadMessage = screen.getByTestId('message-msg-2');
+      expect(unreadMessage).toBeInTheDocument();
+      
+      // Should have blue border for unread messages
+      const messageDiv = unreadMessage.querySelector('.border-2.border-blue-500');
+      expect(messageDiv).toBeInTheDocument();
+      
+      // Should show "New" badge
+      expect(screen.getByText('New')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show unread indicator on own messages', async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Messages />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Leaking Faucet')).toBeInTheDocument();
+    });
+
+    const request = screen.getByTestId('request-req-1');
+    fireEvent.click(request);
+
+    await waitFor(() => {
+      const ownMessage = screen.getByTestId('message-msg-1');
+      expect(ownMessage).toBeInTheDocument();
+      
+      // Should not have blue border for own messages
+      const messageDiv = ownMessage.querySelector('.border-2.border-blue-500');
+      expect(messageDiv).not.toBeInTheDocument();
+      
+      // Should use blue background for own messages
+      const blueBackground = ownMessage.querySelector('.bg-\\[\\#1E90FF\\]');
+      expect(blueBackground).toBeInTheDocument();
     });
   });
 });
