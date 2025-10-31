@@ -138,6 +138,7 @@ export interface IStorage {
   getMessagesByRequest(requestId: string): Promise<Message[]>;
   getMessagesByTask(taskId: string): Promise<Message[]>;
   getMessages(): Promise<Message[]>;
+  markMessagesAsRead(requestId: string, userId: string): Promise<void>;
 
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
@@ -584,6 +585,18 @@ export class DatabaseStorage implements IStorage {
 
   async getMessages(): Promise<Message[]> {
     return await db.select().from(messages).orderBy(desc(messages.createdAt));
+  }
+
+  async markMessagesAsRead(requestId: string, userId: string): Promise<void> {
+    await db
+      .update(messages)
+      .set({ read: true })
+      .where(
+        and(
+          eq(messages.requestId, requestId),
+          sql`${messages.senderId} != ${userId}`
+        )
+      );
   }
 
   // Upload operations
