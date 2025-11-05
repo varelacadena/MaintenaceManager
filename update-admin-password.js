@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 
 async function updateAdminPassword() {
   try {
-    const newPassword = 'AdminSecure2025!';
+    const newPassword = 'Admin2025!';
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     const result = await pool.query(
@@ -15,7 +15,7 @@ async function updateAdminPassword() {
     if (result.rowCount > 0) {
       console.log('✅ Admin password updated successfully!');
       console.log('Username: admin');
-      console.log('Password: AdminSecure2025!');
+      console.log('Password: Admin2025!');
     } else {
       console.log('❌ Admin user not found in database');
     }
