@@ -6,59 +6,56 @@ This is a web-based maintenance management platform designed for college facilit
 
 The platform provides role-based dashboards with workflows optimized for daily operations: college staff submit and track service requests, maintenance workers manage tasks with time tracking and parts logging, and administrators oversee all operations with user management, vendor management, inventory tracking, and reporting capabilities.
 
-## Recent Updates (October 28, 2025)
+## Recent Updates (November 5, 2025)
 
-**MAJOR ARCHITECTURAL REFACTORING - Request/Task Separation:**
+**MESSAGING & USER MANAGEMENT ENHANCEMENTS:**
 
-**Backend Implementation (COMPLETED):**
+**Task Messaging System (COMPLETED):**
+- Added message display to TaskDetail page with real-time polling (5-second intervals)
+- Messages section visible for admin/maintenance roles only
+- Auto-scroll to latest message on new message submission
+- Mark messages as read functionality (PATCH /api/tasks/:taskId/messages/mark-read)
+- Backend routes: POST /api/messages, GET /api/messages/task/:taskId
+- Added `read` boolean column to messages table for unread tracking
+- Updated useUnreadMessages hook to return { unreadCount, messages } object
+- Fixed sidebar message badge to correctly display unread count
+
+**Settings & Profile Management (COMPLETED):**
+- Created Settings.tsx page accessible to all authenticated users
+- Profile update form: firstName, lastName, email, phoneNumber
+- Password change form with current password verification
+- Backend routes:
+  - PATCH /api/users/:id/profile - Update user profile
+  - POST /api/users/change-password - Change password with validation
+- Authorization: Users can only update their own profile
+- Success notifications and automatic auth state refresh
+- Added Settings link to sidebar for all user roles
+
+**Credential Recovery (COMPLETED):**
+- Forgot Username functionality on login page
+  - POST /api/auth/forgot-username - Sends username to user's email
+  - Dialog with email input and success toast
+- Forgot Password functionality on login page
+  - POST /api/auth/forgot-password - Sends reset link to user's email
+  - Dialog with email input and success toast
+- Security best practices:
+  - Always returns success to prevent email enumeration
+  - Uses notification service for email delivery
+  - Backend routes available without authentication
+- Added getUserByEmail method to storage layer
+- End-to-end tested and verified working
+
+**Previous Updates (October 28, 2025):**
+
+**Request/Task Separation Architecture:**
 - Created separate `tasks` table distinct from `service_requests`
-- Service requests are now simple submissions (submitted/under_review/converted_to_task/rejected)
-- Tasks contain all scheduling/assignment fields (initialDate, estimatedCompletionDate, assignedToId, assignedVendorId)
+- Service requests: submitted/under_review/converted_to_task/rejected workflow
+- Tasks: full scheduling, assignment, time tracking, parts usage
 - Task types: one-time, recurring, reminder
-- Updated all related tables (timeEntries, partsUsed, taskNotes) to reference tasks
-- Messages and uploads can reference either requests or tasks
-- Complete storage layer with task CRUD methods
-- All routes updated: service request PATCH/DELETE, task CRUD, status updates
-- Database trigger migration updated to work with taskId
-
-**Frontend Implementation (COMPLETED):**
-- Updated AppSidebar: "Service Requests" and "Tasks" navigation for admin/maintenance
-- Created Tasks.tsx page for viewing/managing tasks with filters by status and urgency
-- Created TaskDetail.tsx page with:
-  - Full task information display (name, description, urgency, status, dates, area, assignment)
-  - Time tracking with start/stop timer functionality
-  - Parts used management with inventory item selection
-  - Task notes for work log documentation
-  - Status update controls for maintenance/admin users
-  - Link to original service request if task was converted
-- Created NewTask.tsx page for:
-  - Creating new tasks from scratch (admin/maintenance only)
-  - Converting service requests to tasks with pre-filled data
-  - Full task configuration (dates, assignment, urgency, type, area/subdivision)
-  - Automatic request status update when converting to task
-- Updated Requests.tsx page with:
-  - Simplified view for new request model (submitted/under_review/converted_to_task/rejected statuses)
-  - Edit/delete buttons for request authors (staff) on submitted requests
-  - Convert to Task button for admin/maintenance on under_review requests
-  - Role-based UI (different views for staff vs admin/maintenance)
-- Updated Calendar.tsx page to:
-  - Display tasks instead of requests based on initialDate
-  - Show task urgency indicators and status badges
-  - Navigate to task detail pages
-  - Include New Task button for admin/maintenance users
-- Full routing configured in App.tsx for all task-related pages
-
-**Previous Features:**
-- User Management: phone numbers, full editing, credentials management
-- Vendor Management: complete CRUD with task assignment capability
-- Inventory Management: real-time tracking, low stock alerts, automatic updates via DB triggers
-- Notification System: email/SMS infrastructure (ready for production integrations)
-- Database Triggers: automatic inventory updates when parts used on tasks
-
-**Next Steps:**
-- Data migration script for existing service_requests (if any exist)
-- End-to-end testing of complete request-to-task workflow
-- Optional enhancements: request edit functionality, vendor task history
+- Complete frontend pages: Tasks.tsx, TaskDetail.tsx, NewTask.tsx
+- Calendar integration showing tasks with urgency indicators
+- User Management, Vendor Management, Inventory Management with DB triggers
+- Notification System infrastructure (email/SMS ready)
 
 ## User Preferences
 
