@@ -28,9 +28,28 @@ export default function Messages() {
     queryKey: ["/api/users"],
   });
 
+  const { data: allMessages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages"],
+    refetchInterval: 5000, // Refetch every 5 seconds
+  });
+
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", selectedRequestId],
     enabled: !!selectedRequestId,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages/request", selectedRequestId],
+      });
+    },
   });
 
   const scrollToBottom = () => {
@@ -40,6 +59,18 @@ export default function Messages() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Mark messages as read when viewing a request
+  useEffect(() => {
+    if (selectedRequestId && messages.length > 0) {
+      const hasUnreadMessages = messages.some(
+        (msg) => !msg.read && msg.senderId !== user?.id
+      );
+      if (hasUnreadMessages) {
+        markAsReadMutation.mutate(selectedRequestId);
+      }
+    }
+  }, [selectedRequestId, messages]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -104,11 +135,26 @@ export default function Messages() {
                   data-testid={`request-${request.id}`}
                 >
                   <div className="flex items-start gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback>
-                        {request.title.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback>
+                          {request.title.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {(() => {
+                        const requestMessages = allMessages.filter(
+                          (msg) => msg.requestId === request.id
+                        );
+                        const unreadCount = requestMessages.filter(
+                          (msg) => !msg.read && msg.senderId !== user?.id
+                        ).length;
+                        return unreadCount > 0 ? (
+                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-medium text-sm truncate">

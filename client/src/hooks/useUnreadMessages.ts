@@ -8,14 +8,15 @@ export function useUnreadMessages() {
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    enabled: !!user, // Only fetch when user is authenticated
   });
 
   if (!user) return 0;
 
-  // Count messages where the user is not the sender
+  // Count unread messages where the user is not the sender
   const unreadCount = messages.filter(
-    (msg) => msg.senderId !== user.id
+    (msg) => !msg.read && msg.senderId !== user.id
   ).length;
 
   return unreadCount;
