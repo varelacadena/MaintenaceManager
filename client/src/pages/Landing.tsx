@@ -154,11 +154,20 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: 'url(/hartland-building.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <Card className="w-full max-w-md relative z-10 backdrop-blur-sm bg-card/95">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Maintenance Portal
+            HARTLAND MAINTENANCE PORTAL
           </CardTitle>
           <CardDescription className="text-center">
             Sign in to access the maintenance management system
