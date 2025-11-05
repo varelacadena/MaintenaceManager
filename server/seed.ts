@@ -22,6 +22,14 @@ const defaultUsers = [
     role: "admin",
   },
   {
+    username: "Santiago",
+    password: "miPrincesa96",
+    email: "santiago@college.edu",
+    firstName: "Santiago",
+    lastName: "Admin",
+    role: "admin",
+  },
+  {
     username: "maintenance",
     password: "maint123",
     email: "maintenance@college.edu",
@@ -73,6 +81,7 @@ export async function seedDatabase() {
     }
     console.log("\nDefault credentials:");
     console.log("Admin - username: admin, password: Admin2025!");
+    console.log("Admin - username: Santiago, password: miPrincesa96");
     console.log("Maintenance - username: maintenance, password: maint123");
     console.log("Staff - username: staff, password: staff123");
   } catch (error) {
