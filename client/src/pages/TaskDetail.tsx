@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,8 @@ import {
   Trash2,
   Paperclip,
   X,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,7 +64,8 @@ import type {
   InventoryItem,
   User as UserType,
   Upload,
-  ServiceRequest
+  ServiceRequest,
+  Message
 } from "@shared/schema";
 
 const urgencyColors = {
@@ -85,6 +88,7 @@ export default function TaskDetail() {
   const { toast } = useToast();
 
   const [newNote, setNewNote] = useState("");
+  const [newMessage, setNewMessage] = useState("");
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [showAddPart, setShowAddPart] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState("");
@@ -104,6 +108,7 @@ export default function TaskDetail() {
   const [holdReason, setHoldReason] = useState("");
   const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
   const [noteType, setNoteType] = useState<"job_note" | "recommendation">("job_note");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -148,6 +153,57 @@ export default function TaskDetail() {
     enabled: !!request?.requesterId,
   });
 
+  const { data: messages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages/task", id],
+    enabled: !!id && (user?.role === "admin" || user?.role === "maintenance"),
+    refetchInterval: 5000, // Poll for new messages
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      return await apiRequest("POST", `/api/messages/task/${taskId}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages/task", id],
+      });
+    },
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/messages", { taskId: id, content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      setNewMessage("");
+      toast({ title: "Message sent" });
+    },
+  });
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Mark messages as read when viewing the task
+  useEffect(() => {
+    if (id && messages.length > 0) {
+      const hasUnreadMessages = messages.some(
+        (msg) => !msg.read && msg.senderId !== user?.id
+      );
+      if (hasUnreadMessages) {
+        markAsReadMutation.mutate(id);
+      }
+    }
+  }, [id, messages, user?.id]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -1283,6 +1339,84 @@ export default function TaskDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {(user?.role === "admin" || user?.role === "maintenance") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Messages
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-96 overflow-y-auto mb-4">
+              {messages.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No messages yet. Start the conversation!
+                </div>
+              ) : (
+                messages.map((message) => {
+                  const isOwn = message.senderId === user?.id;
+                  const sender = users.find(u => u.id === message.senderId);
+                  const senderName = isOwn 
+                    ? "You" 
+                    : sender 
+                      ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.username
+                      : "Unknown User";
+
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+                      data-testid={`message-${message.id}`}
+                    >
+                      <span className="text-xs font-medium text-muted-foreground mb-1">
+                        {senderName}
+                      </span>
+                      <div
+                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                          isOwn
+                            ? "bg-[#1E90FF] text-white rounded-tr-sm"
+                            : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                        }`}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {message.createdAt &&
+                          new Date(message.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="flex gap-2">
+              <Textarea
+                placeholder="Type your message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                className="resize-none"
+                rows={2}
+                data-testid="textarea-new-message"
+              />
+              <Button
+                onClick={() => sendMessageMutation.mutate(newMessage)}
+                disabled={
+                  !newMessage.trim() || sendMessageMutation.isPending
+                }
+                data-testid="button-send-message"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

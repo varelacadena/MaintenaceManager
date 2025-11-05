@@ -55,6 +55,7 @@ export interface IStorage {
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(userData: {
     username: string;
     password: string;
@@ -139,6 +140,7 @@ export interface IStorage {
   getMessagesByTask(taskId: string): Promise<Message[]>;
   getMessages(): Promise<Message[]>;
   markMessagesAsRead(requestId: string, userId: string): Promise<void>;
+  markTaskMessagesAsRead(taskId: string, userId: string): Promise<void>;
 
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
@@ -222,6 +224,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
     return user;
   }
 
@@ -594,6 +604,18 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(messages.requestId, requestId),
+          sql`${messages.senderId} != ${userId}`
+        )
+      );
+  }
+
+  async markTaskMessagesAsRead(taskId: string, userId: string): Promise<void> {
+    await db
+      .update(messages)
+      .set({ read: true })
+      .where(
+        and(
+          eq(messages.taskId, taskId),
           sql`${messages.senderId} != ${userId}`
         )
       );

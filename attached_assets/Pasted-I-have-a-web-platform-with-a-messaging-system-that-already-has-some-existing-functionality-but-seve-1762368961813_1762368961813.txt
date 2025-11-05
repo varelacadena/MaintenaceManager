@@ -1,0 +1,53 @@
+I have a web platform with a messaging system that already has some existing functionality, but several features are not working as expected. Please fix and enhance the system according to the following specifications:
+
+Unread Messages Badge:
+
+Display a red badge with a number inside indicating how many unread messages each user has.
+
+The badge should appear next to the "Messages" icon or section.
+
+When a user opens a message thread, those messages should automatically be marked as read.
+
+Once all messages in a thread are read, the red badge should disappear or update dynamically.
+
+Link Messages with Service Requests:
+
+Integrate the message system with service request modules so that any messages related to a service request are shown in that request’s message area.
+
+Users should be able to see the entire message history (sent and received) related to each specific service request.
+
+Ensure the data model supports message linkage by request ID or reference.
+
+User Settings Area:
+
+Add a "Settings" or "Profile" section in the user dashboard.
+
+Allow users to:
+
+Change their password
+
+Update or edit their profile information (name, email, phone, etc.)
+
+Validate data changes and ensure updates are securely saved to the database.
+
+Login Page Credential Recovery:
+
+Add “Forgot Username” and “Forgot Password” options to the login page.
+
+“Forgot Username” should allow users to recover their username using their registered email.
+
+“Forgot Password” should send a secure reset link to the user’s registered email to set a new password.
+
+Include appropriate error handling and confirmation messages.
+
+Development Notes:
+
+Ensure all features are fully responsive and work across all user roles (Admin, College Staff, Maintenance Team).
+
+Use clean, modular code — ideally React (frontend) and Node.js/Express (backend) if applicable.
+
+Use real-time updates for message notifications if possible (e.g., WebSockets or polling).
+
+Apply best security practices for password management and recovery (hashed storage, secure tokens).
+
+Deliver a functional, testable system with clear documentation and example data where necessary.

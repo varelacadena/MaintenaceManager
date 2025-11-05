@@ -95,6 +95,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Forgot username endpoint
+  app.post("/api/auth/forgot-username", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+
+      // Always return success to prevent email enumeration
+      if (user && user.email) {
+        await notificationService.sendEmail(
+          user.email,
+          "Username Recovery",
+          `Your username is: ${user.username}\n\nIf you didn't request this, please contact support.`
+        );
+      }
+
+      res.json({ success: true, message: "If an account exists with this email, the username has been sent." });
+    } catch (error) {
+      console.error("Forgot username error:", error);
+      res.status(500).json({ message: "Failed to process request" });
+    }
+  });
+
+  // Forgot password endpoint
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+
+      // Always return success to prevent email enumeration
+      if (user && user.email) {
+        // Generate a temporary reset token (in production, store this in DB with expiry)
+        const resetToken = Math.random().toString(36).substring(2, 15);
+        const resetLink = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
+
+        await notificationService.sendEmail(
+          user.email,
+          "Password Reset Request",
+          `You have requested to reset your password.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 24 hours.\n\nIf you didn't request this, please ignore this email and your password will remain unchanged.`
+        );
+      }
+
+      res.json({ success: true, message: "If an account exists with this email, a reset link has been sent." });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process request" });
+    }
+  });
+
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
@@ -303,6 +361,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // User profile management (self-service for all authenticated users)
+  app.patch("/api/users/:id/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const targetId = req.params.id;
+
+      // Users can only update their own profile unless they're admin
+      if (userId !== targetId && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "You can only update your own profile" });
+      }
+
+      const { firstName, lastName, email, phoneNumber } = req.body;
+      const updatedUser = await storage.updateUser(targetId, {
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Change password (self-service for all authenticated users)
+  app.post("/api/users/change-password", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new password are required" });
+      }
+
+      // Verify current password
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await storage.updateUserPassword(userId, hashedPassword);
+
+      res.json({ success: true, message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
     }
   });
 
@@ -978,6 +1102,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // Mark messages as read for a task
+  app.post("/api/messages/task/:taskId/mark-read", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      await storage.markTaskMessagesAsRead(req.params.taskId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking task messages as read:", error);
+      res.status(500).json({ message: "Failed to mark task messages as read" });
+    }
+  });
 
   // Object storage routes for uploads
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {

@@ -69,7 +69,7 @@ const roleMenus = {
 export default function AppSidebar({ userRole, userName, userInitials }: AppSidebarProps) {
   const [location] = useLocation();
   const menuItems = roleMenus[userRole];
-  const unreadCount = useUnreadMessages();
+  const { unreadCount } = useUnreadMessages();
 
   return (
     <Sidebar>

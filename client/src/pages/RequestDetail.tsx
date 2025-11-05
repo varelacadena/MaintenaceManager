@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +55,21 @@ export default function RequestDetail() {
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", id],
     enabled: !!id,
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages/request", id],
+      });
+    },
   });
 
   const { data: uploads = [] } = useQuery<Upload[]>({
@@ -68,6 +83,18 @@ export default function RequestDetail() {
     enabled: request?.status === "converted_to_task",
     select: (tasks: any[]) => tasks.find((t: any) => t.requestId === id),
   });
+
+  // Mark messages as read when viewing the request
+  useEffect(() => {
+    if (id && messages.length > 0) {
+      const hasUnreadMessages = messages.some(
+        (msg) => !msg.read && msg.senderId !== user?.id
+      );
+      if (hasUnreadMessages) {
+        markAsReadMutation.mutate(id);
+      }
+    }
+  }, [id, messages, user?.id]);
 
   const { data: areas = [] } = useQuery<Area[]>({
     queryKey: ["/api/areas"],
