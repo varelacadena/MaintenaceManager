@@ -2,27 +2,39 @@
 const { pool } = require('./server/db');
 const bcrypt = require('bcryptjs');
 
-async function updateAdminPassword() {
+async function resetAdminUser() {
   try {
-    // Set the new password
-    const newPassword = 'Admin2025!';
+    console.log('🔄 Resetting admin user...');
     
-    // Generate a fresh bcrypt hash
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-    console.log('🔄 Updating admin password...');
-    
-    // Update the password in the database
-    const result = await pool.query(
-      "UPDATE users SET password = $1 WHERE username = 'admin' RETURNING id, username",
-      [hashedPassword]
+    // Delete existing admin user
+    const deleteResult = await pool.query(
+      "DELETE FROM users WHERE username = 'admin'"
     );
     
-    if (result.rowCount > 0) {
-      console.log('✅ Admin password updated successfully!');
-      console.log('📋 Login Credentials:');
+    if (deleteResult.rowCount > 0) {
+      console.log('✅ Existing admin user deleted');
+    } else {
+      console.log('ℹ️  No existing admin user found');
+    }
+    
+    // Create new admin user
+    const newPassword = 'Admin2025!';
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    const createResult = await pool.query(
+      `INSERT INTO users (username, password, email, "firstName", "lastName", role, "createdAt") 
+       VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+       RETURNING id, username, email, "firstName", "lastName", role`,
+      ['admin', hashedPassword, 'admin@college.edu', 'Admin', 'User', 'admin']
+    );
+    
+    if (createResult.rows.length > 0) {
+      console.log('✅ New admin user created successfully!');
+      console.log('');
+      console.log('📋 New Admin Credentials:');
       console.log('   Username: admin');
       console.log('   Password: Admin2025!');
+      console.log('   Email: admin@college.edu');
       console.log('');
       
       // Verify the password works
@@ -39,17 +51,16 @@ async function updateAdminPassword() {
         }
       }
     } else {
-      console.log('❌ Admin user not found in database');
-      console.log('💡 Try running: npm run dev to seed the database first');
+      console.log('❌ Failed to create new admin user');
     }
     
     await pool.end();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error updating password:', error);
+    console.error('❌ Error resetting admin user:', error);
     await pool.end();
     process.exit(1);
   }
 }
 
-updateAdminPassword();
+resetAdminUser();
