@@ -14,19 +14,19 @@ const defaultAreas = [
 
 const defaultUsers = [
   {
-    username: "admin",
-    password: "Admin2025!",
-    email: "admin@college.edu",
-    firstName: "Admin",
-    lastName: "User",
-    role: "admin",
-  },
-  {
     username: "Santiago",
     password: "miPrincesa96",
     email: "santiago@college.edu",
     firstName: "Santiago",
     lastName: "Admin",
+    role: "admin",
+  },
+  {
+    username: "admin",
+    password: "Admin2025!",
+    email: "admin@college.edu",
+    firstName: "Admin",
+    lastName: "User",
     role: "admin",
   },
   {
@@ -80,8 +80,8 @@ export async function seedDatabase() {
       }
     }
     console.log("\nDefault credentials:");
-    console.log("Admin - username: admin, password: Admin2025!");
     console.log("Admin - username: Santiago, password: miPrincesa96");
+    console.log("Admin - username: admin, password: Admin2025!");
     console.log("Maintenance - username: maintenance, password: maint123");
     console.log("Staff - username: staff, password: staff123");
   } catch (error) {
