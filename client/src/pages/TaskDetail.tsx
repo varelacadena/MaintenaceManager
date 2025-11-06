@@ -965,7 +965,7 @@ export default function TaskDetail() {
                       {addPartMutation.isPending ? "Adding..." : "Add Part"}
                     </Button>
                   </DialogFooter>
-                </Dialog>
+                </DialogContent>
               </Dialog>
             </div>
           </CardHeader>
