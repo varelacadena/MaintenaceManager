@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, FeatureGroup, Popup, useMap } from "react-leaflet";
-import { EditControl } from "react-leaflet-draw";
+import { useEffect, useRef } from "react";
+import { MapContainer, TileLayer, FeatureGroup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
@@ -137,103 +136,129 @@ function DrawingControl({
   editable: boolean;
   onShapeCreated?: (geometry: any, type: string) => void;
 }) {
-  const handleCreated = (e: any) => {
-    try {
-      const layer = e.layer;
-      if (!layer) {
-        console.error("No layer in draw event");
-        return;
-      }
+  const map = useMap();
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
 
-      let coordinates: any = null;
-      let shapeType = "";
-
-      if (layer instanceof L.Marker) {
-        const latlng = layer.getLatLng();
-        coordinates = {
-          type: "Point",
-          coordinates: [latlng.lng, latlng.lat],
-        };
-        shapeType = "marker";
-      } else if (layer instanceof L.Circle) {
-        const latlng = layer.getLatLng();
-        coordinates = {
-          type: "Circle",
-          coordinates: [latlng.lng, latlng.lat],
-          radius: layer.getRadius(),
-        };
-        shapeType = "circle";
-      } else if (layer instanceof L.Rectangle) {
-        const bounds = layer.getBounds();
-        coordinates = {
-          type: "Rectangle",
-          coordinates: [
-            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-          ],
-        };
-        shapeType = "rectangle";
-      } else if (layer instanceof L.Polygon) {
-        const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-        coordinates = {
-          type: "Polygon",
-          coordinates: [latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat])],
-        };
-        shapeType = "polygon";
-      }
-
-      if (coordinates && onShapeCreated) {
-        console.log("Shape created:", shapeType, coordinates);
-        onShapeCreated(coordinates, shapeType);
-      }
-    } catch (error) {
-      console.error("Error in handleCreated:", error);
+  useEffect(() => {
+    if (!editable || !onShapeCreated) {
+      return;
     }
-  };
 
-  if (!editable || !onShapeCreated) {
-    return null;
-  }
+    // Create feature group for drawn items
+    const drawnItems = new L.FeatureGroup();
+    featureGroupRef.current = drawnItems;
+    map.addLayer(drawnItems);
 
-  return (
-    <FeatureGroup>
-      <EditControl
-        position="topright"
-        onCreated={handleCreated}
-        draw={{
-          polygon: {
-            allowIntersection: false,
-            drawError: {
-              color: "#e1e676",
-              message: "<strong>Error:</strong> Shape edges cannot cross!",
-            },
-            shapeOptions: {
-              color: "#3b82f6",
-            },
+    // Initialize draw control
+    const drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          drawError: {
+            color: '#e1e676',
+            message: '<strong>Error:</strong> Shape edges cannot cross!',
           },
-          polyline: false,
-          circle: {
-            shapeOptions: {
-              color: "#3b82f6",
-            },
+          shapeOptions: {
+            color: '#3b82f6',
           },
-          rectangle: {
-            shapeOptions: {
-              color: "#3b82f6",
-            },
+        },
+        polyline: false,
+        circle: {
+          shapeOptions: {
+            color: '#3b82f6',
           },
-          marker: {
-            icon: new L.Icon.Default(),
+        },
+        rectangle: {
+          shapeOptions: {
+            color: '#3b82f6',
           },
-          circlemarker: false,
-        }}
-        edit={{
-          edit: false,
-          remove: false,
-        }}
-      />
-    </FeatureGroup>
-  );
+        },
+        marker: {
+          icon: new L.Icon.Default(),
+        },
+        circlemarker: false,
+      },
+      edit: {
+        featureGroup: drawnItems,
+        edit: false,
+        remove: false,
+      },
+    });
+
+    drawControlRef.current = drawControl;
+    map.addControl(drawControl);
+
+    // Handle draw events
+    const handleCreated = (e: any) => {
+      try {
+        const layer = e.layer;
+        if (!layer) {
+          console.error('No layer in draw event');
+          return;
+        }
+
+        let coordinates: any = null;
+        let shapeType = '';
+
+        if (layer instanceof L.Marker) {
+          const latlng = layer.getLatLng();
+          coordinates = {
+            type: 'Point',
+            coordinates: [latlng.lng, latlng.lat],
+          };
+          shapeType = 'marker';
+        } else if (layer instanceof L.Circle) {
+          const latlng = layer.getLatLng();
+          coordinates = {
+            type: 'Circle',
+            coordinates: [latlng.lng, latlng.lat],
+            radius: layer.getRadius(),
+          };
+          shapeType = 'circle';
+        } else if (layer instanceof L.Rectangle) {
+          const bounds = layer.getBounds();
+          coordinates = {
+            type: 'Rectangle',
+            coordinates: [
+              [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+              [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+            ],
+          };
+          shapeType = 'rectangle';
+        } else if (layer instanceof L.Polygon) {
+          const latlngs = layer.getLatLngs()[0] as L.LatLng[];
+          coordinates = {
+            type: 'Polygon',
+            coordinates: [latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat])],
+          };
+          shapeType = 'polygon';
+        }
+
+        if (coordinates) {
+          console.log('Shape created:', shapeType, coordinates);
+          onShapeCreated(coordinates, shapeType);
+        }
+      } catch (error) {
+        console.error('Error in handleCreated:', error);
+      }
+    };
+
+    map.on(L.Draw.Event.CREATED, handleCreated);
+
+    return () => {
+      map.off(L.Draw.Event.CREATED, handleCreated);
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+      }
+      if (featureGroupRef.current) {
+        map.removeLayer(featureGroupRef.current);
+      }
+    };
+  }, [map, editable, onShapeCreated]);
+
+  return null;
 }
 
 export default function PropertyMap({
