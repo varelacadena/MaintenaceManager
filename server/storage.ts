@@ -459,7 +459,25 @@ export class DatabaseStorage implements IStorage {
     status?: string;
     areaId?: string;
   }): Promise<Task[]> {
-    let query = db.select().from(tasks);
+    let query = db.select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        urgency: tasks.urgency,
+        status: tasks.status,
+        assignedTo: tasks.assignedTo,
+        requestId: tasks.requestId,
+        areaId: tasks.areaId,
+        propertyId: tasks.propertyId,
+        scheduledDate: tasks.scheduledDate,
+        completedAt: tasks.completedAt,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+      })
+      .from(tasks)
+      .leftJoin(serviceRequests, eq(tasks.requestId, serviceRequests.id))
+      .leftJoin(users, eq(tasks.assignedTo, users.id))
+      .leftJoin(areas, eq(tasks.areaId, areas.id));
 
     const conditions = [];
     if (filters?.assignedToId) {
@@ -703,7 +721,16 @@ export class DatabaseStorage implements IStorage {
 
   // Property operations
   async getProperties(): Promise<Property[]> {
-    return await db.select().from(properties).orderBy(properties.name);
+    const result = await db.select({
+      id: properties.id,
+      name: properties.name,
+      type: properties.type,
+      address: properties.address,
+      imageUrl: properties.imageUrl,
+      coordinates: properties.coordinates,
+      lastWorkDate: properties.lastWorkDate,
+    }).from(properties);
+    return result;
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
