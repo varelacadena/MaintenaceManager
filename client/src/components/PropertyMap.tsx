@@ -193,7 +193,10 @@ function DrawingControl({
     }
   };
 
-  if (!editable || !onShapeCreated) return null;
+  // Don't conditionally return - render null instead to maintain hook order
+  if (!editable || !onShapeCreated) {
+    return null;
+  }
 
   return (
     <FeatureGroup>
