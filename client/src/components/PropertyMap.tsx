@@ -11,7 +11,7 @@ interface PropertyMapProps {
   onPropertySelect?: (property: Property) => void;
   onShapeCreated?: (coordinates: any, type: string) => void;
   onShapeEdited?: (propertyId: string, coordinates: any) => void;
-  onShapeDeleted?: (propertyId: string) => void;
+  onPropertyDelete?: (propertyId: string) => void;
   selectedPropertyId?: string | null;
   editable?: boolean;
 }
@@ -37,10 +37,12 @@ const PropertyTypeColors: Record<string, string> = {
 function PropertyLayers({
   properties,
   onPropertySelect,
+  onPropertyDelete,
   selectedPropertyId,
 }: {
   properties: Property[];
   onPropertySelect?: (property: Property) => void;
+  onPropertyDelete?: (propertyId: string) => void;
   selectedPropertyId?: string | null;
 }) {
   const map = useMap();
@@ -95,14 +97,30 @@ function PropertyLayers({
       }
 
       if (layer) {
-        const popupContent = `
+        const popupContent = document.createElement('div');
+        popupContent.innerHTML = `
           <div>
-            <h3 style="font-weight: bold; margin-bottom: 4px;">${property.name}</h3>
+            <h3 style="font-weight: bold; margin-bottom: 8px;">${property.name}</h3>
             <p style="margin: 2px 0; font-size: 12px;"><strong>Type:</strong> ${property.type}</p>
             ${property.address ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Address:</strong> ${property.address}</p>` : ""}
             ${property.lastWorkDate ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Last Work:</strong> ${new Date(property.lastWorkDate).toLocaleDateString()}</p>` : ""}
+            ${onPropertyDelete ? `<button id="delete-property-${property.id}" style="margin-top: 8px; padding: 4px 12px; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete Property</button>` : ""}
           </div>
         `;
+
+        // Add delete button click handler if delete function is provided
+        if (onPropertyDelete) {
+          const deleteBtn = popupContent.querySelector(`#delete-property-${property.id}`);
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (confirm(`Are you sure you want to delete "${property.name}"?`)) {
+                onPropertyDelete(property.id);
+                map.closePopup();
+              }
+            });
+          }
+        }
 
         layer.bindPopup(popupContent);
 
@@ -145,7 +163,11 @@ function DrawingControl({
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
 
   useEffect(() => {
-    if (!editable || !onShapeCreated) {
+    if (!editable) {
+      return;
+    }
+    
+    if (!onShapeCreated) {
       return;
     }
 
@@ -272,6 +294,7 @@ export default function PropertyMap({
   properties,
   onPropertySelect,
   onShapeCreated,
+  onPropertyDelete,
   selectedPropertyId,
   editable = false,
 }: PropertyMapProps) {
@@ -306,6 +329,7 @@ export default function PropertyMap({
         <PropertyLayers
           properties={properties}
           onPropertySelect={onPropertySelect}
+          onPropertyDelete={editable ? onPropertyDelete : undefined}
           selectedPropertyId={selectedPropertyId}
         />
         <DrawingControl editable={editable} onShapeCreated={onShapeCreated} />

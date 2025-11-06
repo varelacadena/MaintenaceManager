@@ -148,10 +148,8 @@ export default function PropertyMapPage() {
     });
   };
 
-  const handleShapeDeleted = (propertyId: string) => {
-    if (confirm("Are you sure you want to delete this property?")) {
-      deletePropertyMutation.mutate(propertyId);
-    }
+  const handlePropertyDelete = (propertyId: string) => {
+    deletePropertyMutation.mutate(propertyId);
   };
 
   const handlePropertySelect = (property: Property) => {
@@ -215,8 +213,7 @@ export default function PropertyMapPage() {
                 properties={properties}
                 onPropertySelect={handlePropertySelect}
                 onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
-                onShapeEdited={canEdit && editMode ? handleShapeEdited : undefined}
-                onShapeDeleted={canEdit && editMode ? handleShapeDeleted : undefined}
+                onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
                 selectedPropertyId={selectedPropertyId}
                 editable={canEdit && editMode}
               />
