@@ -721,16 +721,7 @@ export class DatabaseStorage implements IStorage {
 
   // Property operations
   async getProperties(): Promise<Property[]> {
-    const result = await db.select({
-      id: properties.id,
-      name: properties.name,
-      type: properties.type,
-      address: properties.address,
-      imageUrl: properties.imageUrl,
-      coordinates: properties.coordinates,
-      lastWorkDate: properties.lastWorkDate,
-    }).from(properties);
-    return result;
+    return await db.select().from(properties);
   }
 
   async getProperty(id: string): Promise<Property | undefined> {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, FeatureGroup, Popup, useMap, LayersControl } from "react-leaflet";
+import { MapContainer, TileLayer, FeatureGroup, Popup, useMap } from "react-leaflet";
 import { DraftControl } from "react-leaflet-draft";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -264,21 +264,11 @@ export default function PropertyMap({
         style={{ width: "100%", height: "100%" }}
         scrollWheelZoom={true}
       >
-        <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="Street View">
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Satellite View">
-            <TileLayer
-              attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              maxZoom={19}
-            />
-          </LayersControl.BaseLayer>
-        </LayersControl>
+        <TileLayer
+          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          maxZoom={19}
+        />
         <PropertyLayers
           properties={properties}
           onPropertySelect={onPropertySelect}
