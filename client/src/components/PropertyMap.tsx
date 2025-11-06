@@ -140,46 +140,55 @@ function DrawingControl({
   if (!editable || !onShapeCreated) return null;
 
   const handleCreated = (e: any) => {
-    const layer = e.layer;
-    let coordinates: any = null;
-    let type = "";
+    try {
+      const layer = e.layer;
+      if (!layer) {
+        console.error("No layer in draw event");
+        return;
+      }
 
-    if (layer instanceof L.Marker) {
-      const latlng = layer.getLatLng();
-      coordinates = {
-        type: "Point",
-        coordinates: [latlng.lng, latlng.lat],
-      };
-      type = "marker";
-    } else if (layer instanceof L.Circle) {
-      const latlng = layer.getLatLng();
-      coordinates = {
-        type: "Circle",
-        coordinates: [latlng.lng, latlng.lat],
-        radius: layer.getRadius(),
-      };
-      type = "circle";
-    } else if (layer instanceof L.Rectangle) {
-      const bounds = layer.getBounds();
-      coordinates = {
-        type: "Rectangle",
-        coordinates: [
-          [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-          [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-        ],
-      };
-      type = "rectangle";
-    } else if (layer instanceof L.Polygon) {
-      const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-      coordinates = {
-        type: "Polygon",
-        coordinates: [latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat])],
-      };
-      type = "polygon";
-    }
+      let coordinates: any = null;
+      let shapeType = "";
 
-    if (coordinates && onShapeCreated) {
-      onShapeCreated(coordinates, type);
+      if (layer instanceof L.Marker) {
+        const latlng = layer.getLatLng();
+        coordinates = {
+          type: "Point",
+          coordinates: [latlng.lng, latlng.lat],
+        };
+        shapeType = "marker";
+      } else if (layer instanceof L.Circle) {
+        const latlng = layer.getLatLng();
+        coordinates = {
+          type: "Circle",
+          coordinates: [latlng.lng, latlng.lat],
+          radius: layer.getRadius(),
+        };
+        shapeType = "circle";
+      } else if (layer instanceof L.Rectangle) {
+        const bounds = layer.getBounds();
+        coordinates = {
+          type: "Rectangle",
+          coordinates: [
+            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+          ],
+        };
+        shapeType = "rectangle";
+      } else if (layer instanceof L.Polygon) {
+        const latlngs = layer.getLatLngs()[0] as L.LatLng[];
+        coordinates = {
+          type: "Polygon",
+          coordinates: [latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat])],
+        };
+        shapeType = "polygon";
+      }
+
+      if (coordinates && onShapeCreated) {
+        onShapeCreated(coordinates, shapeType);
+      }
+    } catch (error) {
+      console.error("Error in handleCreated:", error);
     }
   };
 
