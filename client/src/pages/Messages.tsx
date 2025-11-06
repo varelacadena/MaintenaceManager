@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send } from "lucide-react";
+import { Search, Send, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { ServiceRequest, Message, User } from "@shared/schema";
 
 export default function Messages() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
@@ -85,6 +87,27 @@ export default function Messages() {
       });
       setNewMessage("");
       scrollToBottom();
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return await apiRequest("DELETE", `/api/messages/${messageId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages/request", selectedRequestId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+      toast({ title: "Message deleted" });
+    },
+    onError: () => {
+      toast({ 
+        title: "Failed to delete message",
+        variant: "destructive"
+      });
     },
   });
 
@@ -236,20 +259,36 @@ export default function Messages() {
                     return (
                       <div
                         key={message.id}
-                        className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+                        className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group`}
                         data-testid={`message-${message.id}`}
                       >
                         <span className="text-xs font-medium text-muted-foreground mb-1">
                           {senderName}
                         </span>
-                        <div
-                          className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
-                            isOwn
-                              ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                              : "bg-gray-200 text-gray-900 rounded-tl-sm"
-                          }`}
-                        >
-                          <p className="text-sm">{message.content}</p>
+                        <div className={`flex items-start gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+                          <div
+                            className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                              isOwn
+                                ? "bg-[#1E90FF] text-white rounded-tr-sm"
+                                : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                          </div>
+                          {user?.role === "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this message?")) {
+                                  deleteMessageMutation.mutate(message.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground mt-1">
                           {message.createdAt &&

@@ -37,7 +37,7 @@ import {
   type InsertTaskNote,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, or, sql } from "drizzle-orm";
+import { eq, and, desc, or, sql, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -139,6 +139,7 @@ export interface IStorage {
   getMessagesByRequest(requestId: string): Promise<Message[]>;
   getMessagesByTask(taskId: string): Promise<Message[]>;
   getMessages(): Promise<Message[]>;
+  deleteMessage(id: string): Promise<void>;
   markMessagesAsRead(requestId: string, userId: string): Promise<void>;
   markTaskMessagesAsRead(taskId: string, userId: string): Promise<void>;
 
@@ -604,7 +605,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(messages.requestId, requestId),
-          sql`${messages.senderId} != ${userId}`
+          ne(messages.senderId, userId)
         )
       );
   }
@@ -616,9 +617,13 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(messages.taskId, taskId),
-          sql`${messages.senderId} != ${userId}`
+          ne(messages.senderId, userId)
         )
       );
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    await db.delete(messages).where(eq(messages.id, id));
   }
 
   // Upload operations

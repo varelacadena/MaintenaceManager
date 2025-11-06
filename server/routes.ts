@@ -1115,6 +1115,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete message (admin only)
+  app.delete("/api/messages/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteMessage(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
   // Object storage routes for uploads
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {

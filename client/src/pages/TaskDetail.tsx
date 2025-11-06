@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -182,6 +181,24 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       setNewMessage("");
       toast({ title: "Message sent" });
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return await apiRequest("DELETE", `/api/messages/${messageId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      toast({ title: "Message deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting message",
+        description: error.message || "Failed to delete message",
+        variant: "destructive",
+      });
     },
   });
 
@@ -948,7 +965,7 @@ export default function TaskDetail() {
                       {addPartMutation.isPending ? "Adding..." : "Add Part"}
                     </Button>
                   </DialogFooter>
-                </DialogContent>
+                </Dialog>
               </Dialog>
             </div>
           </CardHeader>
@@ -1333,7 +1350,7 @@ export default function TaskDetail() {
                       {addNoteMutation.isPending ? "Adding..." : "Add Note"}
                     </Button>
                   </DialogFooter>
-                </DialogContent>
+                </Dialog>
               </Dialog>
             )}
           </div>
@@ -1367,20 +1384,35 @@ export default function TaskDetail() {
                   return (
                     <div
                       key={message.id}
-                      className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
-                      data-testid={`message-${message.id}`}
+                      className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group`}
                     >
                       <span className="text-xs font-medium text-muted-foreground mb-1">
                         {senderName}
                       </span>
-                      <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
-                          isOwn
-                            ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                            : "bg-gray-200 text-gray-900 rounded-tl-sm"
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
+                      <div className={`flex items-start gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+                        <div
+                          className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                            isOwn
+                              ? "bg-[#1E90FF] text-white rounded-tr-sm"
+                              : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                          }`}
+                        >
+                          <p className="text-sm">{message.content}</p>
+                        </div>
+                        {user?.role === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this message?")) {
+                                deleteMessageMutation.mutate(message.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                       <span className="text-xs text-muted-foreground mt-1">
                         {message.createdAt &&
