@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, FeatureGroup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import type { Property } from "@shared/schema";
 
@@ -15,6 +16,7 @@ interface PropertyMapProps {
   editable?: boolean;
 }
 
+// @ts-ignore - Leaflet icon fix
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -49,35 +51,36 @@ function PropertyLayers({
     properties.forEach((property) => {
       if (!property.coordinates) return;
 
+      const coords = property.coordinates as any;
       const color = PropertyTypeColors[property.type] || PropertyTypeColors.other;
       const isSelected = property.id === selectedPropertyId;
 
       let layer: L.Layer | null = null;
 
-      if (property.coordinates.type === "Point") {
-        const [lng, lat] = property.coordinates.coordinates;
+      if (coords.type === "Point") {
+        const [lng, lat] = coords.coordinates;
         layer = L.marker([lat, lng]);
-      } else if (property.coordinates.type === "Circle") {
-        const [lng, lat] = property.coordinates.coordinates;
-        const radius = property.coordinates.radius || 100;
+      } else if (coords.type === "Circle") {
+        const [lng, lat] = coords.coordinates;
+        const radius = coords.radius || 100;
         layer = L.circle([lat, lng], {
           radius,
           color,
           weight: isSelected ? 3 : 2,
           fillOpacity: 0.3,
         });
-      } else if (property.coordinates.type === "Polygon") {
-        const coords = property.coordinates.coordinates[0].map(([lng, lat]: [number, number]) => [
+      } else if (coords.type === "Polygon") {
+        const coordsArray = coords.coordinates[0].map(([lng, lat]: [number, number]) => [
           lat,
           lng,
         ]);
-        layer = L.polygon(coords as L.LatLngExpression[], {
+        layer = L.polygon(coordsArray as L.LatLngExpression[], {
           color,
           weight: isSelected ? 3 : 2,
           fillOpacity: 0.3,
         });
-      } else if (property.coordinates.type === "Rectangle") {
-        const [[lng1, lat1], [lng2, lat2]] = property.coordinates.coordinates;
+      } else if (coords.type === "Rectangle") {
+        const [[lng1, lat1], [lng2, lat2]] = coords.coordinates;
         layer = L.rectangle(
           [
             [lat1, lng1],
@@ -112,8 +115,9 @@ function PropertyLayers({
         layer.addTo(map);
         layers.push(layer);
 
-        if (isSelected && property.coordinates.type !== "Point") {
-          const bounds = layer.getBounds();
+        if (isSelected && coords.type !== "Point") {
+          // @ts-ignore - layer might have getBounds
+          const bounds = layer.getBounds && layer.getBounds();
           if (bounds) {
             map.fitBounds(bounds, { padding: [50, 50] });
           }
@@ -137,7 +141,7 @@ function DrawingControl({
   onShapeCreated?: (geometry: any, type: string) => void;
 }) {
   const map = useMap();
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const drawControlRef = useRef<any>(null);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
 
   useEffect(() => {
@@ -151,6 +155,7 @@ function DrawingControl({
     map.addLayer(drawnItems);
 
     // Initialize draw control
+    // @ts-ignore - leaflet-draw types
     const drawControl = new L.Control.Draw({
       position: 'topright',
       draw: {
@@ -245,9 +250,11 @@ function DrawingControl({
       }
     };
 
+    // @ts-ignore - leaflet-draw events
     map.on(L.Draw.Event.CREATED, handleCreated);
 
     return () => {
+      // @ts-ignore - leaflet-draw events
       map.off(L.Draw.Event.CREATED, handleCreated);
       if (drawControlRef.current) {
         map.removeControl(drawControlRef.current);
@@ -273,17 +280,14 @@ export default function PropertyMap({
 
   const center =
     properties.length > 0 && properties[0].coordinates
-      ? properties[0].coordinates.type === "Point"
-        ? [properties[0].coordinates.coordinates[1], properties[0].coordinates.coordinates[0]] as [
-            number,
-            number,
-          ]
-        : properties[0].coordinates.type === "Circle"
-          ? [properties[0].coordinates.coordinates[1], properties[0].coordinates.coordinates[0]] as [
-              number,
-              number,
-            ]
-          : defaultCenter
+      ? (() => {
+          const coords = properties[0].coordinates as any;
+          return coords.type === "Point"
+            ? ([coords.coordinates[1], coords.coordinates[0]] as [number, number])
+            : coords.type === "Circle"
+            ? ([coords.coordinates[1], coords.coordinates[0]] as [number, number])
+            : defaultCenter;
+        })()
       : defaultCenter;
 
   return (
