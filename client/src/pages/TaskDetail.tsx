@@ -66,6 +66,8 @@ import type {
   ServiceRequest,
   Message
 } from "@shared/schema";
+import { Link } from "wouter-react";
+import { Label } from "@radix-ui/react-label";
 
 const urgencyColors = {
   low: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
@@ -290,9 +292,9 @@ export default function TaskDetail() {
 
         // Create a task note if hold reason was provided
         if (newStatus === "on_hold" && onHoldReason) {
-          await apiRequest("POST", "/api/task-notes", { 
-            taskId: id, 
-            content: `Task placed on hold: ${onHoldReason}` 
+          await apiRequest("POST", "/api/task-notes", {
+            taskId: id,
+            content: `Task placed on hold: ${onHoldReason}`
           });
         }
       }
@@ -843,28 +845,26 @@ export default function TaskDetail() {
                           data-testid="input-quick-item-name"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="quick-item-quantity">Quantity</Label>
-                          <Input
-                            id="quick-item-quantity"
-                            type="number"
-                            min="1"
-                            value={quickInventoryQuantity}
-                            onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
-                            data-testid="input-quick-item-quantity"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="quick-item-unit">Unit (Optional)</Label>
-                          <Input
-                            id="quick-item-unit"
-                            placeholder="e.g., pcs, boxes"
-                            value={quickInventoryUnit}
-                            onChange={(e) => setQuickInventoryUnit(e.target.value)}
-                            data-testid="input-quick-item-unit"
-                          />
-                        </div>
+                      <div className="space-2">
+                        <Label htmlFor="quick-item-quantity">Quantity</Label>
+                        <Input
+                          id="quick-item-quantity"
+                          type="number"
+                          min="1"
+                          value={quickInventoryQuantity}
+                          onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
+                          data-testid="input-quick-item-quantity"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="quick-item-unit">Unit (Optional)</Label>
+                        <Input
+                          id="quick-item-unit"
+                          placeholder="e.g., pcs, boxes"
+                          value={quickInventoryUnit}
+                          onChange={(e) => setQuickInventoryUnit(e.target.value)}
+                          data-testid="input-quick-item-unit"
+                        />
                       </div>
                     </div>
                     <DialogFooter>
@@ -1312,7 +1312,7 @@ export default function TaskDetail() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        {noteType === "job_note" 
+                        {noteType === "job_note"
                           ? "Document work performed, parts used, or issues encountered"
                           : "Provide suggestions for future maintenance or improvements"}
                       </p>
@@ -1320,8 +1320,8 @@ export default function TaskDetail() {
                     <div className="space-y-2">
                       <Label>Note Content</Label>
                       <Textarea
-                        placeholder={noteType === "job_note" 
-                          ? "Describe the work performed..." 
+                        placeholder={noteType === "job_note"
+                          ? "Describe the work performed..."
                           : "Provide your recommendation..."}
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
@@ -1375,9 +1375,9 @@ export default function TaskDetail() {
                 messages.map((message) => {
                   const isOwn = message.senderId === user?.id;
                   const sender = users.find(u => u.id === message.senderId);
-                  const senderName = isOwn 
-                    ? "You" 
-                    : sender 
+                  const senderName = isOwn
+                    ? "You"
+                    : sender
                       ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.username
                       : "Unknown User";
 
