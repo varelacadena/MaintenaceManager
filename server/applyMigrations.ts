@@ -29,6 +29,7 @@ export async function applyMigrations() {
     { file: "005_add_note_type_column.sql", name: "005_add_note_type_column" },
     { file: "006_add_read_to_messages.sql", name: "006_add_read_to_messages" },
     { file: "007_add_properties_and_equipment.sql", name: "007_add_properties_and_equipment" },
+    { file: "010_add_missing_property_columns.sql", name: "010_add_missing_property_columns" },
   ];
 
   try {

@@ -135,8 +135,42 @@ function DrawingControl({
   onShapeCreated,
 }: {
   editable: boolean;
-  onShapeCreated?: (coordinates: any, type: string) => void;
+  onShapeCreated?: (geometry: any) => void;
 }) {
+  const map = useMap();
+  const drawOptionsRef = useRef({
+    polygon: {
+      allowIntersection: false,
+      drawError: {
+        color: "#e1e676",
+        message: "<strong>Error:</strong> Shape edges cannot cross!",
+      },
+      shapeOptions: {
+        color: "#3b82f6",
+      },
+    },
+    polyline: false,
+    circle: {
+      shapeOptions: {
+        color: "#3b82f6",
+      },
+    },
+    rectangle: {
+      shapeOptions: {
+        color: "#3b82f6",
+      },
+    },
+    marker: {
+      icon: new L.Icon.Default(),
+    },
+    circlemarker: false,
+  });
+
+  const editOptionsRef = useRef({
+    edit: false,
+    remove: false,
+  });
+
   const handleCreated = useRef((e: any) => {
     try {
       const layer = e.layer;
@@ -198,43 +232,12 @@ function DrawingControl({
 
   if (!editable || !onShapeCreated) return null;
 
-  const drawOptions = useRef({
-    polygon: {
-      allowIntersection: false,
-      showArea: true,
-      shapeOptions: {
-        color: "#3b82f6",
-        weight: 2,
-      },
-    },
-    rectangle: {
-      shapeOptions: {
-        color: "#3b82f6",
-        weight: 2,
-      },
-    },
-    circle: {
-      shapeOptions: {
-        color: "#3b82f6",
-        weight: 2,
-      },
-    },
-    marker: true,
-    polyline: false,
-    circlemarker: false,
-  }).current;
-
-  const editOptions = useRef({
-    edit: false,
-    remove: false,
-  }).current;
-
   return (
     <FeatureGroup>
       <DraftControl
         position="topright"
-        draw={drawOptions}
-        edit={editOptions}
+        draw={drawOptionsRef.current}
+        edit={editOptionsRef.current}
         onCreated={handleCreated}
       />
     </FeatureGroup>
