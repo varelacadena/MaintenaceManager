@@ -137,7 +137,7 @@ function DrawingControl({
   editable: boolean;
   onShapeCreated?: (coordinates: any, type: string) => void;
 }) {
-  const handleCreated = (e: any) => {
+  const handleCreated = useRef((e: any) => {
     try {
       const layer = e.layer;
       if (!layer) {
@@ -188,43 +188,53 @@ function DrawingControl({
     } catch (error) {
       console.error("Error in handleCreated:", error);
     }
-  };
+  }).current;
+
+  useEffect(() => {
+    if (onShapeCreated) {
+      handleCreated.onShapeCreated = onShapeCreated;
+    }
+  }, [onShapeCreated]);
 
   if (!editable || !onShapeCreated) return null;
+
+  const drawOptions = useRef({
+    polygon: {
+      allowIntersection: false,
+      showArea: true,
+      shapeOptions: {
+        color: "#3b82f6",
+        weight: 2,
+      },
+    },
+    rectangle: {
+      shapeOptions: {
+        color: "#3b82f6",
+        weight: 2,
+      },
+    },
+    circle: {
+      shapeOptions: {
+        color: "#3b82f6",
+        weight: 2,
+      },
+    },
+    marker: true,
+    polyline: false,
+    circlemarker: false,
+  }).current;
+
+  const editOptions = useRef({
+    edit: false,
+    remove: false,
+  }).current;
 
   return (
     <FeatureGroup>
       <DraftControl
         position="topright"
-        draw={{
-          polygon: {
-            allowIntersection: false,
-            showArea: true,
-            shapeOptions: {
-              color: "#3b82f6",
-              weight: 2,
-            },
-          },
-          rectangle: {
-            shapeOptions: {
-              color: "#3b82f6",
-              weight: 2,
-            },
-          },
-          circle: {
-            shapeOptions: {
-              color: "#3b82f6",
-              weight: 2,
-            },
-          },
-          marker: true,
-          polyline: false,
-          circlemarker: false,
-        }}
-        edit={{
-          edit: false,
-          remove: false,
-        }}
+        draw={drawOptions}
+        edit={editOptions}
         onCreated={handleCreated}
       />
     </FeatureGroup>

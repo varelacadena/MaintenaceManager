@@ -1,10 +1,10 @@
 
 -- Fix property column names to use snake_case consistently
--- Check if columns exist with quoted camelCase names and rename them
+-- This migration handles the rename regardless of current state
 
 DO $$ 
 BEGIN
-    -- Check and rename imageUrl to image_url if it exists
+    -- First, check if we need to rename imageUrl to image_url
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'properties' 
@@ -13,7 +13,7 @@ BEGIN
         ALTER TABLE properties RENAME COLUMN "imageUrl" TO image_url;
     END IF;
 
-    -- Check and rename lastWorkDate to last_work_date if it exists
+    -- Check if we need to rename lastWorkDate to last_work_date
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'properties' 
