@@ -1350,7 +1350,7 @@ export default function TaskDetail() {
                       {addNoteMutation.isPending ? "Adding..." : "Add Note"}
                     </Button>
                   </DialogFooter>
-                </Dialog>
+                </DialogContent>
               </Dialog>
             )}
           </div>
