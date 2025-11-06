@@ -28,6 +28,7 @@ export async function applyMigrations() {
     { file: "004_fix_phone_number_column.sql", name: "004_fix_phone_number_column" },
     { file: "005_add_note_type_column.sql", name: "005_add_note_type_column" },
     { file: "006_add_read_to_messages.sql", name: "006_add_read_to_messages" },
+    { file: "007_add_properties_and_equipment.sql", name: "007_add_properties_and_equipment" },
   ];
 
   try {
@@ -49,7 +50,7 @@ export async function applyMigrations() {
         SELECT version FROM schema_migrations WHERE version = ${version};
       `));
 
-      if (!result || result.length === 0) {
+      if (!result.rows || result.rows.length === 0) {
         console.log(`Applying migration: ${migration.name}...`);
         try {
           const migrationSQL = readFileSync(
