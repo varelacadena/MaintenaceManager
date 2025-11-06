@@ -66,7 +66,7 @@ import type {
   ServiceRequest,
   Message
 } from "@shared/schema";
-import { Link } from "wouter-react";
+import { Link } from "wouter";
 import { Label } from "@radix-ui/react-label";
 
 const urgencyColors = {
