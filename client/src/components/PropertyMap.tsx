@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, FeatureGroup, Popup, useMap } from "react-leaflet";
-import { DraftControl } from "react-leaflet-draft";
+import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
@@ -137,8 +137,6 @@ function DrawingControl({
   editable: boolean;
   onShapeCreated?: (geometry: any, type: string) => void;
 }) {
-  const map = useMap();
-  
   const handleCreated = (e: any) => {
     try {
       const layer = e.layer;
@@ -193,15 +191,15 @@ function DrawingControl({
     }
   };
 
-  // Don't conditionally return - render null instead to maintain hook order
   if (!editable || !onShapeCreated) {
     return null;
   }
 
   return (
     <FeatureGroup>
-      <DraftControl
+      <EditControl
         position="topright"
+        onCreated={handleCreated}
         draw={{
           polygon: {
             allowIntersection: false,
@@ -233,7 +231,6 @@ function DrawingControl({
           edit: false,
           remove: false,
         }}
-        onCreated={handleCreated}
       />
     </FeatureGroup>
   );
