@@ -137,8 +137,6 @@ function DrawingControl({
   editable: boolean;
   onShapeCreated?: (coordinates: any, type: string) => void;
 }) {
-  if (!editable || !onShapeCreated) return null;
-
   const handleCreated = (e: any) => {
     try {
       const layer = e.layer;
@@ -191,6 +189,8 @@ function DrawingControl({
       console.error("Error in handleCreated:", error);
     }
   };
+
+  if (!editable || !onShapeCreated) return null;
 
   return (
     <FeatureGroup>
