@@ -135,43 +135,11 @@ function DrawingControl({
   onShapeCreated,
 }: {
   editable: boolean;
-  onShapeCreated?: (geometry: any) => void;
+  onShapeCreated?: (geometry: any, type: string) => void;
 }) {
   const map = useMap();
-  const drawOptionsRef = useRef({
-    polygon: {
-      allowIntersection: false,
-      drawError: {
-        color: "#e1e676",
-        message: "<strong>Error:</strong> Shape edges cannot cross!",
-      },
-      shapeOptions: {
-        color: "#3b82f6",
-      },
-    },
-    polyline: false,
-    circle: {
-      shapeOptions: {
-        color: "#3b82f6",
-      },
-    },
-    rectangle: {
-      shapeOptions: {
-        color: "#3b82f6",
-      },
-    },
-    marker: {
-      icon: new L.Icon.Default(),
-    },
-    circlemarker: false,
-  });
-
-  const editOptionsRef = useRef({
-    edit: false,
-    remove: false,
-  });
-
-  const handleCreated = useRef((e: any) => {
+  
+  const handleCreated = (e: any) => {
     try {
       const layer = e.layer;
       if (!layer) {
@@ -217,18 +185,13 @@ function DrawingControl({
       }
 
       if (coordinates && onShapeCreated) {
+        console.log("Shape created:", shapeType, coordinates);
         onShapeCreated(coordinates, shapeType);
       }
     } catch (error) {
       console.error("Error in handleCreated:", error);
     }
-  }).current;
-
-  useEffect(() => {
-    if (onShapeCreated) {
-      handleCreated.onShapeCreated = onShapeCreated;
-    }
-  }, [onShapeCreated]);
+  };
 
   if (!editable || !onShapeCreated) return null;
 
@@ -236,8 +199,37 @@ function DrawingControl({
     <FeatureGroup>
       <DraftControl
         position="topright"
-        draw={drawOptionsRef.current}
-        edit={editOptionsRef.current}
+        draw={{
+          polygon: {
+            allowIntersection: false,
+            drawError: {
+              color: "#e1e676",
+              message: "<strong>Error:</strong> Shape edges cannot cross!",
+            },
+            shapeOptions: {
+              color: "#3b82f6",
+            },
+          },
+          polyline: false,
+          circle: {
+            shapeOptions: {
+              color: "#3b82f6",
+            },
+          },
+          rectangle: {
+            shapeOptions: {
+              color: "#3b82f6",
+            },
+          },
+          marker: {
+            icon: new L.Icon.Default(),
+          },
+          circlemarker: false,
+        }}
+        edit={{
+          edit: false,
+          remove: false,
+        }}
         onCreated={handleCreated}
       />
     </FeatureGroup>
