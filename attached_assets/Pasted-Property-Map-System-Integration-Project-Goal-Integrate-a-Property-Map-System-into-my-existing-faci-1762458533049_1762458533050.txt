@@ -1,0 +1,117 @@
+Property Map System Integration
+
+Project Goal:
+Integrate a Property Map System into my existing facility management app on Replit. The app already includes systems for Tasks, Calendar, Messaging, and Inventory, all of which must connect seamlessly to this new feature.
+
+🗺️ Overview:
+
+Build a satellite-based interactive map showing all buildings and areas within the managed property.
+Users must be able to:
+
+Create, edit, and delete map shapes (buildings, zones, or landmarks) using a drawing tool.
+
+Each shape represents a property area that stores detailed information.
+
+Data must be saved to and retrieved from the backend to stay in sync with other systems.
+
+🔍 Map Requirements:
+
+Use Leaflet.js (or Google Maps API if preferred) with drawing and editing tools.
+
+Map must support satellite view and zoom/pan controls.
+
+Each drawn element should store:
+
+id
+
+name
+
+type (building, lawn, parking, etc.)
+
+coordinates
+
+address
+
+image (optional)
+
+lastWorkDate
+
+openTasks count
+
+🧩 On-Map Interaction:
+
+When a user clicks a building or area:
+
+Show a popup with:
+
+📅 Last Work Done
+
+🧾 Open Tasks
+
+🏠 Address
+
+🖼️ Small image (if available)
+
+🔘 “More Information” button
+
+Clicking “More Information” opens a Property Detail Page.
+
+🏢 Property Detail Page:
+
+Display sections with the following buttons:
+
+Equipment
+
+Work History (auto-pulled from Tasks assigned to this property)
+
+Equipment Page:
+
+Each button opens a category for equipment creation and management:
+
+Appliances
+
+HVAC
+
+Structure
+
+Plumbing
+
+Electric
+
+Landscaping
+
+Diagrams (uploadable files or images)
+
+Each item should include editable data (name, description, serial number, condition, etc.) and connect to the propertyId.
+
+🔗 Integration With Existing Systems:
+System	Integration
+Tasks	Filter tasks by propertyId and display related work history.
+Calendar	Show upcoming maintenance for selected property.
+Messaging	Link message threads to property-specific tasks or equipment issues.
+Inventory	Connect items and parts to the property and its equipment.
+⚙️ Backend and Storage:
+
+Use Express.js (Node) for API routes.
+
+Store property data in your current database (e.g., MongoDB or Firebase).
+
+Allow image uploads for property and equipment using Cloudinary or Firebase Storage.
+
+🧱 Development Tasks:
+
+Integrate map component with drawing/editing/deleting features.
+
+Build API routes for GET, POST, PUT, DELETE property data.
+
+Add popup previews with dynamic data.
+
+Create the Property Detail Page UI and connect to Equipment and Tasks modules.
+
+Connect the system to existing app data models.
+
+Ensure responsive, professional UI styling.
+
+🎯 Deliverable:
+
+A fully functional Property Map System that visually connects your properties to maintenance data, integrates with existing app modules, and allows dynamic creation and management of property assets.
