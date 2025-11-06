@@ -4,9 +4,63 @@
 
 This is a web-based maintenance management platform designed for college facilities departments. The system enables three distinct user roles (administrators, maintenance staff, and college staff) to collaborate on service requests, task tracking, and facility maintenance across multiple areas including grounds, housing, utilities, and building systems.
 
-The platform provides role-based dashboards with workflows optimized for daily operations: college staff submit and track service requests, maintenance workers manage tasks with time tracking and parts logging, and administrators oversee all operations with user management, vendor management, inventory tracking, and reporting capabilities.
+The platform provides role-based dashboards with workflows optimized for daily operations: college staff submit and track service requests, maintenance workers manage tasks with time tracking and parts logging, and administrators oversee all operations with user management, vendor management, inventory tracking, property mapping, and reporting capabilities.
 
-## Recent Updates (November 5, 2025)
+## Recent Updates (November 6, 2025)
+
+**PROPERTY MAP SYSTEM (COMPLETED):**
+
+**Interactive Property Mapping:**
+- Integrated Leaflet.js-based satellite map with drawing capabilities
+- Support for creating, editing, and deleting property shapes (polygons, circles, markers, rectangles)
+- Real-time map with satellite and street view layers
+- Color-coded properties by type (building, lawn, parking, recreation, utility, road, other)
+- Click-to-view property details with popups showing last work date, open tasks, and address
+
+**Property Management:**
+- Properties table with GeoJSON coordinates storage
+- Property types: building, lawn, parking, recreation, utility, road, other
+- Property details including name, type, address, image URL, and last work date
+- Automatic property tracking with coordinates saved as GeoJSON
+- Edit mode for admin/maintenance users to modify map shapes
+- Property list sidebar with filter and quick view capabilities
+
+**Equipment Management:**
+- Equipment table linked to properties with categories:
+  - Appliances, HVAC, Structure, Plumbing, Electric, Landscaping, Diagrams, Other
+- Equipment details: name, description, serial number, condition, notes, images
+- Category-based filtering and organization
+- Equipment CRUD operations with admin/maintenance permissions
+- Visual equipment cards with category icons
+
+**Property-Task Integration:**
+- Tasks can now be linked to specific properties via propertyId field
+- Property detail page displays work history filtered by property
+- Task counts shown on property popups (open tasks)
+- Last work date tracking for properties
+
+**Backend & Routes:**
+- GET /api/properties - List all properties
+- POST /api/properties - Create new property (admin/maintenance)
+- PATCH /api/properties/:id - Update property (admin/maintenance)
+- DELETE /api/properties/:id - Delete property (admin only)
+- GET /api/properties/:id/tasks - Get tasks for a property
+- GET /api/equipment - List equipment (with propertyId and category filters)
+- POST /api/equipment - Create equipment (admin/maintenance)
+- PATCH /api/equipment/:id - Update equipment (admin/maintenance)
+- DELETE /api/equipment/:id - Delete equipment (admin/maintenance)
+
+**Frontend Pages:**
+- /properties - Property Map page with interactive satellite map and property list
+- /properties/:id - Property Detail page with equipment tabs and work history
+- Property Map navigation link added to sidebar (admin and maintenance roles)
+
+**Database Schema:**
+- properties table with id, name, type, coordinates (JSONB), address, imageUrl, lastWorkDate
+- equipment table with id, propertyId, category, name, description, serialNumber, condition, notes, imageUrl
+- tasks.propertyId field for linking tasks to properties
+
+## Previous Updates (November 5, 2025)
 
 **MESSAGING & USER MANAGEMENT ENHANCEMENTS:**
 

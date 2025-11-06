@@ -129,6 +129,7 @@ export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestId: varchar("request_id").references(() => serviceRequests.id),
+  propertyId: varchar("property_id"),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
@@ -243,6 +244,71 @@ export const insertTaskNoteSchema = createInsertSchema(taskNotes).omit({ id: tru
 export type InsertTaskNote = z.infer<typeof insertTaskNoteSchema>;
 export type TaskNote = typeof taskNotes.$inferSelect;
 
+// Properties (map-based property system)
+export const propertyTypeEnum = pgEnum("property_type", [
+  "building",
+  "lawn",
+  "parking",
+  "recreation",
+  "utility",
+  "road",
+  "other"
+]);
+
+export const properties = pgTable("properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  type: propertyTypeEnum("type").notNull(),
+  coordinates: jsonb("coordinates").notNull(), // GeoJSON geometry (Polygon, Point, etc.)
+  address: text("address"),
+  imageUrl: varchar("image_url", { length: 500 }),
+  lastWorkDate: timestamp("last_work_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertySchema = createInsertSchema(properties).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertProperty = z.infer<typeof insertPropertySchema>;
+export type Property = typeof properties.$inferSelect;
+
+// Equipment (linked to properties)
+export const equipmentCategoryEnum = pgEnum("equipment_category", [
+  "appliances",
+  "hvac",
+  "structure",
+  "plumbing",
+  "electric",
+  "landscaping",
+  "diagrams",
+  "other"
+]);
+
+export const equipment = pgTable("equipment", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  category: equipmentCategoryEnum("category").notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  serialNumber: varchar("serial_number", { length: 200 }),
+  condition: varchar("condition", { length: 100 }), // good, fair, poor, needs replacement
+  notes: text("notes"),
+  imageUrl: varchar("image_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEquipmentSchema = createInsertSchema(equipment).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEquipment = z.infer<typeof insertEquipmentSchema>;
+export type Equipment = typeof equipment.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   requestsCreated: many(serviceRequests, { relationName: "requester" }),
@@ -302,6 +368,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   request: one(serviceRequests, {
     fields: [tasks.requestId],
     references: [serviceRequests.id],
+  }),
+  property: one(properties, {
+    fields: [tasks.propertyId],
+    references: [properties.id],
   }),
   creator: one(users, {
     fields: [tasks.createdById],
@@ -392,5 +462,17 @@ export const taskNotesRelations = relations(taskNotes, ({ one }) => ({
   user: one(users, {
     fields: [taskNotes.userId],
     references: [users.id],
+  }),
+}));
+
+export const propertiesRelations = relations(properties, ({ many }) => ({
+  equipment: many(equipment),
+  tasks: many(tasks),
+}));
+
+export const equipmentRelations = relations(equipment, ({ one }) => ({
+  property: one(properties, {
+    fields: [equipment.propertyId],
+    references: [properties.id],
   }),
 }));

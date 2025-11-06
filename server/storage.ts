@@ -11,6 +11,8 @@ import {
   messages,
   uploads,
   taskNotes,
+  properties,
+  equipment,
   type User,
   type UpsertUser,
   type Vendor,
@@ -35,6 +37,10 @@ import {
   type InsertUpload,
   type TaskNote,
   type InsertTaskNote,
+  type Property,
+  type InsertProperty,
+  type Equipment,
+  type InsertEquipment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne } from "drizzle-orm";
@@ -155,6 +161,23 @@ export interface IStorage {
   getTaskNote(id: string): Promise<TaskNote | undefined>;
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
   deleteTaskNote(id: string): Promise<void>;
+
+  // Property operations
+  getProperties(): Promise<Property[]>;
+  getProperty(id: string): Promise<Property | undefined>;
+  createProperty(property: InsertProperty): Promise<Property>;
+  updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined>;
+  deleteProperty(id: string): Promise<void>;
+  getTasksByProperty(propertyId: string): Promise<Task[]>;
+
+  // Equipment operations
+  getEquipment(): Promise<Equipment[]>;
+  getEquipmentItem(id: string): Promise<Equipment | undefined>;
+  getEquipmentByProperty(propertyId: string): Promise<Equipment[]>;
+  getEquipmentByCategory(propertyId: string, category: string): Promise<Equipment[]>;
+  createEquipment(equipment: InsertEquipment): Promise<Equipment>;
+  updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined>;
+  deleteEquipment(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -676,6 +699,86 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTaskNote(id: string): Promise<void> {
     await db.delete(taskNotes).where(eq(taskNotes.id, id));
+  }
+
+  // Property operations
+  async getProperties(): Promise<Property[]> {
+    return await db.select().from(properties).orderBy(properties.name);
+  }
+
+  async getProperty(id: string): Promise<Property | undefined> {
+    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    return property;
+  }
+
+  async createProperty(propertyData: InsertProperty): Promise<Property> {
+    const [property] = await db.insert(properties).values(propertyData).returning();
+    return property;
+  }
+
+  async updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined> {
+    const [property] = await db
+      .update(properties)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(properties.id, id))
+      .returning();
+    return property;
+  }
+
+  async deleteProperty(id: string): Promise<void> {
+    await db.delete(properties).where(eq(properties.id, id));
+  }
+
+  async getTasksByProperty(propertyId: string): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.propertyId, propertyId))
+      .orderBy(desc(tasks.initialDate));
+  }
+
+  // Equipment operations
+  async getEquipment(): Promise<Equipment[]> {
+    return await db.select().from(equipment).orderBy(equipment.name);
+  }
+
+  async getEquipmentItem(id: string): Promise<Equipment | undefined> {
+    const [item] = await db.select().from(equipment).where(eq(equipment.id, id));
+    return item;
+  }
+
+  async getEquipmentByProperty(propertyId: string): Promise<Equipment[]> {
+    return await db
+      .select()
+      .from(equipment)
+      .where(eq(equipment.propertyId, propertyId))
+      .orderBy(equipment.category, equipment.name);
+  }
+
+  async getEquipmentByCategory(propertyId: string, category: string): Promise<Equipment[]> {
+    return await db
+      .select()
+      .from(equipment)
+      .where(and(eq(equipment.propertyId, propertyId), eq(equipment.category, category as any)))
+      .orderBy(equipment.name);
+  }
+
+  async createEquipment(equipmentData: InsertEquipment): Promise<Equipment> {
+    const [item] = await db.insert(equipment).values(equipmentData).returning();
+    return item;
+  }
+
+  async updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined> {
+    const [item] = await db
+      .update(equipment)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(equipment.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteEquipment(id: string): Promise<void> {
+    await db.delete(equipment).where(eq(equipment.id, id));
   }
 }
 

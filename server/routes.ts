@@ -22,6 +22,8 @@ import {
   insertSubdivisionSchema,
   insertVendorSchema,
   insertInventoryItemSchema,
+  insertPropertySchema,
+  insertEquipmentSchema,
 } from "@shared/schema";
 
 // Helper function to get authenticated user
@@ -1373,6 +1375,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting task note:", error);
       res.status(500).json({ message: "Failed to delete task note" });
+    }
+  });
+
+  // Property routes
+  app.get("/api/properties", isAuthenticated, async (req, res) => {
+    try {
+      const properties = await storage.getProperties();
+      res.json(properties);
+    } catch (error) {
+      console.error("Error fetching properties:", error);
+      res.status(500).json({ message: "Failed to fetch properties" });
+    }
+  });
+
+  app.get("/api/properties/:id", isAuthenticated, async (req, res) => {
+    try {
+      const property = await storage.getProperty(req.params.id);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      res.json(property);
+    } catch (error) {
+      console.error("Error fetching property:", error);
+      res.status(500).json({ message: "Failed to fetch property" });
+    }
+  });
+
+  app.post("/api/properties", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const propertyData = insertPropertySchema.parse(req.body);
+      const property = await storage.createProperty(propertyData);
+      res.json(property);
+    } catch (error) {
+      console.error("Error creating property:", error);
+      res.status(500).json({ message: "Failed to create property" });
+    }
+  });
+
+  app.patch("/api/properties/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const property = await storage.updateProperty(req.params.id, req.body);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      res.json(property);
+    } catch (error) {
+      console.error("Error updating property:", error);
+      res.status(500).json({ message: "Failed to update property" });
+    }
+  });
+
+  app.delete("/api/properties/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteProperty(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      res.status(500).json({ message: "Failed to delete property" });
+    }
+  });
+
+  app.get("/api/properties/:id/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getTasksByProperty(req.params.id);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching property tasks:", error);
+      res.status(500).json({ message: "Failed to fetch property tasks" });
+    }
+  });
+
+  // Equipment routes
+  app.get("/api/equipment", isAuthenticated, async (req, res) => {
+    try {
+      const propertyId = req.query.propertyId as string;
+      const category = req.query.category as string;
+
+      let equipment;
+      if (propertyId && category) {
+        equipment = await storage.getEquipmentByCategory(propertyId, category);
+      } else if (propertyId) {
+        equipment = await storage.getEquipmentByProperty(propertyId);
+      } else {
+        equipment = await storage.getEquipment();
+      }
+      
+      res.json(equipment);
+    } catch (error) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ message: "Failed to fetch equipment" });
+    }
+  });
+
+  app.get("/api/equipment/:id", isAuthenticated, async (req, res) => {
+    try {
+      const item = await storage.getEquipmentItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Equipment not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ message: "Failed to fetch equipment" });
+    }
+  });
+
+  app.post("/api/equipment", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const equipmentData = insertEquipmentSchema.parse(req.body);
+      const item = await storage.createEquipment(equipmentData);
+      res.json(item);
+    } catch (error) {
+      console.error("Error creating equipment:", error);
+      res.status(500).json({ message: "Failed to create equipment" });
+    }
+  });
+
+  app.patch("/api/equipment/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const item = await storage.updateEquipment(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ message: "Equipment not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating equipment:", error);
+      res.status(500).json({ message: "Failed to update equipment" });
+    }
+  });
+
+  app.delete("/api/equipment/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      await storage.deleteEquipment(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting equipment:", error);
+      res.status(500).json({ message: "Failed to delete equipment" });
     }
   });
 

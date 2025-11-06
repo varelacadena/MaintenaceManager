@@ -23,6 +23,7 @@ import {
   KeyRound,
   Building2,
   Package,
+  Map,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -39,6 +40,7 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Property Map", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "User Management", url: "/users", icon: Users },
     { title: "Credentials", url: "/credentials", icon: KeyRound },
@@ -52,6 +54,7 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "My Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Property Map", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
