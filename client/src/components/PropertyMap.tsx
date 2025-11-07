@@ -327,7 +327,7 @@ export default function PropertyMap({
   editable = false,
 }: PropertyMapProps) {
   const defaultCenter: [number, number] = [38.33346473042104, -78.0992983903181];
-  const defaultZoom = 14;
+  const defaultZoom = 16;
 
   const center =
     properties.length > 0 && properties[0].coordinates
