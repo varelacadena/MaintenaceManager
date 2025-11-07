@@ -357,7 +357,7 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Last Work Date</CardTitle>
@@ -377,15 +377,6 @@ export default function PropertyDetail() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{tasks.filter((t) => t.status !== "completed").length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Total Equipment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{equipment.length}</div>
           </CardContent>
         </Card>
       </div>
