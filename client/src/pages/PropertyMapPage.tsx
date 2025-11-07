@@ -268,7 +268,7 @@ export default function PropertyMapPage() {
                           <div className="flex flex-col gap-1">
                             <Button
                               size="sm"
-                              variant="ghost"
+                              variant="outline"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/properties/${property.id}`);
@@ -280,7 +280,7 @@ export default function PropertyMapPage() {
                             {canEdit && (
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handlePropertyDelete(property.id);
