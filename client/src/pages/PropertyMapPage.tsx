@@ -183,126 +183,127 @@ export default function PropertyMapPage() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="heading-property-map">Property Map</h1>
-          <p className="text-muted-foreground mt-1">
-            Interactive map of all facility properties and buildings
-          </p>
-        </div>
-        {canEdit && (
-          <div className="flex gap-2">
-            <Button
-              variant={editMode ? "default" : "outline"}
-              onClick={() => setEditMode(!editMode)}
-              data-testid="button-toggle-edit"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Add new
-            </Button>
+    <>
+      <div className="h-full flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="heading-property-map">Property Map</h1>
+            <p className="text-muted-foreground mt-1">
+              Interactive map of all facility properties and buildings
+            </p>
           </div>
-        )}
-      </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <Button
+                variant={editMode ? "default" : "outline"}
+                onClick={() => setEditMode(!editMode)}
+                data-testid="button-toggle-edit"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Add new
+              </Button>
+            </div>
+          )}
+        </div>
 
-      <div className="flex-1 flex flex-col gap-6">
-        <Card className="relative z-0 flex-1">
-          <CardContent className="p-0 h-full">
-            <PropertyMap
-              properties={properties}
-              onPropertySelect={handlePropertySelect}
-              onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
-              onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
-              selectedPropertyId={selectedPropertyId}
-              editable={canEdit && editMode}
-            />
-          </CardContent>
-        </Card>
+        <div className="flex-1 flex flex-col gap-6">
+          <Card className="relative z-0 flex-1">
+            <CardContent className="p-0 h-full">
+              <PropertyMap
+                properties={properties}
+                onPropertySelect={handlePropertySelect}
+                onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
+                onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
+                selectedPropertyId={selectedPropertyId}
+                editable={canEdit && editMode}
+              />
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="text-lg">Properties</CardTitle>
-            <Badge variant="secondary">{properties.length}</Badge>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {properties.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground col-span-full">
-                    <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No properties yet</p>
-                    {canEdit && editMode && (
-                      <p className="text-xs mt-1">Draw shapes on the map to add properties</p>
-                    )}
-                  </div>
-                ) : (
-                  properties.map((property) => (
-                    <Card
-                      key={property.id}
-                      className={`cursor-pointer hover-elevate ${
-                        selectedPropertyId === property.id ? "border-primary" : ""
-                      }`}
-                      onClick={() => setSelectedPropertyId(property.id)}
-                      data-testid={`card-property-${property.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                              <Building2 className="w-5 h-5 text-primary" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="text-lg">Properties</CardTitle>
+              <Badge variant="secondary">{properties.length}</Badge>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {properties.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground col-span-full">
+                      <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No properties yet</p>
+                      {canEdit && editMode && (
+                        <p className="text-xs mt-1">Draw shapes on the map to add properties</p>
+                      )}
+                    </div>
+                  ) : (
+                    properties.map((property) => (
+                      <Card
+                        key={property.id}
+                        className={`cursor-pointer hover-elevate ${
+                          selectedPropertyId === property.id ? "border-primary" : ""
+                        }`}
+                        onClick={() => setSelectedPropertyId(property.id)}
+                        data-testid={`card-property-${property.id}`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                                <Building2 className="w-5 h-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-base mb-1">{property.name}</h4>
+                                <Badge variant="secondary" className="text-xs">
+                                  {property.type}
+                                </Badge>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-base mb-1">{property.name}</h4>
-                              <Badge variant="secondary" className="text-xs">
-                                {property.type}
-                              </Badge>
-                            </div>
-                          </div>
-                          {property.address && (
-                            <p className="text-sm text-muted-foreground">
-                              {property.address}
-                            </p>
-                          )}
-                          <div className="flex gap-2 pt-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/properties/${property.id}`);
-                              }}
-                              data-testid={`button-view-${property.id}`}
-                            >
-                              View
-                            </Button>
-                            {canEdit && (
+                            {property.address && (
+                              <p className="text-sm text-muted-foreground">
+                                {property.address}
+                              </p>
+                            )}
+                            <div className="flex gap-2 pt-2">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="flex-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handlePropertyDelete(property.id);
+                                  navigate(`/properties/${property.id}`);
                                 }}
-                                data-testid={`button-delete-${property.id}`}
+                                data-testid={`button-view-${property.id}`}
                               >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
+                                View
                               </Button>
-                            )}
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePropertyDelete(property.id);
+                                  }}
+                                  data-testid={`button-delete-${property.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Property</DialogTitle>
@@ -397,6 +398,6 @@ export default function PropertyMapPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
