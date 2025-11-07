@@ -111,7 +111,7 @@ export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
 export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
