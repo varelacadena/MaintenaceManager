@@ -350,7 +350,7 @@ export default function PropertyDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
-          <CardContent className="p-0 h-[400px]">
+          <CardContent className="p-0 h-[400px] relative z-0">
             <PropertyMap
               properties={[property]}
               selectedPropertyId={property.id}
@@ -563,7 +563,7 @@ export default function PropertyDetail() {
       </Tabs>
 
       <Dialog open={isEditPropertyDialogOpen} onOpenChange={setIsEditPropertyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="z-50">
           <DialogHeader>
             <DialogTitle>Edit Property</DialogTitle>
             <DialogDescription>
