@@ -60,6 +60,34 @@ export default function Requests() {
 
   const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ["/api/users"],
+    retry: false,
+  });
+
+  // Fetch individual requesters for requests where we don't have user data
+  const requesterIds = [...new Set(requests.map(r => r.requesterId))];
+  const { data: requesters = {} } = useQuery<Record<string, any>>({
+    queryKey: ["/api/requesters", requesterIds],
+    queryFn: async () => {
+      if (users.length > 0) return {}; // Use users list if available
+      
+      const requesterData: Record<string, any> = {};
+      await Promise.all(
+        requesterIds.map(async (id) => {
+          try {
+            const response = await fetch(`/api/users/${id}`, {
+              credentials: 'include',
+            });
+            if (response.ok) {
+              requesterData[id] = await response.json();
+            }
+          } catch (error) {
+            // Silently fail for individual users
+          }
+        })
+      );
+      return requesterData;
+    },
+    enabled: requests.length > 0 && users.length === 0,
   });
 
   const deleteRequestMutation = useMutation({
@@ -77,9 +105,21 @@ export default function Requests() {
 
   // Helper functions
   const getRequesterName = (requesterId: string) => {
-    if (!users || users.length === 0) return "Unknown";
-    const requester = users.find((u: any) => u.id === requesterId);
-    return requester ? `${requester.firstName} ${requester.lastName}` : "Unknown";
+    // First try the users list
+    if (users && users.length > 0) {
+      const requester = users.find((u: any) => u.id === requesterId);
+      if (requester) {
+        return `${requester.firstName} ${requester.lastName}`;
+      }
+    }
+    
+    // Fall back to individual requester data
+    if (requesters && requesters[requesterId]) {
+      const requester = requesters[requesterId];
+      return `${requester.firstName} ${requester.lastName}`;
+    }
+    
+    return "Unknown";
   };
 
   const getPropertyName = (propertyId: string | null) => {
