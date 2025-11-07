@@ -286,35 +286,35 @@ export default function NewRequest() {
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="propertyId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property (Optional)</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || undefined}
-                  >
-                    <FormControl>
-                      <SelectTrigger data-testid="select-property">
-                        <SelectValue placeholder="Select property" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {properties.map((property) => (
-                        <SelectItem key={property.id} value={property.id}>
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="propertyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Property (Optional)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-property">
+                          <SelectValue placeholder="Select property" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {properties.map((property) => (
+                          <SelectItem key={property.id} value={property.id}>
+                            {property.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="areaId"
@@ -346,36 +346,35 @@ export default function NewRequest() {
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="subdivisionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subdivision (Optional)</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || undefined}
-                      disabled={!selectedAreaId}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-subdivision">
-                          <SelectValue placeholder="Select subdivision" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subdivisions.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+
+            control={form.control}
+              name="subdivisionId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subdivision (Optional)</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                    disabled={!selectedAreaId}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-subdivision">
+                        <SelectValue placeholder="Select subdivision" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {subdivisions.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
