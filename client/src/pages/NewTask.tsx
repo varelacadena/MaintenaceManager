@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema } from "@shared/schema";
-import type { Area, Subdivision, User, Vendor, ServiceRequest, Property } from "@shared/schema";
+import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment } from "@shared/schema";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 
@@ -43,6 +43,7 @@ export default function NewTask() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
 
   const searchParams = new URLSearchParams(window.location.search);
   const requestId = searchParams.get('requestId');
@@ -75,6 +76,15 @@ export default function NewTask() {
 
   const { data: vendors = [] } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
+  });
+
+  const { data: equipment = [] } = useQuery<Equipment[]>({
+    queryKey: ["/api/equipment", selectedPropertyId],
+    enabled: !!selectedPropertyId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/equipment?propertyId=${selectedPropertyId}`);
+      return response.json();
+    },
   });
 
   const form = useForm<FormData>({
@@ -287,34 +297,68 @@ export default function NewTask() {
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="propertyId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Property</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedPropertyId(value);
+                      form.setValue("equipmentId", undefined);
+                    }} 
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-property">
+                        <SelectValue placeholder="Select property" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {properties.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="equipmentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Equipment (Optional)</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                    disabled={!selectedPropertyId}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-equipment">
+                        <SelectValue placeholder="Select equipment" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {equipment.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="propertyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Property</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-property">
-                          <SelectValue placeholder="Select property" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {properties.map((property) => (
-                          <SelectItem key={property.id} value={property.id}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="areaId"

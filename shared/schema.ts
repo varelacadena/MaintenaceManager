@@ -130,6 +130,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestId: varchar("request_id").references(() => serviceRequests.id),
   propertyId: varchar("property_id"),
+  equipmentId: varchar("equipment_id").references(() => equipment.id),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
