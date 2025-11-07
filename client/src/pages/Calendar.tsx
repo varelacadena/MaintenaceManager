@@ -42,7 +42,7 @@ const urgencyColors = {
   high: "bg-red-500",
 };
 
-function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onClick: () => void; assignedUser?: any; area?: any }) {
+function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onClick: (e: React.MouseEvent) => void; assignedUser?: any; area?: any }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: { task },
@@ -112,6 +112,7 @@ function DroppableDay({
   tasks,
   isToday,
   onTaskClick,
+  onDayClick,
   users,
   areas,
 }: {
@@ -120,6 +121,7 @@ function DroppableDay({
   tasks: Task[];
   isToday: boolean;
   onTaskClick: (taskId: string) => void;
+  onDayClick: (date: Date) => void;
   users: any[];
   areas: any[];
 }) {
@@ -132,9 +134,10 @@ function DroppableDay({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[100px] border rounded-md p-2 ${
+      className={`min-h-[100px] border rounded-md p-2 cursor-pointer hover:bg-muted/50 transition-colors ${
         isToday ? "border-primary border-2" : ""
       } ${isOver ? "bg-primary/5 border-primary" : ""}`}
+      onClick={() => onDayClick(date)}
       data-testid={`calendar-day-${day}`}
     >
       <div className={`text-sm font-medium mb-2 ${isToday ? "text-primary" : ""}`}>
@@ -148,7 +151,10 @@ function DroppableDay({
             <DraggableTask
               key={task.id}
               task={task}
-              onClick={() => onTaskClick(task.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTaskClick(task.id);
+              }}
               assignedUser={assignedUser}
               area={area}
             />
@@ -416,6 +422,10 @@ export default function Calendar() {
                   tasks={dayTasks}
                   isToday={isTodayDate}
                   onTaskClick={handleTaskClick}
+                  onDayClick={(clickedDate) => {
+                    setCurrentDate(clickedDate);
+                    setView("day");
+                  }}
                   users={users}
                   areas={areas}
                 />
@@ -452,6 +462,10 @@ export default function Calendar() {
                   tasks={dayTasks}
                   isToday={isTodayDate}
                   onTaskClick={handleTaskClick}
+                  onDayClick={(clickedDate) => {
+                    setCurrentDate(clickedDate);
+                    setView("day");
+                  }}
                   users={users}
                   areas={areas}
                 />
