@@ -54,7 +54,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import PropertyMap from "@/components/PropertyMap";
-import type { Property, Equipment, Task, InsertEquipment } from "@shared/schema";
+import type { Property, Equipment, Task, InsertEquipment, InsertProperty } from "@shared/schema";
 import { insertEquipmentSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,6 +66,14 @@ const formSchema = insertEquipmentSchema.extend({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const propertyFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  type: z.string().min(1, "Type is required"),
+  address: z.string().optional(),
+});
+
+type PropertyFormData = z.infer<typeof propertyFormSchema>;
 
 const categoryIcons: Record<string, any> = {
   appliances: Wrench,
@@ -84,6 +92,7 @@ export default function PropertyDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditPropertyDialogOpen, setIsEditPropertyDialogOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -112,6 +121,15 @@ export default function PropertyDetail() {
       condition: "",
       notes: "",
       imageUrl: "",
+    },
+  });
+
+  const propertyForm = useForm<PropertyFormData>({
+    resolver: zodResolver(propertyFormSchema),
+    defaultValues: {
+      name: "",
+      type: "",
+      address: "",
     },
   });
 
@@ -179,6 +197,28 @@ export default function PropertyDetail() {
     },
   });
 
+  const updatePropertyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertProperty> }) => {
+      return await apiRequest("PATCH", `/api/properties/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      toast({
+        title: "Success",
+        description: "Property updated successfully",
+      });
+      setIsEditPropertyDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update property",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: FormData) => {
     if (editingEquipment) {
       updateEquipmentMutation.mutate({
@@ -187,6 +227,24 @@ export default function PropertyDetail() {
       });
     } else {
       createEquipmentMutation.mutate(data);
+    }
+  };
+
+  const onPropertySubmit = (data: PropertyFormData) => {
+    updatePropertyMutation.mutate({
+      id: id!,
+      data,
+    });
+  };
+
+  const handleEditProperty = () => {
+    if (property) {
+      propertyForm.reset({
+        name: property.name,
+        type: property.type,
+        address: property.address || "",
+      });
+      setIsEditPropertyDialogOpen(true);
     }
   };
 
@@ -268,14 +326,24 @@ export default function PropertyDetail() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Map
         </Button>
-        <h1 className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</h1>
-        <div className="flex items-center gap-2 mt-2">
-          <Badge variant="secondary">{property.type}</Badge>
-          {property.address && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4" />
-              {property.address}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="secondary">{property.type}</Badge>
+              {property.address && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  {property.address}
+                </div>
+              )}
             </div>
+          </div>
+          {canEdit && (
+            <Button onClick={handleEditProperty} data-testid="button-edit-property">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Property
+            </Button>
           )}
         </div>
       </div>
@@ -493,6 +561,101 @@ export default function PropertyDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isEditPropertyDialogOpen} onOpenChange={setIsEditPropertyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Property</DialogTitle>
+            <DialogDescription>
+              Update property information
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...propertyForm}>
+            <form onSubmit={propertyForm.handleSubmit(onPropertySubmit)} className="space-y-4">
+              <FormField
+                control={propertyForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Building A" data-testid="input-property-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={propertyForm.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-property-type">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="building">Building</SelectItem>
+                        <SelectItem value="lawn">Lawn</SelectItem>
+                        <SelectItem value="parking">Parking</SelectItem>
+                        <SelectItem value="recreation">Recreation</SelectItem>
+                        <SelectItem value="utility">Utility</SelectItem>
+                        <SelectItem value="road">Road</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={propertyForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value || ""}
+                        placeholder="123 Main St"
+                        data-testid="input-property-address"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditPropertyDialogOpen(false);
+                    propertyForm.reset();
+                  }}
+                  data-testid="button-cancel-property"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatePropertyMutation.isPending}
+                  data-testid="button-submit-property"
+                >
+                  {updatePropertyMutation.isPending ? "Updating..." : "Update Property"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
