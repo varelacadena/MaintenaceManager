@@ -191,7 +191,7 @@ export default function Messages() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Request #{request.id.substring(0, 8)}
+                        Request #{request.id.substring(0, 5)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {request.category}
