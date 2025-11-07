@@ -265,17 +265,33 @@ export default function PropertyMapPage() {
                               )}
                             </div>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/properties/${property.id}`);
-                            }}
-                            data-testid={`button-view-${property.id}`}
-                          >
-                            View
-                          </Button>
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/properties/${property.id}`);
+                              }}
+                              data-testid={`button-view-${property.id}`}
+                            >
+                              View
+                            </Button>
+                            {canEdit && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePropertyDelete(property.id);
+                                }}
+                                data-testid={`button-delete-${property.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                Delete
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
