@@ -348,38 +348,45 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardContent className="p-0 h-[400px] relative z-0">
-            <PropertyMap
-              properties={[property]}
-              selectedPropertyId={property.id}
-              editable={false}
-            />
+      <Card className="w-full">
+        <CardContent className="p-0 h-[300px] relative z-0">
+          <PropertyMap
+            properties={[property]}
+            selectedPropertyId={property.id}
+            editable={false}
+          />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Last Work Date</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {property.lastWorkDate
+                ? new Date(property.lastWorkDate).toLocaleDateString()
+                : "No work recorded"}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Property Info</CardTitle>
+            <CardTitle className="text-lg">Open Tasks</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="text-sm font-semibold text-muted-foreground">Last Work Date</div>
-              <div className="text-lg">
-                {property.lastWorkDate
-                  ? new Date(property.lastWorkDate).toLocaleDateString()
-                  : "No work recorded"}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-muted-foreground">Open Tasks</div>
-              <div className="text-lg">{tasks.filter((t) => t.status !== "completed").length}</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-muted-foreground">Total Equipment</div>
-              <div className="text-lg">{equipment.length}</div>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">{tasks.filter((t) => t.status !== "completed").length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Total Equipment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{equipment.length}</div>
           </CardContent>
         </Card>
       </div>

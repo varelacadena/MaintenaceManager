@@ -158,11 +158,17 @@ function PropertyLayers({
         layer.addTo(map);
         layers.push(layer);
 
-        if (isSelected && coords.type !== "Point") {
-          // @ts-ignore - layer might have getBounds
-          const bounds = layer.getBounds && layer.getBounds();
-          if (bounds) {
-            map.fitBounds(bounds, { padding: [50, 50] });
+        if (isSelected) {
+          if (coords.type !== "Point") {
+            // @ts-ignore - layer might have getBounds
+            const bounds = layer.getBounds && layer.getBounds();
+            if (bounds) {
+              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 19 });
+            }
+          } else {
+            // For point markers, zoom to maximum level
+            const [lng, lat] = coords.coordinates;
+            map.setView([lat, lng], 19);
           }
         }
       }
