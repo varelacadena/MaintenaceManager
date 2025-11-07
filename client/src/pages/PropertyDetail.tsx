@@ -113,7 +113,7 @@ export default function PropertyDetail() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      propertyId: id,
+      propertyId: id || "",
       name: "",
       category: "other",
       description: "",
@@ -419,7 +419,16 @@ export default function PropertyDetail() {
               <Button
                 onClick={() => {
                   setEditingEquipment(null);
-                  form.reset({ propertyId: id });
+                  form.reset({
+                    propertyId: id || "",
+                    name: "",
+                    category: "other",
+                    description: "",
+                    serialNumber: "",
+                    condition: "",
+                    notes: "",
+                    imageUrl: "",
+                  });
                   setIsCreateDialogOpen(true);
                 }}
                 data-testid="button-add-equipment"
@@ -441,7 +450,16 @@ export default function PropertyDetail() {
                       variant="link"
                       onClick={() => {
                         setEditingEquipment(null);
-                        form.reset({ propertyId: id, category: selectedCategory || "other" });
+                        form.reset({
+                          propertyId: id || "",
+                          name: "",
+                          category: selectedCategory || "other",
+                          description: "",
+                          serialNumber: "",
+                          condition: "",
+                          notes: "",
+                          imageUrl: "",
+                        });
                         setIsCreateDialogOpen(true);
                       }}
                       data-testid="button-add-first-equipment"
@@ -795,7 +813,16 @@ export default function PropertyDetail() {
                   onClick={() => {
                     setIsCreateDialogOpen(false);
                     setEditingEquipment(null);
-                    form.reset({ propertyId: id });
+                    form.reset({
+                      propertyId: id || "",
+                      name: "",
+                      category: "other",
+                      description: "",
+                      serialNumber: "",
+                      condition: "",
+                      notes: "",
+                      imageUrl: "",
+                    });
                   }}
                   data-testid="button-cancel-equipment"
                 >
