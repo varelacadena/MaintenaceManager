@@ -316,6 +316,16 @@ export default function PropertyDetail() {
 
   return (
     <div className="h-full flex flex-col gap-6">
+      <Card className="w-full">
+        <CardContent className="p-0 h-[300px] relative z-0">
+          <PropertyMap
+            properties={[property]}
+            selectedPropertyId={property.id}
+            editable={false}
+          />
+        </CardContent>
+      </Card>
+
       <div>
         <Button
           variant="ghost"
@@ -347,16 +357,6 @@ export default function PropertyDetail() {
           )}
         </div>
       </div>
-
-      <Card className="w-full">
-        <CardContent className="p-0 h-[140px] relative z-0">
-          <PropertyMap
-            properties={[property]}
-            selectedPropertyId={property.id}
-            editable={false}
-          />
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
