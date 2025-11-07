@@ -10,6 +10,8 @@ import {
   index,
   boolean,
   doublePrecision,
+  uuid, // Import uuid for defaultRandom().primaryKey()
+  serial, // Import serial for serial().primaryKey()
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -109,7 +111,7 @@ export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
 export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: serial("id").primaryKey(),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
@@ -128,8 +130,8 @@ export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "remin
 export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
 
 export const tasks = pgTable("tasks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").references(() => serviceRequests.id),
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => serviceRequests.id),
   propertyId: varchar("property_id"),
   equipmentId: varchar("equipment_id").references(() => equipment.id),
   name: varchar("name", { length: 200 }).notNull(),
@@ -156,7 +158,7 @@ export const insertServiceRequestSchema = createInsertSchema(serviceRequests).om
   updatedAt: true,
   status: true,
 });
-export type InsertServiceRequest = z.infer<typeof insertServiceRequestSchema>;
+export type InsertServiceRequest = Omit<typeof serviceRequests.$inferInsert, 'id'>;
 export type ServiceRequest = typeof serviceRequests.$inferSelect;
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -165,13 +167,15 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   updatedAt: true,
   actualCompletionDate: true,
 });
-export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type InsertTask = Omit<typeof tasks.$inferInsert, 'id'>;
 export type Task = typeof tasks.$inferSelect;
 
 // Time tracking (linked to tasks, not requests)
 export const timeEntries = pgTable("time_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id),
   userId: varchar("user_id").notNull().references(() => users.id),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
@@ -186,7 +190,9 @@ export type TimeEntry = typeof timeEntries.$inferSelect;
 // Parts used (linked to tasks, not requests)
 export const partsUsed = pgTable("parts_used", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id),
   inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id), // Link to inventory
   partName: varchar("part_name", { length: 200 }).notNull(),
   quantity: integer("quantity").notNull(),
@@ -202,8 +208,8 @@ export type PartUsed = typeof partsUsed.$inferSelect;
 // Messages (can be on requests OR tasks for communication)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: integer("task_id").references(() => tasks.id),
+  requestId: integer("request_id").references(() => serviceRequests.id),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   read: boolean("read").notNull().default(false),
@@ -217,8 +223,8 @@ export type Message = typeof messages.$inferSelect;
 // File uploads (can be attached to tasks OR requests)
 export const uploads = pgTable("uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
+  taskId: integer("task_id").references(() => tasks.id),
+  requestId: integer("request_id").references(() => serviceRequests.id),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
@@ -235,7 +241,9 @@ export const noteTypeEnum = pgEnum("note_type", ["job_note", "recommendation"]);
 
 export const taskNotes = pgTable("task_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id),
   userId: varchar("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   noteType: noteTypeEnum("note_type").notNull().default("job_note"),

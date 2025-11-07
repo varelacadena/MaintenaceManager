@@ -191,7 +191,7 @@ export default function Messages() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Request #{request.id.substring(0, 5)}
+                        Request #{request.id}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {request.category}
@@ -212,7 +212,7 @@ export default function Messages() {
                   <div>
                     <h2 className="font-semibold">{selectedRequest.title}</h2>
                     <p className="text-xs text-muted-foreground">
-                      Request #{selectedRequest.id.substring(0, 8)}
+                      Request #{selectedRequest.id}
                     </p>
                   </div>
                   <Button
