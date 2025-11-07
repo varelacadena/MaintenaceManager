@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema } from "@shared/schema";
-import type { Area, Subdivision, User, Vendor, ServiceRequest } from "@shared/schema";
+import type { Area, Subdivision, User, Vendor, ServiceRequest, Property } from "@shared/schema";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 
@@ -54,6 +54,10 @@ export default function NewTask() {
 
   const { data: areas = [] } = useQuery<Area[]>({
     queryKey: ["/api/areas"],
+  });
+
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
   });
 
   const { data: subdivisions = [] } = useQuery<Subdivision[]>({
@@ -284,6 +288,33 @@ export default function NewTask() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="propertyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Property</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-property">
+                          <SelectValue placeholder="Select property" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {properties.map((property) => (
+                          <SelectItem key={property.id} value={property.id}>
+                            {property.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="areaId"
