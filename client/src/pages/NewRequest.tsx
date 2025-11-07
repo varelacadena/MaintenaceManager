@@ -53,20 +53,10 @@ export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [pendingUploads, setPendingUploads] = useState<Array<{ name: string; url: string; type: string }>>([]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
-  });
-
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
-
-  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
-    queryKey: ["/api/subdivisions", selectedAreaId],
-    enabled: !!selectedAreaId,
   });
 
   const form = useForm<FormData>({
@@ -286,88 +276,25 @@ export default function NewRequest() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="propertyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Property (Optional)</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || undefined}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-property">
-                          <SelectValue placeholder="Select property" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {properties.map((property) => (
-                          <SelectItem key={property.id} value={property.id}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="areaId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Area</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedAreaId(value);
-                        form.setValue("subdivisionId", null);
-                      }}
-                      value={field.value || undefined}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-area">
-                          <SelectValue placeholder="Select area" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {areas.map((area) => (
-                          <SelectItem key={area.id} value={area.id}>
-                            {area.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
-              name="subdivisionId"
+              name="propertyId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Subdivision (Optional)</FormLabel>
+                  <FormLabel>Property (Optional)</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || undefined}
-                    disabled={!selectedAreaId}
                   >
                     <FormControl>
-                      <SelectTrigger data-testid="select-subdivision">
-                        <SelectValue placeholder="Select subdivision" />
+                      <SelectTrigger data-testid="select-property">
+                        <SelectValue placeholder="Select property" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {subdivisions.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.id}>
-                          {sub.name}
+                      {properties.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
