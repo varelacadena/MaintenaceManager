@@ -653,13 +653,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/service-requests/:id",
     isAuthenticated,
-    requireRequestAccess(),
-    async (req, res) => {
+    async (req: any, res) => {
       try {
+        const userId = req.userId;
+        const currentUser = await storage.getUser(userId);
         const request = await storage.getServiceRequest(req.params.id);
+        
         if (!request) {
           return res.status(404).json({ message: "Request not found" });
         }
+
+        // Staff can only view their own requests, admin and maintenance can view all
+        if (currentUser?.role === "staff" && request.requesterId !== userId) {
+          return res.status(403).json({ message: "Forbidden: Cannot view this request" });
+        }
+
         res.json(request);
       } catch (error) {
         console.error("Error fetching service request:", error);
