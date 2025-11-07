@@ -54,12 +54,8 @@ export default function Requests() {
     queryKey: ["/api/service-requests"],
   });
 
-  const { data: areas = [] } = useQuery<any[]>({
-    queryKey: ["/api/areas"],
-  });
-
-  const { data: subdivisions = [] } = useQuery<any[]>({
-    queryKey: ["/api/subdivisions"],
+  const { data: properties = [] } = useQuery<any[]>({
+    queryKey: ["/api/properties"],
   });
 
   const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
@@ -86,33 +82,24 @@ export default function Requests() {
     return requester ? `${requester.firstName} ${requester.lastName}` : "Unknown";
   };
 
-  const getAreaName = (areaId: string | null) => {
-    if (!areaId) return "Not specified";
-    if (!areas || areas.length === 0) return "Unknown";
-    const area = areas.find((a: any) => a.id === areaId);
-    return area?.name || "Unknown";
-  };
-
-  const getSubdivisionName = (subdivisionId: string | null) => {
-    if (!subdivisionId) return null;
-    if (!subdivisions || subdivisions.length === 0) return null;
-    const subdivision = subdivisions.find((s: any) => s.id === subdivisionId);
-    return subdivision?.name || null;
+  const getPropertyName = (propertyId: string | null) => {
+    if (!propertyId) return "Not specified";
+    if (!properties || properties.length === 0) return "Unknown";
+    const property = properties.find((p: any) => p.id === propertyId);
+    return property?.name || "Unknown";
   };
 
   const filteredRequests = requests.filter((request) => {
     const query = searchQuery.toLowerCase();
     const requesterName = getRequesterName(request.requesterId).toLowerCase();
-    const areaName = getAreaName(request.areaId).toLowerCase();
-    const subdivisionName = getSubdivisionName(request.subdivisionId)?.toLowerCase() || "";
+    const propertyName = getPropertyName(request.propertyId).toLowerCase();
     
     const matchesSearch =
       request.id.toLowerCase().includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
-      areaName.includes(query) ||
-      subdivisionName.includes(query);
+      propertyName.includes(query);
     
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesUrgency = urgencyFilter === "all" || request.urgency === urgencyFilter;
@@ -190,8 +177,6 @@ export default function Requests() {
       ) : (
         <div className="grid gap-4">
           {filteredRequests.map((request) => {
-            const subdivisionName = getSubdivisionName(request.subdivisionId);
-
             return (
               <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
                 <CardContent className="p-6">
@@ -246,15 +231,9 @@ export default function Requests() {
                         <p className="text-sm text-foreground leading-relaxed">{request.description}</p>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Area</p>
-                          <p className="font-medium text-sm">{getAreaName(request.areaId)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Location</p>
-                          <p className="font-medium text-sm">{subdivisionName || "Not specified"}</p>
-                        </div>
+                      <div className="pt-2">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Property</p>
+                        <p className="font-medium text-sm">{getPropertyName(request.propertyId)}</p>
                       </div>
                       
                       <div className="flex items-center gap-2 pt-4">
