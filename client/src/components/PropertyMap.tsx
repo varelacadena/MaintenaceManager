@@ -99,13 +99,13 @@ function PropertyLayers({
       if (layer) {
         const popupContent = document.createElement('div');
         popupContent.innerHTML = `
-          <div>
+          <div style="min-width: 200px;">
             <h3 style="font-weight: bold; margin-bottom: 8px;">${property.name}</h3>
             <p style="margin: 2px 0; font-size: 12px;"><strong>Type:</strong> ${property.type}</p>
             ${property.address ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Address:</strong> ${property.address}</p>` : ""}
             ${property.lastWorkDate ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Last Work:</strong> ${new Date(property.lastWorkDate).toLocaleDateString()}</p>` : ""}
-            ${onPropertyDelete ? `<button id="delete-property-${property.id}" style="margin-top: 8px; padding: 4px 12px; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete Property</button>` : ""}
           </div>
+          ${onPropertyDelete ? `<button id="delete-property-${property.id}" style="margin-top: 8px; padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">Delete Property</button>` : ""}
         `;
 
         // Add delete button click handler if delete function is provided
@@ -329,7 +329,7 @@ export default function PropertyMap({
         <PropertyLayers
           properties={properties}
           onPropertySelect={onPropertySelect}
-          onPropertyDelete={editable ? onPropertyDelete : undefined}
+          onPropertyDelete={onPropertyDelete}
           selectedPropertyId={selectedPropertyId}
         />
         <DrawingControl editable={editable} onShapeCreated={onShapeCreated} />
