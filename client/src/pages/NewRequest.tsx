@@ -348,7 +348,8 @@ export default function NewRequest() {
               />
             </div>
 
-            control={form.control}
+            <FormField
+              control={form.control}
               name="subdivisionId"
               render={({ field }) => (
                 <FormItem>
