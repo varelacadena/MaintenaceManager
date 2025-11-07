@@ -306,6 +306,12 @@ export default function Calendar() {
     }
   };
 
+  const handleCalendarClick = () => {
+    // This function can be used to open a date picker dialog if needed
+    // For now, it will just go to today
+    goToToday();
+  };
+
   const getWeekStart = (date: Date) => {
     const d = new Date(date);
     const day = d.getDay();
@@ -561,10 +567,15 @@ export default function Calendar() {
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted min-w-[200px] justify-center">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 px-4 py-2 min-w-[200px] justify-center"
+              onClick={handleCalendarClick}
+              data-testid="button-calendar-display"
+            >
               <CalendarIcon className="w-4 h-4" />
               <span className="font-medium text-sm">{getDisplayDate()}</span>
-            </div>
+            </Button>
             <Button
               variant="outline"
               size="icon"
