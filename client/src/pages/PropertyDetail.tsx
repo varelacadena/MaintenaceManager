@@ -349,7 +349,7 @@ export default function PropertyDetail() {
       </div>
 
       <Card className="w-full">
-        <CardContent className="p-0 h-[280px] relative z-0">
+        <CardContent className="p-0 h-[140px] relative z-0">
           <PropertyMap
             properties={[property]}
             selectedPropertyId={property.id}
