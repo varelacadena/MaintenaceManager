@@ -46,7 +46,6 @@ const roleMenus = {
     { title: "Credentials", url: "/credentials", icon: KeyRound },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
-    { title: "Areas & Subdivisions", url: "/areas", icon: MapPin },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   maintenance: [
