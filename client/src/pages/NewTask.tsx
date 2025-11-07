@@ -42,7 +42,6 @@ export default function NewTask() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
 
   const searchParams = new URLSearchParams(window.location.search);
@@ -53,17 +52,8 @@ export default function NewTask() {
     enabled: !!requestId,
   });
 
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
-
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
-  });
-
-  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
-    queryKey: ["/api/subdivisions", selectedAreaId],
-    enabled: !!selectedAreaId,
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -94,8 +84,6 @@ export default function NewTask() {
       name: "",
       description: "",
       urgency: "medium",
-      areaId: undefined,
-      subdivisionId: undefined,
       initialDate: new Date().toISOString().split("T")[0],
       estimatedCompletionDate: undefined,
       assignedToId: undefined,
@@ -113,13 +101,6 @@ export default function NewTask() {
       form.setValue("name", request.title);
       form.setValue("description", request.description);
       form.setValue("urgency", request.urgency);
-      if (request.areaId) {
-        form.setValue("areaId", request.areaId);
-        setSelectedAreaId(request.areaId);
-      }
-      if (request.subdivisionId) {
-        form.setValue("subdivisionId", request.subdivisionId);
-      }
     }
   }, [request, form]);
 
@@ -133,8 +114,6 @@ export default function NewTask() {
         estimatedCompletionDate: data.estimatedCompletionDate 
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
-        areaId: data.areaId || undefined,
-        subdivisionId: data.subdivisionId || undefined,
         assignedToId: data.assignedToId || undefined,
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
@@ -357,69 +336,6 @@ export default function NewTask() {
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="areaId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Area</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedAreaId(value);
-                        form.setValue("subdivisionId", undefined);
-                      }} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-area">
-                          <SelectValue placeholder="Select area" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {areas.map((area) => (
-                          <SelectItem key={area.id} value={area.id}>
-                            {area.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="subdivisionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subdivision (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                      disabled={!selectedAreaId}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-subdivision">
-                          <SelectValue placeholder="Select subdivision" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subdivisions.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
