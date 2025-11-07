@@ -135,7 +135,7 @@ export default function Requests() {
     const propertyName = getPropertyName(request.propertyId).toLowerCase();
     
     const matchesSearch =
-      request.id.toString().toLowerCase().includes(query) ||
+      request.id.toLowerCase().includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
