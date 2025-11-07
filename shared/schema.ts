@@ -375,6 +375,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.propertyId],
     references: [properties.id],
   }),
+  equipment: one(equipment, {
+    fields: [tasks.equipmentId],
+    references: [equipment.id],
+  }),
   creator: one(users, {
     fields: [tasks.createdById],
     references: [users.id],
