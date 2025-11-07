@@ -102,7 +102,7 @@ export interface IStorage {
     userId?: string;
     status?: string;
   }): Promise<ServiceRequest[]>;
-  getServiceRequest(id: string | number): Promise<ServiceRequest | undefined>;
+  getServiceRequest(id: string): Promise<ServiceRequest | undefined>;
   createServiceRequest(request: InsertServiceRequest): Promise<ServiceRequest>;
   updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined>;
   deleteServiceRequest(id: string): Promise<void>;
@@ -408,13 +408,11 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(serviceRequests.createdAt));
   }
 
-  async getServiceRequest(id: string | number): Promise<ServiceRequest | undefined> {
-    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+  async getServiceRequest(id: string): Promise<ServiceRequest | undefined> {
     const [request] = await db
       .select()
       .from(serviceRequests)
-      .where(eq(serviceRequests.id, numericId))
-      .limit(1);
+      .where(eq(serviceRequests.id, id));
     return request;
   }
 
@@ -452,10 +450,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(serviceRequests.id, id))
       .returning();
     return request;
-  }
-
-  async clearAllServiceRequests(): Promise<void> {
-    await db.delete(serviceRequests);
   }
 
   // Task operations

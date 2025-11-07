@@ -54,40 +54,16 @@ export default function Requests() {
     queryKey: ["/api/service-requests"],
   });
 
-  const { data: properties = [] } = useQuery<any[]>({
-    queryKey: ["/api/properties"],
+  const { data: areas = [] } = useQuery<any[]>({
+    queryKey: ["/api/areas"],
+  });
+
+  const { data: subdivisions = [] } = useQuery<any[]>({
+    queryKey: ["/api/subdivisions"],
   });
 
   const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ["/api/users"],
-    retry: false,
-  });
-
-  // Fetch individual requesters for requests where we don't have user data
-  const requesterIds = [...new Set(requests.map(r => r.requesterId))];
-  const { data: requesters = {} } = useQuery<Record<string, any>>({
-    queryKey: ["/api/requesters", requesterIds],
-    queryFn: async () => {
-      if (users.length > 0) return {}; // Use users list if available
-
-      const requesterData: Record<string, any> = {};
-      await Promise.all(
-        requesterIds.map(async (id) => {
-          try {
-            const response = await fetch(`/api/users/${id}`, {
-              credentials: 'include',
-            });
-            if (response.ok) {
-              requesterData[id] = await response.json();
-            }
-          } catch (error) {
-            // Silently fail for individual users
-          }
-        })
-      );
-      return requesterData;
-    },
-    enabled: requests.length > 0 && users.length === 0,
   });
 
   const deleteRequestMutation = useMutation({
@@ -105,43 +81,39 @@ export default function Requests() {
 
   // Helper functions
   const getRequesterName = (requesterId: string) => {
-    // First try the users list
-    if (users && users.length > 0) {
-      const requester = users.find((u: any) => u.id === requesterId);
-      if (requester) {
-        return `${requester.firstName} ${requester.lastName}`;
-      }
-    }
-
-    // Fall back to individual requester data
-    if (requesters && requesters[requesterId]) {
-      const requester = requesters[requesterId];
-      return `${requester.firstName} ${requester.lastName}`;
-    }
-
-    return "Unknown";
+    if (!users || users.length === 0) return "Unknown";
+    const requester = users.find((u: any) => u.id === requesterId);
+    return requester ? `${requester.firstName} ${requester.lastName}` : "Unknown";
   };
 
-  const getPropertyName = (propertyId: string | null) => {
-    if (!propertyId) return "Not specified";
-    if (!properties || properties.length === 0) return "Unknown";
-    const property = properties.find((p: any) => p.id === propertyId);
-    return property?.name || "Unknown";
+  const getAreaName = (areaId: string | null) => {
+    if (!areaId) return "Not specified";
+    if (!areas || areas.length === 0) return "Unknown";
+    const area = areas.find((a: any) => a.id === areaId);
+    return area?.name || "Unknown";
+  };
+
+  const getSubdivisionName = (subdivisionId: string | null) => {
+    if (!subdivisionId) return null;
+    if (!subdivisions || subdivisions.length === 0) return null;
+    const subdivision = subdivisions.find((s: any) => s.id === subdivisionId);
+    return subdivision?.name || null;
   };
 
   const filteredRequests = requests.filter((request) => {
     const query = searchQuery.toLowerCase();
     const requesterName = getRequesterName(request.requesterId).toLowerCase();
-    const propertyName = getPropertyName(request.propertyId).toLowerCase();
-
+    const areaName = getAreaName(request.areaId).toLowerCase();
+    const subdivisionName = getSubdivisionName(request.subdivisionId)?.toLowerCase() || "";
+    
     const matchesSearch =
-      String(request.id).padStart(4, '0').includes(query) ||
-      String(request.id).includes(query) ||
+      request.id.toLowerCase().includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
-      propertyName.includes(query);
-
+      areaName.includes(query) ||
+      subdivisionName.includes(query);
+    
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesUrgency = urgencyFilter === "all" || request.urgency === urgencyFilter;
     return matchesSearch && matchesStatus && matchesUrgency;
@@ -165,6 +137,10 @@ export default function Requests() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Service Requests</h1>
+        <Button onClick={() => navigate("/requests/new")} data-testid="button-new-request">
+          <Plus className="w-4 h-4 mr-2" />
+          New Request
+        </Button>
       </div>
 
       <div className="flex gap-4">
@@ -214,6 +190,8 @@ export default function Requests() {
       ) : (
         <div className="grid gap-4">
           {filteredRequests.map((request) => {
+            const subdivisionName = getSubdivisionName(request.subdivisionId);
+
             return (
               <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
                 <CardContent className="p-6">
@@ -222,34 +200,32 @@ export default function Requests() {
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request ID</p>
-                        <p className="font-mono text-sm font-medium">#{String(request.id).padStart(4, '0')}</p>
+                        <p className="font-mono text-sm font-medium">#{request.id.slice(0, 8)}</p>
                       </div>
-
-                      {!isStaff && (
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
-                          <p className="font-medium" data-testid={`text-requester-${request.id}`}>
-                            {getRequesterName(request.requesterId)}
-                          </p>
-                        </div>
-                      )}
-
+                      
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
+                        <p className="font-medium" data-testid={`text-requester-${request.id}`}>
+                          {getRequesterName(request.requesterId)}
+                        </p>
+                      </div>
+                      
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Date Submitted</p>
-                        <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
+                        <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
                         })}</p>
                       </div>
-
+                      
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Status</p>
                         <Badge variant="outline" className={statusColors[request.status]} data-testid={`badge-status-${request.id}`}>
                           {request.status.replace(/_/g, " ")}
                         </Badge>
                       </div>
-
+                      
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Urgency</p>
                         <Badge variant="outline" className={urgencyColors[request.urgency]} data-testid={`badge-urgency-${request.id}`}>
@@ -264,17 +240,23 @@ export default function Requests() {
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request Title</p>
                         <CardTitle className="text-xl mb-3">{request.title}</CardTitle>
                       </div>
-
+                      
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Description</p>
                         <p className="text-sm text-foreground leading-relaxed">{request.description}</p>
                       </div>
-
-                      <div className="pt-2">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Property</p>
-                        <p className="font-medium text-sm">{getPropertyName(request.propertyId)}</p>
+                      
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Area</p>
+                          <p className="font-medium text-sm">{getAreaName(request.areaId)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Location</p>
+                          <p className="font-medium text-sm">{subdivisionName || "Not specified"}</p>
+                        </div>
                       </div>
-
+                      
                       <div className="flex items-center gap-2 pt-4">
                         <Button
                           variant="default"
