@@ -102,7 +102,7 @@ export interface IStorage {
     userId?: string;
     status?: string;
   }): Promise<ServiceRequest[]>;
-  getServiceRequest(id: string): Promise<ServiceRequest | undefined>;
+  getServiceRequest(id: string | number): Promise<ServiceRequest | undefined>;
   createServiceRequest(request: InsertServiceRequest): Promise<ServiceRequest>;
   updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined>;
   deleteServiceRequest(id: string): Promise<void>;
@@ -408,11 +408,13 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(serviceRequests.createdAt));
   }
 
-  async getServiceRequest(id: string): Promise<ServiceRequest | undefined> {
+  async getServiceRequest(id: string | number): Promise<ServiceRequest | undefined> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
     const [request] = await db
       .select()
       .from(serviceRequests)
-      .where(eq(serviceRequests.id, id));
+      .where(eq(serviceRequests.id, numericId))
+      .limit(1);
     return request;
   }
 

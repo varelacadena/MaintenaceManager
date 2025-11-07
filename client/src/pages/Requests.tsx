@@ -69,7 +69,7 @@ export default function Requests() {
     queryKey: ["/api/requesters", requesterIds],
     queryFn: async () => {
       if (users.length > 0) return {}; // Use users list if available
-      
+
       const requesterData: Record<string, any> = {};
       await Promise.all(
         requesterIds.map(async (id) => {
@@ -112,13 +112,13 @@ export default function Requests() {
         return `${requester.firstName} ${requester.lastName}`;
       }
     }
-    
+
     // Fall back to individual requester data
     if (requesters && requesters[requesterId]) {
       const requester = requesters[requesterId];
       return `${requester.firstName} ${requester.lastName}`;
     }
-    
+
     return "Unknown";
   };
 
@@ -133,14 +133,15 @@ export default function Requests() {
     const query = searchQuery.toLowerCase();
     const requesterName = getRequesterName(request.requesterId).toLowerCase();
     const propertyName = getPropertyName(request.propertyId).toLowerCase();
-    
+
     const matchesSearch =
-      request.id.toLowerCase().includes(query) ||
+      String(request.id).padStart(4, '0').includes(query) ||
+      String(request.id).includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
       propertyName.includes(query);
-    
+
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesUrgency = urgencyFilter === "all" || request.urgency === urgencyFilter;
     return matchesSearch && matchesStatus && matchesUrgency;
@@ -221,9 +222,9 @@ export default function Requests() {
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request ID</p>
-                        <p className="font-mono text-sm font-medium">#{String(request.id).padStart(6, '0')}</p>
+                        <p className="font-mono text-sm font-medium">#{String(request.id).padStart(4, '0')}</p>
                       </div>
-                      
+
                       {!isStaff && (
                         <div>
                           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
@@ -232,23 +233,23 @@ export default function Requests() {
                           </p>
                         </div>
                       )}
-                      
+
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Date Submitted</p>
-                        <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
+                        <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
                         })}</p>
                       </div>
-                      
+
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Status</p>
                         <Badge variant="outline" className={statusColors[request.status]} data-testid={`badge-status-${request.id}`}>
                           {request.status.replace(/_/g, " ")}
                         </Badge>
                       </div>
-                      
+
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Urgency</p>
                         <Badge variant="outline" className={urgencyColors[request.urgency]} data-testid={`badge-urgency-${request.id}`}>
@@ -263,17 +264,17 @@ export default function Requests() {
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request Title</p>
                         <CardTitle className="text-xl mb-3">{request.title}</CardTitle>
                       </div>
-                      
+
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Description</p>
                         <p className="text-sm text-foreground leading-relaxed">{request.description}</p>
                       </div>
-                      
+
                       <div className="pt-2">
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Property</p>
                         <p className="font-medium text-sm">{getPropertyName(request.propertyId)}</p>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 pt-4">
                         <Button
                           variant="default"
