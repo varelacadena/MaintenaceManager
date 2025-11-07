@@ -281,7 +281,7 @@ export default function PropertyDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 relative z-0">
+        <Card className="lg:col-span-2">
           <CardContent className="p-0 h-[400px]">
             <PropertyMap
               properties={[property]}
