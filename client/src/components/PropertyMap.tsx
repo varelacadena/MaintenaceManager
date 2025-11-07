@@ -6,6 +6,24 @@ import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import type { Property } from "@shared/schema";
 
+// Add custom CSS for tooltips
+const style = document.createElement('style');
+style.textContent = `
+  .property-tooltip {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 500 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+  }
+  .property-tooltip::before {
+    border-top-color: rgba(0, 0, 0, 0.8) !important;
+  }
+`;
+document.head.appendChild(style);
+
 interface PropertyMapProps {
   properties: Property[];
   onPropertySelect?: (property: Property) => void;
@@ -97,6 +115,13 @@ function PropertyLayers({
       }
 
       if (layer) {
+        // Add tooltip with property name
+        layer.bindTooltip(property.name, {
+          permanent: false,
+          direction: 'top',
+          className: 'property-tooltip',
+        });
+
         const popupContent = document.createElement('div');
         popupContent.innerHTML = `
           <div style="min-width: 200px;">
