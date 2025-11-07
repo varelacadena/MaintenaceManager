@@ -316,16 +316,6 @@ export default function PropertyDetail() {
 
   return (
     <div className="h-full flex flex-col gap-6">
-      <Card className="w-full">
-        <CardContent className="p-0 h-[300px] relative z-0">
-          <PropertyMap
-            properties={[property]}
-            selectedPropertyId={property.id}
-            editable={false}
-          />
-        </CardContent>
-      </Card>
-
       <div>
         <Button
           variant="ghost"
@@ -336,7 +326,7 @@ export default function PropertyDetail() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Map
         </Button>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</h1>
             <div className="flex items-center gap-2 mt-2">
@@ -357,6 +347,16 @@ export default function PropertyDetail() {
           )}
         </div>
       </div>
+
+      <Card className="w-full">
+        <CardContent className="p-0 h-[300px] relative z-0">
+          <PropertyMap
+            properties={[property]}
+            selectedPropertyId={property.id}
+            editable={false}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
