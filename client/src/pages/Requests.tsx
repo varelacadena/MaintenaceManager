@@ -228,12 +228,14 @@ export default function Requests() {
                         <p className="font-mono text-sm font-medium">#{request.id.slice(0, 8)}</p>
                       </div>
                       
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
-                        <p className="font-medium" data-testid={`text-requester-${request.id}`}>
-                          {getRequesterName(request.requesterId)}
-                        </p>
-                      </div>
+                      {!isStaff && (
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
+                          <p className="font-medium" data-testid={`text-requester-${request.id}`}>
+                            {getRequesterName(request.requesterId)}
+                          </p>
+                        </div>
+                      )}
                       
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Date Submitted</p>
