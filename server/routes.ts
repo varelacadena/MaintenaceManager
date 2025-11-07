@@ -734,6 +734,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear all service requests (admin only)
+  app.delete("/api/service-requests", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.clearAllServiceRequests();
+      res.json({ success: true, message: "All service requests cleared" });
+    } catch (error) {
+      console.error("Error clearing service requests:", error);
+      res.status(500).json({ message: "Failed to clear service requests" });
+    }
+  });
+
   app.patch(
     "/api/service-requests/:id/status",
     isAuthenticated,

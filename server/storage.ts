@@ -452,6 +452,10 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
+  async clearAllServiceRequests(): Promise<void> {
+    await db.delete(serviceRequests);
+  }
+
   // Task operations
   async getTasks(filters?: {
     assignedToId?: string;
