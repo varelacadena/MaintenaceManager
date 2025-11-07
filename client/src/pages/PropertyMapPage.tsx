@@ -199,7 +199,7 @@ export default function PropertyMapPage() {
               data-testid="button-toggle-edit"
             >
               <Edit className="w-4 h-4 mr-2" />
-              {editMode ? "Done Editing" : "Edit Map"}
+              Add new
             </Button>
           </div>
         )}
