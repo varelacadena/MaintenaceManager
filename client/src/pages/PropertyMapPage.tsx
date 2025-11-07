@@ -206,7 +206,7 @@ export default function PropertyMapPage() {
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-4 relative z-0">
+        <div className="lg:col-span-3 relative z-0">
           <Card className="h-full">
             <CardContent className="p-0 h-full">
               <PropertyMap
@@ -222,13 +222,13 @@ export default function PropertyMapPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <Card className="h-full">
+          <Card className="h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="text-lg">Properties</CardTitle>
               <Badge variant="secondary">{properties.length}</Badge>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="max-h-[600px] overflow-y-auto space-y-2">
+            <CardContent className="space-y-2 flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto space-y-2">
                 {properties.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
