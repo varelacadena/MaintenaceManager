@@ -111,7 +111,7 @@ export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
 export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: serial("id").primaryKey(),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
@@ -130,7 +130,7 @@ export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "remin
 export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
 
 export const tasks = pgTable("tasks", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: serial("id").primaryKey(),
   requestId: integer("request_id").references(() => serviceRequests.id),
   propertyId: varchar("property_id"),
   equipmentId: varchar("equipment_id").references(() => equipment.id),

@@ -409,6 +409,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getServiceRequest(id: string | number): Promise<ServiceRequest | undefined> {
+    if (id === null || id === undefined || id === 'null' || id === 'undefined') {
+      return undefined;
+    }
     const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
     if (isNaN(numericId)) {
       return undefined;
@@ -436,28 +439,40 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined> {
+  async updateServiceRequest(id: string | number, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(numericId)) {
+      return undefined;
+    }
     const [request] = await db
       .update(serviceRequests)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(serviceRequests.id, id))
+      .where(eq(serviceRequests.id, numericId))
       .returning();
     return request;
   }
 
-  async deleteServiceRequest(id: string): Promise<void> {
-    await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
+  async deleteServiceRequest(id: string | number): Promise<void> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(numericId)) {
+      return;
+    }
+    await db.delete(serviceRequests).where(eq(serviceRequests.id, numericId));
   }
 
   async updateServiceRequestStatus(
-    id: string,
+    id: string | number,
     status: string,
     rejectionReason?: string
   ): Promise<ServiceRequest | undefined> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(numericId)) {
+      return undefined;
+    }
     const [request] = await db
       .update(serviceRequests)
       .set({ status: status as any, rejectionReason, updatedAt: new Date() })
-      .where(eq(serviceRequests.id, id))
+      .where(eq(serviceRequests.id, numericId))
       .returning();
     return request;
   }
