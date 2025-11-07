@@ -215,17 +215,20 @@ function DrawingControl({
           shapeOptions: {
             color: '#3b82f6',
           },
+          showArea: false,
         },
         polyline: false,
         circle: {
           shapeOptions: {
             color: '#3b82f6',
           },
+          showRadius: false,
         },
         rectangle: {
           shapeOptions: {
             color: '#3b82f6',
           },
+          showArea: false,
         },
         marker: {
           icon: new L.Icon.Default(),
