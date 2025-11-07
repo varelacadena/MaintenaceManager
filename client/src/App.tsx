@@ -1,4 +1,3 @@
-
 import { Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -98,7 +97,6 @@ function AuthenticatedApp() {
                 <Route path="/properties" component={PropertyMapPage} />
                 <Route path="/properties/:id" component={PropertyDetail} />
                 <Route path="/users" component={Users} />
-                <Route path="/areas" component={Areas} />
                 <Route path="/credentials" component={Credentials} />
                 <Route path="/vendors" component={Vendors} />
                 <Route path="/inventory" component={Inventory} />
