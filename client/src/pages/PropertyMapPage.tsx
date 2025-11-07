@@ -247,28 +247,29 @@ export default function PropertyMapPage() {
                       onClick={() => setSelectedPropertyId(property.id)}
                       data-testid={`card-property-${property.id}`}
                     >
-                      <CardContent className="p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Building2 className="w-4 h-4 flex-shrink-0" />
-                              <h4 className="font-semibold text-sm truncate">{property.name}</h4>
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                              <Building2 className="w-5 h-5 text-primary" />
                             </div>
-                            <div className="space-y-1">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-base mb-1">{property.name}</h4>
                               <Badge variant="secondary" className="text-xs">
                                 {property.type}
                               </Badge>
-                              {property.address && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {property.address}
-                                </p>
-                              )}
                             </div>
                           </div>
-                          <div className="flex flex-col gap-1">
+                          {property.address && (
+                            <p className="text-sm text-muted-foreground">
+                              {property.address}
+                            </p>
+                          )}
+                          <div className="flex gap-2 pt-2">
                             <Button
                               size="sm"
                               variant="outline"
+                              className="flex-1"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/properties/${property.id}`);
@@ -281,13 +282,14 @@ export default function PropertyMapPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                className="flex-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handlePropertyDelete(property.id);
                                 }}
                                 data-testid={`button-delete-${property.id}`}
                               >
-                                <Trash2 className="w-4 h-4 mr-1" />
+                                <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
                               </Button>
                             )}
