@@ -111,7 +111,7 @@ export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
 export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
@@ -130,7 +130,7 @@ export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "remin
 export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
 
 export const tasks = pgTable("tasks", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   requestId: integer("request_id").references(() => serviceRequests.id),
   propertyId: varchar("property_id"),
   equipmentId: varchar("equipment_id").references(() => equipment.id),
@@ -158,7 +158,7 @@ export const insertServiceRequestSchema = createInsertSchema(serviceRequests).om
   updatedAt: true,
   status: true,
 });
-export type InsertServiceRequest = Omit<typeof serviceRequests.$inferInsert, 'id'>;
+export type InsertServiceRequest = z.infer<typeof insertServiceRequestSchema>;
 export type ServiceRequest = typeof serviceRequests.$inferSelect;
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -167,7 +167,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   updatedAt: true,
   actualCompletionDate: true,
 });
-export type InsertTask = Omit<typeof tasks.$inferInsert, 'id'>;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 
 // Time tracking (linked to tasks, not requests)
