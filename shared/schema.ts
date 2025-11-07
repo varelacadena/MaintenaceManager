@@ -115,6 +115,7 @@ export const serviceRequests = pgTable("service_requests", {
   urgency: urgencyEnum("urgency").notNull(),
   status: requestStatusEnum("status").notNull().default("submitted"),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
+  propertyId: varchar("property_id").references(() => properties.id),
   areaId: varchar("area_id").references(() => areas.id),
   subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
   rejectionReason: text("rejection_reason"),
