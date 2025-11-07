@@ -228,7 +228,7 @@ export default function PropertyMapPage() {
               <Badge variant="secondary">{properties.length}</Badge>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="max-h-[600px] overflow-y-auto">
+              <div className="max-h-[600px] overflow-y-auto space-y-2">
                 {properties.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -238,68 +238,66 @@ export default function PropertyMapPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {properties.map((property) => (
-                      <Card
-                        key={property.id}
-                        className={`cursor-pointer hover-elevate ${
-                          selectedPropertyId === property.id ? "border-primary" : ""
-                        }`}
-                        onClick={() => setSelectedPropertyId(property.id)}
-                        data-testid={`card-property-${property.id}`}
-                      >
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                                <Building2 className="w-5 h-5 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-base mb-1 truncate">{property.name}</h4>
-                                <Badge variant="secondary" className="text-xs">
-                                  {property.type}
-                                </Badge>
-                              </div>
+                  properties.map((property) => (
+                    <Card
+                      key={property.id}
+                      className={`cursor-pointer hover-elevate ${
+                        selectedPropertyId === property.id ? "border-primary" : ""
+                      }`}
+                      onClick={() => setSelectedPropertyId(property.id)}
+                      data-testid={`card-property-${property.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                              <Building2 className="w-5 h-5 text-primary" />
                             </div>
-                            {property.address && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {property.address}
-                              </p>
-                            )}
-                            <div className="flex flex-col gap-2 pt-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-base mb-1">{property.name}</h4>
+                              <Badge variant="secondary" className="text-xs">
+                                {property.type}
+                              </Badge>
+                            </div>
+                          </div>
+                          {property.address && (
+                            <p className="text-sm text-muted-foreground">
+                              {property.address}
+                            </p>
+                          )}
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/properties/${property.id}`);
+                              }}
+                              data-testid={`button-view-${property.id}`}
+                            >
+                              View
+                            </Button>
+                            {canEdit && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="w-full"
+                                className="flex-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/properties/${property.id}`);
+                                  handlePropertyDelete(property.id);
                                 }}
-                                data-testid={`button-view-${property.id}`}
+                                data-testid={`button-delete-${property.id}`}
                               >
-                                View
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
                               </Button>
-                              {canEdit && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePropertyDelete(property.id);
-                                  }}
-                                  data-testid={`button-delete-${property.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </Button>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
               </div>
             </CardContent>
