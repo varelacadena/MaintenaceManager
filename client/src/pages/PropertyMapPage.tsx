@@ -205,32 +205,29 @@ export default function PropertyMapPage() {
         )}
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-4 relative z-0">
-          <Card className="h-full">
-            <CardContent className="p-0 h-full">
-              <PropertyMap
-                properties={properties}
-                onPropertySelect={handlePropertySelect}
-                onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
-                onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
-                selectedPropertyId={selectedPropertyId}
-                editable={canEdit && editMode}
-              />
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex-1 flex flex-col gap-6">
+        <Card className="relative z-0 flex-1">
+          <CardContent className="p-0 h-full">
+            <PropertyMap
+              properties={properties}
+              onPropertySelect={handlePropertySelect}
+              onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
+              onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
+              selectedPropertyId={selectedPropertyId}
+              editable={canEdit && editMode}
+            />
+          </CardContent>
+        </Card>
 
-        <div className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-lg">Properties</CardTitle>
-              <Badge variant="secondary">{properties.length}</Badge>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="max-h-[600px] overflow-y-auto space-y-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="text-lg">Properties</CardTitle>
+            <Badge variant="secondary">{properties.length}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {properties.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-muted-foreground col-span-full">
                     <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No properties yet</p>
                     {canEdit && editMode && (
