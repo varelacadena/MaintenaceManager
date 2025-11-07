@@ -101,7 +101,7 @@ export default function PropertyDetail() {
   });
 
   const { data: equipment = [] } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment", { propertyId: id }],
+    queryKey: [`/api/equipment?propertyId=${id}`],
     enabled: !!id,
   });
 
@@ -316,40 +316,18 @@ export default function PropertyDetail() {
 
   return (
     <div className="h-full flex flex-col gap-6">
-      <div>
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/properties")}
-          className="mb-4"
-          data-testid="button-back-to-map"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Map
-        </Button>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</h1>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="secondary">{property.type}</Badge>
-              {property.address && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  {property.address}
-                </div>
-              )}
-            </div>
-          </div>
-          {canEdit && (
-            <Button onClick={handleEditProperty} data-testid="button-edit-property">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Property
-            </Button>
-          )}
-        </div>
-      </div>
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/properties")}
+        className="mb-2"
+        data-testid="button-back-to-map"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Map
+      </Button>
 
       <Card className="w-full">
-        <CardContent className="p-0 h-[300px] relative z-0">
+        <CardContent className="p-0 h-[400px] relative z-0">
           <PropertyMap
             properties={[property]}
             selectedPropertyId={property.id}
@@ -357,6 +335,27 @@ export default function PropertyDetail() {
           />
         </CardContent>
       </Card>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</h1>
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="secondary">{property.type}</Badge>
+            {property.address && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4" />
+                {property.address}
+              </div>
+            )}
+          </div>
+        </div>
+        {canEdit && (
+          <Button onClick={handleEditProperty} data-testid="button-edit-property">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit Property
+          </Button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
