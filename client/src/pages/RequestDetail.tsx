@@ -256,7 +256,7 @@ export default function RequestDetail() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold" data-testid="text-request-title">{request.title}</h1>
-          <p className="text-sm text-muted-foreground" data-testid="text-request-id">Request #{request.id}</p>
+          <p className="text-sm text-muted-foreground" data-testid="text-request-id">Request #{String(request.id).padStart(6, '0')}</p>
         </div>
         <Badge className={getStatusColor(request.status)} data-testid="badge-status">
           {request.status.replace("_", " ").toUpperCase()}

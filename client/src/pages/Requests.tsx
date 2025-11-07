@@ -221,7 +221,7 @@ export default function Requests() {
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request ID</p>
-                        <p className="font-mono text-sm font-medium">#{request.id}</p>
+                        <p className="font-mono text-sm font-medium">#{String(request.id).padStart(6, '0')}</p>
                       </div>
                       
                       {!isStaff && (
