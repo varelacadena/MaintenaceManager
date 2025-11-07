@@ -408,11 +408,15 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(serviceRequests.createdAt));
   }
 
-  async getServiceRequest(id: string): Promise<ServiceRequest | undefined> {
+  async getServiceRequest(id: string | number): Promise<ServiceRequest | undefined> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(numericId)) {
+      return undefined;
+    }
     const [request] = await db
       .select()
       .from(serviceRequests)
-      .where(eq(serviceRequests.id, id));
+      .where(eq(serviceRequests.id, numericId));
     return request;
   }
 
@@ -423,6 +427,12 @@ export class DatabaseStorage implements IStorage {
       .insert(serviceRequests)
       .values(requestData)
       .returning();
+    
+    // Ensure ID is properly set
+    if (!request.id) {
+      throw new Error("Failed to create service request - no ID returned");
+    }
+    
     return request;
   }
 
