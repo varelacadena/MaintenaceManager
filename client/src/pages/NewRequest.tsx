@@ -67,11 +67,11 @@ export default function NewRequest() {
       category: "",
       urgency: "medium",
       requestedDate: new Date().toISOString().split("T")[0],
-      requesterId: user?.id || "",
-      propertyId: null,
+      requesterId: "",
       areaId: null,
       subdivisionId: null,
-      rejectionReason: null,
+      assignedToId: null,
+      onHoldReason: null,
     },
   });
 
@@ -229,7 +229,7 @@ export default function NewRequest() {
                     <FormLabel>Category</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value || undefined}
+                      defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger data-testid="select-category">
