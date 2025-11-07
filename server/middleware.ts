@@ -50,17 +50,26 @@ export const requireMaintenanceOrAdmin = requireRole("maintenance", "admin");
 export const requireStaffOrHigher = requireRole("staff", "maintenance", "admin");
 
 // Helper to check if user can access a specific request
-export async function canAccessRequest(userId: string, requestId: string | number, requireAssignedOrRequester: boolean = false): Promise<boolean> {
+export async function canAccessRequest(userId: string, requestId: string, requireAssignedOrRequester: boolean = false): Promise<boolean> {
   const { storage } = await import("./storage");
 
   const user = await storage.getUser(userId);
   if (!user) return false;
 
-  // Admins and maintenance can access all requests
-  if (user.role === "admin" || user.role === "maintenance") return true;
+  // Admins can access all requests
+  if (user.role === "admin") return true;
 
   const request = await storage.getServiceRequest(requestId);
   if (!request) return false;
+
+  // Maintenance can access all requests
+  if (user.role === "maintenance") {
+    if (requireAssignedOrRequester) {
+      // For modifications, must be assigned to the request
+      return request.assignedToId === userId || request.requesterId === userId;
+    }
+    return true;
+  }
 
   // Staff can only access their own requests
   if (user.role === "staff") {

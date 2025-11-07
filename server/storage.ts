@@ -119,7 +119,7 @@ export interface IStorage {
     status?: string;
     areaId?: string;
   }): Promise<Task[]>;
-  getTask(id: string | number): Promise<Task | undefined>;
+  getTask(id: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<void>;
@@ -408,18 +408,11 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(serviceRequests.createdAt));
   }
 
-  async getServiceRequest(id: string | number): Promise<ServiceRequest | undefined> {
-    if (id === null || id === undefined || id === 'null' || id === 'undefined') {
-      return undefined;
-    }
-    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-    if (isNaN(numericId)) {
-      return undefined;
-    }
+  async getServiceRequest(id: string): Promise<ServiceRequest | undefined> {
     const [request] = await db
       .select()
       .from(serviceRequests)
-      .where(eq(serviceRequests.id, numericId));
+      .where(eq(serviceRequests.id, id));
     return request;
   }
 
@@ -430,49 +423,31 @@ export class DatabaseStorage implements IStorage {
       .insert(serviceRequests)
       .values(requestData)
       .returning();
-    
-    // Ensure ID is properly set
-    if (!request.id) {
-      throw new Error("Failed to create service request - no ID returned");
-    }
-    
     return request;
   }
 
-  async updateServiceRequest(id: string | number, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined> {
-    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-    if (isNaN(numericId)) {
-      return undefined;
-    }
+  async updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined> {
     const [request] = await db
       .update(serviceRequests)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(serviceRequests.id, numericId))
+      .where(eq(serviceRequests.id, id))
       .returning();
     return request;
   }
 
-  async deleteServiceRequest(id: string | number): Promise<void> {
-    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-    if (isNaN(numericId)) {
-      return;
-    }
-    await db.delete(serviceRequests).where(eq(serviceRequests.id, numericId));
+  async deleteServiceRequest(id: string): Promise<void> {
+    await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
   }
 
   async updateServiceRequestStatus(
-    id: string | number,
+    id: string,
     status: string,
     rejectionReason?: string
   ): Promise<ServiceRequest | undefined> {
-    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-    if (isNaN(numericId)) {
-      return undefined;
-    }
     const [request] = await db
       .update(serviceRequests)
       .set({ status: status as any, rejectionReason, updatedAt: new Date() })
-      .where(eq(serviceRequests.id, numericId))
+      .where(eq(serviceRequests.id, id))
       .returning();
     return request;
   }
@@ -525,8 +500,11 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(tasks.initialDate));
   }
 
-  async getTask(id: string | number): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, typeof id === 'string' ? parseInt(id, 10) : id));
+  async getTask(id: string): Promise<Task | undefined> {
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, id));
     return task;
   }
 

@@ -158,7 +158,7 @@ export const insertServiceRequestSchema = createInsertSchema(serviceRequests).om
   updatedAt: true,
   status: true,
 });
-export type InsertServiceRequest = z.infer<typeof insertServiceRequestSchema>;
+export type InsertServiceRequest = Omit<typeof serviceRequests.$inferInsert, 'id'>;
 export type ServiceRequest = typeof serviceRequests.$inferSelect;
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -167,7 +167,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   updatedAt: true,
   actualCompletionDate: true,
 });
-export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type InsertTask = Omit<typeof tasks.$inferInsert, 'id'>;
 export type Task = typeof tasks.$inferSelect;
 
 // Time tracking (linked to tasks, not requests)
