@@ -263,8 +263,7 @@ export default function Requests() {
                   <tr>
                     <th className="text-left px-6 py-4 text-sm font-medium">Requester Name</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Title</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Phone Number</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Date & Time</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Submitted</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Status</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Action</th>
                   </tr>
@@ -290,11 +289,6 @@ export default function Requests() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="max-w-xs truncate">{request.title}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
-                            {requesterUser?.phoneNumber || 'N/A'}
-                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm">
@@ -324,17 +318,10 @@ export default function Requests() {
                               variant="default"
                               size="sm"
                               className="bg-primary hover:bg-primary/90"
-                              onClick={() => navigate(`/tasks/new?requestId=${request.id}`)}
-                              data-testid={`button-approve-${request.id}`}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
                               onClick={() => navigate(`/requests/${request.id}`)}
+                              data-testid={`button-review-${request.id}`}
                             >
-                              View
+                              Review
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
