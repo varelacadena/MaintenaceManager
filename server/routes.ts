@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = req.userId;
         const currentUser = await storage.getUser(userId);
         const request = await storage.getServiceRequest(req.params.id);
-        
+
         if (!request) {
           return res.status(404).json({ message: "Request not found" });
         }
@@ -1468,7 +1468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         equipment = await storage.getEquipment();
       }
-      
+
       res.json(equipment);
     } catch (error) {
       console.error("Error fetching equipment:", error);

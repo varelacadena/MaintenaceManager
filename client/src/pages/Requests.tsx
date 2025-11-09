@@ -259,13 +259,29 @@ export default function Requests() {
           {filteredRequests.map((request) => {
             const requesterUser = users.find((u: any) => u.id === request.requesterId) || requesters[request.requesterId];
             return (
-              <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
+              <Card 
+                key={request.id} 
+                className={`hover:shadow-md transition-shadow ${
+                  request.status === 'submitted' 
+                    ? 'border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10' 
+                    : ''
+                }`} 
+                data-testid={`card-request-${request.id}`}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
                     {/* User Icon */}
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
-                        <span className="text-orange-600 dark:text-orange-400 text-lg">👤</span>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        request.status === 'submitted' 
+                          ? 'bg-blue-100 dark:bg-blue-900/20 ring-2 ring-blue-500 ring-offset-2' 
+                          : 'bg-orange-100 dark:bg-orange-900/20'
+                      }`}>
+                        <span className={`text-lg ${
+                          request.status === 'submitted'
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-orange-600 dark:text-orange-400'
+                        }`}>👤</span>
                       </div>
                     </div>
 
@@ -274,9 +290,16 @@ export default function Requests() {
                       {/* Header: Name and Property */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="font-semibold text-base" data-testid={`text-requester-${request.id}`}>
-                            {getRequesterName(request.requesterId)}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-base" data-testid={`text-requester-${request.id}`}>
+                              {getRequesterName(request.requesterId)}
+                            </h3>
+                            {request.status === 'submitted' && (
+                              <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 text-xs">
+                                NEW
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</p>
                         </div>
                         <div className="flex gap-2">
