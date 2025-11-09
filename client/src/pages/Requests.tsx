@@ -263,6 +263,7 @@ export default function Requests() {
                   <tr>
                     <th className="text-left px-6 py-4 text-sm font-medium">Requester Name</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Title</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Property</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Submitted</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Status</th>
                     <th className="text-left px-6 py-4 text-sm font-medium">Action</th>
@@ -289,6 +290,9 @@ export default function Requests() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="max-w-xs truncate">{request.title}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">{getPropertyName(request.propertyId)}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm">
