@@ -77,7 +77,6 @@ export default function NewRequest() {
 
   const createRequestMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      // Status will default to 'submitted' on the server
       const response = await apiRequest("POST", "/api/service-requests", {
         ...data,
         requestedDate: new Date(data.requestedDate),

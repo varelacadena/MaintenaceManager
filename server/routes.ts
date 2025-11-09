@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = req.userId;
         const currentUser = await storage.getUser(userId);
         const request = await storage.getServiceRequest(req.params.id);
-
+        
         if (!request) {
           return res.status(404).json({ message: "Request not found" });
         }
@@ -683,11 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         requesterId: userId,
       });
-      // Ensure status defaults to 'submitted' if not provided
-      const request = await storage.createServiceRequest({
-        ...requestData,
-        status: 'submitted' as any
-      });
+      const request = await storage.createServiceRequest(requestData);
       res.json(request);
     } catch (error) {
       console.error("Error creating service request:", error);
@@ -1472,7 +1468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         equipment = await storage.getEquipment();
       }
-
+      
       res.json(equipment);
     } catch (error) {
       console.error("Error fetching equipment:", error);
