@@ -10,6 +10,7 @@ import {
   index,
   boolean,
   doublePrecision,
+  uuid, // Import uuid from drizzle-orm/pg-core
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -109,15 +110,15 @@ export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
 export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: varchar("title", { length: 200 }).notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  requesterId: text("requester_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
   description: text("description").notNull(),
-  urgency: urgencyEnum("urgency").notNull(),
-  status: requestStatusEnum("status").notNull().default("submitted"),
-  requesterId: varchar("requester_id").notNull().references(() => users.id),
-  propertyId: varchar("property_id").references(() => properties.id),
-  areaId: varchar("area_id").references(() => areas.id),
-  subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
+  urgency: text("urgency").notNull().default("medium"),
+  status: text("status").notNull().default("submitted"),
+  areaId: uuid("area_id").references(() => areas.id),
+  subdivisionId: uuid("subdivision_id").references(() => subdivisions.id),
+  propertyId: uuid("property_id").references(() => properties.id),
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
