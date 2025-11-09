@@ -49,6 +49,7 @@ export default function RequestDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [pendingUploads, setPendingUploads] = useState<
     { name: string; url: string; type: string }[]
   >([]);
@@ -74,6 +75,45 @@ export default function RequestDetail() {
       queryClient.invalidateQueries({
         queryKey: ["/api/messages/request", id],
       });
+    },
+  });
+
+  const approveRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
+        status: "under_review",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
+      toast({ title: "Request approved and moved to under review" });
+    },
+    onError: () => {
+      toast({ title: "Failed to approve request", variant: "destructive" });
+    },
+  });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: async ({ requestId, reason }: { requestId: string; reason: string }) => {
+      await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
+        status: "rejected",
+        rejectionReason: reason,
+      });
+
+      await apiRequest("POST", "/api/messages", {
+        requestId,
+        content: `Your service request "${request?.title}" has been rejected.\n\nReason: ${reason}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
+      toast({ title: "Request rejected and requester notified" });
+      navigate("/requests");
+    },
+    onError: () => {
+      toast({ title: "Failed to reject request", variant: "destructive" });
     },
   });
 
@@ -273,13 +313,81 @@ export default function RequestDetail() {
             </div>
           </div>
           
-          {canConvertToTask && (
-            <div className="flex justify-end">
-              <Link href={`/tasks/new?requestId=${id}`}>
-                <Button size="sm" data-testid="button-convert-to-task">
-                  Convert to Task
-                </Button>
-              </Link>
+          {isMaintenanceOrAdmin && (
+            <div className="flex justify-end gap-2">
+              {request.status === "pending" && (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20"
+                    onClick={() => approveRequestMutation.mutate(id)}
+                    disabled={approveRequestMutation.isPending}
+                    data-testid="button-approve-request"
+                  >
+                    Approve
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20"
+                        data-testid="button-reject-request"
+                      >
+                        Reject
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Please provide a reason for rejecting this request. The requester will be notified.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <Textarea
+                        placeholder="Enter rejection reason..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className="min-h-[100px]"
+                        data-testid="textarea-rejection-reason"
+                      />
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setRejectionReason("")}>
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            if (!rejectionReason.trim()) {
+                              toast({ 
+                                title: "Please provide a rejection reason", 
+                                variant: "destructive" 
+                              });
+                              return;
+                            }
+                            rejectRequestMutation.mutate({ 
+                              requestId: id, 
+                              reason: rejectionReason 
+                            });
+                            setRejectionReason("");
+                          }}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          data-testid="button-confirm-reject"
+                        >
+                          Reject Request
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+              {canConvertToTask && (
+                <Link href={`/tasks/new?requestId=${id}`}>
+                  <Button size="sm" data-testid="button-convert-to-task">
+                    Convert to Task
+                  </Button>
+                </Link>
+              )}
             </div>
           )}
         </div>
