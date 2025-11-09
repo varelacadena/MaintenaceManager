@@ -265,7 +265,7 @@ export default function Requests() {
                 key={request.id} 
                 className={`hover:shadow-md transition-shadow ${
                   isNewRequest
-                    ? 'border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10' 
+                    ? 'border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20' 
                     : ''
                 }`} 
                 data-testid={`card-request-${request.id}`}
@@ -276,14 +276,10 @@ export default function Requests() {
                     <div className="flex-shrink-0">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         isNewRequest
-                          ? 'bg-blue-100 dark:bg-blue-900/20 ring-2 ring-blue-500 ring-offset-2' 
-                          : 'bg-orange-100 dark:bg-orange-900/20'
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
                       }`}>
-                        <span className={`text-lg ${
-                          isNewRequest
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-orange-600 dark:text-orange-400'
-                        }`}>👤</span>
+                        <span className="text-lg">👤</span>
                       </div>
                     </div>
 
