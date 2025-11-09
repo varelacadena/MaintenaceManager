@@ -32,7 +32,6 @@ import type { ServiceRequest } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
   submitted: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  pending: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
   under_review: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
   converted_to_task: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
   rejected: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
@@ -259,13 +258,11 @@ export default function Requests() {
         <div className="grid gap-4">
           {filteredRequests.map((request) => {
             const requesterUser = users.find((u: any) => u.id === request.requesterId) || requesters[request.requesterId];
-            const isNewRequest = request.status === 'submitted';
-            
             return (
               <Card 
                 key={request.id} 
                 className={`hover:shadow-md transition-shadow ${
-                  isNewRequest
+                  request.status === 'submitted' 
                     ? 'border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10' 
                     : ''
                 }`} 
@@ -276,12 +273,12 @@ export default function Requests() {
                     {/* User Icon */}
                     <div className="flex-shrink-0">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isNewRequest
+                        request.status === 'submitted' 
                           ? 'bg-blue-100 dark:bg-blue-900/20 ring-2 ring-blue-500 ring-offset-2' 
                           : 'bg-orange-100 dark:bg-orange-900/20'
                       }`}>
                         <span className={`text-lg ${
-                          isNewRequest
+                          request.status === 'submitted'
                             ? 'text-blue-600 dark:text-blue-400'
                             : 'text-orange-600 dark:text-orange-400'
                         }`}>👤</span>
@@ -297,8 +294,8 @@ export default function Requests() {
                             <h3 className="font-semibold text-base" data-testid={`text-requester-${request.id}`}>
                               {getRequesterName(request.requesterId)}
                             </h3>
-                            {isNewRequest && (
-                              <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 text-xs font-semibold">
+                            {request.status === 'submitted' && (
+                              <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 text-xs">
                                 NEW
                               </Badge>
                             )}
