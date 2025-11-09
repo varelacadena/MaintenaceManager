@@ -306,7 +306,7 @@ export default function PropertyDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="text-muted-foreground">Property not found</div>
-        <Button onClick={() => navigate("/properties")} data-testid="button-back">
+        <Button onClick={() => navigate("/properties")} data-testid="button-button-back-to-map">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Properties
         </Button>
@@ -316,46 +316,53 @@ export default function PropertyDetail() {
 
   return (
     <div className="h-full flex flex-col gap-6">
-      <Button
-        variant="ghost"
-        onClick={() => navigate("/properties")}
-        className="mb-2"
-        data-testid="button-back-to-map"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Map
-      </Button>
-
-      <Card className="w-full">
-        <CardContent className="p-0 h-[400px] relative z-0">
-          <PropertyMap
-            properties={[property]}
-            selectedPropertyId={property.id}
-            editable={false}
-          />
-        </CardContent>
-      </Card>
-
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="secondary">{property.type}</Badge>
-            {property.address && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                {property.address}
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/properties")}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Map
+          </Button>
         </div>
         {canEdit && (
-          <Button onClick={handleEditProperty} data-testid="button-edit-property">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Property
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleEditProperty}
+              data-testid="button-edit-property"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Property
+            </Button>
+            {/* The delete property button is removed as it's not in scope of this change */}
+          </div>
         )}
       </div>
+
+      {/* Property Details */}
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div className="space-y-1">
+            <CardTitle className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="secondary">{property.type}</Badge>
+              {property.address && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {property.address}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -576,6 +583,20 @@ export default function PropertyDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Map - Now at the bottom */}
+      <Card className="relative z-0" style={{ height: "400px" }}>
+        <CardHeader>
+          <CardTitle className="text-lg">Location</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 h-[calc(100%-4rem)]">
+          <PropertyMap
+            properties={[property]}
+            selectedPropertyId={property.id}
+            editable={false}
+          />
+        </CardContent>
+      </Card>
 
       <Dialog open={isEditPropertyDialogOpen} onOpenChange={setIsEditPropertyDialogOpen}>
         <DialogContent className="z-50">
