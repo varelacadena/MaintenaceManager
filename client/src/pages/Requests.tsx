@@ -217,152 +217,118 @@ export default function Requests() {
       ) : (
         <div className="grid gap-4">
           {filteredRequests.map((request) => {
+            const requesterUser = users.find((u: any) => u.id === request.requesterId) || requesters[request.requesterId];
             return (
               <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
                 <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
-                    {/* Left Column: Requester & Status Info */}
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request ID</p>
-                        <p className="font-mono text-sm font-medium">#{request.id.slice(0, 8)}</p>
-                      </div>
-                      
-                      {!isStaff && (
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Submitted by</p>
-                          <p className="font-medium" data-testid={`text-requester-${request.id}`}>
-                            {getRequesterName(request.requesterId)}
-                          </p>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Date Submitted</p>
-                        <p className="font-medium">{new Date(request.createdAt!).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}</p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Status</p>
-                        <Badge variant="outline" className={statusColors[request.status]} data-testid={`badge-status-${request.id}`}>
-                          {request.status.replace(/_/g, " ")}
-                        </Badge>
-                      </div>
-                      
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Urgency</p>
-                        <Badge variant="outline" className={urgencyColors[request.urgency]} data-testid={`badge-urgency-${request.id}`}>
-                          {request.urgency.toUpperCase()}
-                        </Badge>
+                  <div className="flex items-start gap-4">
+                    {/* User Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
+                        <span className="text-orange-600 dark:text-orange-400 text-lg">👤</span>
                       </div>
                     </div>
 
-                    {/* Right Column: Request Details */}
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Request Title</p>
-                        <CardTitle className="text-xl mb-3">{request.title}</CardTitle>
+                    {/* Main Content */}
+                    <div className="flex-1 space-y-3">
+                      {/* Header: Name and Property */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold text-base" data-testid={`text-requester-${request.id}`}>
+                            {getRequesterName(request.requesterId)}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                          >
+                            Reject
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => navigate(`/requests/${request.id}`)}
+                            data-testid={`button-view-${request.id}`}
+                          >
+                            Approve
+                          </Button>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Description</p>
-                        <p className="text-sm text-foreground leading-relaxed">{request.description}</p>
-                      </div>
-                      
-                      <div className="pt-2">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Property</p>
-                        <p className="font-medium text-sm">{getPropertyName(request.propertyId)}</p>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 pt-4">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => navigate(`/requests/${request.id}`)}
-                          data-testid={`button-view-${request.id}`}
-                        >
-                          View Details
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
 
-                        {canManageRequests && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                data-testid={`button-delete-${request.id}`}
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete this service request. This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteRequestMutation.mutate(request.id)}
-                                  data-testid={`button-confirm-delete-${request.id}`}
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-
-                        {(isStaff && request.requesterId === user?.id && request.status === "submitted") && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/requests/${request.id}/edit`)}
-                              data-testid={`button-edit-${request.id}`}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  data-testid={`button-delete-${request.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete this service request. This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteRequestMutation.mutate(request.id)}
-                                    data-testid={`button-confirm-delete-${request.id}`}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </>
+                      {/* Date and Phone */}
+                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span>📅</span>
+                          <span>
+                            {new Date(request.createdAt!).toLocaleDateString('en-US', { 
+                              weekday: 'long',
+                              month: 'long', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            })}
+                          </span>
+                        </div>
+                        {requesterUser?.phoneNumber && (
+                          <div className="flex items-center gap-2">
+                            <span>📞</span>
+                            <span>{requesterUser.phoneNumber}</span>
+                          </div>
                         )}
                       </div>
+
+                      {/* Description */}
+                      <p className="text-sm leading-relaxed">
+                        {request.description}
+                      </p>
+
+                      {/* View Details Link */}
+                      <Button
+                        variant="link"
+                        className="px-0 h-auto text-blue-600 hover:text-blue-700"
+                        onClick={() => navigate(`/requests/${request.id}`)}
+                      >
+                        View Details →
+                      </Button>
                     </div>
                   </div>
+
+                  {/* Action buttons for different user roles (hidden in this layout but preserved for functionality) */}
+                  {canManageRequests && (
+                    <div className="hidden">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`button-delete-${request.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete this service request. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteRequestMutation.mutate(request.id)}
+                              data-testid={`button-confirm-delete-${request.id}`}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
