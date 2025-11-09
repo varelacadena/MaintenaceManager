@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -55,7 +56,7 @@ export default function RequestDetail() {
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", id],
     enabled: !!id,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
   });
 
   const markAsReadMutation = useMutation({
@@ -77,14 +78,12 @@ export default function RequestDetail() {
     enabled: !!id,
   });
 
-  // Fetch linked task if request has been converted
   const { data: linkedTask } = useQuery({
     queryKey: ["/api/tasks"],
     enabled: request?.status === "converted_to_task",
     select: (tasks: any[]) => tasks.find((t: any) => t.requestId === id),
   });
 
-  // Mark messages as read when viewing the request
   useEffect(() => {
     if (id && messages.length > 0) {
       const hasUnreadMessages = messages.some(
@@ -218,117 +217,131 @@ export default function RequestDetail() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-blue-500";
+        return "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20";
       case "under_review":
-        return "bg-yellow-500";
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20";
       case "converted_to_task":
-        return "bg-green-500";
+        return "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20";
       case "rejected":
-        return "bg-red-500";
+        return "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20";
       default:
-        return "bg-gray-500";
+        return "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20";
     }
   };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case "low":
-        return "bg-green-500";
+        return "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20";
       case "medium":
-        return "bg-yellow-500";
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20";
       case "high":
-        return "bg-red-500";
+        return "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20";
       default:
-        return "bg-gray-500";
+        return "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20";
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b p-4 flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/requests")}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold" data-testid="text-request-title">{request.title}</h1>
-          <p className="text-sm text-muted-foreground" data-testid="text-request-id">Request #{request.id}</p>
-        </div>
-        <Badge className={getStatusColor(request.status)} data-testid="badge-status">
-          {request.status.replace("_", " ").toUpperCase()}
-        </Badge>
-        {linkedTask && (
-          <Badge 
-            variant="outline" 
-            className={
-              linkedTask.status === "completed" 
-                ? "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20"
-                : linkedTask.status === "in_progress"
-                ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
-                : linkedTask.status === "on_hold"
-                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20"
-                : "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20"
-            }
-            data-testid="badge-task-status"
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4">
+        <div className="flex items-center gap-4 mb-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/requests")}
+            data-testid="button-back"
           >
-            Task: {linkedTask.status.replace("_", " ").toUpperCase()}
-          </Badge>
-        )}
-        <Badge className={getUrgencyColor(request.urgency)} data-testid="badge-urgency">
-          {request.urgency.toUpperCase()}
-        </Badge>
-        {canConvertToTask && (
-          <Link href={`/tasks/new?requestId=${id}`}>
-            <Button data-testid="button-convert-to-task">
-              Convert to Task
-            </Button>
-          </Link>
-        )}
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-request-title">
+            {request.title}
+          </h1>
+        </div>
+        <div className="flex items-center justify-between ml-14">
+          <p className="text-sm text-muted-foreground" data-testid="text-request-id">
+            Request #{request.id}
+          </p>
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="outline" 
+              className={getStatusColor(request.status)} 
+              data-testid="badge-status"
+            >
+              {request.status === 'converted_to_task' ? 'CONVERTED TO TASK' : 
+               request.status === 'under_review' ? 'UNDER REVIEW' : 
+               request.status === 'pending' ? 'PENDING' :
+               request.status === 'rejected' ? 'REJECTED' :
+               request.status.toUpperCase()}
+            </Badge>
+            <Badge 
+              variant="outline" 
+              className={getUrgencyColor(request.urgency)} 
+              data-testid="badge-urgency"
+            >
+              {request.urgency.toUpperCase()}
+            </Badge>
+            {canConvertToTask && (
+              <Link href={`/tasks/new?requestId=${id}`}>
+                <Button data-testid="button-convert-to-task">
+                  Convert to Task
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* Content */}
       <div className="flex-1 overflow-auto p-6">
         <div className="grid gap-6 max-w-6xl mx-auto">
+          {/* Details Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle className="text-xl font-semibold">Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div>
-                <h3 className="font-medium mb-2">Description</h3>
-                <p className="text-muted-foreground" data-testid="text-description">{request.description}</p>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
+                <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-description">
+                  {request.description}
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {area && (
-                  <div>
-                    <h3 className="font-medium mb-2">Area</h3>
-                    <p className="text-muted-foreground" data-testid="text-area">{area.name}</p>
-                  </div>
-                )}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Created</h3>
+                <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-created-at">
+                  {new Date(request.createdAt!).toLocaleString()}
+                </p>
+              </div>
 
-                {subdivision && (
-                  <div>
-                    <h3 className="font-medium mb-2">Subdivision</h3>
-                    <p className="text-muted-foreground" data-testid="text-subdivision">{subdivision.name}</p>
-                  </div>
-                )}
+              {(area || subdivision) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {area && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Area</h3>
+                      <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-area">
+                        {area.name}
+                      </p>
+                    </div>
+                  )}
 
-                <div>
-                  <h3 className="font-medium mb-2">Created</h3>
-                  <p className="text-muted-foreground" data-testid="text-created-at">
-                    {new Date(request.createdAt!).toLocaleString()}
-                  </p>
+                  {subdivision && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Subdivision</h3>
+                      <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-subdivision">
+                        {subdivision.name}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               {request.status === "rejected" && request.rejectionReason && (
                 <div>
-                  <h3 className="font-medium mb-2 text-destructive">Rejection Reason</h3>
-                  <p className="text-muted-foreground" data-testid="text-rejection-reason">
+                  <h3 className="text-sm font-medium text-destructive mb-2">Rejection Reason</h3>
+                  <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-rejection-reason">
                     {request.rejectionReason}
                   </p>
                 </div>
@@ -336,34 +349,35 @@ export default function RequestDetail() {
             </CardContent>
           </Card>
 
+          {/* Requester Contact Information Card */}
           {requester && (
             <Card>
               <CardHeader>
-                <CardTitle>Requester Contact Information</CardTitle>
+                <CardTitle className="text-xl font-semibold">Requester Contact Information</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
-                    <p className="text-base" data-testid="text-requester-name">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Name</h3>
+                    <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-requester-name">
                       {requester.firstName} {requester.lastName}
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
-                    <p className="text-base" data-testid="text-requester-email">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Email</h3>
+                    <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-requester-email">
                       {requester.email || "Not provided"}
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
-                    <p className="text-base" data-testid="text-requester-phone">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Phone Number</h3>
+                    <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-requester-phone">
                       {requester.phoneNumber || "Not provided"}
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Username</h3>
-                    <p className="text-base" data-testid="text-requester-username">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Username</h3>
+                    <p className="text-base text-gray-900 dark:text-gray-100" data-testid="text-requester-username">
                       {requester.username}
                     </p>
                   </div>
@@ -372,9 +386,10 @@ export default function RequestDetail() {
             </Card>
           )}
 
+          {/* Attachments Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
                 <Paperclip className="h-5 w-5" />
                 Attachments
               </CardTitle>
@@ -390,13 +405,13 @@ export default function RequestDetail() {
                     {uploads.map((upload) => (
                       <div
                         key={upload.id}
-                        className="flex items-center justify-between p-2 rounded border"
+                        className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 dark:bg-gray-800"
                       >
                         <a
                           href={upload.objectPath}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 hover:text-primary"
                           data-testid={`link-attachment-${upload.id}`}
                         >
                           <Paperclip className="w-4 h-4" />
@@ -441,7 +456,7 @@ export default function RequestDetail() {
                       {pendingUploads.map((upload, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-2 rounded border"
+                          className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 dark:bg-gray-800"
                         >
                           <div className="flex items-center gap-2">
                             <Paperclip className="w-4 h-4 text-muted-foreground" />
@@ -478,7 +493,7 @@ export default function RequestDetail() {
                   </div>
                 )}
 
-                <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center">
+                <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
                   <ObjectUploader
                     maxNumberOfFiles={5}
                     maxFileSize={10485760}
@@ -501,9 +516,10 @@ export default function RequestDetail() {
             </CardContent>
           </Card>
 
+          {/* Messages Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
                 <MessageSquare className="h-5 w-5" />
                 Messages ({messages.length})
               </CardTitle>
@@ -539,7 +555,7 @@ export default function RequestDetail() {
                             className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
                               isOwn
                                 ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                                : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-sm"
                             }`}
                           >
                             <p className="text-sm" data-testid={`text-content-${message.id}`}>{message.content}</p>
