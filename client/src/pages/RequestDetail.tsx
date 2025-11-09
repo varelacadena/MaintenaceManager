@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -23,6 +24,10 @@ import {
   Send,
   Trash2,
   X,
+  User,
+  Mail,
+  Phone,
+  Calendar,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,7 +60,7 @@ export default function RequestDetail() {
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/request", id],
     enabled: !!id,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
   });
 
   const markAsReadMutation = useMutation({
@@ -77,14 +82,12 @@ export default function RequestDetail() {
     enabled: !!id,
   });
 
-  // Fetch linked task if request has been converted
   const { data: linkedTask } = useQuery({
     queryKey: ["/api/tasks"],
     enabled: request?.status === "converted_to_task",
     select: (tasks: any[]) => tasks.find((t: any) => t.requestId === id),
   });
 
-  // Mark messages as read when viewing the request
   useEffect(() => {
     if (id && messages.length > 0) {
       const hasUnreadMessages = messages.some(
@@ -244,91 +247,83 @@ export default function RequestDetail() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b p-4 flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/requests")}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold" data-testid="text-request-title">{request.title}</h1>
-          <p className="text-sm text-muted-foreground" data-testid="text-request-id">Request #{request.id}</p>
-        </div>
-        <Badge className={getStatusColor(request.status)} data-testid="badge-status">
-          {request.status.replace("_", " ").toUpperCase()}
-        </Badge>
-        {linkedTask && (
-          <Badge 
-            variant="outline" 
-            className={
-              linkedTask.status === "completed" 
-                ? "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20"
-                : linkedTask.status === "in_progress"
-                ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
-                : linkedTask.status === "on_hold"
-                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20"
-                : "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20"
-            }
-            data-testid="badge-task-status"
-          >
-            Task: {linkedTask.status.replace("_", " ").toUpperCase()}
-          </Badge>
-        )}
-        <Badge className={getUrgencyColor(request.urgency)} data-testid="badge-urgency">
-          {request.urgency.toUpperCase()}
-        </Badge>
-        {canConvertToTask && (
-          <Link href={`/tasks/new?requestId=${id}`}>
-            <Button data-testid="button-convert-to-task">
-              Convert to Task
+    <div className="flex flex-col h-full bg-muted/30">
+      <div className="bg-background border-b">
+        <div className="max-w-5xl mx-auto p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/requests")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-          </Link>
-        )}
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold" data-testid="text-request-title">{request.title}</h1>
+              <p className="text-xs text-muted-foreground" data-testid="text-request-id">Request #{request.id}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className={getStatusColor(request.status)} data-testid="badge-status">
+                {request.status.replace("_", " ").toUpperCase()}
+              </Badge>
+              <Badge className={getUrgencyColor(request.urgency)} data-testid="badge-urgency">
+                {request.urgency.toUpperCase()}
+              </Badge>
+            </div>
+          </div>
+          
+          {canConvertToTask && (
+            <div className="flex justify-end">
+              <Link href={`/tasks/new?requestId=${id}`}>
+                <Button size="sm" data-testid="button-convert-to-task">
+                  Convert to Task
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="grid gap-6 max-w-6xl mx-auto">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-5xl mx-auto p-4 space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div>
-                <h3 className="font-medium mb-2">Description</h3>
-                <p className="text-muted-foreground" data-testid="text-description">{request.description}</p>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
+                <p className="text-sm" data-testid="text-description">{request.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3 pt-2 border-t">
                 {area && (
                   <div>
-                    <h3 className="font-medium mb-2">Area</h3>
-                    <p className="text-muted-foreground" data-testid="text-area">{area.name}</p>
+                    <h3 className="text-xs font-medium text-muted-foreground mb-1">Area</h3>
+                    <p className="text-sm" data-testid="text-area">{area.name}</p>
                   </div>
                 )}
 
                 {subdivision && (
                   <div>
-                    <h3 className="font-medium mb-2">Subdivision</h3>
-                    <p className="text-muted-foreground" data-testid="text-subdivision">{subdivision.name}</p>
+                    <h3 className="text-xs font-medium text-muted-foreground mb-1">Subdivision</h3>
+                    <p className="text-sm" data-testid="text-subdivision">{subdivision.name}</p>
                   </div>
                 )}
 
                 <div>
-                  <h3 className="font-medium mb-2">Created</h3>
-                  <p className="text-muted-foreground" data-testid="text-created-at">
-                    {new Date(request.createdAt!).toLocaleString()}
+                  <h3 className="text-xs font-medium text-muted-foreground mb-1">Created</h3>
+                  <p className="text-sm" data-testid="text-created-at">
+                    {new Date(request.createdAt!).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
               {request.status === "rejected" && request.rejectionReason && (
-                <div>
-                  <h3 className="font-medium mb-2 text-destructive">Rejection Reason</h3>
-                  <p className="text-muted-foreground" data-testid="text-rejection-reason">
+                <div className="pt-2 border-t">
+                  <h3 className="text-sm font-medium text-destructive mb-1">Rejection Reason</h3>
+                  <p className="text-sm text-muted-foreground" data-testid="text-rejection-reason">
                     {request.rejectionReason}
                   </p>
                 </div>
@@ -338,34 +333,46 @@ export default function RequestDetail() {
 
           {requester && (
             <Card>
-              <CardHeader>
-                <CardTitle>Requester Contact Information</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Requester Contact Information</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
-                    <p className="text-base" data-testid="text-requester-name">
-                      {requester.firstName} {requester.lastName}
-                    </p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Name</p>
+                      <p className="text-sm font-medium" data-testid="text-requester-name">
+                        {requester.firstName} {requester.lastName}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
-                    <p className="text-base" data-testid="text-requester-email">
-                      {requester.email || "Not provided"}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-sm font-medium" data-testid="text-requester-email">
+                        {requester.email || "Not provided"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
-                    <p className="text-base" data-testid="text-requester-phone">
-                      {requester.phoneNumber || "Not provided"}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Phone Number</p>
+                      <p className="text-sm font-medium" data-testid="text-requester-phone">
+                        {requester.phoneNumber || "Not provided"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Username</h3>
-                    <p className="text-base" data-testid="text-requester-username">
-                      {requester.username}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Username</p>
+                      <p className="text-sm font-medium" data-testid="text-requester-username">
+                        {requester.username}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -373,40 +380,37 @@ export default function RequestDetail() {
           )}
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Paperclip className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
                 Attachments
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Upload photos or documents related to this request
-                </p>
-
+              <div className="space-y-3">
                 {uploads.length > 0 && (
-                  <div className="grid gap-2 mb-4">
+                  <div className="space-y-2">
                     {uploads.map((upload) => (
                       <div
                         key={upload.id}
-                        className="flex items-center justify-between p-2 rounded border"
+                        className="flex items-center justify-between p-2 rounded border bg-muted/30"
                       >
                         <a
                           href={upload.objectPath}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 flex-1"
                           data-testid={`link-attachment-${upload.id}`}
                         >
-                          <Paperclip className="w-4 h-4" />
-                          <span className="text-sm">{upload.fileName}</span>
+                          <Paperclip className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm truncate">{upload.fileName}</span>
                         </a>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
+                              className="h-8 w-8 p-0"
                               data-testid={`button-delete-attachment-${upload.id}`}
                             >
                               <Trash2 className="w-4 h-4 text-red-500" />
@@ -436,28 +440,27 @@ export default function RequestDetail() {
                 )}
 
                 {pendingUploads.length > 0 && (
-                  <div className="space-y-3 mb-4 border-t pt-4">
-                    <div className="grid gap-2">
-                      {pendingUploads.map((upload, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-2 rounded border"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Paperclip className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{upload.name}</span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removePendingUpload(index)}
-                            data-testid={`button-remove-pending-upload-${index}`}
-                          >
-                            <X className="w-4 h-4 text-red-500" />
-                          </Button>
+                  <div className="space-y-2 border-t pt-3">
+                    {pendingUploads.map((upload, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded border bg-blue-50 dark:bg-blue-950"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Paperclip className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{upload.name}</span>
                         </div>
-                      ))}
-                    </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => removePendingUpload(index)}
+                          data-testid={`button-remove-pending-upload-${index}`}
+                        >
+                          <X className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
                     <Button
                       onClick={async () => {
                         for (const upload of pendingUploads) {
@@ -471,6 +474,7 @@ export default function RequestDetail() {
                       }}
                       disabled={addUploadMutation.isPending}
                       className="w-full"
+                      size="sm"
                       data-testid="button-save-attachments"
                     >
                       {addUploadMutation.isPending ? "Saving..." : "Save Attachments"}
@@ -478,7 +482,7 @@ export default function RequestDetail() {
                   </div>
                 )}
 
-                <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center">
+                <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center">
                   <ObjectUploader
                     maxNumberOfFiles={5}
                     maxFileSize={10485760}
@@ -502,16 +506,16 @@ export default function RequestDetail() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
                 Messages ({messages.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {messages.length > 0 ? (
-                  <div className="space-y-4 mb-4">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
                     {messages.map((message) => {
                       const isOwn = message.senderId === user?.id;
                       const sender = users.find(u => u.id === message.senderId);
@@ -536,10 +540,10 @@ export default function RequestDetail() {
                             {senderName}
                           </span>
                           <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                            className={`max-w-[70%] rounded-lg px-3 py-2 ${
                               isOwn
-                                ? "bg-[#1E90FF] text-white rounded-tr-sm"
-                                : "bg-gray-200 text-gray-900 rounded-tl-sm"
+                                ? "bg-[#1E90FF] text-white"
+                                : "bg-muted text-foreground"
                             }`}
                           >
                             <p className="text-sm" data-testid={`text-content-${message.id}`}>{message.content}</p>
@@ -556,18 +560,17 @@ export default function RequestDetail() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground py-12">
+                  <div className="text-center text-muted-foreground py-8 text-sm">
                     No messages yet. Start the conversation!
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2 border-t">
                   <Textarea
                     placeholder="Type a message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 resize-none"
-                    rows={2}
+                    className="flex-1 resize-none min-h-[60px]"
                     data-testid="textarea-message"
                   />
                   <Button
@@ -577,6 +580,7 @@ export default function RequestDetail() {
                       }
                     }}
                     disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                    size="icon"
                     data-testid="button-send-message"
                   >
                     <Send className="h-4 w-4" />
