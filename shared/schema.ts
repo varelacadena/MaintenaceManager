@@ -106,14 +106,14 @@ export type Subdivision = typeof subdivisions.$inferSelect;
 
 // Service requests (simplified - staff submissions that need review)
 export const urgencyEnum = pgEnum("urgency", ["low", "medium", "high"]);
-export const requestStatusEnum = pgEnum("request_status", ["submitted", "under_review", "converted_to_task", "rejected"]);
+export const requestStatusEnum = pgEnum("request_status", ["pending", "under_review", "converted_to_task", "rejected"]);
 
 export const serviceRequests = pgTable("service_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
-  status: requestStatusEnum("status").notNull().default("submitted"),
+  status: requestStatusEnum("status").notNull().default("pending"),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
   propertyId: varchar("property_id").references(() => properties.id),
   areaId: varchar("area_id").references(() => areas.id),

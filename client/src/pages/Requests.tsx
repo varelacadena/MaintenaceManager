@@ -31,7 +31,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ServiceRequest } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
-  submitted: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  pending: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
   under_review: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
   converted_to_task: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
   rejected: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
@@ -224,7 +224,7 @@ export default function Requests() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="submitted">Submitted</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="under_review">Under Review</SelectItem>
             <SelectItem value="converted_to_task">Converted to Task</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
@@ -309,7 +309,7 @@ export default function Requests() {
                           >
                             {request.status === 'converted_to_task' ? 'Converted to Task' : 
                              request.status === 'under_review' ? 'Under Review' : 
-                             request.status === 'submitted' ? 'Submitted' :
+                             request.status === 'pending' ? 'Pending' :
                              request.status === 'rejected' ? 'Rejected' :
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </Badge>

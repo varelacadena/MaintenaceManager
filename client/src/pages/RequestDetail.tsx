@@ -213,11 +213,11 @@ export default function RequestDetail() {
 
   const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
   const canConvertToTask = isMaintenanceOrAdmin &&
-    (request.status === "submitted" || request.status === "under_review" || request.status === "pending");
+    (request.status === "pending" || request.status === "under_review");
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "submitted":
+      case "pending":
         return "bg-blue-500";
       case "under_review":
         return "bg-yellow-500";
