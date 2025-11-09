@@ -204,10 +204,6 @@ export default function Requests() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Service Requests</h1>
-        <Button onClick={() => navigate("/requests/new")} data-testid="button-new-request">
-          <Plus className="w-4 h-4 mr-2" />
-          New Request
-        </Button>
       </div>
 
       <div className="flex gap-4">
