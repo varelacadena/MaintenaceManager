@@ -683,7 +683,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         requesterId: userId,
       });
-      const request = await storage.createServiceRequest(requestData);
+      // Ensure status defaults to 'submitted' if not provided
+      const request = await storage.createServiceRequest({
+        ...requestData,
+        status: 'submitted' as any
+      });
       res.json(request);
     } catch (error) {
       console.error("Error creating service request:", error);

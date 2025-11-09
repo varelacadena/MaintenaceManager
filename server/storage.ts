@@ -421,7 +421,10 @@ export class DatabaseStorage implements IStorage {
   ): Promise<ServiceRequest> {
     const [request] = await db
       .insert(serviceRequests)
-      .values(requestData)
+      .values({
+        ...requestData,
+        status: 'submitted' as any
+      })
       .returning();
     return request;
   }
