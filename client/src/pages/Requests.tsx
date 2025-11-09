@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -49,6 +50,7 @@ export default function Requests() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [urgencyFilter, setUrgencyFilter] = useState("all");
+  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
 
   const { data: requests = [], isLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
@@ -102,6 +104,44 @@ export default function Requests() {
       toast({ title: "Failed to delete request", variant: "destructive" });
     },
   });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: async ({ requestId, reason, requesterId, title }: { 
+      requestId: string; 
+      reason: string;
+      requesterId: string;
+      title: string;
+    }) => {
+      // Update request status to rejected
+      await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
+        status: "rejected",
+        rejectionReason: reason
+      });
+
+      // Send message to requester
+      await apiRequest("POST", "/api/messages", {
+        requestId,
+        content: `Your service request "${title}" has been rejected.\n\nReason: ${reason}`
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      toast({ title: "Request rejected and requester notified" });
+      setRejectionReasons({});
+    },
+    onError: () => {
+      toast({ title: "Failed to reject request", variant: "destructive" });
+    },
+  });
+
+  const handleRejectRequest = (requestId: string, requesterId: string, title: string) => {
+    const reason = rejectionReasons[requestId];
+    if (!reason?.trim()) {
+      toast({ title: "Please provide a rejection reason", variant: "destructive" });
+      return;
+    }
+    rejectRequestMutation.mutate({ requestId, reason, requesterId, title });
+  };
 
   // Helper functions
   const getRequesterName = (requesterId: string) => {
@@ -240,19 +280,52 @@ export default function Requests() {
                           <p className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                          >
-                            Reject
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                data-testid={`button-reject-${request.id}`}
+                              >
+                                Reject
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Please provide a reason for rejecting this service request. The requester will be notified.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <Textarea
+                                placeholder="Enter rejection reason..."
+                                value={rejectionReasons[request.id] || ""}
+                                onChange={(e) => setRejectionReasons(prev => ({
+                                  ...prev,
+                                  [request.id]: e.target.value
+                                }))}
+                                className="min-h-[100px]"
+                                data-testid={`textarea-rejection-${request.id}`}
+                              />
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleRejectRequest(request.id, request.requesterId, request.title)}
+                                  disabled={!rejectionReasons[request.id]?.trim()}
+                                  data-testid={`button-confirm-reject-${request.id}`}
+                                >
+                                  Submit
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                           <Button
                             variant="default"
                             size="sm"
                             className="bg-green-600 hover:bg-green-700"
-                            onClick={() => navigate(`/requests/${request.id}`)}
-                            data-testid={`button-view-${request.id}`}
+                            onClick={() => navigate(`/tasks/new?requestId=${request.id}`)}
+                            data-testid={`button-approve-${request.id}`}
                           >
                             Approve
                           </Button>
