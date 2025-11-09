@@ -307,8 +307,10 @@ export default function Requests() {
                             variant="outline" 
                             className={statusColors[request.status]}
                           >
-                            {request.status === 'converted_to_task' ? 'Completed' : 
-                             request.status === 'under_review' ? 'Booked' : 
+                            {request.status === 'converted_to_task' ? 'Converted to Task' : 
+                             request.status === 'under_review' ? 'Under Review' : 
+                             request.status === 'submitted' ? 'Submitted' :
+                             request.status === 'rejected' ? 'Rejected' :
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </Badge>
                         </td>
