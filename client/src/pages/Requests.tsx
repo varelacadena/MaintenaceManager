@@ -251,153 +251,119 @@ export default function Requests() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {filteredRequests.map((request) => {
-            const requesterUser = users.find((u: any) => u.id === request.requesterId) || requesters[request.requesterId];
-            const requesterName = getRequesterName(request.requesterId);
-            const phoneNumber = requesterUser?.phoneNumber || "(555) 890-1234";
-            
-            return (
-              <Card 
-                key={request.id} 
-                className="hover:shadow-md transition-shadow"
-                data-testid={`card-request-${request.id}`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                        <span className="text-lg">👤</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-base" data-testid={`text-requester-${request.id}`}>
-                          {requesterName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {request.title}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="outline" 
-                        className={statusColors[request.status]}
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Requester Name</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Title</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Property</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Submitted</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Status</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRequests.map((request) => {
+                    const requesterUser = users.find((u: any) => u.id === request.requesterId) || requesters[request.requesterId];
+                    const requesterName = getRequesterName(request.requesterId);
+                    const nameParts = requesterName.split(' ');
+                    const firstName = nameParts[0] || '';
+                    const lastName = nameParts.slice(1).join(' ') || '';
+                    
+                    return (
+                      <tr 
+                        key={request.id} 
+                        className="border-b hover:bg-muted/30 transition-colors"
+                        data-testid={`card-request-${request.id}`}
                       >
-                        {request.status === 'converted_to_task' ? 'CONVERTED TO TASK' : 
-                         request.status === 'under_review' ? 'UNDER REVIEW' : 
-                         request.status === 'pending' ? 'PENDING' :
-                         request.status === 'rejected' ? 'REJECTED' :
-                         request.status.toUpperCase()}
-                      </Badge>
-                      <Badge 
-                        variant="outline" 
-                        className={urgencyColors[request.urgency]}
-                      >
-                        {request.urgency.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>
-                        {new Date(request.createdAt!).toLocaleDateString('en-US', { 
-                          weekday: 'long',
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>
-                        {new Date(request.createdAt!).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                      <span>{phoneNumber}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span>{getPropertyName(request.propertyId)}</span>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 p-3 bg-muted/30 rounded-md">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {request.description}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Button
-                      variant="link"
-                      className="text-primary p-0 h-auto font-normal"
-                      onClick={() => navigate(`/requests/${request.id}`)}
-                    >
-                      View Details →
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                            data-testid={`button-delete-${request.id}`}
+                        <td className="px-6 py-4">
+                          <div className="font-medium" data-testid={`text-requester-${request.id}`}>
+                            {requesterName}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="max-w-xs truncate">{request.title}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">{getPropertyName(request.propertyId)}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            {new Date(request.createdAt!).toLocaleDateString('en-US', { 
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })} at {new Date(request.createdAt!).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge 
+                            variant="outline" 
+                            className={statusColors[request.status]}
                           >
-                            Reject
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete this service request. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteRequestMutation.mutate(request.id)}
-                              data-testid={`button-confirm-delete-${request.id}`}
+                            {request.status === 'converted_to_task' ? 'Converted to Task' : 
+                             request.status === 'under_review' ? 'Under Review' : 
+                             request.status === 'pending' ? 'Pending' :
+                             request.status === 'rejected' ? 'Rejected' :
+                             request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-primary hover:bg-primary/90"
+                              onClick={() => navigate(`/requests/${request.id}`)}
+                              data-testid={`button-review-${request.id}`}
                             >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => navigate(`/requests/${request.id}`)}
-                        data-testid={`button-review-${request.id}`}
-                      >
-                        Approve
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                              Review
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  data-testid={`button-delete-${request.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this service request. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteRequestMutation.mutate(request.id)}
+                                    data-testid={`button-confirm-delete-${request.id}`}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
