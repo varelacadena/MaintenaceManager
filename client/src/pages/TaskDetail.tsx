@@ -50,6 +50,8 @@ import {
   X,
   MessageSquare,
   Send,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,7 +66,9 @@ import type {
   User as UserType,
   Upload,
   ServiceRequest,
-  Message
+  Message,
+  Property,
+  Equipment,
 } from "@shared/schema";
 import { Link } from "wouter";
 import { Label } from "@radix-ui/react-label";
@@ -152,6 +156,16 @@ export default function TaskDetail() {
   const { data: requester } = useQuery<UserType>({
     queryKey: ["/api/users", request?.requesterId],
     enabled: !!request?.requesterId,
+  });
+
+  const { data: property } = useQuery<Property>({
+    queryKey: ["/api/properties", task?.propertyId],
+    enabled: !!task?.propertyId,
+  });
+
+  const { data: equipment } = useQuery<Equipment>({
+    queryKey: ["/api/equipment", task?.equipmentId],
+    enabled: !!task?.equipmentId,
   });
 
   const { data: messages = [] } = useQuery<Message[]>({
@@ -692,6 +706,50 @@ export default function TaskDetail() {
                 </div>
               )}
             </div>
+            {property && (
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="text-sm font-semibold">Property Information</div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Property</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Building2 className="w-4 h-4" />
+                        <span 
+                          className="cursor-pointer hover:underline"
+                          onClick={() => navigate(`/properties/${property.id}`)}
+                          data-testid="text-property-name"
+                        >
+                          {property.name}
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {property.type}
+                        </Badge>
+                      </div>
+                    </div>
+                    {property.address && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Address</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <MapPin className="w-4 h-4" />
+                          <span className="text-sm">{property.address}</span>
+                        </div>
+                      </div>
+                    )}
+                    {equipment && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Equipment</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Building2 className="w-4 h-4" />
+                          <span className="text-sm">{equipment.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {equipment.category}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             {isMaintenanceOrAdmin && (
               <div>
                 <Label>Update Status</Label>
@@ -965,7 +1023,7 @@ export default function TaskDetail() {
                       {addPartMutation.isPending ? "Adding..." : "Add Part"}
                     </Button>
                   </DialogFooter>
-                </DialogContent>
+                </Dialog>
               </Dialog>
             </div>
           </CardHeader>
