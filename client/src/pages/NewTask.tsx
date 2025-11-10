@@ -33,7 +33,10 @@ import { ArrowLeft } from "lucide-react";
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
-  estimatedCompletionDate: z.string().optional(),
+  estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
+  propertyId: z.string().min(1, "Please select a property"),
+  equipmentId: z.string().min(1, "Please select equipment"),
+  taskType: z.enum(["one_time", "recurring", "reminder"]),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -87,7 +90,9 @@ export default function NewTask() {
       description: "",
       urgency: "medium",
       initialDate: new Date().toISOString().split("T")[0],
-      estimatedCompletionDate: undefined,
+      estimatedCompletionDate: "",
+      propertyId: "",
+      equipmentId: "",
       assignedToId: undefined,
       assignedVendorId: undefined,
       taskType: "one_time",
@@ -266,7 +271,7 @@ export default function NewTask() {
                 name="taskType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Task Type</FormLabel>
+                    <FormLabel>Task Type *</FormLabel>
                     <Select 
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -377,12 +382,12 @@ export default function NewTask() {
               name="propertyId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property</FormLabel>
+                  <FormLabel>Property *</FormLabel>
                   <Select 
                     onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedPropertyId(value);
-                      form.setValue("equipmentId", undefined);
+                      form.setValue("equipmentId", "");
                     }} 
                     value={field.value || ""}
                   >
@@ -409,7 +414,7 @@ export default function NewTask() {
               name="equipmentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Equipment (Optional)</FormLabel>
+                  <FormLabel>Equipment *</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || ""}
@@ -457,7 +462,7 @@ export default function NewTask() {
                 name="estimatedCompletionDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Est. Completion Date (Optional)</FormLabel>
+                    <FormLabel>Est. Completion Date *</FormLabel>
                     <FormControl>
                       <Input 
                         type="date" 
