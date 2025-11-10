@@ -707,49 +707,49 @@ export default function TaskDetail() {
               )}
             </div>
             {property && (
-                <div className="space-y-2 pt-4 border-t">
-                  <div className="text-sm font-semibold">Property Information</div>
-                  <div className="space-y-2">
+              <div className="space-y-2 pt-4 border-t">
+                <div className="text-sm font-semibold">Property Information</div>
+                <div className="space-y-2">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Property</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Building2 className="w-4 h-4" />
+                      <span 
+                        className="cursor-pointer hover:underline"
+                        onClick={() => navigate(`/properties/${property.id}`)}
+                        data-testid="text-property-name"
+                      >
+                        {property.name}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {property.type}
+                      </Badge>
+                    </div>
+                  </div>
+                  {property.address && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Property</div>
+                      <div className="text-sm text-muted-foreground">Address</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm">{property.address}</span>
+                      </div>
+                    </div>
+                  )}
+                  {equipment && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Equipment</div>
                       <div className="flex items-center gap-2 mt-1">
                         <Building2 className="w-4 h-4" />
-                        <span 
-                          className="cursor-pointer hover:underline"
-                          onClick={() => navigate(`/properties/${property.id}`)}
-                          data-testid="text-property-name"
-                        >
-                          {property.name}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {property.type}
+                        <span className="text-sm">{equipment.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {equipment.category}
                         </Badge>
                       </div>
                     </div>
-                    {property.address && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Address</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-sm">{property.address}</span>
-                        </div>
-                      </div>
-                    )}
-                    {equipment && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Equipment</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Building2 className="w-4 h-4" />
-                          <span className="text-sm">{equipment.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {equipment.category}
-                          </Badge>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
+            )}
             {isMaintenanceOrAdmin && (
               <div>
                 <Label>Update Status</Label>
