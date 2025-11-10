@@ -483,7 +483,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(tasks)
       .leftJoin(serviceRequests, eq(tasks.requestId, serviceRequests.id))
-      .leftJoin(users, eq(tasks.assignedTo, users.id))
+      .leftJoin(users, eq(tasks.assignedToId, users.id))
       .leftJoin(areas, eq(tasks.areaId, areas.id));
 
     const conditions = [];
