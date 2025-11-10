@@ -524,8 +524,14 @@ export default function EditTask() {
                   onValueChange={(value) => {
                     setAssignmentType(value as "maintenance" | "vendor" | "");
                     // Clear both assignment fields when changing type
-                    form.setValue("assignedToId", undefined);
-                    form.setValue("assignedVendorId", undefined);
+                    if (value === "maintenance") {
+                      form.setValue("assignedVendorId", undefined);
+                    } else if (value === "vendor") {
+                      form.setValue("assignedToId", undefined);
+                    } else {
+                      form.setValue("assignedToId", undefined);
+                      form.setValue("assignedVendorId", undefined);
+                    }
                   }} 
                   value={assignmentType}
                 >
