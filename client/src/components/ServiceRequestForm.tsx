@@ -22,13 +22,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const categories = [
-  "Indoor Renovation",
+  "Appliances",
   "Electrical",
   "Plumbing",
-  "HVAC",
-  "Kitchen Appliances",
-  "Grounds & Landscaping",
-  "Building Cleaning",
+  "Heating, Ventilation, A/C",
+  "Lawn",
+  "Home Renovation",
+  "Pest Control",
   "Other",
 ];
 
