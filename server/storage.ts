@@ -152,6 +152,7 @@ export interface IStorage {
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
   getUpload(id: string): Promise<Upload | undefined>;
+  getUploadByObjectPath(objectPath: string): Promise<Upload | undefined>;
   getUploadsByRequest(requestId: string): Promise<Upload[]>;
   getUploadsByTask(taskId: string): Promise<Upload[]>;
   deleteUpload(id: string): Promise<void>;
@@ -181,14 +182,16 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private db = db; // Ensure db instance is available within the class
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
@@ -203,7 +206,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserRole(id: string, role: string): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ role, updatedAt: new Date() })
       .where(eq(users.id, id))
@@ -212,7 +215,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserPassword(id: string, hashedPassword: string): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ password: hashedPassword, updatedAt: new Date() })
       .where(eq(users.id, id))
@@ -227,7 +230,7 @@ export class DatabaseStorage implements IStorage {
     firstName?: string;
     lastName?: string;
   }): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ ...userData, updatedAt: new Date() })
       .where(eq(users.id, id))
@@ -236,15 +239,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
+    await this.db.delete(users).where(eq(users.id, id));
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return await this.db.select().from(users);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .select()
       .from(users)
       .where(eq(users.username, username));
@@ -252,7 +255,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .select()
       .from(users)
       .where(eq(users.email, email));
@@ -260,7 +263,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersByRoles(roles: string[]): Promise<User[]> {
-    return await db.select().from(users).where(
+    return await this.db.select().from(users).where(
       or(...roles.map(role => eq(users.role, role)))
     );
   }
@@ -274,7 +277,7 @@ export class DatabaseStorage implements IStorage {
     lastName?: string;
     role: string;
   }): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values(userData)
       .returning();
@@ -284,21 +287,21 @@ export class DatabaseStorage implements IStorage {
 
   // Vendor operations
   async getVendors(): Promise<Vendor[]> {
-    return await db.select().from(vendors);
+    return await this.db.select().from(vendors);
   }
 
   async getVendor(id: string): Promise<Vendor | undefined> {
-    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id));
+    const [vendor] = await this.db.select().from(vendors).where(eq(vendors.id, id));
     return vendor;
   }
 
   async createVendor(vendorData: InsertVendor): Promise<Vendor> {
-    const [vendor] = await db.insert(vendors).values(vendorData).returning();
+    const [vendor] = await this.db.insert(vendors).values(vendorData).returning();
     return vendor;
   }
 
   async updateVendor(id: string, vendorData: Partial<InsertVendor>): Promise<Vendor | undefined> {
-    const [vendor] = await db
+    const [vendor] = await this.db
       .update(vendors)
       .set({ ...vendorData, updatedAt: new Date() })
       .where(eq(vendors.id, id))
@@ -307,26 +310,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteVendor(id: string): Promise<void> {
-    await db.delete(vendors).where(eq(vendors.id, id));
+    await this.db.delete(vendors).where(eq(vendors.id, id));
   }
 
   // Inventory operations
   async getInventoryItems(): Promise<InventoryItem[]> {
-    return await db.select().from(inventoryItems);
+    return await this.db.select().from(inventoryItems);
   }
 
   async getInventoryItem(id: string): Promise<InventoryItem | undefined> {
-    const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
+    const [item] = await this.db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
     return item;
   }
 
   async createInventoryItem(itemData: InsertInventoryItem): Promise<InventoryItem> {
-    const [item] = await db.insert(inventoryItems).values(itemData).returning();
+    const [item] = await this.db.insert(inventoryItems).values(itemData).returning();
     return item;
   }
 
   async updateInventoryItem(id: string, itemData: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined> {
-    const [item] = await db
+    const [item] = await this.db
       .update(inventoryItems)
       .set({ ...itemData, updatedAt: new Date() })
       .where(eq(inventoryItems.id, id))
@@ -335,11 +338,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInventoryItem(id: string): Promise<void> {
-    await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+    await this.db.delete(inventoryItems).where(eq(inventoryItems.id, id));
   }
 
   async updateInventoryQuantity(id: string, quantityChange: number): Promise<InventoryItem | undefined> {
-    const [item] = await db
+    const [item] = await this.db
       .update(inventoryItems)
       .set({ 
         quantity: sql`${inventoryItems.quantity} + ${quantityChange}`,
@@ -352,21 +355,21 @@ export class DatabaseStorage implements IStorage {
 
   // Area operations
   async getAreas(): Promise<Area[]> {
-    return await db.select().from(areas);
+    return await this.db.select().from(areas);
   }
 
   async createArea(areaData: InsertArea): Promise<Area> {
-    const [area] = await db.insert(areas).values(areaData).returning();
+    const [area] = await this.db.insert(areas).values(areaData).returning();
     return area;
   }
 
   async deleteArea(id: string): Promise<void> {
-    await db.delete(areas).where(eq(areas.id, id));
+    await this.db.delete(areas).where(eq(areas.id, id));
   }
 
   // Subdivision operations
   async getSubdivisionsByArea(areaId: string): Promise<Subdivision[]> {
-    return await db
+    return await this.db
       .select()
       .from(subdivisions)
       .where(eq(subdivisions.areaId, areaId));
@@ -375,7 +378,7 @@ export class DatabaseStorage implements IStorage {
   async createSubdivision(
     subdivisionData: InsertSubdivision
   ): Promise<Subdivision> {
-    const [subdivision] = await db
+    const [subdivision] = await this.db
       .insert(subdivisions)
       .values(subdivisionData)
       .returning();
@@ -383,7 +386,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSubdivision(id: string): Promise<void> {
-    await db.delete(subdivisions).where(eq(subdivisions.id, id));
+    await this.db.delete(subdivisions).where(eq(subdivisions.id, id));
   }
 
   // Service request operations
@@ -391,7 +394,7 @@ export class DatabaseStorage implements IStorage {
     userId?: string;
     status?: string;
   }): Promise<ServiceRequest[]> {
-    let query = db.select().from(serviceRequests);
+    let query = this.db.select().from(serviceRequests);
 
     const conditions = [];
     if (filters?.userId) {
@@ -409,7 +412,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getServiceRequest(id: string): Promise<ServiceRequest | undefined> {
-    const [request] = await db
+    const [request] = await this.db
       .select()
       .from(serviceRequests)
       .where(eq(serviceRequests.id, id));
@@ -419,7 +422,7 @@ export class DatabaseStorage implements IStorage {
   async createServiceRequest(
     requestData: InsertServiceRequest
   ): Promise<ServiceRequest> {
-    const [request] = await db
+    const [request] = await this.db
       .insert(serviceRequests)
       .values(requestData)
       .returning();
@@ -427,7 +430,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined> {
-    const [request] = await db
+    const [request] = await this.db
       .update(serviceRequests)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(serviceRequests.id, id))
@@ -436,7 +439,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteServiceRequest(id: string): Promise<void> {
-    await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
+    await this.db.delete(serviceRequests).where(eq(serviceRequests.id, id));
   }
 
   async updateServiceRequestStatus(
@@ -444,7 +447,7 @@ export class DatabaseStorage implements IStorage {
     status: string,
     rejectionReason?: string
   ): Promise<ServiceRequest | undefined> {
-    const [request] = await db
+    const [request] = await this.db
       .update(serviceRequests)
       .set({ status: status as any, rejectionReason, updatedAt: new Date() })
       .where(eq(serviceRequests.id, id))
@@ -459,7 +462,7 @@ export class DatabaseStorage implements IStorage {
     status?: string;
     areaId?: string;
   }): Promise<Task[]> {
-    let query = db.select({
+    let query = this.db.select({
         id: tasks.id,
         requestId: tasks.requestId,
         propertyId: tasks.propertyId,
@@ -508,7 +511,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    const result = await db.select({
+    const result = await this.db.select({
       id: tasks.id,
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
@@ -534,7 +537,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTask(taskData: InsertTask): Promise<Task> {
-    const [task] = await db
+    const [task] = await this.db
       .insert(tasks)
       .values(taskData)
       .returning();
@@ -542,7 +545,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined> {
-    const [task] = await db
+    const [task] = await this.db
       .update(tasks)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(tasks.id, id))
@@ -551,7 +554,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTask(id: string): Promise<void> {
-    await db.delete(tasks).where(eq(tasks.id, id));
+    await this.db.delete(tasks).where(eq(tasks.id, id));
   }
 
   async updateTaskStatus(
@@ -573,7 +576,7 @@ export class DatabaseStorage implements IStorage {
       updateData.actualCompletionDate = actualCompletionDate;
     }
 
-    const [task] = await db
+    const [task] = await this.db
       .update(tasks)
       .set(updateData)
       .where(eq(tasks.id, id))
@@ -583,12 +586,12 @@ export class DatabaseStorage implements IStorage {
 
   // Time entry operations
   async createTimeEntry(entryData: InsertTimeEntry): Promise<TimeEntry> {
-    const [entry] = await db.insert(timeEntries).values(entryData).returning();
+    const [entry] = await this.db.insert(timeEntries).values(entryData).returning();
     return entry;
   }
 
   async getTimeEntry(id: string): Promise<TimeEntry | undefined> {
-    const [entry] = await db
+    const [entry] = await this.db
       .select()
       .from(timeEntries)
       .where(eq(timeEntries.id, id));
@@ -600,7 +603,7 @@ export class DatabaseStorage implements IStorage {
     endTime: Date,
     durationMinutes: number
   ): Promise<TimeEntry | undefined> {
-    const [entry] = await db
+    const [entry] = await this.db
       .update(timeEntries)
       .set({ endTime, durationMinutes })
       .where(eq(timeEntries.id, id))
@@ -609,7 +612,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]> {
-    return await db
+    return await this.db
       .select()
       .from(timeEntries)
       .where(eq(timeEntries.taskId, taskId));
@@ -618,17 +621,17 @@ export class DatabaseStorage implements IStorage {
   // Parts used operations
   async createPartUsed(partData: InsertPartUsed): Promise<PartUsed> {
     // Database trigger automatically updates inventory quantities
-    const [part] = await db.insert(partsUsed).values(partData).returning();
+    const [part] = await this.db.insert(partsUsed).values(partData).returning();
     return part;
   }
 
   async deletePartUsed(id: string): Promise<void> {
     // Database trigger will automatically restore inventory quantity
-    await db.delete(partsUsed).where(eq(partsUsed.id, id));
+    await this.db.delete(partsUsed).where(eq(partsUsed.id, id));
   }
 
   async getPartsByTask(taskId: string): Promise<PartUsed[]> {
-    return await db
+    return await this.db
       .select()
       .from(partsUsed)
       .where(eq(partsUsed.taskId, taskId));
@@ -636,7 +639,7 @@ export class DatabaseStorage implements IStorage {
 
   // Message operations
   async createMessage(messageData: InsertMessage): Promise<Message> {
-    const [message] = await db.insert(messages).values(messageData).returning();
+    const [message] = await this.db.insert(messages).values(messageData).returning();
     return message;
   }
 
@@ -645,7 +648,7 @@ export class DatabaseStorage implements IStorage {
   async getMessages(): Promise<Message[]>;
 
   async getMessagesByRequest(requestId: string): Promise<Message[]> {
-    return await db
+    return await this.db
       .select()
       .from(messages)
       .where(eq(messages.requestId, requestId))
@@ -653,7 +656,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessagesByTask(taskId: string): Promise<Message[]> {
-    return await db
+    return await this.db
       .select()
       .from(messages)
       .where(eq(messages.taskId, taskId))
@@ -661,11 +664,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessages(): Promise<Message[]> {
-    return await db.select().from(messages).orderBy(desc(messages.createdAt));
+    return await this.db.select().from(messages).orderBy(desc(messages.createdAt));
   }
 
   async markMessagesAsRead(requestId: string, userId: string): Promise<void> {
-    await db
+    await this.db
       .update(messages)
       .set({ read: true })
       .where(
@@ -677,7 +680,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markTaskMessagesAsRead(taskId: string, userId: string): Promise<void> {
-    await db
+    await this.db
       .update(messages)
       .set({ read: true })
       .where(
@@ -689,51 +692,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMessage(id: string): Promise<void> {
-    await db.delete(messages).where(eq(messages.id, id));
+    await this.db.delete(messages).where(eq(messages.id, id));
   }
 
   // Upload operations
   async createUpload(uploadData: InsertUpload): Promise<Upload> {
-    const [upload] = await db.insert(uploads).values(uploadData).returning();
+    const [upload] = await this.db.insert(uploads).values(uploadData).returning();
     return upload;
   }
 
   async getUpload(id: string): Promise<Upload | undefined> {
-    const [upload] = await db.select().from(uploads).where(eq(uploads.id, id));
-    return upload;
+    const result = await this.db.select().from(uploads).where(eq(uploads.id, id)).limit(1);
+    return result[0] || null;
+  }
+
+  async getUploadByObjectPath(objectPath: string): Promise<Upload | undefined> {
+    const result = await this.db.select().from(uploads).where(eq(uploads.objectPath, objectPath)).limit(1);
+    return result[0] || null;
   }
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
-    return await db
+    return await this.db
       .select()
       .from(uploads)
       .where(eq(uploads.requestId, requestId));
   }
 
   async getUploadsByTask(taskId: string): Promise<Upload[]> {
-    return await db
+    return await this.db
       .select()
       .from(uploads)
       .where(eq(uploads.taskId, taskId));
   }
 
   async deleteUpload(id: string): Promise<void> {
-    await db.delete(uploads).where(eq(uploads.id, id));
+    await this.db.delete(uploads).where(eq(uploads.id, id));
   }
 
   // Task note operations
   async createTaskNote(noteData: InsertTaskNote): Promise<TaskNote> {
-    const [note] = await db.insert(taskNotes).values(noteData).returning();
+    const [note] = await this.db.insert(taskNotes).values(noteData).returning();
     return note;
   }
 
   async getTaskNote(id: string): Promise<TaskNote | undefined> {
-    const [note] = await db.select().from(taskNotes).where(eq(taskNotes.id, id));
+    const [note] = await this.db.select().from(taskNotes).where(eq(taskNotes.id, id));
     return note;
   }
 
   async getNotesByTask(taskId: string): Promise<TaskNote[]> {
-    return await db
+    return await this.db
       .select()
       .from(taskNotes)
       .where(eq(taskNotes.taskId, taskId))
@@ -741,26 +749,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTaskNote(id: string): Promise<void> {
-    await db.delete(taskNotes).where(eq(taskNotes.id, id));
+    await this.db.delete(taskNotes).where(eq(taskNotes.id, id));
   }
 
   // Property operations
   async getProperties(): Promise<Property[]> {
-    return await db.select().from(properties);
+    return await this.db.select().from(properties);
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    const [property] = await this.db.select().from(properties).where(eq(properties.id, id));
     return property;
   }
 
   async createProperty(propertyData: InsertProperty): Promise<Property> {
-    const [property] = await db.insert(properties).values(propertyData).returning();
+    const [property] = await this.db.insert(properties).values(propertyData).returning();
     return property;
   }
 
   async updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined> {
-    const [property] = await db
+    const [property] = await this.db
       .update(properties)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(properties.id, id))
@@ -769,11 +777,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProperty(id: string): Promise<void> {
-    await db.delete(properties).where(eq(properties.id, id));
+    await this.db.delete(properties).where(eq(properties.id, id));
   }
 
   async getTasksByProperty(propertyId: string): Promise<Task[]> {
-    return await db.select({
+    return await this.db.select({
       id: tasks.id,
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
@@ -799,16 +807,16 @@ export class DatabaseStorage implements IStorage {
 
   // Equipment operations
   async getEquipment(): Promise<Equipment[]> {
-    return await db.select().from(equipment).orderBy(equipment.name);
+    return await this.db.select().from(equipment).orderBy(equipment.name);
   }
 
   async getEquipmentItem(id: string): Promise<Equipment | undefined> {
-    const [item] = await db.select().from(equipment).where(eq(equipment.id, id));
+    const [item] = await this.db.select().from(equipment).where(eq(equipment.id, id));
     return item;
   }
 
   async getEquipmentByProperty(propertyId: string): Promise<Equipment[]> {
-    return await db
+    return await this.db
       .select()
       .from(equipment)
       .where(eq(equipment.propertyId, propertyId))
@@ -816,7 +824,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEquipmentByCategory(propertyId: string, category: string): Promise<Equipment[]> {
-    return await db
+    return await this.db
       .select()
       .from(equipment)
       .where(and(eq(equipment.propertyId, propertyId), eq(equipment.category, category as any)))
@@ -824,12 +832,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEquipment(equipmentData: InsertEquipment): Promise<Equipment> {
-    const [item] = await db.insert(equipment).values(equipmentData).returning();
+    const [item] = await this.db.insert(equipment).values(equipmentData).returning();
     return item;
   }
 
   async updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined> {
-    const [item] = await db
+    const [item] = await this.db
       .update(equipment)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(equipment.id, id))
@@ -838,7 +846,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEquipment(id: string): Promise<void> {
-    await db.delete(equipment).where(eq(equipment.id, id));
+    await this.db.delete(equipment).where(eq(equipment.id, id));
   }
 }
 

@@ -1229,18 +1229,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
       const objectStorageService = new ObjectStorageService();
       const objectFile = await objectStorageService.getObjectEntityFile(
         req.path
       );
-      const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        requestedPermission: ObjectPermission.READ,
-      });
-      if (!canAccess) {
+
+      // Get the upload record to check permissions
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.path);
+      const upload = await storage.getUploadByObjectPath(objectPath);
+
+      if (!upload) {
+        console.error("Upload not found for object path:", objectPath);
+        return res.sendStatus(404);
+      }
+
+      // Check if user has permission to view this file
+      let hasPermission = false;
+
+      // Check if it's attached to a request
+      if (upload.requestId) {
+        const request = await storage.getServiceRequest(upload.requestId);
+        if (request) {
+          // Requester, admin, or maintenance can view
+          hasPermission = 
+            request.requesterId === userId ||
+            currentUser?.role === "admin" ||
+            currentUser?.role === "maintenance";
+        }
+      }
+
+      // Check if it's attached to a task
+      if (upload.taskId && !hasPermission) {
+        const task = await storage.getTask(upload.taskId);
+        if (task) {
+          // Assigned user, admin, or maintenance can view
+          hasPermission = 
+            task.assignedToId === userId ||
+            currentUser?.role === "admin" ||
+            currentUser?.role === "maintenance";
+        }
+      }
+
+      if (!hasPermission) {
         return res.sendStatus(401);
       }
+
       objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error downloading object:", error);
