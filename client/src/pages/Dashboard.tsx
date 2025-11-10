@@ -143,6 +143,105 @@ export default function Dashboard() {
     }
   };
 
+  // Staff view - simplified dashboard
+  if (user?.role === "staff") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold" data-testid="text-dashboard-title">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground">
+              Welcome back, {user?.firstName || "User"}
+            </p>
+          </div>
+          <Link href="/new-request">
+            <Button data-testid="button-new-request">
+              <Plus className="w-4 h-4 mr-2" />
+              New Request
+            </Button>
+          </Link>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Last Service Requests</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {recentRequests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No requests yet
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentRequests.map((request) => (
+                  <Link
+                    key={request.id}
+                    href={`/requests/${request.id}`}
+                  >
+                    <div className="flex items-start gap-3 p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-request-${request.id}`}>
+                      <div
+                        className={`w-2 h-2 rounded-full mt-2 ${getStatusColor(
+                          request.status
+                        )}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-medium truncate">
+                            {request.title}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {request.category}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {request.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            <Link href="/new-request">
+              <Button className="w-full justify-start" variant="outline" data-testid="button-create-request">
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Request
+              </Button>
+            </Link>
+            <Link href="/requests">
+              <Button className="w-full justify-start" variant="outline" data-testid="button-view-all">
+                <ClipboardList className="w-4 h-4 mr-2" />
+                View My Requests
+              </Button>
+            </Link>
+            <Link href="/messages">
+              <Button className="w-full justify-start" variant="outline" data-testid="button-view-messages">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                View Messages
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Admin/Maintenance view - full dashboard
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -154,14 +253,6 @@ export default function Dashboard() {
             Welcome back, {user?.firstName || "User"}
           </p>
         </div>
-        {user?.role === "staff" && (
-          <Link href="/new-request">
-            <Button data-testid="button-new-request">
-              <Plus className="w-4 h-4 mr-2" />
-              New Request
-            </Button>
-          </Link>
-        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -308,18 +399,10 @@ export default function Dashboard() {
           <CardTitle className="text-lg">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 pt-0">
-          {user?.role === "staff" && (
-            <Link href="/new-request">
-              <Button className="w-full justify-start" variant="outline" data-testid="button-create-request">
-                <Plus className="w-4 h-4 mr-2" />
-                Create New Request
-              </Button>
-            </Link>
-          )}
           <Link href="/requests">
             <Button className="w-full justify-start" variant="outline" data-testid="button-view-all">
               <ClipboardList className="w-4 h-4 mr-2" />
-              {user?.role === "staff" ? "View My Requests" : "View All Tasks"}
+              View All Tasks
             </Button>
           </Link>
           {user?.role === "admin" && (
