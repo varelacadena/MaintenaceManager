@@ -101,6 +101,10 @@ export default function NewTask() {
       form.setValue("name", request.title);
       form.setValue("description", request.description);
       form.setValue("urgency", request.urgency);
+      if (request.propertyId) {
+        form.setValue("propertyId", request.propertyId);
+        setSelectedPropertyId(request.propertyId);
+      }
     }
   }, [request, form]);
 
