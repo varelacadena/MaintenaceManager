@@ -708,7 +708,7 @@ export default function TaskDetail() {
             </div>
             
             {(property || equipment) && (
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4">
                 {property && (
                   <div>
                     <p className="text-sm text-muted-foreground">Property</p>
