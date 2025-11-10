@@ -145,6 +145,9 @@ export const tasks = pgTable("tasks", {
   taskType: taskTypeEnum("task_type").notNull().default("one_time"),
   status: taskStatusEnum("status").notNull().default("not_started"),
   onHoldReason: text("on_hold_reason"),
+  recurringFrequency: text("recurring_frequency"), // daily, weekly, monthly, yearly
+  recurringInterval: integer("recurring_interval"), // every X days/weeks/months
+  recurringEndDate: text("recurring_end_date"),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

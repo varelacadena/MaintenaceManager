@@ -77,6 +77,8 @@ export default function NewTask() {
     },
   });
 
+  const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -92,6 +94,9 @@ export default function NewTask() {
       status: "not_started",
       onHoldReason: undefined,
       createdById: user?.id || "",
+      recurringFrequency: undefined,
+      recurringInterval: undefined,
+      recurringEndDate: undefined,
     },
   });
 
@@ -125,6 +130,9 @@ export default function NewTask() {
         onHoldReason: data.onHoldReason || undefined,
         requestId: data.requestId || undefined,
         createdById: data.createdById,
+        recurringFrequency: data.recurringFrequency || undefined,
+        recurringInterval: data.recurringInterval || undefined,
+        recurringEndDate: data.recurringEndDate || undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
@@ -259,7 +267,13 @@ export default function NewTask() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Task Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setTaskType(value as "one_time" | "recurring" | "reminder");
+                      }} 
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger data-testid="select-task-type">
                           <SelectValue placeholder="Select type" />
@@ -279,6 +293,84 @@ export default function NewTask() {
                 )}
               />
             </div>
+
+            {taskType === "recurring" && (
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+                <h3 className="font-semibold">Recurring Parameters</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="recurringFrequency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Frequency</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-recurring-frequency">
+                              <SelectValue placeholder="Select frequency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="recurringInterval"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Repeat Every</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="1"
+                            placeholder="e.g., 1" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                            value={field.value || ""}
+                            data-testid="input-recurring-interval"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Number of periods between occurrences
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="recurringEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-recurring-end-date"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Leave empty for tasks that never end
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <FormField
               control={form.control}
