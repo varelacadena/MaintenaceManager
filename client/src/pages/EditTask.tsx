@@ -134,25 +134,15 @@ export default function EditTask() {
       }
       if (task.assignedToId) {
         form.setValue("assignedToId", task.assignedToId);
+        setAssignmentType("maintenance");
       }
       if (task.assignedVendorId) {
         form.setValue("assignedVendorId", task.assignedVendorId);
+        setAssignmentType("vendor");
       }
       form.setValue("createdById", task.createdById);
     }
   }, [task, form]);
-
-  // Set assignment type based on form values
-  useEffect(() => {
-    const assignedToId = form.watch("assignedToId");
-    const assignedVendorId = form.watch("assignedVendorId");
-    
-    if (assignedToId) {
-      setAssignmentType("maintenance");
-    } else if (assignedVendorId) {
-      setAssignmentType("vendor");
-    }
-  }, [form]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
