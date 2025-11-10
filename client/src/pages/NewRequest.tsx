@@ -44,7 +44,11 @@ const categories = [
 ];
 
 const formSchema = insertServiceRequestSchema.extend({
-  requestedDate: z.string().min(1, "Please select a date"),
+  requestedDate: z.string().min(1, "Date is required"),
+  title: z.string().min(1, "Request title is required"),
+  category: z.string().min(1, "Category is required"),
+  urgency: z.string().min(1, "Urgency is required"),
+  propertyId: z.string().min(1, "Property is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -281,7 +285,7 @@ export default function NewRequest() {
               name="propertyId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property (Optional)</FormLabel>
+                  <FormLabel>Property</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || undefined}

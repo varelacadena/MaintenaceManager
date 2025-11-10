@@ -35,10 +35,10 @@ const categories = [
 const urgencyLevels = ["Low", "Medium", "High"];
 
 const formSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  category: z.string().min(1, "Please select a category"),
-  urgency: z.string().min(1, "Please select urgency level"),
-  date: z.string().min(1, "Please select a date"),
+  title: z.string().min(1, "Request title is required"),
+  category: z.string().min(1, "Category is required"),
+  urgency: z.string().min(1, "Urgency is required"),
+  date: z.string().min(1, "Date is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
 });
 
