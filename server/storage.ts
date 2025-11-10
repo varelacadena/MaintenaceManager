@@ -461,16 +461,23 @@ export class DatabaseStorage implements IStorage {
   }): Promise<Task[]> {
     let query = db.select({
         id: tasks.id,
-        title: tasks.title,
+        requestId: tasks.requestId,
+        propertyId: tasks.propertyId,
+        equipmentId: tasks.equipmentId,
+        name: tasks.name,
         description: tasks.description,
         urgency: tasks.urgency,
-        status: tasks.status,
-        assignedTo: tasks.assignedTo,
-        requestId: tasks.requestId,
         areaId: tasks.areaId,
-        propertyId: tasks.propertyId,
-        scheduledDate: tasks.scheduledDate,
-        completedAt: tasks.completedAt,
+        subdivisionId: tasks.subdivisionId,
+        initialDate: tasks.initialDate,
+        estimatedCompletionDate: tasks.estimatedCompletionDate,
+        actualCompletionDate: tasks.actualCompletionDate,
+        assignedToId: tasks.assignedToId,
+        assignedVendorId: tasks.assignedVendorId,
+        taskType: tasks.taskType,
+        status: tasks.status,
+        onHoldReason: tasks.onHoldReason,
+        createdById: tasks.createdById,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
       })
@@ -501,11 +508,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    const [task] = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, id));
-    return task;
+    const result = await db.select({
+      id: tasks.id,
+      requestId: tasks.requestId,
+      propertyId: tasks.propertyId,
+      equipmentId: tasks.equipmentId,
+      name: tasks.name,
+      description: tasks.description,
+      urgency: tasks.urgency,
+      areaId: tasks.areaId,
+      subdivisionId: tasks.subdivisionId,
+      initialDate: tasks.initialDate,
+      estimatedCompletionDate: tasks.estimatedCompletionDate,
+      actualCompletionDate: tasks.actualCompletionDate,
+      assignedToId: tasks.assignedToId,
+      assignedVendorId: tasks.assignedVendorId,
+      taskType: tasks.taskType,
+      status: tasks.status,
+      onHoldReason: tasks.onHoldReason,
+      createdById: tasks.createdById,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+    }).from(tasks).where(eq(tasks.id, id)).limit(1);
+    return result[0] || null;
   }
 
   async createTask(taskData: InsertTask): Promise<Task> {
@@ -748,11 +773,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTasksByProperty(propertyId: string): Promise<Task[]> {
-    return await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.propertyId, propertyId))
-      .orderBy(desc(tasks.initialDate));
+    return await db.select({
+      id: tasks.id,
+      requestId: tasks.requestId,
+      propertyId: tasks.propertyId,
+      equipmentId: tasks.equipmentId,
+      name: tasks.name,
+      description: tasks.description,
+      urgency: tasks.urgency,
+      areaId: tasks.areaId,
+      subdivisionId: tasks.subdivisionId,
+      initialDate: tasks.initialDate,
+      estimatedCompletionDate: tasks.estimatedCompletionDate,
+      actualCompletionDate: tasks.actualCompletionDate,
+      assignedToId: tasks.assignedToId,
+      assignedVendorId: tasks.assignedVendorId,
+      taskType: tasks.taskType,
+      status: tasks.status,
+      onHoldReason: tasks.onHoldReason,
+      createdById: tasks.createdById,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+    }).from(tasks).where(eq(tasks.propertyId, propertyId)).orderBy(desc(tasks.initialDate));
   }
 
   // Equipment operations
