@@ -81,6 +81,7 @@ export default function NewTask() {
   });
 
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
+  const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -117,6 +118,18 @@ export default function NewTask() {
       }
     }
   }, [request, form]);
+
+  // Set assignment type based on form values
+  useEffect(() => {
+    const assignedToId = form.watch("assignedToId");
+    const assignedVendorId = form.watch("assignedVendorId");
+    
+    if (assignedToId) {
+      setAssignmentType("maintenance");
+    } else if (assignedVendorId) {
+      setAssignmentType("vendor");
+    }
+  }, [form]);
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -477,62 +490,89 @@ export default function NewTask() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="assignedToId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign To Maintenance Staff (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-assigned-user">
-                          <SelectValue placeholder="Select maintenance staff member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {maintenanceUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-4">
+              <FormItem>
+                <FormLabel>Assign To (Optional)</FormLabel>
+                <Select 
+                  onValueChange={(value) => {
+                    setAssignmentType(value as "maintenance" | "vendor" | "");
+                    // Clear both assignment fields when changing type
+                    form.setValue("assignedToId", undefined);
+                    form.setValue("assignedVendorId", undefined);
+                  }} 
+                  value={assignmentType}
+                >
+                  <FormControl>
+                    <SelectTrigger data-testid="select-assignment-type">
+                      <SelectValue placeholder="Select assignment type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="maintenance">Maintenance Team</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
 
-              <FormField
-                control={form.control}
-                name="assignedVendorId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign To Vendor (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-assigned-vendor">
-                          <SelectValue placeholder="Select vendor" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {vendors.map((vendor) => (
-                          <SelectItem key={vendor.id} value={vendor.id}>
-                            {vendor.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {assignmentType === "maintenance" && (
+                <FormField
+                  control={form.control}
+                  name="assignedToId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Maintenance Staff</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-user">
+                            <SelectValue placeholder="Select maintenance staff member" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {maintenanceUsers.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.firstName} {user.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {assignmentType === "vendor" && (
+                <FormField
+                  control={form.control}
+                  name="assignedVendorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Vendor</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-vendor">
+                            <SelectValue placeholder="Select vendor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vendors.map((vendor) => (
+                            <SelectItem key={vendor.id} value={vendor.id}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <div className="flex gap-4">
