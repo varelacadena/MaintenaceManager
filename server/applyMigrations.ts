@@ -32,6 +32,7 @@ export async function applyMigrations() {
     { file: "010_add_missing_property_columns.sql", name: "010_add_missing_property_columns" },
     { file: "011_add_property_to_service_requests.sql", name: "011_add_property_to_service_requests" },
     { file: "012_add_equipment_id_to_tasks.sql", name: "012_add_equipment_id_to_tasks" },
+    { file: "013_add_recurring_parameters.sql", name: "013_add_recurring_parameters" },
   ];
 
   try {
