@@ -28,13 +28,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema } from "@shared/schema";
-import type { Area, Subdivision, User, Vendor, Task } from "@shared/schema";
+import type { Property, Equipment, User, Vendor, Task } from "@shared/schema";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
-  estimatedCompletionDate: z.string().optional(),
+  estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
+  propertyId: z.string().min(1, "Please select a property"),
+  equipmentId: z.string().min(1, "Please select equipment"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -44,20 +46,25 @@ export default function EditTask() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
+  const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
 
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
   });
 
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
   });
 
-  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
-    queryKey: ["/api/subdivisions", selectedAreaId],
-    enabled: !!selectedAreaId,
+  const { data: equipment = [] } = useQuery<Equipment[]>({
+    queryKey: ["/api/equipment", selectedPropertyId],
+    enabled: !!selectedPropertyId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/equipment?propertyId=${selectedPropertyId}`);
+      return response.json();
+    },
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -79,10 +86,10 @@ export default function EditTask() {
       name: "",
       description: "",
       urgency: "medium",
-      areaId: undefined,
-      subdivisionId: undefined,
       initialDate: new Date().toISOString().split("T")[0],
-      estimatedCompletionDate: undefined,
+      estimatedCompletionDate: "",
+      propertyId: "",
+      equipmentId: "",
       assignedToId: undefined,
       assignedVendorId: undefined,
       taskType: "one_time",
@@ -118,12 +125,12 @@ export default function EditTask() {
       if (task.estimatedCompletionDate) {
         form.setValue("estimatedCompletionDate", new Date(task.estimatedCompletionDate).toISOString().split("T")[0]);
       }
-      if (task.areaId) {
-        form.setValue("areaId", task.areaId);
-        setSelectedAreaId(task.areaId);
+      if (task.propertyId) {
+        form.setValue("propertyId", task.propertyId);
+        setSelectedPropertyId(task.propertyId);
       }
-      if (task.subdivisionId) {
-        form.setValue("subdivisionId", task.subdivisionId);
+      if (task.equipmentId) {
+        form.setValue("equipmentId", task.equipmentId);
       }
       if (task.assignedToId) {
         form.setValue("assignedToId", task.assignedToId);
@@ -135,6 +142,18 @@ export default function EditTask() {
     }
   }, [task, form]);
 
+  // Set assignment type based on form values
+  useEffect(() => {
+    const assignedToId = form.watch("assignedToId");
+    const assignedVendorId = form.watch("assignedVendorId");
+    
+    if (assignedToId) {
+      setAssignmentType("maintenance");
+    } else if (assignedVendorId) {
+      setAssignmentType("vendor");
+    }
+  }, [form]);
+
   const updateTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const taskData = {
@@ -145,8 +164,8 @@ export default function EditTask() {
         estimatedCompletionDate: data.estimatedCompletionDate 
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
-        areaId: data.areaId || undefined,
-        subdivisionId: data.subdivisionId || undefined,
+        propertyId: data.propertyId || undefined,
+        equipmentId: data.equipmentId || undefined,
         assignedToId: data.assignedToId || undefined,
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
@@ -296,7 +315,7 @@ export default function EditTask() {
                 name="taskType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Task Type</FormLabel>
+                    <FormLabel>Task Type *</FormLabel>
                     <Select 
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -402,68 +421,66 @@ export default function EditTask() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="areaId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Area</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedAreaId(value);
-                        form.setValue("subdivisionId", undefined);
-                      }} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-area">
-                          <SelectValue placeholder="Select area" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {areas.map((area) => (
-                          <SelectItem key={area.id} value={area.id}>
-                            {area.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="propertyId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Property *</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedPropertyId(value);
+                      form.setValue("equipmentId", "");
+                    }} 
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-property">
+                        <SelectValue placeholder="Select property" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {properties.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="subdivisionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subdivision (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                      disabled={!selectedAreaId}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-subdivision">
-                          <SelectValue placeholder="Select subdivision" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subdivisions.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="equipmentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Equipment *</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                    disabled={!selectedPropertyId}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-equipment">
+                        <SelectValue placeholder="Select equipment" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {equipment.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -489,7 +506,7 @@ export default function EditTask() {
                 name="estimatedCompletionDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Est. Completion Date (Optional)</FormLabel>
+                    <FormLabel>Est. Completion Date *</FormLabel>
                     <FormControl>
                       <Input 
                         type="date" 
@@ -504,62 +521,89 @@ export default function EditTask() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="assignedToId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign To Maintenance Staff (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-assigned-user">
-                          <SelectValue placeholder="Select maintenance staff member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {maintenanceUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-4">
+              <FormItem>
+                <FormLabel>Assign To (Optional)</FormLabel>
+                <Select 
+                  onValueChange={(value) => {
+                    setAssignmentType(value as "maintenance" | "vendor" | "");
+                    // Clear both assignment fields when changing type
+                    form.setValue("assignedToId", undefined);
+                    form.setValue("assignedVendorId", undefined);
+                  }} 
+                  value={assignmentType}
+                >
+                  <FormControl>
+                    <SelectTrigger data-testid="select-assignment-type">
+                      <SelectValue placeholder="Select assignment type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="maintenance">Maintenance Team</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
 
-              <FormField
-                control={form.control}
-                name="assignedVendorId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign To Vendor (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-assigned-vendor">
-                          <SelectValue placeholder="Select vendor" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {vendors.map((vendor) => (
-                          <SelectItem key={vendor.id} value={vendor.id}>
-                            {vendor.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {assignmentType === "maintenance" && (
+                <FormField
+                  control={form.control}
+                  name="assignedToId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Maintenance Staff</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-user">
+                            <SelectValue placeholder="Select maintenance staff member" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {maintenanceUsers.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.firstName} {user.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {assignmentType === "vendor" && (
+                <FormField
+                  control={form.control}
+                  name="assignedVendorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Vendor</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-vendor">
+                            <SelectValue placeholder="Select vendor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vendors.map((vendor) => (
+                            <SelectItem key={vendor.id} value={vendor.id}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <div className="flex gap-4">
