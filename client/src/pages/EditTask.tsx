@@ -49,6 +49,7 @@ export default function EditTask() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
+  const [isTaskLoaded, setIsTaskLoaded] = useState(false);
 
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -103,7 +104,7 @@ export default function EditTask() {
   });
 
   useEffect(() => {
-    if (task) {
+    if (task && !isTaskLoaded) {
       form.setValue("requestId", task.requestId || undefined);
       form.setValue("name", task.name);
       form.setValue("description", task.description);
@@ -132,17 +133,22 @@ export default function EditTask() {
       if (task.equipmentId) {
         form.setValue("equipmentId", task.equipmentId);
       }
+      
+      // Set assignment type based on what's assigned
       if (task.assignedToId) {
         form.setValue("assignedToId", task.assignedToId);
         setAssignmentType("maintenance");
-      }
-      if (task.assignedVendorId) {
+      } else if (task.assignedVendorId) {
         form.setValue("assignedVendorId", task.assignedVendorId);
         setAssignmentType("vendor");
+      } else {
+        setAssignmentType("");
       }
+      
       form.setValue("createdById", task.createdById);
+      setIsTaskLoaded(true);
     }
-  }, [task, form]);
+  }, [task, form, isTaskLoaded]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
