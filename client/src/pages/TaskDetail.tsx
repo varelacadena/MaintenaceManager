@@ -705,31 +705,36 @@ export default function TaskDetail() {
                   </p>
                 </div>
               )}
-              {property && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Property</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Building2 className="w-4 h-4" />
-                    <span
-                      className="cursor-pointer hover:underline"
-                      onClick={() => navigate(`/properties/${property.id}`)}
-                      data-testid="text-property-name"
-                    >
-                      {property.name}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {equipment && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Equipment</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Package className="w-4 h-4" />
-                    <span className="text-sm">{equipment.name}</span>
-                  </div>
-                </div>
-              )}
             </div>
+            
+            {(property || equipment) && (
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                {property && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Property</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                      <span
+                        className="cursor-pointer hover:underline text-primary"
+                        onClick={() => navigate(`/properties/${property.id}`)}
+                        data-testid="text-property-name"
+                      >
+                        {property.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {equipment && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Equipment</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Package className="w-4 h-4 text-muted-foreground" />
+                      <span data-testid="text-equipment-name">{equipment.name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             
             {isMaintenanceOrAdmin && (
               <div>
