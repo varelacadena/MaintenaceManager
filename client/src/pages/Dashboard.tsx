@@ -144,7 +144,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-semibold" data-testid="text-dashboard-title">
@@ -164,56 +164,62 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <div>
-              <p className="text-xs text-muted-foreground">Tasks Not Started</p>
-              <div className="text-3xl font-bold mt-2" data-testid="stat-not-started">
-                {notStartedCount}
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3 pt-4 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-yellow-500/20">
+                <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               </div>
-            </div>
-            <div className="p-3 rounded-full bg-yellow-500/20">
-              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Tasks Not Started</p>
+                <div className="text-2xl font-bold" data-testid="stat-not-started">
+                  {notStartedCount}
+                </div>
+              </div>
             </div>
           </CardHeader>
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <div>
-              <p className="text-xs text-muted-foreground">In Progress</p>
-              <div className="text-3xl font-bold mt-2" data-testid="stat-in-progress">
-                {inProgressCount}
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3 pt-4 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <PlayCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
-            </div>
-            <div className="p-3 rounded-full bg-blue-500/20">
-              <PlayCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">In Progress</p>
+                <div className="text-2xl font-bold" data-testid="stat-in-progress">
+                  {inProgressCount}
+                </div>
+              </div>
             </div>
           </CardHeader>
         </Card>
 
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <div>
-              <p className="text-xs text-muted-foreground">Completed</p>
-              <div className="text-3xl font-bold mt-2" data-testid="stat-completed">
-                {completedCount}
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3 pt-4 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-green-500/20">
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
-            </div>
-            <div className="p-3 rounded-full bg-green-500/20">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Completed</p>
+                <div className="text-2xl font-bold" data-testid="stat-completed">
+                  {completedCount}
+                </div>
+              </div>
             </div>
           </CardHeader>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Last Service Requests</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Last Service Requests</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {recentRequests.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No requests yet
@@ -258,9 +264,9 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Calendar</CardTitle>
-            <p className="text-sm text-muted-foreground">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Calendar</CardTitle>
+            <p className="text-xs text-muted-foreground">
               Select a month to filter dashboard data
             </p>
           </CardHeader>
@@ -276,14 +282,14 @@ export default function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Weekly Work</CardTitle>
-          <p className="text-sm text-muted-foreground">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Weekly Work</CardTitle>
+          <p className="text-xs text-muted-foreground">
             Comparing tasks assigned this week vs last week
           </p>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+        <CardContent className="pt-0">
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={weeklyData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="day" />
@@ -298,10 +304,10 @@ export default function Dashboard() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 pt-0">
           {user?.role === "staff" && (
             <Link href="/new-request">
               <Button className="w-full justify-start" variant="outline" data-testid="button-create-request">
