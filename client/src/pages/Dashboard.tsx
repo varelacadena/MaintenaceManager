@@ -1,8 +1,10 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import { Link } from "wouter";
 import {
   ClipboardList,
@@ -14,18 +16,38 @@ import {
   Plus,
   MapPin,
   MessageSquare,
+  PlayCircle,
 } from "lucide-react";
-import type { ServiceRequest, Message } from "@shared/schema";
+import { useState } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import type { ServiceRequest, Message, Task } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { data: requests = [], isLoading } = useQuery<ServiceRequest[]>({
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const { data: requests = [], isLoading: requestsLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
+  });
+
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
   });
 
   const { data: allMessages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
   });
+
+  const isLoading = requestsLoading || tasksLoading;
 
   if (isLoading) {
     return (
@@ -38,14 +60,24 @@ export default function Dashboard() {
     );
   }
 
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const inProgressCount = requests.filter((r) => r.status === "in_progress").length;
-  const completedCount = requests.filter((r) => r.status === "completed").length;
-  const onHoldCount = requests.filter((r) => r.status === "on_hold").length;
+  // Filter data based on selected date (month and year)
+  const filterByMonth = (items: any[]) => {
+    return items.filter((item) => {
+      if (!item.createdAt) return false;
+      const itemDate = new Date(item.createdAt);
+      return (
+        itemDate.getMonth() === selectedDate.getMonth() &&
+        itemDate.getFullYear() === selectedDate.getFullYear()
+      );
+    });
+  };
 
-  const highUrgencyCount = requests.filter(
-    (r) => r.urgency === "high" && r.status !== "completed"
-  ).length;
+  const monthlyTasks = filterByMonth(tasks);
+  const monthlyRequests = filterByMonth(requests);
+
+  const notStartedCount = monthlyTasks.filter((t) => t.status === "not_started").length;
+  const inProgressCount = monthlyTasks.filter((t) => t.status === "in_progress").length;
+  const completedCount = monthlyTasks.filter((t) => t.status === "completed").length;
 
   const recentRequests = requests
     .sort((a, b) => {
@@ -55,37 +87,57 @@ export default function Dashboard() {
     })
     .slice(0, 5);
 
-  const recentMessages = allMessages
-    .sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    })
-    .slice(0, 5);
+  // Weekly work chart data
+  const getWeeklyData = () => {
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay());
+    currentWeekStart.setHours(0, 0, 0, 0);
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "high":
-        return "bg-destructive text-destructive-foreground";
-      case "medium":
-        return "bg-yellow-500 text-white";
-      case "low":
-        return "bg-blue-500 text-white";
-      default:
-        return "bg-muted";
-    }
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
+
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    
+    return days.map((day, index) => {
+      const currentDay = new Date(currentWeekStart);
+      currentDay.setDate(currentWeekStart.getDate() + index);
+      
+      const previousDay = new Date(previousWeekStart);
+      previousDay.setDate(previousWeekStart.getDate() + index);
+
+      const currentCount = tasks.filter((task) => {
+        if (!task.initialDate) return false;
+        const taskDate = new Date(task.initialDate);
+        return taskDate.toDateString() === currentDay.toDateString();
+      }).length;
+
+      const previousCount = tasks.filter((task) => {
+        if (!task.initialDate) return false;
+        const taskDate = new Date(task.initialDate);
+        return taskDate.toDateString() === previousDay.toDateString();
+      }).length;
+
+      return {
+        day,
+        "This Week": currentCount,
+        "Last Week": previousCount,
+      };
+    });
   };
+
+  const weeklyData = getWeeklyData();
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
+      case "submitted":
         return "bg-yellow-500";
-      case "in_progress":
+      case "under_review":
         return "bg-blue-500";
-      case "completed":
+      case "converted_to_task":
         return "bg-green-500";
-      case "on_hold":
-        return "bg-orange-500";
+      case "rejected":
+        return "bg-red-500";
       default:
         return "bg-muted";
     }
@@ -112,64 +164,54 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold" data-testid="stat-pending">
-              {pendingCount}
+            <div>
+              <p className="text-xs text-muted-foreground">Tasks Not Started</p>
+              <div className="text-3xl font-bold mt-2" data-testid="stat-not-started">
+                {notStartedCount}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Awaiting assignment</p>
-          </CardContent>
+            <div className="p-3 rounded-full bg-yellow-500/20">
+              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+          </CardHeader>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Wrench className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold" data-testid="stat-in-progress">
-              {inProgressCount}
+            <div>
+              <p className="text-xs text-muted-foreground">In Progress</p>
+              <div className="text-3xl font-bold mt-2" data-testid="stat-in-progress">
+                {inProgressCount}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Currently active</p>
-          </CardContent>
+            <div className="p-3 rounded-full bg-blue-500/20">
+              <PlayCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </CardHeader>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold" data-testid="stat-completed">
-              {completedCount}
+            <div>
+              <p className="text-xs text-muted-foreground">Completed</p>
+              <div className="text-3xl font-bold mt-2" data-testid="stat-completed">
+                {completedCount}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Tasks finished</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Priority</CardTitle>
-            <AlertCircle className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold" data-testid="stat-high-priority">
-              {highUrgencyCount}
+            <div className="p-3 rounded-full bg-green-500/20">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-xs text-muted-foreground">Urgent attention needed</p>
-          </CardContent>
+          </CardHeader>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Requests</CardTitle>
+            <CardTitle>Last Service Requests</CardTitle>
           </CardHeader>
           <CardContent>
             {recentRequests.length === 0 ? (
@@ -194,20 +236,14 @@ export default function Dashboard() {
                           <span className="font-medium truncate">
                             {request.title}
                           </span>
-                          <Badge
-                            className={`${getUrgencyColor(request.urgency)} no-default-hover-elevate`}
-                          >
-                            {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
+                          <Badge variant="outline" className="text-xs">
+                            {request.category}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground truncate">
                           {request.description}
                         </p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-xs text-muted-foreground">
-                            {request.category}
-                          </span>
-                          <span className="text-xs text-muted-foreground">•</span>
+                        <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">
                             {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
                           </span>
@@ -223,51 +259,43 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Recent Messages
-            </CardTitle>
+            <CardTitle>Calendar</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Select a month to filter dashboard data
+            </p>
           </CardHeader>
-          <CardContent>
-            {recentMessages.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No messages yet
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentMessages.map((message) => {
-                  const request = requests.find(r => r.id === message.requestId);
-                  return (
-                    <Link
-                      key={message.id}
-                      href={`/messages`}
-                    >
-                      <div className="flex items-start gap-3 p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-message-${message.id}`}>
-                        <MessageSquare className="w-4 h-4 text-muted-foreground mt-1" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="font-medium text-sm truncate">
-                              {request?.title || 'Unknown Request'}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {message.content}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {message.createdAt ? new Date(message.createdAt).toLocaleString() : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+          <CardContent className="flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              className="rounded-md border"
+            />
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Work</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Comparing tasks assigned this week vs last week
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={weeklyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="This Week" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="Last Week" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
