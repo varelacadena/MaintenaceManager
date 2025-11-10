@@ -156,14 +156,25 @@ export default function NewRequest() {
   };
 
   const getUploadParameters = async () => {
-    const response = await apiRequest("POST", "/api/object-storage/upload-url", {
-      fileName: "upload",
-    });
-    const data = await response.json();
-    return {
-      method: "PUT" as const,
-      url: data.uploadUrl,
-    };
+    try {
+      const response = await fetch("/api/objects/upload", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+      };
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      throw error;
+    }
   };
 
   const handleSubmit = (data: FormData) => {
