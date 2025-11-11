@@ -42,6 +42,17 @@ const formSchema = insertTaskSchema.extend({
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional().or(z.literal("")),
   contactPhone: z.string().optional(),
+}).refine((data) => {
+  if (data.contactType === "staff" && !data.contactStaffId) {
+    return false;
+  }
+  if (data.contactType === "other" && !data.contactName) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please provide the required contact information",
+  path: ["contactType"],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -87,7 +98,7 @@ export default function NewTask() {
 
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
-  const [contactType, setContactType] = useState<"staff" | "other">("staff");
+  const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -109,7 +120,7 @@ export default function NewTask() {
       recurringFrequency: undefined,
       recurringInterval: undefined,
       recurringEndDate: undefined,
-      contactType: undefined,
+      contactType: "staff",
       contactStaffId: undefined,
       contactName: "",
       contactEmail: "",
@@ -133,6 +144,7 @@ export default function NewTask() {
         setSelectedPropertyId(request.propertyId);
       }
       form.setValue("contactType", "requester");
+      setContactType("requester");
     }
   }, [request, form]);
 
