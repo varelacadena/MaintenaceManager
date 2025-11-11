@@ -795,31 +795,29 @@ export default function TaskDetail() {
                   </p>
                 </div>
               </div>
-            ) : task.contactType === "staff" && task.contactStaffId ? (
-              contactStaff ? (
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
-                    <p className="text-base" data-testid="text-contact-name">
-                      {contactStaff.firstName} {contactStaff.lastName}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
-                    <p className="text-base" data-testid="text-contact-email">
-                      {contactStaff.email || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
-                    <p className="text-base" data-testid="text-contact-phone">
-                      {contactStaff.phoneNumber || "Not provided"}
-                    </p>
-                  </div>
+            ) : task.contactType === "staff" && contactStaff ? (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
+                  <p className="text-base" data-testid="text-contact-name">
+                    {contactStaff.firstName} {contactStaff.lastName}
+                  </p>
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">Loading contact information...</p>
-              )
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
+                  <p className="text-base" data-testid="text-contact-email">
+                    {contactStaff.email || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
+                  <p className="text-base" data-testid="text-contact-phone">
+                    {contactStaff.phoneNumber || "Not provided"}
+                  </p>
+                </div>
+              </div>
+            ) : task.contactType === "staff" && task.contactStaffId ? (
+              <p className="text-muted-foreground text-center py-4">Loading contact information...</p>
             ) : task.contactType === "other" && (task.contactName || task.contactEmail || task.contactPhone) ? (
               <div className="grid grid-cols-1 gap-4">
                 <div>
