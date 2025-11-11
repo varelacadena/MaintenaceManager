@@ -37,6 +37,11 @@ const formSchema = insertTaskSchema.extend({
   propertyId: z.string().min(1, "Please select a property"),
   equipmentId: z.string().min(1, "Please select equipment"),
   taskType: z.enum(["one_time", "recurring", "reminder"]),
+  contactType: z.enum(["requester", "staff", "other"]).optional(),
+  contactStaffId: z.string().optional(),
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional().or(z.literal("")),
+  contactPhone: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -82,6 +87,7 @@ export default function NewTask() {
 
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
+  const [contactType, setContactType] = useState<"staff" | "other">("staff");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -103,7 +109,17 @@ export default function NewTask() {
       recurringFrequency: undefined,
       recurringInterval: undefined,
       recurringEndDate: undefined,
+      contactType: undefined,
+      contactStaffId: undefined,
+      contactName: "",
+      contactEmail: "",
+      contactPhone: "",
     },
+  });
+
+  const { data: requester } = useQuery<User>({
+    queryKey: ["/api/users", request?.requesterId],
+    enabled: !!request?.requesterId,
   });
 
   useEffect(() => {
@@ -116,6 +132,7 @@ export default function NewTask() {
         form.setValue("propertyId", request.propertyId);
         setSelectedPropertyId(request.propertyId);
       }
+      form.setValue("contactType", "requester");
     }
   }, [request, form]);
 
@@ -141,6 +158,8 @@ export default function NewTask() {
         estimatedCompletionDate: data.estimatedCompletionDate 
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
+        propertyId: data.propertyId || undefined,
+        equipmentId: data.equipmentId || undefined,
         assignedToId: data.assignedToId || undefined,
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
@@ -151,6 +170,11 @@ export default function NewTask() {
         recurringFrequency: data.recurringFrequency || undefined,
         recurringInterval: data.recurringInterval || undefined,
         recurringEndDate: data.recurringEndDate || undefined,
+        contactType: data.contactType || undefined,
+        contactStaffId: data.contactStaffId || undefined,
+        contactName: data.contactName || undefined,
+        contactEmail: data.contactEmail || undefined,
+        contactPhone: data.contactPhone || undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
@@ -572,6 +596,159 @@ export default function NewTask() {
                     </FormItem>
                   )}
                 />
+              )}
+            </div>
+
+            <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+              <h3 className="font-semibold">Contact Information</h3>
+              
+              {requestId && requester ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Contact information from service request
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Name</p>
+                      <p className="text-sm text-muted-foreground">
+                        {requester.firstName} {requester.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Email</p>
+                      <p className="text-sm text-muted-foreground">
+                        {requester.email || "Not provided"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Phone</p>
+                      <p className="text-sm text-muted-foreground">
+                        {requester.phoneNumber || "Not provided"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      type="button"
+                      variant={contactType === "staff" ? "default" : "outline"}
+                      onClick={() => {
+                        setContactType("staff");
+                        form.setValue("contactType", "staff");
+                        form.setValue("contactName", "");
+                        form.setValue("contactEmail", "");
+                        form.setValue("contactPhone", "");
+                      }}
+                      data-testid="button-contact-staff"
+                    >
+                      College Staff
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={contactType === "other" ? "default" : "outline"}
+                      onClick={() => {
+                        setContactType("other");
+                        form.setValue("contactType", "other");
+                        form.setValue("contactStaffId", undefined);
+                      }}
+                      data-testid="button-contact-other"
+                    >
+                      Other
+                    </Button>
+                  </div>
+
+                  {contactType === "staff" && (
+                    <FormField
+                      control={form.control}
+                      name="contactStaffId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Staff Member</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-contact-staff">
+                                <SelectValue placeholder="Select staff member" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {users.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.firstName} {user.lastName} - {user.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {contactType === "other" && (
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="contactName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter contact name" 
+                                {...field} 
+                                data-testid="input-contact-name"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="contactEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Email</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="email"
+                                placeholder="Enter contact email" 
+                                {...field} 
+                                data-testid="input-contact-email"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="contactPhone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Phone</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="tel"
+                                placeholder="Enter contact phone" 
+                                {...field} 
+                                data-testid="input-contact-phone"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
