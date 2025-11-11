@@ -41,12 +41,12 @@ export async function applyMigrations() {
 
   try {
     // Create migrations tracking table if it doesn't exist (PostgreSQL)
-    await db.execute(sql.raw(`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `));
+      )
+    `);
 
     console.log("Checking for pending migrations...");
 
@@ -66,9 +66,9 @@ export async function applyMigrations() {
             "utf-8"
           );
           await db.execute(sql.raw(migrationSQL));
-          await db.execute(sql.raw(`
-            INSERT INTO schema_migrations (version) VALUES (${version});
-          `));
+          await db.execute(sql`
+            INSERT INTO schema_migrations (version) VALUES (${version})
+          `);
           console.log(`✓ Migration ${migration.name} applied successfully`);
         } catch (error) {
           console.error(`Error applying migration ${migration.name}:`, error);
