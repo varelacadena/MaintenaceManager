@@ -126,6 +126,7 @@ export const serviceRequests = pgTable("service_requests", {
 // Tasks (created from reviewed requests, managed by admin/maintenance)
 export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "reminder"]);
 export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
+export const contactTypeEnum = pgEnum("contact_type", ["requester", "staff", "other"]);
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -148,6 +149,11 @@ export const tasks = pgTable("tasks", {
   recurringFrequency: text("recurring_frequency"), // daily, weekly, monthly, yearly
   recurringInterval: integer("recurring_interval"), // every X days/weeks/months
   recurringEndDate: text("recurring_end_date"),
+  contactType: contactTypeEnum("contact_type"),
+  contactStaffId: varchar("contact_staff_id").references(() => users.id),
+  contactName: varchar("contact_name", { length: 200 }),
+  contactEmail: varchar("contact_email", { length: 200 }),
+  contactPhone: varchar("contact_phone", { length: 20 }),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
