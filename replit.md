@@ -17,6 +17,7 @@ All database migrations have been updated to be fully idempotent and production-
 - ✅ **Migration 007** (add_properties_and_equipment): Updated to use snake_case column names from the start (image_url, last_work_date, property_id, serial_number)
 - ✅ **Migrations 008 & 009**: Added to migration application list in applyMigrations.ts to ensure camelCase→snake_case fixes run on deployment
 - ✅ **Migration 011** (add_property_to_service_requests): Added conditional checks for column and foreign key constraint
+- ✅ **Migration 012** (add_equipment_id_to_tasks): Added conditional checks for column and foreign key constraint
 - ✅ **Migration 013** (add_recurring_parameters): Added conditional checks for all three recurring columns
 
 **Schema Alignment:**
