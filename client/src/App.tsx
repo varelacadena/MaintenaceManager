@@ -25,8 +25,9 @@ import Credentials from "@/pages/Credentials";
 import Vendors from "@/pages/Vendors";
 import Inventory from "@/pages/Inventory";
 import Settings from "@/pages/Settings";
-import PropertyMapPage from "@/pages/PropertyMapPage";
-import PropertyDetail from "@/pages/PropertyDetail";
+import PropertyMapPage from "./pages/PropertyMapPage";
+import PropertyDetail from "./pages/PropertyDetail";
+import EquipmentWorkHistory from "./pages/EquipmentWorkHistory";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -96,11 +97,12 @@ function AuthenticatedApp() {
                 <Route path="/calendar" component={Calendar} />
                 <Route path="/properties" component={PropertyMapPage} />
                 <Route path="/properties/:id" component={PropertyDetail} />
+                <Route path="/equipment/:id/work-history" component={EquipmentWorkHistory} />
+                <Route path="/settings" component={Settings} />
                 <Route path="/users" component={Users} />
                 <Route path="/credentials" component={Credentials} />
                 <Route path="/vendors" component={Vendors} />
                 <Route path="/inventory" component={Inventory} />
-                <Route path="/settings" component={Settings} />
                 <Route component={NotFound} />
               </Switch>
             </main>

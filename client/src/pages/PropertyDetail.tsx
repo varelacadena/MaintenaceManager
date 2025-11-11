@@ -483,26 +483,37 @@ export default function PropertyDetail() {
                   <Card key={item.id} data-testid={`card-equipment-${item.id}`}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-semibold truncate">{item.name}</CardTitle>
-                      {canEdit && (
-                        <div className="flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleEditEquipment(item)}
-                            data-testid={`button-edit-${item.id}`}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleDeleteEquipment(item.id)}
-                            data-testid={`button-delete-${item.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/equipment/${item.id}/work-history`)}
+                          data-testid={`button-work-history-${item.id}`}
+                          className="text-xs"
+                        >
+                          Work History
+                        </Button>
+                        {canEdit && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEditEquipment(item)}
+                              data-testid={`button-edit-${item.id}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteEquipment(item.id)}
+                              data-testid={`button-delete-${item.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
