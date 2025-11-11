@@ -32,6 +32,8 @@ export async function applyMigrations() {
     { file: "005_add_note_type_column.sql", name: "005_add_note_type_column" },
     { file: "006_add_read_to_messages.sql", name: "006_add_read_to_messages" },
     { file: "007_add_properties_and_equipment.sql", name: "007_add_properties_and_equipment" },
+    { file: "008_fix_property_image_url.sql", name: "008_fix_property_image_url" },
+    { file: "009_ensure_snake_case_columns.sql", name: "009_ensure_snake_case_columns" },
     { file: "010_add_missing_property_columns.sql", name: "010_add_missing_property_columns" },
     { file: "011_add_property_to_service_requests.sql", name: "011_add_property_to_service_requests" },
     { file: "012_add_equipment_id_to_tasks.sql", name: "012_add_equipment_id_to_tasks" },
