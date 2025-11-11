@@ -99,6 +99,7 @@ export default function NewTask() {
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -159,6 +160,21 @@ export default function NewTask() {
       setAssignmentType("vendor");
     }
   }, [form]);
+
+  // Auto-populate contact info when vendor is selected
+  useEffect(() => {
+    if (selectedVendorId && vendors.length > 0) {
+      const vendor = vendors.find(v => v.id === selectedVendorId);
+      if (vendor) {
+        setContactType("other");
+        form.setValue("contactType", "other");
+        form.setValue("contactName", vendor.contactPerson || vendor.name);
+        form.setValue("contactEmail", vendor.email || "");
+        form.setValue("contactPhone", vendor.phoneNumber || "");
+        form.setValue("contactStaffId", undefined);
+      }
+    }
+  }, [selectedVendorId, vendors, form]);
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -588,7 +604,10 @@ export default function NewTask() {
                     <FormItem>
                       <FormLabel>Select Vendor</FormLabel>
                       <Select 
-                        onValueChange={field.onChange} 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedVendorId(value);
+                        }} 
                         value={field.value || ""}
                       >
                         <FormControl>

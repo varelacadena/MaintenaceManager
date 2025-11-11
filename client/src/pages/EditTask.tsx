@@ -37,6 +37,11 @@ const formSchema = insertTaskSchema.extend({
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
   propertyId: z.string().min(1, "Please select a property"),
   equipmentId: z.string().min(1, "Please select equipment"),
+  contactType: z.enum(["requester", "staff", "other"]).optional(),
+  contactStaffId: z.string().optional(),
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional().or(z.literal("")),
+  contactPhone: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -50,6 +55,7 @@ export default function EditTask() {
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -100,6 +106,11 @@ export default function EditTask() {
       recurringFrequency: undefined,
       recurringInterval: undefined,
       recurringEndDate: undefined,
+      contactType: undefined,
+      contactStaffId: undefined,
+      contactName: "",
+      contactEmail: "",
+      contactPhone: "",
     },
   });
 
@@ -140,15 +151,47 @@ export default function EditTask() {
         setAssignmentType("maintenance");
       } else if (task.assignedVendorId) {
         form.setValue("assignedVendorId", task.assignedVendorId);
+        setSelectedVendorId(task.assignedVendorId);
         setAssignmentType("vendor");
       } else {
         setAssignmentType("");
+      }
+      
+      // Load contact information
+      if (task.contactType) {
+        form.setValue("contactType", task.contactType);
+      }
+      if (task.contactStaffId) {
+        form.setValue("contactStaffId", task.contactStaffId);
+      }
+      if (task.contactName) {
+        form.setValue("contactName", task.contactName);
+      }
+      if (task.contactEmail) {
+        form.setValue("contactEmail", task.contactEmail);
+      }
+      if (task.contactPhone) {
+        form.setValue("contactPhone", task.contactPhone);
       }
       
       form.setValue("createdById", task.createdById);
       setIsTaskLoaded(true);
     }
   }, [task, form, isTaskLoaded]);
+
+  // Auto-populate contact info when vendor is selected
+  useEffect(() => {
+    if (selectedVendorId && vendors.length > 0) {
+      const vendor = vendors.find(v => v.id === selectedVendorId);
+      if (vendor) {
+        form.setValue("contactType", "other");
+        form.setValue("contactName", vendor.contactPerson || vendor.name);
+        form.setValue("contactEmail", vendor.email || "");
+        form.setValue("contactPhone", vendor.phoneNumber || "");
+        form.setValue("contactStaffId", undefined);
+      }
+    }
+  }, [selectedVendorId, vendors, form]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -585,7 +628,10 @@ export default function EditTask() {
                     <FormItem>
                       <FormLabel>Select Vendor</FormLabel>
                       <Select 
-                        onValueChange={field.onChange} 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedVendorId(value);
+                        }} 
                         value={field.value || ""}
                       >
                         <FormControl>
@@ -606,6 +652,71 @@ export default function EditTask() {
                   )}
                 />
               )}
+            </div>
+
+            <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+              <h3 className="font-semibold">Contact Information</h3>
+              
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="contactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter contact name" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-contact-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="email"
+                          placeholder="Enter contact email" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-contact-email"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Phone</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="tel"
+                          placeholder="Enter contact phone" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-contact-phone"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="flex gap-4">
