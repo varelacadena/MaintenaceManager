@@ -170,7 +170,7 @@ export default function TaskDetail() {
 
   const { data: contactStaff } = useQuery<UserType>({
     queryKey: ["/api/users", task?.contactStaffId],
-    enabled: !!task?.contactStaffId && task?.contactType === "staff",
+    enabled: !!task?.contactStaffId,
   });
 
   const { data: messages = [] } = useQuery<Message[]>({
@@ -795,7 +795,7 @@ export default function TaskDetail() {
                   </p>
                 </div>
               </div>
-            ) : task.contactType === "staff" ? (
+            ) : task.contactType === "staff" && task.contactStaffId ? (
               contactStaff ? (
                 <div className="grid grid-cols-1 gap-4">
                   <div>
@@ -820,7 +820,7 @@ export default function TaskDetail() {
               ) : (
                 <p className="text-muted-foreground text-center py-4">Loading contact information...</p>
               )
-            ) : task.contactType === "other" ? (
+            ) : task.contactType === "other" && (task.contactName || task.contactEmail || task.contactPhone) ? (
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
