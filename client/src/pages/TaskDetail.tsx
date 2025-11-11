@@ -1375,10 +1375,21 @@ export default function TaskDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Task Notes
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Task Notes
+            </CardTitle>
+            {isMaintenanceOrAdmin && (
+              <Button
+                onClick={() => setIsAddNoteDialogOpen(true)}
+                data-testid="button-add-note"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Note
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
