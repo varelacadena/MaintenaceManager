@@ -54,9 +54,9 @@ export async function applyMigrations() {
       const version = parseInt(migration.name.split('_')[0]);
 
       // Check if migration was already applied
-      const result = await db.execute(sql.raw(`
-        SELECT version FROM schema_migrations WHERE version = ${version};
-      `));
+      const result = await db.execute(sql`
+        SELECT version FROM schema_migrations WHERE version = ${version}
+      `);
 
       if (!result.rows || result.rows.length === 0) {
         console.log(`Applying migration: ${migration.name}...`);
