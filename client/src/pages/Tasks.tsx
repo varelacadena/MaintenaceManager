@@ -4,6 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, Calendar, User, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -83,6 +92,13 @@ export default function Tasks() {
   const navigate = useLocation()[1];
   const { toast } = useToast();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
+  const [holdReason, setHoldReason] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    taskId: string;
+    newStatus: StatusType;
+    task: Task;
+  } | null>(null);
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -92,18 +108,46 @@ export default function Tasks() {
   const { data: users } = useQuery({ queryKey: ["/api/users"] });
 
   const updateTaskStatusMutation = useMutation({
-    mutationFn: async ({ taskId, newStatus }: { taskId: string; newStatus: StatusType }) => {
-      const response = await apiRequest("PATCH", `/api/tasks/${taskId}`, {
-        status: newStatus,
-      });
+    mutationFn: async ({ 
+      taskId, 
+      newStatus, 
+      onHoldReason,
+      requestId,
+      taskName
+    }: { 
+      taskId: string; 
+      newStatus: StatusType;
+      onHoldReason?: string;
+      requestId?: string | null;
+      taskName?: string;
+    }) => {
+      const updateData: any = { status: newStatus };
+      if (newStatus === "on_hold" && onHoldReason) {
+        updateData.onHoldReason = onHoldReason;
+      }
+      
+      const response = await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
+
+      // If status is on_hold and task has a requestId, send message to requester
+      if (newStatus === "on_hold" && onHoldReason && requestId) {
+        await apiRequest("POST", "/api/messages", {
+          requestId,
+          content: `Your task "${taskName}" has been placed on hold.\n\nReason: ${onHoldReason}`
+        });
+      }
+
       return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       toast({
         title: "Task updated",
         description: "Task status has been updated successfully.",
       });
+      setIsHoldReasonDialogOpen(false);
+      setHoldReason("");
+      setPendingStatusChange(null);
     },
     onError: () => {
       toast({
@@ -160,7 +204,34 @@ export default function Tasks() {
 
     // Only update if the status changed
     if (task.status !== newStatus) {
-      updateTaskStatusMutation.mutate({ taskId, newStatus });
+      // If changing to on_hold and task has a requestId, show dialog for reason
+      if (newStatus === "on_hold" && task.requestId) {
+        setPendingStatusChange({ taskId, newStatus, task });
+        setIsHoldReasonDialogOpen(true);
+      } else {
+        updateTaskStatusMutation.mutate({ taskId, newStatus });
+      }
+    }
+  };
+
+  const handleHoldReasonSubmit = () => {
+    if (!holdReason.trim()) {
+      toast({
+        title: "Please provide a reason",
+        description: "A reason is required when placing a task on hold.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (pendingStatusChange) {
+      updateTaskStatusMutation.mutate({
+        taskId: pendingStatusChange.taskId,
+        newStatus: pendingStatusChange.newStatus,
+        onHoldReason: holdReason,
+        requestId: pendingStatusChange.task.requestId,
+        taskName: pendingStatusChange.task.name
+      });
     }
   };
 
@@ -316,6 +387,46 @@ export default function Tasks() {
           ) : null}
         </DragOverlay>
       </div>
+
+      <Dialog open={isHoldReasonDialogOpen} onOpenChange={setIsHoldReasonDialogOpen}>
+        <DialogContent data-testid="dialog-hold-reason">
+          <DialogHeader>
+            <DialogTitle>Hold Task</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for putting this task on hold. This reason will be sent to the requester.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter reason for holding the task..."
+              value={holdReason}
+              onChange={(e) => setHoldReason(e.target.value)}
+              rows={4}
+              data-testid="textarea-hold-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsHoldReasonDialogOpen(false);
+                setHoldReason("");
+                setPendingStatusChange(null);
+              }}
+              data-testid="button-cancel-hold"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleHoldReasonSubmit}
+              disabled={!holdReason.trim() || updateTaskStatusMutation.isPending}
+              data-testid="button-submit-hold"
+            >
+              {updateTaskStatusMutation.isPending ? "Holding..." : "Hold Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndContext>
   );
 }
