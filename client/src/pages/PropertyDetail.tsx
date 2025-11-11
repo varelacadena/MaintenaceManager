@@ -481,63 +481,69 @@ export default function PropertyDetail() {
                 const Icon = categoryIcons[item.category];
                 return (
                   <Card key={item.id} data-testid={`card-equipment-${item.id}`}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-semibold truncate">{item.name}</CardTitle>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/equipment/${item.id}/work-history`)}
-                          data-testid={`button-work-history-${item.id}`}
-                          className="text-xs"
-                        >
-                          Work History
-                        </Button>
-                        {canEdit && (
-                          <>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleEditEquipment(item)}
-                              data-testid={`button-edit-${item.id}`}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDeleteEquipment(item.id)}
-                              data-testid={`button-delete-${item.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Icon className="w-4 h-4" />
-                          <Badge variant="secondary" className="text-xs">
-                            {item.category}
-                          </Badge>
+                    <CardContent className="p-4">
+                      <div className="flex gap-4">
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/equipment/${item.id}/work-history`)}
+                            data-testid={`button-work-history-${item.id}`}
+                            className="text-xs whitespace-nowrap"
+                          >
+                            Work History
+                          </Button>
+                          {canEdit && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditEquipment(item)}
+                                data-testid={`button-edit-${item.id}`}
+                                className="justify-start"
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteEquipment(item.id)}
+                                data-testid={`button-delete-${item.id}`}
+                                className="justify-start text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
                         </div>
-                        {item.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {item.description}
-                          </p>
-                        )}
-                        {item.serialNumber && (
-                          <div className="text-xs">
-                            <span className="font-semibold">Serial:</span> {item.serialNumber}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-2xl font-bold mb-2">{item.name}</h3>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Icon className="w-4 h-4" />
+                              <Badge variant="secondary" className="text-xs">
+                                {item.category}
+                              </Badge>
+                            </div>
+                            {item.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {item.description}
+                              </p>
+                            )}
+                            {item.serialNumber && (
+                              <div className="text-xs">
+                                <span className="font-semibold">Serial:</span> {item.serialNumber}
+                              </div>
+                            )}
+                            {item.condition && (
+                              <div className="text-xs">
+                                <span className="font-semibold">Condition:</span> {item.condition}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {item.condition && (
-                          <div className="text-xs">
-                            <span className="font-semibold">Condition:</span> {item.condition}
-                          </div>
-                        )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
