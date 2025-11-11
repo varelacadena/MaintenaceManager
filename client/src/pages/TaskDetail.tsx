@@ -916,8 +916,41 @@ export default function TaskDetail() {
                 <Package className="w-5 h-5" />
                 Parts Used
               </CardTitle>
-              <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
-                <DialogContent data-testid="dialog-add-part">
+              <Button
+                onClick={() => setIsAddPartDialogOpen(true)}
+                data-testid="button-add-part"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Part
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {parts.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No parts used yet</p>
+            ) : (
+              <div className="space-y-2">
+                {parts.map((part) => (
+                  <div key={part.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
+                    <div>
+                      <p className="font-medium">{part.partName}</p>
+                      {part.notes && <p className="text-sm text-muted-foreground">{part.notes}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">Qty: {part.quantity}</p>
+                      <p className="text-sm text-muted-foreground">${part.cost.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add Part Dialog */}
+      <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
+        <DialogContent data-testid="dialog-add-part">
                   <DialogHeader>
                     <DialogTitle>Add Part to Task</DialogTitle>
                     <DialogDescription>
@@ -1007,30 +1040,70 @@ export default function TaskDetail() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+      {/* Quick Add Inventory Dialog */}
+      <Dialog open={isQuickAddInventoryOpen} onOpenChange={setIsQuickAddInventoryOpen}>
+        <DialogContent data-testid="dialog-quick-add-inventory">
+          <DialogHeader>
+            <DialogTitle>Create New Inventory Item</DialogTitle>
+            <DialogDescription>
+              Quickly add a new item to inventory
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Item Name</Label>
+              <Input
+                value={quickInventoryName}
+                onChange={(e) => setQuickInventoryName(e.target.value)}
+                placeholder="Enter item name"
+                data-testid="input-quick-inventory-name"
+              />
             </div>
-          </CardHeader>
-          <CardContent>
-            {parts.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No parts used yet</p>
-            ) : (
-              <div className="space-y-2">
-                {parts.map((part) => (
-                  <div key={part.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <div>
-                      <p className="font-medium">{part.partName}</p>
-                      {part.notes && <p className="text-sm text-muted-foreground">{part.notes}</p>}
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">Qty: {part.quantity}</p>
-                      <p className="text-sm text-muted-foreground">${part.cost.toFixed(2)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            <div className="space-y-2">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                value={quickInventoryQuantity}
+                onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
+                placeholder="Enter quantity"
+                data-testid="input-quick-inventory-quantity"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unit (Optional)</Label>
+              <Input
+                value={quickInventoryUnit}
+                onChange={(e) => setQuickInventoryUnit(e.target.value)}
+                placeholder="e.g., pieces, boxes, gallons"
+                data-testid="input-quick-inventory-unit"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsQuickAddInventoryOpen(false);
+                setQuickInventoryName("");
+                setQuickInventoryQuantity(0);
+                setQuickInventoryUnit("");
+              }}
+              data-testid="button-cancel-quick-inventory"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => quickAddInventoryMutation.mutate()}
+              disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickAddInventoryMutation.isPending}
+              data-testid="button-submit-quick-inventory"
+            >
+              {quickAddInventoryMutation.isPending ? "Creating..." : "Create Item"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stop Timer Dialog */}
       <Dialog open={isStopTimerDialogOpen} onOpenChange={setIsStopTimerDialogOpen}>
