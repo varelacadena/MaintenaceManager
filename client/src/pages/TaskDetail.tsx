@@ -959,41 +959,62 @@ export default function TaskDetail() {
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label>Search Inventory</Label>
-                      <Input
-                        placeholder="Search by item name..."
-                        value={inventorySearchQuery}
-                        onChange={(e) => setInventorySearchQuery(e.target.value)}
-                        data-testid="input-search-inventory"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Inventory Item</Label>
-                      <Select value={selectedInventoryItemId} onValueChange={(value) => {
-                        if (value === "__new_item__") {
-                          setIsQuickAddInventoryOpen(true);
-                        } else {
-                          setSelectedInventoryItemId(value);
-                        }
-                      }}>
-                        <SelectTrigger data-testid="select-inventory-item">
-                          <SelectValue placeholder="Select item" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__new_item__" className="font-semibold text-primary">
-                            + New Item
-                          </SelectItem>
-                          {inventoryItems
-                            ?.filter((item) => 
+                      <Label>Search and Select Inventory Item</Label>
+                      <div className="relative">
+                        <Input
+                          placeholder="Type to search inventory items..."
+                          value={inventorySearchQuery}
+                          onChange={(e) => setInventorySearchQuery(e.target.value)}
+                          onFocus={() => setInventorySearchQuery(inventorySearchQuery || "")}
+                          data-testid="input-search-inventory"
+                        />
+                        {inventorySearchQuery && (
+                          <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div
+                              className="px-3 py-2 cursor-pointer hover:bg-accent font-semibold text-primary border-b"
+                              onClick={() => {
+                                setIsQuickAddInventoryOpen(true);
+                              }}
+                            >
+                              + Create New Item
+                            </div>
+                            {inventoryItems
+                              ?.filter((item) => 
+                                item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
+                              )
+                              .map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="px-3 py-2 cursor-pointer hover:bg-accent"
+                                  onClick={() => {
+                                    setSelectedInventoryItemId(item.id);
+                                    setInventorySearchQuery(item.name);
+                                  }}
+                                  data-testid={`search-result-${item.id}`}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">{item.name}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                      Available: {item.quantity}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            {inventoryItems?.filter((item) => 
                               item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
-                            )
-                            .map((item) => (
-                              <SelectItem key={item.id} value={item.id}>
-                                {item.name} (Available: {item.quantity})
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                            ).length === 0 && (
+                              <div className="px-3 py-2 text-sm text-muted-foreground">
+                                No items found
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {selectedInventoryItemId && inventoryItems?.find(item => item.id === selectedInventoryItemId) && (
+                        <div className="text-sm text-muted-foreground">
+                          Selected: {inventoryItems.find(item => item.id === selectedInventoryItemId)?.name}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Quantity</Label>
