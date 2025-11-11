@@ -123,15 +123,65 @@ function PropertyLayers({
         });
 
         const popupContent = document.createElement('div');
-        popupContent.innerHTML = `
-          <div style="min-width: 200px;">
-            <h3 style="font-weight: bold; margin-bottom: 8px;">${property.name}</h3>
-            <p style="margin: 2px 0; font-size: 12px;"><strong>Type:</strong> ${property.type}</p>
-            ${property.address ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Address:</strong> ${property.address}</p>` : ""}
-            ${property.lastWorkDate ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Last Work:</strong> ${new Date(property.lastWorkDate).toLocaleDateString()}</p>` : ""}
-          </div>
-          ${onPropertyDelete ? `<button id="delete-property-${property.id}" style="margin-top: 8px; padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">Delete Property</button>` : ""}
-        `;
+        // Create popup content safely without innerHTML
+        const contentDiv = document.createElement('div');
+        contentDiv.style.minWidth = '200px';
+
+        const title = document.createElement('h3');
+        title.style.fontWeight = 'bold';
+        title.style.marginBottom = '8px';
+        title.textContent = property.name;
+        contentDiv.appendChild(title);
+
+        const typePara = document.createElement('p');
+        typePara.style.margin = '2px 0';
+        typePara.style.fontSize = '12px';
+        const typeStrong = document.createElement('strong');
+        typeStrong.textContent = 'Type:';
+        typePara.appendChild(typeStrong);
+        typePara.appendChild(document.createTextNode(' ' + property.type));
+        contentDiv.appendChild(typePara);
+
+        if (property.address) {
+          const addressPara = document.createElement('p');
+          addressPara.style.margin = '2px 0';
+          addressPara.style.fontSize = '12px';
+          const addressStrong = document.createElement('strong');
+          addressStrong.textContent = 'Address:';
+          addressPara.appendChild(addressStrong);
+          addressPara.appendChild(document.createTextNode(' ' + property.address));
+          contentDiv.appendChild(addressPara);
+        }
+
+        if (property.lastWorkDate) {
+          const workDatePara = document.createElement('p');
+          workDatePara.style.margin = '2px 0';
+          workDatePara.style.fontSize = '12px';
+          const workDateStrong = document.createElement('strong');
+          workDateStrong.textContent = 'Last Work:';
+          workDatePara.appendChild(workDateStrong);
+          workDatePara.appendChild(document.createTextNode(' ' + new Date(property.lastWorkDate).toLocaleDateString()));
+          contentDiv.appendChild(workDatePara);
+        }
+
+        if (onPropertyDelete) {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.id = `delete-property-${property.id}`;
+          deleteBtn.style.marginTop = '8px';
+          deleteBtn.style.padding = '6px 12px';
+          deleteBtn.style.backgroundColor = '#dc2626';
+          deleteBtn.style.color = 'white';
+          deleteBtn.style.border = 'none';
+          deleteBtn.style.borderRadius = '4px';
+          deleteBtn.style.cursor = 'pointer';
+          deleteBtn.style.fontSize = '12px';
+          deleteBtn.style.width = '100%';
+          deleteBtn.textContent = 'Delete Property';
+          contentDiv.appendChild(deleteBtn);
+        }
+
+        popupContent.appendChild(contentDiv);
+
 
         // Add delete button click handler if delete function is provided
         if (onPropertyDelete) {
@@ -197,7 +247,7 @@ function DrawingControl({
     if (!editable) {
       return;
     }
-    
+
     if (!onShapeCreated) {
       return;
     }
