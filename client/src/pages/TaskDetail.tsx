@@ -113,6 +113,7 @@ export default function TaskDetail() {
   const [holdReason, setHoldReason] = useState("");
   const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
   const [noteType, setNoteType] = useState<"job_note" | "recommendation">("job_note");
+  const [inventorySearchQuery, setInventorySearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
 
@@ -397,6 +398,7 @@ export default function TaskDetail() {
       setSelectedInventoryItemId("");
       setPartNotes("");
       setPartQuantity("");
+      setInventorySearchQuery(""); // Reset search query after adding part
       toast({
         title: "Part Added",
         description: "The part has been added to the task.",
@@ -745,7 +747,7 @@ export default function TaskDetail() {
                 </div>
               </div>
             )}
-            
+
             {isMaintenanceOrAdmin && (
               <div>
                 <Label>Update Status</Label>
@@ -915,79 +917,6 @@ export default function TaskDetail() {
                 Parts Used
               </CardTitle>
               <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button data-testid="button-add-part">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Part
-                  </Button>
-                </DialogTrigger>
-
-                {/* Quick Add Inventory Dialog */}
-                <Dialog open={isQuickAddInventoryOpen} onOpenChange={setIsQuickAddInventoryOpen}>
-                  <DialogContent data-testid="dialog-quick-add-inventory">
-                    <DialogHeader>
-                      <DialogTitle>Create New Inventory Item</DialogTitle>
-                      <DialogDescription>
-                        Add a new item to inventory that will be immediately available
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quick-item-name">Item Name</Label>
-                        <Input
-                          id="quick-item-name"
-                          placeholder="e.g., PVC Pipe, Light Bulbs"
-                          value={quickInventoryName}
-                          onChange={(e) => setQuickInventoryName(e.target.value)}
-                          data-testid="input-quick-item-name"
-                        />
-                      </div>
-                      <div className="space-2">
-                        <Label htmlFor="quick-item-quantity">Quantity</Label>
-                        <Input
-                          id="quick-item-quantity"
-                          type="number"
-                          min="1"
-                          value={quickInventoryQuantity}
-                          onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
-                          data-testid="input-quick-item-quantity"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="quick-item-unit">Unit (Optional)</Label>
-                        <Input
-                          id="quick-item-unit"
-                          placeholder="e.g., pcs, boxes"
-                          value={quickInventoryUnit}
-                          onChange={(e) => setQuickInventoryUnit(e.target.value)}
-                          data-testid="input-quick-item-unit"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setIsQuickAddInventoryOpen(false);
-                          setQuickInventoryName("");
-                          setQuickInventoryQuantity(0);
-                          setQuickInventoryUnit("");
-                        }}
-                        data-testid="button-cancel-quick-add"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => quickAddInventoryMutation.mutate()}
-                        disabled={quickAddInventoryMutation.isPending || !quickInventoryName || quickInventoryQuantity <= 0}
-                        data-testid="button-submit-quick-add"
-                      >
-                        {quickAddInventoryMutation.isPending ? "Creating..." : "Create & Select"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
                 <DialogContent data-testid="dialog-add-part">
                   <DialogHeader>
                     <DialogTitle>Add Part to Task</DialogTitle>
@@ -996,6 +925,15 @@ export default function TaskDetail() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Search Inventory</Label>
+                      <Input
+                        placeholder="Search by item name..."
+                        value={inventorySearchQuery}
+                        onChange={(e) => setInventorySearchQuery(e.target.value)}
+                        data-testid="input-search-inventory"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label>Inventory Item</Label>
                       <Select value={selectedInventoryItemId} onValueChange={(value) => {
@@ -1012,11 +950,15 @@ export default function TaskDetail() {
                           <SelectItem value="__new_item__" className="font-semibold text-primary">
                             + New Item
                           </SelectItem>
-                          {inventoryItems?.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name} (Available: {item.quantity})
-                            </SelectItem>
-                          ))}
+                          {inventoryItems
+                            ?.filter((item) => 
+                              item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
+                            )
+                            .map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name} (Available: {item.quantity})
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1046,11 +988,12 @@ export default function TaskDetail() {
                       variant="outline"
                       onClick={() => {
                         setIsAddPartDialogOpen(false);
-                        setSelectedInventoryItemId("");
-                        setPartNotes("");
-                        setPartQuantity("");
+                        setInventorySearchQuery(""); // Reset search query when dialog closes
+                        setSelectedInventoryItemId(""); // Reset selected item
+                        setPartNotes(""); // Reset notes
+                        setPartQuantity(""); // Reset quantity
                       }}
-                      data-testid="button-cancel-add-part"
+                      data-testid="button-cancel-part"
                     >
                       Cancel
                     </Button>
@@ -1383,12 +1326,6 @@ export default function TaskDetail() {
             })}
             {isMaintenanceOrAdmin && (
               <Dialog open={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="w-full" data-testid="button-add-note">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Note
-                  </Button>
-                </DialogTrigger>
                 <DialogContent data-testid="dialog-add-note">
                   <DialogHeader>
                     <DialogTitle>Add Task Note</DialogTitle>
@@ -1444,7 +1381,7 @@ export default function TaskDetail() {
                       disabled={!newNote.trim() || addNoteMutation.isPending}
                       data-testid="button-submit-note"
                     >
-                      {addNoteMutation.isPending ? "Adding..." : "Add Note"}
+                      {addPartMutation.isPending ? "Adding..." : "Add Note"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
