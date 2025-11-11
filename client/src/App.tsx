@@ -28,6 +28,7 @@ import Settings from "@/pages/Settings";
 import PropertyMapPage from "./pages/PropertyMapPage";
 import PropertyDetail from "./pages/PropertyDetail";
 import EquipmentWorkHistory from "./pages/EquipmentWorkHistory";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -84,6 +85,7 @@ function AuthenticatedApp() {
               </div>
             </header>
             <main className="flex-1 overflow-auto p-8">
+              <ScrollToTop />
               <Switch>
                 <Route path="/" component={Dashboard} />
                 <Route path="/requests" component={Requests} />
