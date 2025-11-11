@@ -6,7 +6,32 @@ This is a web-based maintenance management platform designed for college facilit
 
 The platform provides role-based dashboards with workflows optimized for daily operations: college staff submit and track service requests, maintenance workers manage tasks with time tracking and parts logging, and administrators oversee all operations with user management, vendor management, inventory tracking, property mapping, and reporting capabilities.
 
-## Recent Updates (November 6, 2025)
+## Recent Updates (November 11, 2025)
+
+**CONTACT INFORMATION FOR TASKS (COMPLETED):**
+
+**Task Contact Information System:**
+- Added contact information fields to tasks table with discriminator pattern
+- Three contact scenarios supported:
+  1. Requester contact (from service request) - auto-populated when converting request to task
+  2. Staff contact (dropdown selection) - select any college staff member as contact
+  3. Other contact (manual entry) - enter custom contact name, email, and phone
+- Contact Information card on Task Detail page displays appropriate contact based on type
+- Contact Information section in New Task form with conditional rendering
+- Database migration 014 added contact_type enum and related columns
+
+**Database Schema:**
+- tasks.contact_type: enum ('requester', 'staff', 'other')
+- tasks.contact_staff_id: foreign key to users.id (nullable)
+- tasks.contact_name: text (nullable)
+- tasks.contact_email: text (nullable)
+- tasks.contact_phone: text (nullable)
+
+**Bug Fixes:**
+- Fixed storage layer queries (getTask, getTasks, getTasksByProperty) to include contact fields
+- All task queries now return complete contact information data
+
+## Previous Updates (November 6, 2025)
 
 **PROPERTY MAP SYSTEM (COMPLETED):**
 
