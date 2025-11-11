@@ -965,15 +965,21 @@ export default function TaskDetail() {
                           placeholder="Type to search inventory items..."
                           value={inventorySearchQuery}
                           onChange={(e) => setInventorySearchQuery(e.target.value)}
-                          onFocus={() => setInventorySearchQuery(inventorySearchQuery || "")}
+                          onFocus={() => {
+                            // Only show dropdown if no item is selected
+                            if (!selectedInventoryItemId) {
+                              setInventorySearchQuery(inventorySearchQuery || "");
+                            }
+                          }}
                           data-testid="input-search-inventory"
                         />
-                        {inventorySearchQuery && (
+                        {inventorySearchQuery && !selectedInventoryItemId && (
                           <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
                             <div
                               className="px-3 py-2 cursor-pointer hover:bg-accent font-semibold text-primary border-b"
                               onClick={() => {
                                 setIsQuickAddInventoryOpen(true);
+                                setInventorySearchQuery("");
                               }}
                             >
                               + Create New Item
@@ -1011,8 +1017,21 @@ export default function TaskDetail() {
                         )}
                       </div>
                       {selectedInventoryItemId && inventoryItems?.find(item => item.id === selectedInventoryItemId) && (
-                        <div className="text-sm text-muted-foreground">
-                          Selected: {inventoryItems.find(item => item.id === selectedInventoryItemId)?.name}
+                        <div className="flex items-center justify-between text-sm bg-muted p-2 rounded">
+                          <span className="text-muted-foreground">
+                            Selected: <span className="font-medium text-foreground">{inventoryItems.find(item => item.id === selectedInventoryItemId)?.name}</span>
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInventoryItemId("");
+                              setInventorySearchQuery("");
+                            }}
+                            className="h-6 px-2"
+                          >
+                            Change
+                          </Button>
                         </div>
                       )}
                     </div>
