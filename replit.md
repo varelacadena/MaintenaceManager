@@ -4,6 +4,34 @@
 
 This web-based platform streamlines maintenance operations for college facilities. It supports three user roles—administrators, maintenance staff, and college staff—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
 
+## Recent Updates (November 11, 2025)
+
+**DATABASE MIGRATION HARDENING - DEPLOYMENT READY:**
+
+All database migrations have been updated to be fully idempotent and production-deployment safe. The following critical issues were identified and fixed:
+
+**Migration Fixes Applied:**
+- ✅ **Migration 002** (nullable_request_id): Added IF NOT EXISTS check for `uploads_parent_check` constraint
+- ✅ **Migration 003** (note_type): Added existence checks for ENUM type and column creation
+- ✅ **Migration 004** (fix_phone_number_column): Added column existence check before rename operation
+- ✅ **Migration 007** (add_properties_and_equipment): Updated to use snake_case column names from the start (image_url, last_work_date, property_id, serial_number)
+- ✅ **Migrations 008 & 009**: Added to migration application list in applyMigrations.ts to ensure camelCase→snake_case fixes run on deployment
+- ✅ **Migration 011** (add_property_to_service_requests): Added conditional checks for column and foreign key constraint
+- ✅ **Migration 013** (add_recurring_parameters): Added conditional checks for all three recurring columns
+
+**Schema Alignment:**
+- All property and equipment columns now consistently use snake_case naming
+- Migration 007 creates tables with correct snake_case columns for fresh installations
+- Migration 009 ensures existing databases are migrated from camelCase to snake_case
+- Database schema now matches application code expectations across all environments
+
+**Deployment Readiness:**
+- ✅ All 14 migrations are idempotent and safe to run multiple times
+- ✅ No schema mismatch errors on deployment
+- ✅ Comprehensive error handling for constraints, types, and columns
+- ✅ Migration tracking prevents duplicate execution
+- ✅ Safe for production deployment without database corruption
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
