@@ -168,6 +168,11 @@ export default function TaskDetail() {
     enabled: !!task?.equipmentId,
   });
 
+  const { data: contactStaff } = useQuery<UserType>({
+    queryKey: ["/api/users", task?.contactStaffId],
+    enabled: !!task?.contactStaffId,
+  });
+
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/task", id],
     enabled: !!id && (user?.role === "admin" || user?.role === "maintenance"),
@@ -766,34 +771,75 @@ export default function TaskDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
+            <CardTitle>Contact Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Total Hours</span>
+          <CardContent>
+            {task.contactType === "requester" && requester ? (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
+                  <p className="text-base" data-testid="text-contact-name">
+                    {requester.firstName} {requester.lastName}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
+                  <p className="text-base" data-testid="text-contact-email">
+                    {requester.email || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
+                  <p className="text-base" data-testid="text-contact-phone">
+                    {requester.phoneNumber || "Not provided"}
+                  </p>
+                </div>
               </div>
-              <span className="font-semibold" data-testid="text-total-hours">
-                {totalHours.toFixed(1)}h
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Parts Cost</span>
+            ) : task.contactType === "staff" && contactStaff ? (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
+                  <p className="text-base" data-testid="text-contact-name">
+                    {contactStaff.firstName} {contactStaff.lastName}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
+                  <p className="text-base" data-testid="text-contact-email">
+                    {contactStaff.email || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
+                  <p className="text-base" data-testid="text-contact-phone">
+                    {contactStaff.phoneNumber || "Not provided"}
+                  </p>
+                </div>
               </div>
-              <span className="font-semibold" data-testid="text-total-cost">
-                ${totalCost.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Notes</span>
+            ) : task.contactType === "other" ? (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
+                  <p className="text-base" data-testid="text-contact-name">
+                    {task.contactName || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
+                  <p className="text-base" data-testid="text-contact-email">
+                    {task.contactEmail || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
+                  <p className="text-base" data-testid="text-contact-phone">
+                    {task.contactPhone || "Not provided"}
+                  </p>
+                </div>
               </div>
-              <span className="font-semibold">{notes.length}</span>
-            </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No contact information available</p>
+            )}
           </CardContent>
         </Card>
       </div>
