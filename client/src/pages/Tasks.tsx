@@ -44,16 +44,18 @@ const statusConfig = [
 type StatusType = "not_started" | "in_progress" | "on_hold" | "completed";
 
 function DraggableTaskCard({ task, children }: { task: Task; children: React.ReactNode }) {
+  const isCompleted = task.status === "completed";
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: { task },
+    disabled: isCompleted,
   });
 
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      {...(!isCompleted && listeners)}
+      {...(!isCompleted && attributes)}
       className={isDragging ? "opacity-50" : ""}
     >
       {children}
