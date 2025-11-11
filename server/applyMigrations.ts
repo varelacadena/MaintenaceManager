@@ -7,10 +7,13 @@ export async function applyInventoryTriggers() {
   try {
     console.log("Applying inventory triggers migration...");
 
-    const migrationSQL = readFileSync(
-      join(import.meta.dirname, "migrations", "001_inventory_triggers.sql"),
-      "utf-8"
-    );
+    // In production, migrations are copied to dist/migrations
+    // In development, they're in server/migrations
+    const migrationPath = process.env.NODE_ENV === 'production'
+      ? join(import.meta.dirname, "migrations", "001_inventory_triggers.sql")
+      : join(import.meta.dirname, "migrations", "001_inventory_triggers.sql");
+
+    const migrationSQL = readFileSync(migrationPath, "utf-8");
 
     await db.execute(sql.raw(migrationSQL));
     console.log("✓ Inventory triggers migration applied successfully");
