@@ -30,6 +30,10 @@ import { insertTaskSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment } from "@shared/schema";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
@@ -153,7 +157,7 @@ export default function NewTask() {
   useEffect(() => {
     const assignedToId = form.watch("assignedToId");
     const assignedVendorId = form.watch("assignedVendorId");
-    
+
     if (assignedToId) {
       setAssignmentType("maintenance");
     } else if (assignedVendorId) {
@@ -183,7 +187,7 @@ export default function NewTask() {
         description: data.description,
         urgency: data.urgency,
         initialDate: new Date(data.initialDate).toISOString(),
-        estimatedCompletionDate: data.estimatedCompletionDate 
+        estimatedCompletionDate: data.estimatedCompletionDate
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
         propertyId: data.propertyId || undefined,
@@ -260,7 +264,7 @@ export default function NewTask() {
             {requestId ? "Convert Request to Task" : "Create New Task"}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {requestId 
+            {requestId
               ? "Review the request details and set up the task"
               : "Create a new maintenance task"}
           </p>
@@ -277,9 +281,9 @@ export default function NewTask() {
                 <FormItem>
                   <FormLabel>Task Name</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter task name" 
-                      {...field} 
+                    <Input
+                      placeholder="Enter task name"
+                      {...field}
                       data-testid="input-task-name"
                     />
                   </FormControl>
@@ -337,11 +341,11 @@ export default function NewTask() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Task Type *</FormLabel>
-                    <Select 
+                    <Select
                       onValueChange={(value) => {
                         field.onChange(value);
                         setTaskType(value as "one_time" | "recurring" | "reminder");
-                      }} 
+                      }}
                       value={field.value}
                     >
                       <FormControl>
@@ -399,10 +403,10 @@ export default function NewTask() {
                       <FormItem>
                         <FormLabel>Repeat Every</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             min="1"
-                            placeholder="e.g., 1" 
+                            placeholder="e.g., 1"
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
                             value={field.value || ""}
@@ -425,9 +429,9 @@ export default function NewTask() {
                     <FormItem>
                       <FormLabel>End Date (Optional)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="date" 
-                          {...field} 
+                        <Input
+                          type="date"
+                          {...field}
                           value={field.value || ""}
                           data-testid="input-recurring-end-date"
                         />
@@ -448,12 +452,12 @@ export default function NewTask() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Property *</FormLabel>
-                  <Select 
+                  <Select
                     onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedPropertyId(value);
                       form.setValue("equipmentId", "");
-                    }} 
+                    }}
                     value={field.value || ""}
                   >
                     <FormControl>
@@ -480,8 +484,8 @@ export default function NewTask() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Equipment *</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     value={field.value || ""}
                     disabled={!selectedPropertyId}
                   >
@@ -510,13 +514,35 @@ export default function NewTask() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        data-testid="input-start-date"
-                      />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal cursor-pointer",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            type="button"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
+                            <span className="pointer-events-none">
+                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
+                            </span>
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            field.onChange(date ? date.toISOString().split("T")[0] : undefined);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -528,14 +554,35 @@ export default function NewTask() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Est. Completion Date *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        value={field.value || ""}
-                        data-testid="input-completion-date"
-                      />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal cursor-pointer",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            type="button"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
+                            <span className="pointer-events-none">
+                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
+                            </span>
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            field.onChange(date ? date.toISOString().split("T")[0] : undefined);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -545,13 +592,13 @@ export default function NewTask() {
             <div className="space-y-4">
               <FormItem>
                 <FormLabel>Assign To (Optional)</FormLabel>
-                <Select 
+                <Select
                   onValueChange={(value) => {
                     setAssignmentType(value as "maintenance" | "vendor" | "");
                     // Clear both assignment fields when changing type
                     form.setValue("assignedToId", undefined);
                     form.setValue("assignedVendorId", undefined);
-                  }} 
+                  }}
                   value={assignmentType}
                 >
                   <FormControl>
@@ -573,8 +620,8 @@ export default function NewTask() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Select Maintenance Staff</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         value={field.value || ""}
                       >
                         <FormControl>
@@ -603,11 +650,11 @@ export default function NewTask() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Select Vendor</FormLabel>
-                      <Select 
+                      <Select
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedVendorId(value);
-                        }} 
+                        }}
                         value={field.value || ""}
                       >
                         <FormControl>
@@ -632,7 +679,7 @@ export default function NewTask() {
 
             <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
               <h3 className="font-semibold">Contact Information</h3>
-              
+
               {requestId && requester ? (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
@@ -697,8 +744,8 @@ export default function NewTask() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Select Staff Member</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
+                          <Select
+                            onValueChange={field.onChange}
                             value={field.value || ""}
                           >
                             <FormControl>
@@ -729,9 +776,9 @@ export default function NewTask() {
                           <FormItem>
                             <FormLabel>Contact Name</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter contact name" 
-                                {...field} 
+                              <Input
+                                placeholder="Enter contact name"
+                                {...field}
                                 data-testid="input-contact-name"
                               />
                             </FormControl>
@@ -747,10 +794,10 @@ export default function NewTask() {
                           <FormItem>
                             <FormLabel>Contact Email</FormLabel>
                             <FormControl>
-                              <Input 
+                              <Input
                                 type="email"
-                                placeholder="Enter contact email" 
-                                {...field} 
+                                placeholder="Enter contact email"
+                                {...field}
                                 data-testid="input-contact-email"
                               />
                             </FormControl>
@@ -766,10 +813,10 @@ export default function NewTask() {
                           <FormItem>
                             <FormLabel>Contact Phone</FormLabel>
                             <FormControl>
-                              <Input 
+                              <Input
                                 type="tel"
-                                placeholder="Enter contact phone" 
-                                {...field} 
+                                placeholder="Enter contact phone"
+                                {...field}
                                 data-testid="input-contact-phone"
                               />
                             </FormControl>

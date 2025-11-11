@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -30,7 +29,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema } from "@shared/schema";
 import type { Property, Equipment, User, Vendor, Task } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
@@ -144,7 +146,7 @@ export default function EditTask() {
       if (task.equipmentId) {
         form.setValue("equipmentId", task.equipmentId);
       }
-      
+
       // Set assignment type based on what's assigned
       if (task.assignedToId) {
         form.setValue("assignedToId", task.assignedToId);
@@ -156,7 +158,7 @@ export default function EditTask() {
       } else {
         setAssignmentType("");
       }
-      
+
       // Load contact information
       if (task.contactType) {
         form.setValue("contactType", task.contactType);
@@ -173,7 +175,7 @@ export default function EditTask() {
       if (task.contactPhone) {
         form.setValue("contactPhone", task.contactPhone);
       }
-      
+
       form.setValue("createdById", task.createdById);
       setIsTaskLoaded(true);
     }
@@ -528,13 +530,37 @@ export default function EditTask() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        data-testid="input-start-date"
-                      />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal cursor-pointer",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            type="button"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
+                            <span className="pointer-events-none">
+                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
+                            </span>
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Input
+                          type="date"
+                          onChange={(e) => field.onChange(e.target.value)}
+                          value={field.value || ""}
+                          className="hidden" // Hide the default input
+                        />
+                        <div className="flex justify-center items-center p-4">
+                          <CalendarIcon className="h-4 w-4 mr-2" />
+                          <span className="text-sm font-medium">Select Start Date</span>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -546,14 +572,37 @@ export default function EditTask() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Est. Completion Date *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        value={field.value || ""}
-                        data-testid="input-completion-date"
-                      />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal cursor-pointer",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            type="button"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
+                            <span className="pointer-events-none">
+                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
+                            </span>
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Input
+                          type="date"
+                          onChange={(e) => field.onChange(e.target.value)}
+                          value={field.value || ""}
+                          className="hidden" // Hide the default input
+                        />
+                        <div className="flex justify-center items-center p-4">
+                          <CalendarIcon className="h-4 w-4 mr-2" />
+                          <span className="text-sm font-medium">Select Completion Date</span>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -656,7 +705,7 @@ export default function EditTask() {
 
             <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
               <h3 className="font-semibold">Contact Information</h3>
-              
+
               <div className="space-y-4">
                 <FormField
                   control={form.control}
