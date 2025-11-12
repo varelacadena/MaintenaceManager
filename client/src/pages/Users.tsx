@@ -124,15 +124,15 @@ export default function Users() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold mb-2">User Management</h1>
-          <p className="text-muted-foreground">Manage user roles and permissions</p>
+          <h1 className="text-2xl md:text-3xl font-semibold mb-2">User Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage user roles and permissions</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto h-9 md:h-10 text-xs md:text-sm">
               <UserPlus className="w-4 h-4 mr-2" />
               Create User
             </Button>
@@ -213,36 +213,36 @@ export default function Users() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Total Users</CardTitle>
             <UsersIcon className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{users.length}</div>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-semibold">{users.length}</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admin</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Admin</CardTitle>
             <Shield className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "admin").length}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Maintenance</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Maintenance</CardTitle>
             <UsersIcon className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "maintenance").length}
             </div>
           </CardContent>
@@ -250,10 +250,10 @@ export default function Users() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="text-base md:text-lg">All Users</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6 pt-0">
           <div className="space-y-3">
             {users.map((user) => {
               const initials =
@@ -264,29 +264,29 @@ export default function Users() {
               return (
                 <div
                   key={user.id}
-                  className="flex items-center gap-4 p-4 rounded-lg border"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 md:p-4 rounded-lg border"
                   data-testid={`user-${user.id}`}
                 >
-                  <Avatar className="w-12 h-12">
+                  <Avatar className="w-10 h-10 md:w-12 md:h-12">
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-medium">
+                      <span className="font-medium text-sm md:text-base">
                         {user.firstName && user.lastName
                           ? `${user.firstName} ${user.lastName}`
                           : user.username}
                       </span>
                       <Badge
-                        className={`${getRoleBadgeColor(user.role)} no-default-hover-elevate`}
+                        className={`${getRoleBadgeColor(user.role)} no-default-hover-elevate text-xs`}
                       >
                         {getRoleLabel(user.role)}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="w-3 h-3" />
-                      <span>{user.email || user.username}</span>
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                      <Mail className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{user.email || user.username}</span>
                     </div>
                   </div>
 
@@ -297,7 +297,7 @@ export default function Users() {
                     }
                     disabled={updateRoleMutation.isPending}
                   >
-                    <SelectTrigger className="w-[180px]" data-testid={`select-role-${user.id}`}>
+                    <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs md:text-sm" data-testid={`select-role-${user.id}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

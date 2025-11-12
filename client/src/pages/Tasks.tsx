@@ -267,36 +267,36 @@ export default function Tasks() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
               {user?.role === "admin" ? "All Tasks" : "My Tasks"}
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               {user?.role === "admin"
                 ? "Drag tasks to change their status"
                 : "View and manage your assigned tasks"}
             </p>
           </div>
           <Link href="/tasks/new">
-            <Button data-testid="button-create-task">
+            <Button data-testid="button-create-task" className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Create Task
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {statusConfig.map((status) => {
             const tasksInColumn = groupedTasks[status.key] || [];
 
             return (
               <div key={status.key} className="flex flex-col">
-                <div className="mb-4">
-                  <h2 className="font-semibold text-lg flex items-center gap-2">
+                <div className="mb-3 md:mb-4">
+                  <h2 className="font-semibold text-base md:text-lg flex items-center gap-2">
                     {status.label}
-                    <Badge variant="secondary" className="rounded-full">
+                    <Badge variant="secondary" className="rounded-full text-xs">
                       {tasksInColumn.length}
                     </Badge>
                   </h2>
@@ -307,12 +307,12 @@ export default function Tasks() {
                     <DraggableTaskCard key={task.id} task={task}>
                       <Link href={`/tasks/${task.id}`}>
                         <Card
-                          className="hover-elevate cursor-move transition-all"
+                          className="hover-elevate cursor-move transition-all active:scale-[0.98]"
                           data-testid={`card-task-${task.id}`}
                         >
-                          <CardHeader className="p-4 pb-3">
+                          <CardHeader className="p-3 md:p-4 pb-2 md:pb-3">
                             <div className="space-y-2">
-                              <CardTitle className="text-base leading-tight" data-testid={`text-task-name-${task.id}`}>
+                              <CardTitle className="text-sm md:text-base leading-tight" data-testid={`text-task-name-${task.id}`}>
                                 {task.name}
                               </CardTitle>
                               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -320,18 +320,18 @@ export default function Tasks() {
                               </p>
                             </div>
                           </CardHeader>
-                          <CardContent className="p-4 pt-0 space-y-2">
-                            <div className="flex gap-2">
+                          <CardContent className="p-3 md:p-4 pt-0 space-y-2">
+                            <div className="flex gap-1.5 md:gap-2 flex-wrap">
                               <Badge
                                 variant="outline"
-                                className={urgencyColors[task.urgency]}
+                                className={`${urgencyColors[task.urgency]} text-xs`}
                                 data-testid={`badge-urgency-${task.id}`}
                               >
                                 {task.urgency}
                               </Badge>
                               <Badge
                                 variant="outline"
-                                className={status.color}
+                                className={`${status.color} text-xs`}
                                 data-testid={`badge-status-${task.id}`}
                               >
                                 {status.label}
@@ -340,28 +340,28 @@ export default function Tasks() {
 
                             <div className="space-y-1 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                <span>
+                                <Calendar className="w-3 h-3 shrink-0" />
+                                <span className="truncate">
                                   {new Date(task.initialDate).toLocaleDateString()}
                                 </span>
                               </div>
                               {task.estimatedCompletionDate && (
                                 <div className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  <span>
+                                  <Calendar className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">
                                     Due: {new Date(task.estimatedCompletionDate).toLocaleDateString()}
                                   </span>
                                 </div>
                               )}
                               {task.assignedToId && (
                                 <div className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  <span>{getAssigneeName(task.assignedToId)}</span>
+                                  <User className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{getAssigneeName(task.assignedToId)}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                <span>{task.taskType}</span>
+                                <MapPin className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{task.taskType}</span>
                               </div>
                             </div>
                           </CardContent>
@@ -372,8 +372,8 @@ export default function Tasks() {
 
                   {tasksInColumn.length === 0 && (
                     <Card className="border-dashed">
-                      <CardContent className="py-8">
-                        <p className="text-center text-sm text-muted-foreground">
+                      <CardContent className="py-6 md:py-8">
+                        <p className="text-center text-xs md:text-sm text-muted-foreground">
                           No tasks
                         </p>
                       </CardContent>

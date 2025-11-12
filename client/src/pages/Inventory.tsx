@@ -250,11 +250,11 @@ export default function Inventory() {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="h-full flex flex-col p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
-          <p className="text-muted-foreground">Track and manage maintenance supplies and equipment</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Inventory Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Track and manage maintenance supplies and equipment</p>
         </div>
         <Button
           onClick={() => {
@@ -262,6 +262,7 @@ export default function Inventory() {
             setIsCreateDialogOpen(true);
           }}
           data-testid="button-create-inventory"
+          className="w-full sm:w-auto h-9 md:h-10 text-xs md:text-sm"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Item
@@ -270,51 +271,52 @@ export default function Inventory() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading inventory...</p>
+          <p className="text-sm md:text-base text-muted-foreground">Loading inventory...</p>
         </div>
       ) : !inventoryItems || inventoryItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-          <Package className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium">No inventory items yet</p>
-          <p className="text-muted-foreground mb-4">Get started by adding your first item</p>
+        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg p-4">
+          <Package className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+          <p className="text-base md:text-lg font-medium">No inventory items yet</p>
+          <p className="text-sm md:text-base text-muted-foreground mb-4">Get started by adding your first item</p>
           <Button
             onClick={() => {
               createForm.reset();
               setIsCreateDialogOpen(true);
             }}
             data-testid="button-create-first-inventory"
+            className="h-9 md:h-10 text-xs md:text-sm"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add First Item
           </Button>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Min Qty</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap">Name</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap hidden sm:table-cell">Description</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap">Quantity</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap hidden md:table-cell">Unit</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap hidden lg:table-cell">Location</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap hidden lg:table-cell">Min Qty</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap hidden md:table-cell">Cost</TableHead>
+                <TableHead className="text-xs md:text-sm whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-xs md:text-sm text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {inventoryItems.map((item) => (
                 <TableRow key={item.id} data-testid={`row-inventory-${item.id}`}>
-                  <TableCell className="font-medium" data-testid={`text-name-${item.id}`}>
+                  <TableCell className="font-medium text-xs md:text-sm" data-testid={`text-name-${item.id}`}>
                     {item.name}
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-w-xs truncate">
+                  <TableCell className="text-muted-foreground max-w-xs truncate text-xs md:text-sm hidden sm:table-cell">
                     {item.description || "-"}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                  <TableCell className="text-xs md:text-sm">
+                    <div className="flex items-center gap-1 md:gap-2">
                       <span className="font-semibold" data-testid={`text-quantity-${item.id}`}>
                         {item.quantity}
                       </span>
@@ -323,34 +325,38 @@ export default function Inventory() {
                         variant="outline"
                         onClick={() => handleQuantityUpdate(item)}
                         data-testid={`button-update-quantity-${item.id}`}
+                        className="h-7 w-7 p-0"
                       >
                         <TrendingUp className="h-3 w-3" />
                       </Button>
                     </div>
                   </TableCell>
-                  <TableCell>{item.unit || "-"}</TableCell>
-                  <TableCell>{item.location || "-"}</TableCell>
-                  <TableCell>{item.minQuantity || 0}</TableCell>
-                  <TableCell>{item.cost || "-"}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs md:text-sm hidden md:table-cell">{item.unit || "-"}</TableCell>
+                  <TableCell className="text-xs md:text-sm hidden lg:table-cell">{item.location || "-"}</TableCell>
+                  <TableCell className="text-xs md:text-sm hidden lg:table-cell">{item.minQuantity || 0}</TableCell>
+                  <TableCell className="text-xs md:text-sm hidden md:table-cell">{item.cost || "-"}</TableCell>
+                  <TableCell className="text-xs md:text-sm">
                     {isLowStock(item) ? (
-                      <Badge variant="destructive" data-testid={`badge-low-stock-${item.id}`}>
+                      <Badge variant="destructive" data-testid={`badge-low-stock-${item.id}`} className="text-xs whitespace-nowrap">
                         <AlertTriangle className="h-3 w-3 mr-1" />
-                        Low Stock
+                        <span className="hidden sm:inline">Low Stock</span>
+                        <span className="sm:hidden">Low</span>
                       </Badge>
                     ) : (
-                      <Badge variant="secondary" data-testid={`badge-in-stock-${item.id}`}>
-                        In Stock
+                      <Badge variant="secondary" data-testid={`badge-in-stock-${item.id}`} className="text-xs whitespace-nowrap">
+                        <span className="hidden sm:inline">In Stock</span>
+                        <span className="sm:hidden">OK</span>
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1 md:gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleEdit(item)}
                         data-testid={`button-edit-${item.id}`}
+                        className="h-7 w-7 p-0"
                       >
                         <Pencil className="h-3 w-3" />
                       </Button>
@@ -360,6 +366,7 @@ export default function Inventory() {
                           variant="outline"
                           onClick={() => handleDelete(item)}
                           data-testid={`button-delete-${item.id}`}
+                          className="h-7 w-7 p-0"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

@@ -324,25 +324,27 @@ export default function PropertyDetail() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col gap-4 md:gap-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate("/properties")}
             data-testid="button-back"
+            className="h-9 text-xs md:text-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Map
           </Button>
         </div>
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={handleEditProperty}
               data-testid="button-edit-property"
+              className="flex-1 sm:flex-none h-9 text-xs md:text-sm"
             >
               <Edit className="w-4 h-4 mr-2" />
               Edit Property
@@ -354,10 +356,10 @@ export default function PropertyDetail() {
 
       {/* Property Details */}
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0 p-4 md:p-6">
           <div className="space-y-1">
-            <CardTitle className="text-3xl font-bold" data-testid="heading-property-name">{property.name}</CardTitle>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CardTitle className="text-2xl md:text-3xl font-bold" data-testid="heading-property-name">{property.name}</CardTitle>
+            <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground flex-wrap">
               <Badge variant="secondary">{property.type}</Badge>
               {property.address && (
                 <>
@@ -404,13 +406,14 @@ export default function PropertyDetail() {
         </TabsList>
 
         <TabsContent value="equipment" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap">
               <Button
                 variant={selectedCategory === null ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(null)}
                 data-testid="filter-all"
+                className="whitespace-nowrap h-8 text-xs md:text-sm"
               >
                 All ({equipment.length})
               </Button>
@@ -424,9 +427,11 @@ export default function PropertyDetail() {
                     size="sm"
                     onClick={() => setSelectedCategory(cat)}
                     data-testid={`filter-${cat}`}
+                    className="whitespace-nowrap h-8 text-xs md:text-sm"
                   >
-                    <Icon className="w-4 h-4 mr-1" />
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+                    <Icon className="w-4 h-4 mr-1 shrink-0" />
+                    <span className="hidden sm:inline">{cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})</span>
+                    <span className="sm:hidden">{cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
                   </Button>
                 );
               })}
@@ -448,6 +453,7 @@ export default function PropertyDetail() {
                   setIsCreateDialogOpen(true);
                 }}
                 data-testid="button-add-equipment"
+                className="w-full sm:w-auto h-9 text-xs md:text-sm"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Equipment
@@ -455,12 +461,12 @@ export default function PropertyDetail() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {filteredEquipment.length === 0 ? (
               <Card className="col-span-full">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <Wrench className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No equipment in this category</p>
+                <CardContent className="py-8 md:py-12 text-center text-muted-foreground">
+                  <Wrench className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm md:text-base">No equipment in this category</p>
                   {canEdit && (
                     <Button
                       variant="link"
@@ -479,6 +485,7 @@ export default function PropertyDetail() {
                         setIsCreateDialogOpen(true);
                       }}
                       data-testid="button-add-first-equipment"
+                      className="text-xs md:text-sm"
                     >
                       Add your first equipment
                     </Button>
@@ -490,15 +497,15 @@ export default function PropertyDetail() {
                 const Icon = categoryIcons[item.category];
                 return (
                   <Card key={item.id} data-testid={`card-equipment-${item.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex gap-4">
-                        <div className="flex flex-col gap-2 shrink-0">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                        <div className="flex sm:flex-col gap-2 order-2 sm:order-1 shrink-0">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => navigate(`/equipment/${item.id}/work-history`)}
                             data-testid={`button-work-history-${item.id}`}
-                            className="text-xs whitespace-nowrap"
+                            className="text-xs whitespace-nowrap flex-1 sm:flex-none h-8"
                           >
                             Work History
                           </Button>
@@ -509,7 +516,7 @@ export default function PropertyDetail() {
                                 variant="ghost"
                                 onClick={() => handleEditEquipment(item)}
                                 data-testid={`button-edit-${item.id}`}
-                                className="justify-start"
+                                className="justify-start flex-1 sm:flex-none h-8"
                               >
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
@@ -519,7 +526,7 @@ export default function PropertyDetail() {
                                 variant="ghost"
                                 onClick={() => handleDeleteEquipment(item.id)}
                                 data-testid={`button-delete-${item.id}`}
-                                className="justify-start text-destructive hover:text-destructive"
+                                className="justify-start text-destructive hover:text-destructive flex-1 sm:flex-none h-8"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
@@ -527,8 +534,8 @@ export default function PropertyDetail() {
                             </>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-2xl font-bold mb-2">{item.name}</h3>
+                        <div className="flex-1 min-w-0 order-1 sm:order-2">
+                          <h3 className="text-xl md:text-2xl font-bold mb-2">{item.name}</h3>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <Icon className="w-4 h-4" />

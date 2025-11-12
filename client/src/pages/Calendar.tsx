@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -296,7 +295,7 @@ export default function Calendar() {
       const weekStart = getWeekStart(currentDate);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
-      
+
       if (weekStart.getMonth() === weekEnd.getMonth()) {
         return `${weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric" })} - ${weekEnd.getDate()}, ${weekStart.getFullYear()}`;
       } else {
@@ -388,19 +387,19 @@ export default function Calendar() {
   const renderCalendarView = () => {
     if (view === "month") {
       return (
-        <Card className="p-6">
-          <div className="grid grid-cols-7 gap-2 mb-4">
+        <Card className="p-3 md:p-6">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3 md:mb-4">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-sm font-medium text-center text-muted-foreground py-2"
+                className="text-xs md:text-sm font-medium text-center text-muted-foreground py-1 md:py-2"
               >
                 {day.substring(0, 3)}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
             {monthDays.map((day, index) => {
               if (day === null) {
                 return <div key={`empty-${index}`} className="min-h-[100px]" />;
@@ -436,19 +435,19 @@ export default function Calendar() {
       );
     } else if (view === "week") {
       return (
-        <Card className="p-6">
-          <div className="grid grid-cols-7 gap-2 mb-4">
+        <Card className="p-3 md:p-6">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3 md:mb-4">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-sm font-medium text-center text-muted-foreground py-2"
+                className="text-xs md:text-sm font-medium text-center text-muted-foreground py-1 md:py-2"
               >
                 {day.substring(0, 3)}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
             {weekDays.map((date) => {
               const dateKey = date.toDateString();
               const dayTasks = tasksByDate.get(dateKey) || [];
@@ -485,7 +484,7 @@ export default function Calendar() {
             <h3 className="text-lg font-semibold">
               {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
             </h3>
-            
+
             {dayTasks.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
                 No tasks scheduled for this day
@@ -495,7 +494,7 @@ export default function Calendar() {
                 {dayTasks.map((task) => {
                   const assignedUser = users.find((u) => u.id === task.assignedToId);
                   const area = areas.find((a) => a.id === task.areaId);
-                  
+
                   return (
                     <div
                       key={task.id}
