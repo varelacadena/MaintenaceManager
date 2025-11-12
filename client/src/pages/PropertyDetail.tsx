@@ -134,17 +134,26 @@ export default function PropertyDetail() {
   });
 
   const createEquipmentMutation = useMutation({
-    mutationFn: async (data: InsertEquipment) => {
-      return await apiRequest("POST", "/api/equipment", data);
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      const res = await fetch("/api/equipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
     },
     onSuccess: () => {
+      // Invalidate both equipment queries to ensure the list refreshes
       queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
+      setIsCreateDialogOpen(false);
+      setEditingEquipment(null);
       toast({
         title: "Success",
-        description: "Equipment created successfully",
+        description: "Equipment added successfully",
       });
-      setIsCreateDialogOpen(false);
-      form.reset({ propertyId: id });
     },
     onError: (error: any) => {
       toast({
