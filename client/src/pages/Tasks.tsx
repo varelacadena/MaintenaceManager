@@ -63,11 +63,21 @@ function DraggableTaskCard({ task, children }: { task: Task; children: React.Rea
   return (
     <div
       ref={setNodeRef}
-      {...(!isCompleted && listeners)}
-      {...(!isCompleted && attributes)}
+      {...attributes}
       className={isDragging ? "opacity-50" : ""}
+      style={{ position: 'relative' }}
     >
-      {children}
+      {!isCompleted && (
+        <div
+          {...listeners}
+          className="absolute inset-0 cursor-move"
+          style={{ pointerEvents: 'auto' }}
+          onClick={(e) => e.preventDefault()}
+        />
+      )}
+      <div style={{ position: 'relative', pointerEvents: 'auto' }}>
+        {children}
+      </div>
     </div>
   );
 }
