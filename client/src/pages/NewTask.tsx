@@ -513,7 +513,7 @@ export default function NewTask() {
                 control={form.control}
                 name="initialDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Start Date</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -521,26 +521,32 @@ export default function NewTask() {
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal cursor-pointer",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                             type="button"
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
-                            <span className="pointer-events-none">
-                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
-                            </span>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
+                          selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
                           onSelect={(date) => {
-                            field.onChange(date ? date.toISOString().split("T")[0] : undefined);
+                            if (date) {
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              field.onChange(`${year}-${month}-${day}`);
+                            } else {
+                              field.onChange(undefined);
+                            }
                           }}
                           initialFocus
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         />
                       </PopoverContent>
                     </Popover>
@@ -553,7 +559,7 @@ export default function NewTask() {
                 control={form.control}
                 name="estimatedCompletionDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Est. Completion Date *</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -561,26 +567,32 @@ export default function NewTask() {
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal cursor-pointer",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                             type="button"
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
-                            <span className="pointer-events-none">
-                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
-                            </span>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
+                          selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
                           onSelect={(date) => {
-                            field.onChange(date ? date.toISOString().split("T")[0] : undefined);
+                            if (date) {
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              field.onChange(`${year}-${month}-${day}`);
+                            } else {
+                              field.onChange(undefined);
+                            }
                           }}
                           initialFocus
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         />
                       </PopoverContent>
                     </Popover>
