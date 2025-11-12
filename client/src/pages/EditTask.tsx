@@ -33,6 +33,7 @@ import { ArrowLeft, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
@@ -542,7 +543,7 @@ export default function EditTask() {
                 control={form.control}
                 name="initialDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Start Date</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -550,29 +551,33 @@ export default function EditTask() {
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal cursor-pointer",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                             type="button"
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
-                            <span className="pointer-events-none">
-                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
-                            </span>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Input
-                          type="date"
-                          onChange={(e) => field.onChange(e.target.value)}
-                          value={field.value || ""}
-                          className="hidden" // Hide the default input
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              field.onChange(`${year}-${month}-${day}`);
+                            } else {
+                              field.onChange(undefined);
+                            }
+                          }}
+                          initialFocus
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         />
-                        <div className="flex justify-center items-center p-4">
-                          <CalendarIcon className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">Select Start Date</span>
-                        </div>
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
@@ -584,7 +589,7 @@ export default function EditTask() {
                 control={form.control}
                 name="estimatedCompletionDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Est. Completion Date *</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -592,29 +597,33 @@ export default function EditTask() {
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal cursor-pointer",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                             type="button"
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4 pointer-events-none" />
-                            <span className="pointer-events-none">
-                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
-                            </span>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Input
-                          type="date"
-                          onChange={(e) => field.onChange(e.target.value)}
-                          value={field.value || ""}
-                          className="hidden" // Hide the default input
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              field.onChange(`${year}-${month}-${day}`);
+                            } else {
+                              field.onChange(undefined);
+                            }
+                          }}
+                          initialFocus
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         />
-                        <div className="flex justify-center items-center p-4">
-                          <CalendarIcon className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">Select Completion Date</span>
-                        </div>
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
