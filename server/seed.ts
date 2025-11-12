@@ -12,46 +12,11 @@ const defaultAreas = [
   { name: "Other", description: "Miscellaneous maintenance requests" },
 ];
 
-const defaultUsers = [
-  {
-    username: "Santiago",
-    password: "miPrincesa96",
-    email: "santiago@college.edu",
-    firstName: "Santiago",
-    lastName: "Admin",
-    role: "admin",
-  },
-  {
-    username: "admin",
-    password: "Admin2025!",
-    email: "admin@college.edu",
-    firstName: "Admin",
-    lastName: "User",
-    role: "admin",
-  },
-  {
-    username: "maintenance",
-    password: "maint123",
-    email: "maintenance@college.edu",
-    firstName: "Maintenance",
-    lastName: "Staff",
-    role: "maintenance",
-  },
-  {
-    username: "staff",
-    password: "staff123",
-    email: "staff@college.edu",
-    firstName: "College",
-    lastName: "Staff",
-    role: "staff",
-  },
-];
-
 export async function seedDatabase() {
   try {
     // Seed areas
     const existingAreas = await storage.getAreas();
-    
+
     if (existingAreas.length === 0) {
       console.log("Seeding default areas...");
       for (const area of defaultAreas) {
@@ -62,28 +27,15 @@ export async function seedDatabase() {
       console.log("Areas already exist, skipping seed");
     }
 
-    // Seed default users
-    console.log("Checking for default users...");
-    for (const userData of defaultUsers) {
-      const existingUser = await storage.getUserByUsername(userData.username);
-      
-      if (!existingUser) {
-        console.log(`Creating user: ${userData.username}`);
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-        await storage.createUser({
-          ...userData,
-          password: hashedPassword,
-        });
-        console.log(`User ${userData.username} created with password: ${userData.password}`);
-      } else {
-        console.log(`User ${userData.username} already exists, skipping`);
-      }
+    // Check if any users exist
+    const users = await storage.getAllUsers();
+    if (users.length === 0) {
+      console.log("\n⚠️  No users found in database");
+      console.log("🔐 First login attempt will create the initial admin account");
+      console.log("💡 Simply log in with your desired username and password\n");
+    } else {
+      console.log(`\n✅ System has ${users.length} user(s) registered\n`);
     }
-    console.log("\nDefault credentials:");
-    console.log("Admin - username: Santiago, password: miPrincesa96");
-    console.log("Admin - username: admin, password: Admin2025!");
-    console.log("Maintenance - username: maintenance, password: maint123");
-    console.log("Staff - username: staff, password: staff123");
   } catch (error) {
     console.error("Error seeding database:", error);
   }

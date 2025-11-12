@@ -43,6 +43,14 @@ export default function Landing() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        if (data.firstTimeSetup) {
+          toast({
+            title: "Welcome!",
+            description: `Admin account created successfully. Welcome, ${username}!`,
+            duration: 5000,
+          });
+        }
         window.location.href = "/";
       } else {
         const errorData = await response.json();
@@ -172,6 +180,11 @@ export default function Landing() {
           <CardDescription className="text-center">
             Sign in to access the maintenance management system
           </CardDescription>
+          {error && error.includes("first") && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+              <strong>First Time Setup:</strong> Enter your desired admin username and password to create the initial account.
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

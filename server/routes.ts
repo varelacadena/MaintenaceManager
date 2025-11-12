@@ -57,6 +57,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Check if this is first-time setup (no users exist)
+      const allUsers = await storage.getAllUsers();
+      
+      if (allUsers.length === 0) {
+        console.log("First-time setup detected - creating initial admin account");
+        
+        // Create the first admin account with provided credentials
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newAdmin = await storage.createUser({
+          username,
+          password: hashedPassword,
+          email: "",
+          firstName: "Admin",
+          lastName: "User",
+          role: "admin",
+        });
+
+        console.log(`✅ First admin account created: ${username}`);
+
+        // Log them in immediately
+        req.login(newAdmin, (err) => {
+          if (err) {
+            return res.status(500).json({ message: "Login failed" });
+          }
+          res.json({ 
+            success: true, 
+            firstTimeSetup: true,
+            user: {
+              id: newAdmin.id,
+              username: newAdmin.username,
+              email: newAdmin.email,
+              firstName: newAdmin.firstName,
+              lastName: newAdmin.lastName,
+              role: newAdmin.role,
+            }
+          });
+        });
+        return;
+      }
+
+      // Normal login flow
       const user = await storage.getUserByUsername(username);
 
       if (!user) {
