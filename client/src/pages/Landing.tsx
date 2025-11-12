@@ -172,13 +172,13 @@ export default function Landing() {
       }}
     >
       <div className="absolute inset-0 bg-black/40" />
-      <Card className="w-full max-w-md relative z-10 backdrop-blur-sm bg-card/95">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            HARTLAND MAINTENANCE PORTAL
+      <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/98 border-0 shadow-2xl">
+        <CardHeader className="space-y-3 pb-8 pt-8">
+          <CardTitle className="text-3xl font-semibold text-center tracking-tight">
+            Hartland Maintenance
           </CardTitle>
-          <CardDescription className="text-center">
-            Sign in to access the maintenance management system
+          <CardDescription className="text-center text-base">
+            Sign in to access your workspace
           </CardDescription>
           {error && error.includes("first") && (
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
@@ -186,14 +186,14 @@ export default function Landing() {
             </div>
           )}
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+        <CardContent className="px-8 pb-8">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username"
+                placeholder="Enter username"
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);
@@ -202,14 +202,15 @@ export default function Landing() {
                 required
                 disabled={isLoading}
                 data-testid="input-username"
+                className="h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -218,12 +219,13 @@ export default function Landing() {
                 required
                 disabled={isLoading}
                 data-testid="input-password"
+                className="h-11"
               />
               {error && (
-                <p className="text-sm text-red-500 font-medium">{error}</p>
+                <p className="text-sm text-red-500 font-medium mt-2">{error}</p>
               )}
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
+            <Button type="submit" size="lg" className="w-full mt-6" disabled={isLoading} data-testid="button-login">
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
 

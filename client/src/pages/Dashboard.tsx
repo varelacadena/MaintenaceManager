@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,11 +97,11 @@ export default function Dashboard() {
     previousWeekStart.setDate(currentWeekStart.getDate() - 7);
 
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    
+
     return days.map((day, index) => {
       const currentDay = new Date(currentWeekStart);
       currentDay.setDate(currentWeekStart.getDate() + index);
-      
+
       const previousDay = new Date(previousWeekStart);
       previousDay.setDate(previousWeekStart.getDate() + index);
 
@@ -146,18 +145,18 @@ export default function Dashboard() {
   // Staff view - simplified dashboard
   if (user?.role === "staff") {
     return (
-      <div className="space-y-3 md:space-y-4 pb-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold" data-testid="text-dashboard-title">
+      <div className="space-y-6 md:space-y-8 pb-8">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight" data-testid="text-dashboard-title">
               Dashboard
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               Welcome back, {user?.firstName || "User"}
             </p>
           </div>
           <Link href="/new-request" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto" data-testid="button-new-request">
+            <Button size="lg" className="w-full sm:w-auto" data-testid="button-new-request">
               <Plus className="w-4 h-4 mr-2" />
               New Request
             </Button>
@@ -243,19 +242,19 @@ export default function Dashboard() {
 
   // Admin/Maintenance view - full dashboard
   return (
-    <div className="space-y-3 md:space-y-4 pb-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold" data-testid="text-dashboard-title">
+    <div className="space-y-6 md:space-y-8 pb-8">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight" data-testid="text-dashboard-title">
             Dashboard
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Welcome back, {user?.firstName || "User"}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 pt-3 px-3 md:pb-3 md:pt-4 md:px-4">
             <div className="flex items-center gap-2 md:gap-3 w-full">
@@ -305,7 +304,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6 md:pb-3">
             <CardTitle className="text-base md:text-lg">Last Service Requests</CardTitle>

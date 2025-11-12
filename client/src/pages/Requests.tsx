@@ -201,12 +201,15 @@ export default function Requests() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Service Requests</h1>
+        <div className="space-y-1">
+          <h1 className="text-4xl font-semibold tracking-tight">Service Requests</h1>
+          <p className="text-muted-foreground">Manage and review all maintenance requests</p>
+        </div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -251,18 +254,18 @@ export default function Requests() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="border-0 shadow-md">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted/50 border-b">
+                <thead className="bg-muted/30 border-b border-border/50">
                   <tr>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Requester Name</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Title</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Property</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Submitted</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Status</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium">Action</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Requester</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Title</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submitted</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -276,22 +279,22 @@ export default function Requests() {
                     return (
                       <tr 
                         key={request.id} 
-                        className="border-b hover:bg-muted/30 transition-colors"
+                        className="border-b border-border/40 hover:bg-muted/20 transition-all duration-150"
                         data-testid={`card-request-${request.id}`}
                       >
-                        <td className="px-6 py-4">
-                          <div className="font-medium" data-testid={`text-requester-${request.id}`}>
+                        <td className="px-6 py-5">
+                          <div className="font-medium text-sm" data-testid={`text-requester-${request.id}`}>
                             {requesterName}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="max-w-xs truncate">{request.title}</div>
+                        <td className="px-6 py-5">
+                          <div className="max-w-xs truncate text-sm font-medium">{request.title}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">{getPropertyName(request.propertyId)}</div>
+                        <td className="px-6 py-5">
+                          <div className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
+                        <td className="px-6 py-5">
+                          <div className="text-sm text-muted-foreground">
                             {new Date(request.createdAt!).toLocaleDateString('en-US', { 
                               day: 'numeric',
                               month: 'short',
@@ -302,10 +305,10 @@ export default function Requests() {
                             })}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-5">
                           <Badge 
                             variant="outline" 
-                            className={statusColors[request.status]}
+                            className={cn("font-medium border-0", statusColors[request.status])}
                           >
                             {request.status === 'converted_to_task' ? 'Converted to Task' : 
                              request.status === 'under_review' ? 'Under Review' : 
@@ -314,12 +317,11 @@ export default function Requests() {
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
                             <Button
                               variant="default"
                               size="sm"
-                              className="bg-primary hover:bg-primary/90"
                               onClick={() => navigate(`/requests/${request.id}`)}
                               data-testid={`button-review-${request.id}`}
                             >

@@ -68,23 +68,23 @@ function AuthenticatedApp() {
             userInitials={userInitials}
           />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between p-4 border-b">
+            <header className="flex items-center justify-between px-8 py-4 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <ThemeToggle />
                 <button
                   onClick={async () => {
                     await fetch("/api/logout", { method: "POST" });
                     window.location.href = "/";
                   }}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   data-testid="button-logout"
                 >
                   Sign Out
                 </button>
               </div>
             </header>
-            <main className="flex-1 overflow-auto p-8">
+            <main className="flex-1 overflow-auto px-8 py-6 bg-muted/20">
               <ScrollToTop />
               <Switch>
                 <Route path="/" component={Dashboard} />

@@ -195,15 +195,15 @@ export default function NewRequest() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">New Service Request</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div className="max-w-3xl mx-auto space-y-8 pb-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">New Service Request</h1>
+        <p className="text-base text-muted-foreground">
           Submit a new maintenance request
         </p>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-8 border-0 shadow-md">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <FormField
