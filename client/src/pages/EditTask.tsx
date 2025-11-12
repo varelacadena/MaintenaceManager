@@ -215,6 +215,11 @@ export default function EditTask() {
         recurringFrequency: data.recurringFrequency || undefined,
         recurringInterval: data.recurringInterval || undefined,
         recurringEndDate: data.recurringEndDate || undefined,
+        contactType: data.contactType || undefined,
+        contactStaffId: data.contactStaffId || undefined,
+        contactName: data.contactName || undefined,
+        contactEmail: data.contactEmail || undefined,
+        contactPhone: data.contactPhone || undefined,
       };
       const response = await apiRequest("PATCH", `/api/tasks/${id}`, taskData);
       return response.json();
@@ -239,7 +244,16 @@ export default function EditTask() {
   });
 
   const handleSubmit = (data: FormData) => {
-    updateTaskMutation.mutate(data);
+    // Include contact information in the update
+    const updateData = {
+      ...data,
+      contactType: data.contactType || undefined,
+      contactStaffId: data.contactStaffId || undefined,
+      contactName: data.contactName || undefined,
+      contactEmail: data.contactEmail || undefined,
+      contactPhone: data.contactPhone || undefined,
+    };
+    updateTaskMutation.mutate(updateData);
   };
 
   if (taskLoading) {
