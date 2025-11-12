@@ -1,4 +1,3 @@
-
 import express, { type Request, Response, NextFunction } from "express";
 import { log, setupVite, serveStatic } from "./vite";
 import { setupAuth } from "./replitAuth";
@@ -32,6 +31,8 @@ const store = new PgSession({
   tableName: 'sessions'
 });
 
+// Configure session management for express-session
+const isProduction = process.env.NODE_ENV === "production";
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "default-secret",
@@ -41,10 +42,18 @@ app.use(
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // Enable secure cookies in production (requires HTTPS)
+      secure: isProduction,
+      // Allow cookies to be sent with cross-site requests in production
+      sameSite: isProduction ? "none" : "lax",
     },
   })
 );
+
+// Trust proxy in production (required for Replit deployments)
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
 
 // Configure passport for local authentication
 passport.serializeUser((user: any, done) => {
@@ -99,7 +108,7 @@ app.use((req, res, next) => {
 (async () => {
   // Apply all database migrations
   await applyMigrations();
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -138,7 +147,7 @@ app.use((req, res, next) => {
     server.close(() => {
       log('Server closed');
     });
-    
+
     try {
       await pool.end();
       log('Database connections closed');

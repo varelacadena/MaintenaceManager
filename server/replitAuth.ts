@@ -1,8 +1,29 @@
 import type { Express, RequestHandler } from "express";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
+import session from "express-session";
+import PostgresSessionStore from "connect-pg-simple";
+import { pool } from "./db";
 
 export async function setupAuth(app: Express) {
+  const isProduction = process.env.REPL_DEPLOYMENT === "1";
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "replit-maintenance-secret-key",
+      resave: false,
+      saveUninitialized: false,
+      store: new PostgresSessionStore(pool),
+      cookie: {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        httpOnly: true,
+        secure: isProduction, // Use secure cookies in production
+        sameSite: isProduction ? "none" : "lax", // Allow cross-site in production
+      },
+      proxy: isProduction, // Trust proxy in production
+    })
+  );
+
   // Login endpoint
   app.post("/api/login", async (req, res) => {
     try {
