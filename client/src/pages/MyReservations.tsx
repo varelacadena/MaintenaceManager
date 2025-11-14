@@ -66,13 +66,13 @@ export default function MyReservations() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
         }
       });
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicles');
@@ -99,13 +99,13 @@ export default function MyReservations() {
       return await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
         }
       });
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicles');
@@ -203,6 +203,7 @@ export default function MyReservations() {
                               field.onChange(newDateTime);
                             }}
                             data-testid="input-start-time"
+                            className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0"
                           />
                         </FormControl>
                       </div>
@@ -239,6 +240,7 @@ export default function MyReservations() {
                               field.onChange(newDateTime);
                             }}
                             data-testid="input-end-time"
+                            className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0"
                           />
                         </FormControl>
                       </div>
@@ -342,9 +344,9 @@ export default function MyReservations() {
                           Check Out
                         </Button>
                       </Link>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => cancelMutation.mutate(reservation.id)}
                         disabled={cancelMutation.isPending}
                         data-testid={`button-cancel-${reservation.id}`}
