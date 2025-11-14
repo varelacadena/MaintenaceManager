@@ -1,9 +1,10 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, Car, User, Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Calendar, Car, User, Search, Check, X } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { format } from "date-fns";
 import type { VehicleReservation, Vehicle, User as UserType } from "@shared/schema";
@@ -14,6 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const statusColors = {
   pending: "secondary",
@@ -25,6 +39,14 @@ const statusColors = {
 export default function VehicleReservations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<VehicleReservation | null>(null);
+  const [keyLocation, setKeyLocation] = useState<string>("");
+  const [cancellationReason, setCancellationReason] = useState<string>("");
+  const [otherReason, setOtherReason] = useState<string>("");
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations"],
@@ -37,6 +59,151 @@ export default function VehicleReservations() {
   const { data: users } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
   });
+
+  const approveMutation = useMutation({
+    mutationFn: async ({ reservationId, keyLocation }: { reservationId: string; keyLocation: string }) => {
+      // Update reservation status to approved
+      await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
+        status: "approved",
+      });
+
+      // Get reservation details to find the user
+      const reservation = reservations?.find(r => r.id === reservationId);
+      if (!reservation) throw new Error("Reservation not found");
+
+      // Send message to the user
+      const vehicle = vehicles?.find(v => v.id === reservation.vehicleId);
+      const vehicleName = vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})` : "the vehicle";
+      
+      await apiRequest("POST", "/api/messages", {
+        requestId: null,
+        taskId: null,
+        content: `Your vehicle reservation for ${vehicleName} has been approved!\n\nKey Location: ${keyLocation}\n\nReservation Details:\nStart: ${format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")}\nEnd: ${format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Reservation approved and user notified",
+      });
+      setApproveDialogOpen(false);
+      setKeyLocation("");
+      setSelectedReservation(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async ({ reservationId, reason }: { reservationId: string; reason: string }) => {
+      // Update reservation status to cancelled
+      await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
+        status: "cancelled",
+      });
+
+      // Get reservation details
+      const reservation = reservations?.find(r => r.id === reservationId);
+      if (!reservation) throw new Error("Reservation not found");
+
+      // Send message to the user
+      const vehicle = vehicles?.find(v => v.id === reservation.vehicleId);
+      const vehicleName = vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})` : "the vehicle";
+      
+      await apiRequest("POST", "/api/messages", {
+        requestId: null,
+        taskId: null,
+        content: `Your vehicle reservation for ${vehicleName} has been cancelled.\n\nReason: ${reason}\n\nReservation Details:\nStart: ${format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")}\nEnd: ${format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}\n\nPlease contact the maintenance department if you have any questions.`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Reservation cancelled and user notified",
+      });
+      setCancelDialogOpen(false);
+      setCancellationReason("");
+      setOtherReason("");
+      setSelectedReservation(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleApprove = (reservation: VehicleReservation) => {
+    setSelectedReservation(reservation);
+    setApproveDialogOpen(true);
+  };
+
+  const handleCancel = (reservation: VehicleReservation) => {
+    setSelectedReservation(reservation);
+    setCancelDialogOpen(true);
+  };
+
+  const submitApproval = () => {
+    if (!selectedReservation || !keyLocation) {
+      toast({
+        title: "Error",
+        description: "Please select a key location",
+        variant: "destructive",
+      });
+      return;
+    }
+    approveMutation.mutate({
+      reservationId: selectedReservation.id,
+      keyLocation,
+    });
+  };
+
+  const submitCancellation = () => {
+    if (!selectedReservation || !cancellationReason) {
+      toast({
+        title: "Error",
+        description: "Please select a cancellation reason",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const finalReason = cancellationReason === "Other" ? otherReason : cancellationReason;
+    
+    if (cancellationReason === "Other" && !otherReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    cancelMutation.mutate({
+      reservationId: selectedReservation.id,
+      reason: finalReason,
+    });
+  };
+
+  const canManageReservations = user?.role === "admin" || user?.role === "maintenance";
 
   const getVehicleName = (vehicleId: string) => {
     const vehicle = vehicles?.find(v => v.id === vehicleId);
@@ -162,6 +329,26 @@ export default function VehicleReservations() {
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
               </CardContent>
+              {canManageReservations && reservation.status === "pending" && (
+                <CardFooter className="flex gap-2">
+                  <Button 
+                    onClick={() => handleApprove(reservation)}
+                    className="flex-1"
+                    variant="default"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button 
+                    onClick={() => handleCancel(reservation)}
+                    className="flex-1"
+                    variant="destructive"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </CardFooter>
+              )}
             </Card>
           ))}
         </div>
@@ -178,6 +365,91 @@ export default function VehicleReservations() {
           </CardContent>
         </Card>
       )}
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Reservation</DialogTitle>
+            <DialogDescription>
+              Select where the user can find the vehicle keys
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Key Location</Label>
+              <Select value={keyLocation} onValueChange={setKeyLocation}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select key location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Mailbox">Mailbox</SelectItem>
+                  <SelectItem value="Inside the car">Inside the car</SelectItem>
+                  <SelectItem value="In person">In person</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitApproval} disabled={approveMutation.isPending}>
+              {approveMutation.isPending ? "Approving..." : "Approve & Notify"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Reservation</DialogTitle>
+            <DialogDescription>
+              Select a reason for cancellation
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Cancellation Reason</Label>
+              <Select value={cancellationReason} onValueChange={setCancellationReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Unit out of service">Unit out of service</SelectItem>
+                  <SelectItem value="Unit in maintenance">Unit in maintenance</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {cancellationReason === "Other" && (
+              <div className="space-y-2">
+                <Label>Please specify reason</Label>
+                <Textarea
+                  value={otherReason}
+                  onChange={(e) => setOtherReason(e.target.value)}
+                  placeholder="Enter cancellation reason..."
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={submitCancellation} 
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel & Notify"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
