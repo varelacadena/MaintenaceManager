@@ -67,10 +67,16 @@ export default function MyReservations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/vehicle-reservations')
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
+        }
       });
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/vehicles')
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicles');
+        }
       });
       toast({
         title: "Success",
@@ -94,10 +100,16 @@ export default function MyReservations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/vehicle-reservations')
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
+        }
       });
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/vehicles')
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicles');
+        }
       });
       toast({
         title: "Success",
