@@ -147,8 +147,8 @@ export default function VehicleReservations() {
                     {format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Purpose:</span>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Purpose: </span>
                   <span>{reservation.purpose}</span>
                 </div>
                 {reservation.notes && (
@@ -157,8 +157,8 @@ export default function VehicleReservations() {
                     <span>{reservation.notes}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Created:</span>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Created: </span>
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
               </CardContent>
