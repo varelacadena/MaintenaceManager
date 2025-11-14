@@ -33,6 +33,7 @@ import VehicleDetail from "./pages/VehicleDetail";
 import MyReservations from "./pages/MyReservations";
 import VehicleCheckOut from "./pages/VehicleCheckOut";
 import VehicleCheckIn from "./pages/VehicleCheckIn";
+import VehicleReservations from "./pages/VehicleReservations";
 import { ScrollToTop } from "./components/ScrollToTop";
 
 function AuthenticatedApp() {
@@ -113,8 +114,9 @@ function AuthenticatedApp() {
                 <Route path="/vehicles" component={Vehicles} />
                 <Route path="/vehicles/:id" component={VehicleDetail} />
                 <Route path="/my-reservations" component={MyReservations} />
+                <Route path="/vehicle-reservations" component={VehicleReservations} />
                 <Route path="/vehicle-checkout/:reservationId" component={VehicleCheckOut} />
-                <Route path="/vehicle-checkin/:checkOutLogId" component={VehicleCheckIn} />
+                <Route path="/vehicle-checkin/:reservationId" component={VehicleCheckIn} />
                 <Route component={NotFound} />
               </Switch>
             </main>
