@@ -24,6 +24,11 @@ import {
   insertInventoryItemSchema,
   insertPropertySchema,
   insertEquipmentSchema,
+  insertVehicleSchema,
+  insertVehicleReservationSchema,
+  insertVehicleCheckOutLogSchema,
+  insertVehicleCheckInLogSchema,
+  insertVehicleMaintenanceScheduleSchema,
 } from "@shared/schema";
 
 // Helper function to get authenticated user
@@ -1611,6 +1616,411 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting equipment:", error);
       res.status(500).json({ message: "Failed to delete equipment" });
+    }
+  });
+
+  // Vehicle routes
+  app.get("/api/vehicles", isAuthenticated, async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const vehicles = await storage.getVehicles(status ? { status } : undefined);
+      res.json(vehicles);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      res.status(500).json({ message: "Failed to fetch vehicles" });
+    }
+  });
+
+  app.get("/api/vehicles/:id", isAuthenticated, async (req, res) => {
+    try {
+      const vehicle = await storage.getVehicle(req.params.id);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Error fetching vehicle:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle" });
+    }
+  });
+
+  app.post("/api/vehicles", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const vehicleData = insertVehicleSchema.parse(req.body);
+      const vehicle = await storage.createVehicle(vehicleData);
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Error creating vehicle:", error);
+      res.status(500).json({ message: "Failed to create vehicle" });
+    }
+  });
+
+  app.patch("/api/vehicles/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const vehicle = await storage.updateVehicle(req.params.id, req.body);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+      res.status(500).json({ message: "Failed to update vehicle" });
+    }
+  });
+
+  app.delete("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteVehicle(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+      res.status(500).json({ message: "Failed to delete vehicle" });
+    }
+  });
+
+  // Vehicle reservation routes
+  app.get("/api/vehicle-reservations", isAuthenticated, async (req, res) => {
+    try {
+      const vehicleId = req.query.vehicleId as string | undefined;
+      const userId = req.query.userId as string | undefined;
+      const status = req.query.status as string | undefined;
+      
+      const reservations = await storage.getVehicleReservations({
+        vehicleId,
+        userId,
+        status,
+      });
+      res.json(reservations);
+    } catch (error) {
+      console.error("Error fetching vehicle reservations:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle reservations" });
+    }
+  });
+
+  app.get("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const reservation = await storage.getVehicleReservation(req.params.id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      res.json(reservation);
+    } catch (error) {
+      console.error("Error fetching vehicle reservation:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle reservation" });
+    }
+  });
+
+  app.post("/api/vehicle-reservations", isAuthenticated, async (req, res) => {
+    try {
+      const reservationData = insertVehicleReservationSchema.parse(req.body);
+      
+      // Check vehicle availability
+      const isAvailable = await storage.checkVehicleAvailability(
+        reservationData.vehicleId,
+        new Date(reservationData.startDate),
+        new Date(reservationData.endDate)
+      );
+
+      if (!isAvailable) {
+        return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
+      }
+
+      const reservation = await storage.createVehicleReservation(reservationData);
+      
+      // Update vehicle status to reserved
+      await storage.updateVehicleStatus(reservationData.vehicleId, "reserved");
+      
+      res.json(reservation);
+    } catch (error) {
+      console.error("Error creating vehicle reservation:", error);
+      res.status(500).json({ message: "Failed to create vehicle reservation" });
+    }
+  });
+
+  app.patch("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const reservation = await storage.updateVehicleReservation(req.params.id, req.body);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      res.json(reservation);
+    } catch (error) {
+      console.error("Error updating vehicle reservation:", error);
+      res.status(500).json({ message: "Failed to update vehicle reservation" });
+    }
+  });
+
+  app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const reservation = await storage.getVehicleReservation(req.params.id);
+      if (reservation) {
+        await storage.updateVehicleStatus(reservation.vehicleId, "available");
+      }
+      await storage.deleteVehicleReservation(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle reservation:", error);
+      res.status(500).json({ message: "Failed to delete vehicle reservation" });
+    }
+  });
+
+  app.post("/api/vehicle-reservations/:id/check-availability", isAuthenticated, async (req, res) => {
+    try {
+      const { startDate, endDate, vehicleId } = req.body;
+      const isAvailable = await storage.checkVehicleAvailability(
+        vehicleId,
+        new Date(startDate),
+        new Date(endDate),
+        req.params.id
+      );
+      res.json({ available: isAvailable });
+    } catch (error) {
+      console.error("Error checking vehicle availability:", error);
+      res.status(500).json({ message: "Failed to check vehicle availability" });
+    }
+  });
+
+  // Vehicle check-out log routes
+  app.get("/api/vehicle-checkout-logs", isAuthenticated, async (req, res) => {
+    try {
+      const vehicleId = req.query.vehicleId as string | undefined;
+      const userId = req.query.userId as string | undefined;
+      
+      const logs = await storage.getVehicleCheckOutLogs({ vehicleId, userId });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching vehicle check-out logs:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle check-out logs" });
+    }
+  });
+
+  app.get("/api/vehicle-checkout-logs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const log = await storage.getVehicleCheckOutLog(req.params.id);
+      if (!log) {
+        return res.status(404).json({ message: "Check-out log not found" });
+      }
+      res.json(log);
+    } catch (error) {
+      console.error("Error fetching vehicle check-out log:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle check-out log" });
+    }
+  });
+
+  app.post("/api/vehicle-checkout-logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const logData = insertVehicleCheckOutLogSchema.parse(req.body);
+      
+      // Verify reservation belongs to current user
+      const reservation = await storage.getVehicleReservation(logData.reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      if (reservation.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized: This reservation belongs to another user" });
+      }
+      if (reservation.vehicleId !== logData.vehicleId) {
+        return res.status(400).json({ message: "Vehicle mismatch: This reservation is for a different vehicle" });
+      }
+      
+      const log = await storage.createVehicleCheckOutLog(logData);
+      
+      // Update vehicle status to in_use and mileage
+      await storage.updateVehicleStatus(logData.vehicleId, "in_use");
+      await storage.updateVehicleMileage(logData.vehicleId, logData.startMileage);
+      
+      // Update reservation status to active
+      await storage.updateReservationStatus(logData.reservationId, "active");
+      
+      res.json(log);
+    } catch (error) {
+      console.error("Error creating vehicle check-out log:", error);
+      res.status(500).json({ message: "Failed to create vehicle check-out log" });
+    }
+  });
+
+  app.delete("/api/vehicle-checkout-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      await storage.deleteVehicleCheckOutLog(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle check-out log:", error);
+      res.status(500).json({ message: "Failed to delete vehicle check-out log" });
+    }
+  });
+
+  // Vehicle check-in log routes
+  app.get("/api/vehicle-checkin-logs", isAuthenticated, async (req, res) => {
+    try {
+      const vehicleId = req.query.vehicleId as string | undefined;
+      const userId = req.query.userId as string | undefined;
+      
+      const logs = await storage.getVehicleCheckInLogs({ vehicleId, userId });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching vehicle check-in logs:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle check-in logs" });
+    }
+  });
+
+  app.get("/api/vehicle-checkin-logs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const log = await storage.getVehicleCheckInLog(req.params.id);
+      if (!log) {
+        return res.status(404).json({ message: "Check-in log not found" });
+      }
+      res.json(log);
+    } catch (error) {
+      console.error("Error fetching vehicle check-in log:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle check-in log" });
+    }
+  });
+
+  app.post("/api/vehicle-checkin-logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const logData = insertVehicleCheckInLogSchema.parse(req.body);
+      
+      // Verify check-out log belongs to current user
+      const checkOutLog = await storage.getVehicleCheckOutLog(logData.checkOutLogId);
+      if (!checkOutLog) {
+        return res.status(404).json({ message: "Check-out log not found" });
+      }
+      if (checkOutLog.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized: This check-out log belongs to another user" });
+      }
+      if (checkOutLog.vehicleId !== logData.vehicleId) {
+        return res.status(400).json({ message: "Vehicle mismatch: This check-out was for a different vehicle" });
+      }
+      
+      const log = await storage.createVehicleCheckInLog(logData);
+      
+      // Update vehicle mileage
+      await storage.updateVehicleMileage(logData.vehicleId, logData.endMileage);
+      
+      // Determine new vehicle status based on cleanliness and issues
+      let newStatus = "available";
+      if (logData.cleanlinessStatus === "needs_cleaning") {
+        newStatus = "needs_cleaning";
+      } else if (logData.issues && logData.issues.trim().length > 0) {
+        newStatus = "needs_maintenance";
+      }
+      
+      await storage.updateVehicleStatus(logData.vehicleId, newStatus);
+      
+      // Update reservation status
+      await storage.updateReservationStatus(checkOutLog.reservationId, "completed");
+      
+      // Auto-create cleaning task if needed
+      if (logData.cleanlinessStatus === "needs_cleaning") {
+        const userId = req.userId;
+        const vehicle = await storage.getVehicle(logData.vehicleId);
+        
+        if (vehicle) {
+          await storage.createTask({
+            vehicleId: logData.vehicleId,
+            name: `Clean Vehicle: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
+            description: `Vehicle returned and needs cleaning. Check-in log ID: ${log.id}`,
+            urgency: "medium",
+            initialDate: new Date(),
+            taskType: "one_time",
+            status: "not_started",
+            createdById: userId,
+          });
+        }
+      }
+      
+      // Auto-create maintenance task if issues reported
+      if (logData.issues && logData.issues.trim().length > 0) {
+        const userId = req.userId;
+        const vehicle = await storage.getVehicle(logData.vehicleId);
+        
+        if (vehicle) {
+          await storage.createTask({
+            vehicleId: logData.vehicleId,
+            name: `Maintenance Required: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
+            description: `Issues reported: ${logData.issues}\n\nCheck-in log ID: ${log.id}`,
+            urgency: "high",
+            initialDate: new Date(),
+            taskType: "one_time",
+            status: "not_started",
+            createdById: userId,
+          });
+        }
+      }
+      
+      res.json(log);
+    } catch (error) {
+      console.error("Error creating vehicle check-in log:", error);
+      res.status(500).json({ message: "Failed to create vehicle check-in log" });
+    }
+  });
+
+  app.delete("/api/vehicle-checkin-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      await storage.deleteVehicleCheckInLog(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle check-in log:", error);
+      res.status(500).json({ message: "Failed to delete vehicle check-in log" });
+    }
+  });
+
+  // Vehicle maintenance schedule routes
+  app.get("/api/vehicle-maintenance-schedules", isAuthenticated, async (req, res) => {
+    try {
+      const vehicleId = req.query.vehicleId as string | undefined;
+      const schedules = await storage.getVehicleMaintenanceSchedules(vehicleId);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching vehicle maintenance schedules:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle maintenance schedules" });
+    }
+  });
+
+  app.get("/api/vehicle-maintenance-schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const schedule = await storage.getVehicleMaintenanceSchedule(req.params.id);
+      if (!schedule) {
+        return res.status(404).json({ message: "Maintenance schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error fetching vehicle maintenance schedule:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle maintenance schedule" });
+    }
+  });
+
+  app.post("/api/vehicle-maintenance-schedules", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const scheduleData = insertVehicleMaintenanceScheduleSchema.parse(req.body);
+      const schedule = await storage.createVehicleMaintenanceSchedule(scheduleData);
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error creating vehicle maintenance schedule:", error);
+      res.status(500).json({ message: "Failed to create vehicle maintenance schedule" });
+    }
+  });
+
+  app.patch("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const schedule = await storage.updateVehicleMaintenanceSchedule(req.params.id, req.body);
+      if (!schedule) {
+        return res.status(404).json({ message: "Maintenance schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating vehicle maintenance schedule:", error);
+      res.status(500).json({ message: "Failed to update vehicle maintenance schedule" });
+    }
+  });
+
+  app.delete("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      await storage.deleteVehicleMaintenanceSchedule(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle maintenance schedule:", error);
+      res.status(500).json({ message: "Failed to delete vehicle maintenance schedule" });
     }
   });
 

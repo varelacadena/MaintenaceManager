@@ -13,6 +13,11 @@ import {
   taskNotes,
   properties,
   equipment,
+  vehicles,
+  vehicleReservations,
+  vehicleCheckOutLogs,
+  vehicleCheckInLogs,
+  vehicleMaintenanceSchedules,
   type User,
   type UpsertUser,
   type Vendor,
@@ -41,6 +46,16 @@ import {
   type InsertProperty,
   type Equipment,
   type InsertEquipment,
+  type Vehicle,
+  type InsertVehicle,
+  type VehicleReservation,
+  type InsertVehicleReservation,
+  type VehicleCheckOutLog,
+  type InsertVehicleCheckOutLog,
+  type VehicleCheckInLog,
+  type InsertVehicleCheckInLog,
+  type VehicleMaintenanceSchedule,
+  type InsertVehicleMaintenanceSchedule,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne } from "drizzle-orm";
@@ -179,6 +194,55 @@ export interface IStorage {
   createEquipment(equipment: InsertEquipment): Promise<Equipment>;
   updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined>;
   deleteEquipment(id: string): Promise<void>;
+
+  // Vehicle operations
+  getVehicles(filters?: { status?: string }): Promise<Vehicle[]>;
+  getVehicle(id: string): Promise<Vehicle | undefined>;
+  getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined>;
+  createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  updateVehicle(id: string, data: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+  updateVehicleStatus(id: string, status: string): Promise<Vehicle | undefined>;
+  updateVehicleMileage(id: string, mileage: number): Promise<Vehicle | undefined>;
+  deleteVehicle(id: string): Promise<void>;
+
+  // Vehicle reservation operations
+  getVehicleReservations(filters?: {
+    vehicleId?: string;
+    userId?: string;
+    status?: string;
+  }): Promise<VehicleReservation[]>;
+  getVehicleReservation(id: string): Promise<VehicleReservation | undefined>;
+  createVehicleReservation(reservation: InsertVehicleReservation): Promise<VehicleReservation>;
+  updateVehicleReservation(id: string, data: Partial<InsertVehicleReservation>): Promise<VehicleReservation | undefined>;
+  updateReservationStatus(id: string, status: string): Promise<VehicleReservation | undefined>;
+  deleteVehicleReservation(id: string): Promise<void>;
+  checkVehicleAvailability(vehicleId: string, startDate: Date, endDate: Date, excludeReservationId?: string): Promise<boolean>;
+
+  // Vehicle check-out log operations
+  getVehicleCheckOutLogs(filters?: { vehicleId?: string; userId?: string }): Promise<VehicleCheckOutLog[]>;
+  getVehicleCheckOutLog(id: string): Promise<VehicleCheckOutLog | undefined>;
+  getCheckOutLogByReservation(reservationId: string): Promise<VehicleCheckOutLog | undefined>;
+  createVehicleCheckOutLog(log: InsertVehicleCheckOutLog): Promise<VehicleCheckOutLog>;
+  deleteVehicleCheckOutLog(id: string): Promise<void>;
+
+  // Vehicle check-in log operations
+  getVehicleCheckInLogs(filters?: { vehicleId?: string; userId?: string }): Promise<VehicleCheckInLog[]>;
+  getVehicleCheckInLog(id: string): Promise<VehicleCheckInLog | undefined>;
+  getCheckInLogByCheckOut(checkOutLogId: string): Promise<VehicleCheckInLog | undefined>;
+  createVehicleCheckInLog(log: InsertVehicleCheckInLog): Promise<VehicleCheckInLog>;
+  deleteVehicleCheckInLog(id: string): Promise<void>;
+
+  // Vehicle maintenance schedule operations
+  getVehicleMaintenanceSchedules(vehicleId?: string): Promise<VehicleMaintenanceSchedule[]>;
+  getVehicleMaintenanceSchedule(id: string): Promise<VehicleMaintenanceSchedule | undefined>;
+  createVehicleMaintenanceSchedule(schedule: InsertVehicleMaintenanceSchedule): Promise<VehicleMaintenanceSchedule>;
+  updateVehicleMaintenanceSchedule(id: string, data: Partial<InsertVehicleMaintenanceSchedule>): Promise<VehicleMaintenanceSchedule | undefined>;
+  deleteVehicleMaintenanceSchedule(id: string): Promise<void>;
+
+  // Upload extensions for vehicles
+  getUploadsByVehicle(vehicleId: string): Promise<Upload[]>;
+  getUploadsByCheckOutLog(checkOutLogId: string): Promise<Upload[]>;
+  getUploadsByCheckInLog(checkInLogId: string): Promise<Upload[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -467,6 +531,7 @@ export class DatabaseStorage implements IStorage {
         requestId: tasks.requestId,
         propertyId: tasks.propertyId,
         equipmentId: tasks.equipmentId,
+        vehicleId: tasks.vehicleId,
         name: tasks.name,
         description: tasks.description,
         urgency: tasks.urgency,
@@ -524,6 +589,7 @@ export class DatabaseStorage implements IStorage {
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
       equipmentId: tasks.equipmentId,
+      vehicleId: tasks.vehicleId,
       name: tasks.name,
       description: tasks.description,
       urgency: tasks.urgency,
@@ -802,6 +868,7 @@ export class DatabaseStorage implements IStorage {
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
       equipmentId: tasks.equipmentId,
+      vehicleId: tasks.vehicleId,
       name: tasks.name,
       description: tasks.description,
       urgency: tasks.urgency,
@@ -871,6 +938,292 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEquipment(id: string): Promise<void> {
     await this.db.delete(equipment).where(eq(equipment.id, id));
+  }
+
+  // Vehicle operations
+  async getVehicles(filters?: { status?: string }): Promise<Vehicle[]> {
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(vehicles.status, filters.status as any));
+    }
+    
+    const query = this.db.select().from(vehicles);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(vehicles.vehicleId);
+    }
+    return await query.orderBy(vehicles.vehicleId);
+  }
+
+  async getVehicle(id: string): Promise<Vehicle | undefined> {
+    const [vehicle] = await this.db.select().from(vehicles).where(eq(vehicles.id, id));
+    return vehicle;
+  }
+
+  async getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined> {
+    const [vehicle] = await this.db.select().from(vehicles).where(eq(vehicles.vehicleId, vehicleId));
+    return vehicle;
+  }
+
+  async createVehicle(vehicleData: InsertVehicle): Promise<Vehicle> {
+    const [vehicle] = await this.db.insert(vehicles).values(vehicleData).returning();
+    return vehicle;
+  }
+
+  async updateVehicle(id: string, data: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
+    const [vehicle] = await this.db
+      .update(vehicles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(vehicles.id, id))
+      .returning();
+    return vehicle;
+  }
+
+  async updateVehicleStatus(id: string, status: string): Promise<Vehicle | undefined> {
+    const [vehicle] = await this.db
+      .update(vehicles)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(vehicles.id, id))
+      .returning();
+    return vehicle;
+  }
+
+  async updateVehicleMileage(id: string, mileage: number): Promise<Vehicle | undefined> {
+    const [vehicle] = await this.db
+      .update(vehicles)
+      .set({ currentMileage: mileage, updatedAt: new Date() })
+      .where(eq(vehicles.id, id))
+      .returning();
+    return vehicle;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    await this.db.delete(vehicles).where(eq(vehicles.id, id));
+  }
+
+  // Vehicle reservation operations
+  async getVehicleReservations(filters?: {
+    vehicleId?: string;
+    userId?: string;
+    status?: string;
+  }): Promise<VehicleReservation[]> {
+    const conditions = [];
+    if (filters?.vehicleId) {
+      conditions.push(eq(vehicleReservations.vehicleId, filters.vehicleId));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(vehicleReservations.userId, filters.userId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(vehicleReservations.status, filters.status as any));
+    }
+    
+    const query = this.db.select().from(vehicleReservations);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(vehicleReservations.startDate));
+    }
+    return await query.orderBy(desc(vehicleReservations.startDate));
+  }
+
+  async getVehicleReservation(id: string): Promise<VehicleReservation | undefined> {
+    const [reservation] = await this.db.select().from(vehicleReservations).where(eq(vehicleReservations.id, id));
+    return reservation;
+  }
+
+  async createVehicleReservation(reservationData: InsertVehicleReservation): Promise<VehicleReservation> {
+    const [reservation] = await this.db.insert(vehicleReservations).values(reservationData).returning();
+    return reservation;
+  }
+
+  async updateVehicleReservation(id: string, data: Partial<InsertVehicleReservation>): Promise<VehicleReservation | undefined> {
+    const [reservation] = await this.db
+      .update(vehicleReservations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(vehicleReservations.id, id))
+      .returning();
+    return reservation;
+  }
+
+  async updateReservationStatus(id: string, status: string): Promise<VehicleReservation | undefined> {
+    const [reservation] = await this.db
+      .update(vehicleReservations)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(vehicleReservations.id, id))
+      .returning();
+    return reservation;
+  }
+
+  async deleteVehicleReservation(id: string): Promise<void> {
+    await this.db.delete(vehicleReservations).where(eq(vehicleReservations.id, id));
+  }
+
+  async checkVehicleAvailability(
+    vehicleId: string,
+    startDate: Date,
+    endDate: Date,
+    excludeReservationId?: string
+  ): Promise<boolean> {
+    const conditions = [
+      eq(vehicleReservations.vehicleId, vehicleId),
+      ne(vehicleReservations.status, "cancelled" as any),
+      or(
+        and(
+          sql`${vehicleReservations.startDate} <= ${endDate}`,
+          sql`${vehicleReservations.endDate} >= ${startDate}`
+        )
+      )
+    ];
+
+    if (excludeReservationId) {
+      conditions.push(ne(vehicleReservations.id, excludeReservationId));
+    }
+
+    const conflictingReservations = await this.db
+      .select()
+      .from(vehicleReservations)
+      .where(and(...conditions));
+
+    return conflictingReservations.length === 0;
+  }
+
+  // Vehicle check-out log operations
+  async getVehicleCheckOutLogs(filters?: { vehicleId?: string; userId?: string }): Promise<VehicleCheckOutLog[]> {
+    const conditions = [];
+    if (filters?.vehicleId) {
+      conditions.push(eq(vehicleCheckOutLogs.vehicleId, filters.vehicleId));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(vehicleCheckOutLogs.userId, filters.userId));
+    }
+    
+    const query = this.db.select().from(vehicleCheckOutLogs);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(vehicleCheckOutLogs.checkOutTime));
+    }
+    return await query.orderBy(desc(vehicleCheckOutLogs.checkOutTime));
+  }
+
+  async getVehicleCheckOutLog(id: string): Promise<VehicleCheckOutLog | undefined> {
+    const [log] = await this.db.select().from(vehicleCheckOutLogs).where(eq(vehicleCheckOutLogs.id, id));
+    return log;
+  }
+
+  async getCheckOutLogByReservation(reservationId: string): Promise<VehicleCheckOutLog | undefined> {
+    const [log] = await this.db
+      .select()
+      .from(vehicleCheckOutLogs)
+      .where(eq(vehicleCheckOutLogs.reservationId, reservationId));
+    return log;
+  }
+
+  async createVehicleCheckOutLog(logData: InsertVehicleCheckOutLog): Promise<VehicleCheckOutLog> {
+    const [log] = await this.db.insert(vehicleCheckOutLogs).values(logData).returning();
+    return log;
+  }
+
+  async deleteVehicleCheckOutLog(id: string): Promise<void> {
+    await this.db.delete(vehicleCheckOutLogs).where(eq(vehicleCheckOutLogs.id, id));
+  }
+
+  // Vehicle check-in log operations
+  async getVehicleCheckInLogs(filters?: { vehicleId?: string; userId?: string }): Promise<VehicleCheckInLog[]> {
+    const conditions = [];
+    if (filters?.vehicleId) {
+      conditions.push(eq(vehicleCheckInLogs.vehicleId, filters.vehicleId));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(vehicleCheckInLogs.userId, filters.userId));
+    }
+    
+    const query = this.db.select().from(vehicleCheckInLogs);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(vehicleCheckInLogs.checkInTime));
+    }
+    return await query.orderBy(desc(vehicleCheckInLogs.checkInTime));
+  }
+
+  async getVehicleCheckInLog(id: string): Promise<VehicleCheckInLog | undefined> {
+    const [log] = await this.db.select().from(vehicleCheckInLogs).where(eq(vehicleCheckInLogs.id, id));
+    return log;
+  }
+
+  async getCheckInLogByCheckOut(checkOutLogId: string): Promise<VehicleCheckInLog | undefined> {
+    const [log] = await this.db
+      .select()
+      .from(vehicleCheckInLogs)
+      .where(eq(vehicleCheckInLogs.checkOutLogId, checkOutLogId));
+    return log;
+  }
+
+  async createVehicleCheckInLog(logData: InsertVehicleCheckInLog): Promise<VehicleCheckInLog> {
+    const [log] = await this.db.insert(vehicleCheckInLogs).values(logData).returning();
+    return log;
+  }
+
+  async deleteVehicleCheckInLog(id: string): Promise<void> {
+    await this.db.delete(vehicleCheckInLogs).where(eq(vehicleCheckInLogs.id, id));
+  }
+
+  // Vehicle maintenance schedule operations
+  async getVehicleMaintenanceSchedules(vehicleId?: string): Promise<VehicleMaintenanceSchedule[]> {
+    if (vehicleId) {
+      return await this.db
+        .select()
+        .from(vehicleMaintenanceSchedules)
+        .where(eq(vehicleMaintenanceSchedules.vehicleId, vehicleId))
+        .orderBy(vehicleMaintenanceSchedules.maintenanceType);
+    }
+    return await this.db.select().from(vehicleMaintenanceSchedules).orderBy(vehicleMaintenanceSchedules.maintenanceType);
+  }
+
+  async getVehicleMaintenanceSchedule(id: string): Promise<VehicleMaintenanceSchedule | undefined> {
+    const [schedule] = await this.db
+      .select()
+      .from(vehicleMaintenanceSchedules)
+      .where(eq(vehicleMaintenanceSchedules.id, id));
+    return schedule;
+  }
+
+  async createVehicleMaintenanceSchedule(scheduleData: InsertVehicleMaintenanceSchedule): Promise<VehicleMaintenanceSchedule> {
+    const [schedule] = await this.db.insert(vehicleMaintenanceSchedules).values(scheduleData).returning();
+    return schedule;
+  }
+
+  async updateVehicleMaintenanceSchedule(
+    id: string,
+    data: Partial<InsertVehicleMaintenanceSchedule>
+  ): Promise<VehicleMaintenanceSchedule | undefined> {
+    const [schedule] = await this.db
+      .update(vehicleMaintenanceSchedules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(vehicleMaintenanceSchedules.id, id))
+      .returning();
+    return schedule;
+  }
+
+  async deleteVehicleMaintenanceSchedule(id: string): Promise<void> {
+    await this.db.delete(vehicleMaintenanceSchedules).where(eq(vehicleMaintenanceSchedules.id, id));
+  }
+
+  // Upload extensions for vehicles
+  async getUploadsByVehicle(vehicleId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.vehicleId, vehicleId));
+  }
+
+  async getUploadsByCheckOutLog(checkOutLogId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.checkOutLogId, checkOutLogId));
+  }
+
+  async getUploadsByCheckInLog(checkInLogId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.checkInLogId, checkInLogId));
   }
 }
 

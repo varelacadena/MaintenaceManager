@@ -28,6 +28,11 @@ import Settings from "@/pages/Settings";
 import PropertyMapPage from "./pages/PropertyMapPage";
 import PropertyDetail from "./pages/PropertyDetail";
 import EquipmentWorkHistory from "./pages/EquipmentWorkHistory";
+import Vehicles from "./pages/Vehicles";
+import VehicleDetail from "./pages/VehicleDetail";
+import MyReservations from "./pages/MyReservations";
+import VehicleCheckOut from "./pages/VehicleCheckOut";
+import VehicleCheckIn from "./pages/VehicleCheckIn";
 import { ScrollToTop } from "./components/ScrollToTop";
 
 function AuthenticatedApp() {
@@ -105,6 +110,11 @@ function AuthenticatedApp() {
                 <Route path="/credentials" component={Credentials} />
                 <Route path="/vendors" component={Vendors} />
                 <Route path="/inventory" component={Inventory} />
+                <Route path="/vehicles" component={Vehicles} />
+                <Route path="/vehicles/:id" component={VehicleDetail} />
+                <Route path="/my-reservations" component={MyReservations} />
+                <Route path="/vehicle-checkout/:reservationId" component={VehicleCheckOut} />
+                <Route path="/vehicle-checkin/:checkOutLogId" component={VehicleCheckIn} />
                 <Route component={NotFound} />
               </Switch>
             </main>

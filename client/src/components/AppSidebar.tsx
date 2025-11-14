@@ -24,6 +24,7 @@ import {
   Building2,
   Package,
   Map,
+  Car,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -40,6 +41,7 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
     { title: "Properties", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "User Management", url: "/users", icon: Users },
@@ -53,6 +55,7 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "My Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
     { title: "Properties", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Vendors", url: "/vendors", icon: Building2 },
@@ -63,6 +66,7 @@ const roleMenus = {
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
+    { title: "My Reservations", url: "/my-reservations", icon: Car },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],

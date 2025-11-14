@@ -133,6 +133,7 @@ export const tasks = pgTable("tasks", {
   requestId: varchar("request_id").references(() => serviceRequests.id),
   propertyId: varchar("property_id"),
   equipmentId: varchar("equipment_id").references(() => equipment.id),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id), // For vehicle-related tasks
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
@@ -223,11 +224,14 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
-// File uploads (can be attached to tasks OR requests)
+// File uploads (can be attached to tasks, requests, vehicles, or check-in/out logs)
 export const uploads = pgTable("uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
+  checkOutLogId: varchar("check_out_log_id").references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
+  checkInLogId: varchar("check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
@@ -329,6 +333,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   messages: many(messages),
   uploads: many(uploads),
   taskNotes: many(taskNotes),
+  vehicleReservations: many(vehicleReservations),
+  vehicleCheckOutLogs: many(vehicleCheckOutLogs),
+  vehicleCheckInLogs: many(vehicleCheckInLogs),
 }));
 
 export const vendorsRelations = relations(vendors, ({ many }) => ({
@@ -387,6 +394,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   equipment: one(equipment, {
     fields: [tasks.equipmentId],
     references: [equipment.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [tasks.vehicleId],
+    references: [vehicles.id],
   }),
   creator: one(users, {
     fields: [tasks.createdById],
@@ -463,6 +474,18 @@ export const uploadsRelations = relations(uploads, ({ one }) => ({
     fields: [uploads.requestId],
     references: [serviceRequests.id],
   }),
+  vehicle: one(vehicles, {
+    fields: [uploads.vehicleId],
+    references: [vehicles.id],
+  }),
+  checkOutLog: one(vehicleCheckOutLogs, {
+    fields: [uploads.checkOutLogId],
+    references: [vehicleCheckOutLogs.id],
+  }),
+  checkInLog: one(vehicleCheckInLogs, {
+    fields: [uploads.checkInLogId],
+    references: [vehicleCheckInLogs.id],
+  }),
   uploadedBy: one(users, {
     fields: [uploads.uploadedById],
     references: [users.id],
@@ -489,5 +512,205 @@ export const equipmentRelations = relations(equipment, ({ one }) => ({
   property: one(properties, {
     fields: [equipment.propertyId],
     references: [properties.id],
+  }),
+}));
+
+// Vehicle Fleet Management
+
+// Vehicle status enum
+export const vehicleStatusEnum = pgEnum("vehicle_status", [
+  "available",
+  "reserved",
+  "in_use",
+  "needs_cleaning",
+  "needs_maintenance",
+  "out_of_service"
+]);
+
+// Reservation status enum
+export const reservationStatusEnum = pgEnum("reservation_status", [
+  "pending",
+  "approved",
+  "active",
+  "completed",
+  "cancelled"
+]);
+
+// Vehicles table
+export const vehicles = pgTable("vehicles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  make: varchar("make", { length: 100 }).notNull(),
+  model: varchar("model", { length: 100 }).notNull(),
+  year: integer("year").notNull(),
+  vehicleId: varchar("vehicle_id", { length: 50 }).notNull().unique(), // Custom ID like "VEH-001"
+  licensePlate: varchar("license_plate", { length: 20 }).notNull().unique(),
+  status: vehicleStatusEnum("status").notNull().default("available"),
+  currentMileage: integer("current_mileage").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_vehicle_status").on(table.status),
+]);
+
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
+export type Vehicle = typeof vehicles.$inferSelect;
+
+// Vehicle reservations table
+export const vehicleReservations = pgTable("vehicle_reservations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  destination: varchar("destination", { length: 200 }).notNull(),
+  purpose: text("purpose").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: reservationStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_reservation_vehicle_dates").on(table.vehicleId, table.startDate, table.endDate),
+]);
+
+export const insertVehicleReservationSchema = createInsertSchema(vehicleReservations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertVehicleReservation = z.infer<typeof insertVehicleReservationSchema>;
+export type VehicleReservation = typeof vehicleReservations.$inferSelect;
+
+// Vehicle check-out logs table
+export const vehicleCheckOutLogs = pgTable("vehicle_check_out_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reservationId: varchar("reservation_id").notNull().references(() => vehicleReservations.id, { onDelete: "cascade" }),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "restrict" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  startMileage: integer("start_mileage").notNull(),
+  fuelLevel: varchar("fuel_level", { length: 20 }).notNull(),
+  cleanlinessConfirmed: boolean("cleanliness_confirmed").notNull().default(false),
+  damageNotes: text("damage_notes"),
+  digitalSignature: text("digital_signature"),
+  checkOutTime: timestamp("check_out_time").notNull().defaultNow(),
+}, (table) => [
+  index("idx_checkout_vehicle_time").on(table.vehicleId, table.checkOutTime),
+]);
+
+export const insertVehicleCheckOutLogSchema = createInsertSchema(vehicleCheckOutLogs).omit({
+  id: true,
+  checkOutTime: true,
+});
+export type InsertVehicleCheckOutLog = z.infer<typeof insertVehicleCheckOutLogSchema>;
+export type VehicleCheckOutLog = typeof vehicleCheckOutLogs.$inferSelect;
+
+// Vehicle check-in logs table
+export const vehicleCheckInLogs = pgTable("vehicle_check_in_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checkOutLogId: varchar("check_out_log_id").notNull().references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "restrict" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  endMileage: integer("end_mileage").notNull(),
+  fuelLevel: varchar("fuel_level", { length: 20 }).notNull(),
+  cleanlinessStatus: varchar("cleanliness_status", { length: 50 }).notNull(),
+  issues: text("issues"),
+  checkInTime: timestamp("check_in_time").notNull().defaultNow(),
+}, (table) => [
+  index("idx_checkin_vehicle_time").on(table.vehicleId, table.checkInTime),
+]);
+
+export const insertVehicleCheckInLogSchema = createInsertSchema(vehicleCheckInLogs).omit({
+  id: true,
+  checkInTime: true,
+});
+export type InsertVehicleCheckInLog = z.infer<typeof insertVehicleCheckInLogSchema>;
+export type VehicleCheckInLog = typeof vehicleCheckInLogs.$inferSelect;
+
+// Vehicle maintenance schedules table
+export const vehicleMaintenanceSchedules = pgTable("vehicle_maintenance_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  maintenanceType: varchar("maintenance_type", { length: 100 }).notNull(),
+  mileageThreshold: integer("mileage_threshold"),
+  timeThresholdDays: integer("time_threshold_days"),
+  lastPerformedMileage: integer("last_performed_mileage"),
+  lastPerformedDate: timestamp("last_performed_date"),
+  nextDueMileage: integer("next_due_mileage"),
+  nextDueDate: timestamp("next_due_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertVehicleMaintenanceScheduleSchema = createInsertSchema(vehicleMaintenanceSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertVehicleMaintenanceSchedule = z.infer<typeof insertVehicleMaintenanceScheduleSchema>;
+export type VehicleMaintenanceSchedule = typeof vehicleMaintenanceSchedules.$inferSelect;
+
+// Vehicle relations
+export const vehiclesRelations = relations(vehicles, ({ many }) => ({
+  reservations: many(vehicleReservations),
+  checkOutLogs: many(vehicleCheckOutLogs),
+  checkInLogs: many(vehicleCheckInLogs),
+  maintenanceSchedules: many(vehicleMaintenanceSchedules),
+  tasks: many(tasks),
+  uploads: many(uploads),
+}));
+
+export const vehicleReservationsRelations = relations(vehicleReservations, ({ one, many }) => ({
+  vehicle: one(vehicles, {
+    fields: [vehicleReservations.vehicleId],
+    references: [vehicles.id],
+  }),
+  user: one(users, {
+    fields: [vehicleReservations.userId],
+    references: [users.id],
+  }),
+  checkOutLogs: many(vehicleCheckOutLogs),
+}));
+
+export const vehicleCheckOutLogsRelations = relations(vehicleCheckOutLogs, ({ one, many }) => ({
+  reservation: one(vehicleReservations, {
+    fields: [vehicleCheckOutLogs.reservationId],
+    references: [vehicleReservations.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [vehicleCheckOutLogs.vehicleId],
+    references: [vehicles.id],
+  }),
+  user: one(users, {
+    fields: [vehicleCheckOutLogs.userId],
+    references: [users.id],
+  }),
+  checkInLog: one(vehicleCheckInLogs),
+  uploads: many(uploads),
+}));
+
+export const vehicleCheckInLogsRelations = relations(vehicleCheckInLogs, ({ one, many }) => ({
+  checkOutLog: one(vehicleCheckOutLogs, {
+    fields: [vehicleCheckInLogs.checkOutLogId],
+    references: [vehicleCheckOutLogs.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [vehicleCheckInLogs.vehicleId],
+    references: [vehicles.id],
+  }),
+  user: one(users, {
+    fields: [vehicleCheckInLogs.userId],
+    references: [users.id],
+  }),
+  uploads: many(uploads),
+}));
+
+export const vehicleMaintenanceSchedulesRelations = relations(vehicleMaintenanceSchedules, ({ one }) => ({
+  vehicle: one(vehicles, {
+    fields: [vehicleMaintenanceSchedules.vehicleId],
+    references: [vehicles.id],
   }),
 }));
