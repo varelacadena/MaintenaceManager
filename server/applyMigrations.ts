@@ -39,6 +39,7 @@ export async function applyMigrations() {
     { file: "012_add_equipment_id_to_tasks.sql", name: "012_add_equipment_id_to_tasks" },
     { file: "013_add_recurring_parameters.sql", name: "013_add_recurring_parameters" },
     { file: "014_add_contact_information_to_tasks.sql", name: "014_add_contact_information_to_tasks" },
+    { file: "015_add_key_location_to_reservations.sql", name: "015_add_key_location_to_reservations" },
   ];
 
   try {
