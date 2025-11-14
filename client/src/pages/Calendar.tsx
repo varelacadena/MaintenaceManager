@@ -55,58 +55,50 @@ function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onCl
           {...listeners}
           {...attributes}
           onClick={onClick}
-          className={`group/task text-xs p-1.5 rounded cursor-move transition-all bg-primary/10 border-l-2 ${
-            urgencyColors[task.urgency].replace('bg-', 'border-')
-          } hover:bg-primary/15 ${
+          className={`text-xs p-1 rounded cursor-move hover-elevate bg-muted ${
             isDragging ? "opacity-50" : ""
           }`}
           data-testid={`task-${task.id}`}
         >
-          <div className="flex items-center gap-1.5">
-            <span className="truncate flex-1 font-medium text-xs leading-tight">
-              {task.name}
-            </span>
+          <div className="flex items-center gap-1">
+            <div className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`} />
+            <span className="truncate flex-1">{task.name}</span>
           </div>
         </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-80" side="top">
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
-            <h4 className="font-semibold text-sm mb-1">{task.name}</h4>
+            <h4 className="font-semibold text-sm">{task.name}</h4>
             {task.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2">
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {task.description}
               </p>
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={`${statusColors[task.status]} text-xs h-5`}>
+            <Badge variant="outline" className={statusColors[task.status]}>
               {task.status.replace("_", " ")}
             </Badge>
-            <Badge variant="outline" className="capitalize text-xs h-5">
+            <Badge variant="outline" className="capitalize">
               {task.urgency}
             </Badge>
           </div>
-          <div className="space-y-1 pt-2 border-t text-xs">
-            {area && (
-              <p className="text-muted-foreground flex items-center gap-2">
-                <span>📍</span>
-                <span>{area.name}</span>
-              </p>
-            )}
-            {assignedUser && (
-              <p className="text-muted-foreground flex items-center gap-2">
-                <span>👤</span>
-                <span>{assignedUser.firstName} {assignedUser.lastName}</span>
-              </p>
-            )}
-            {task.location && (
-              <p className="text-muted-foreground flex items-center gap-2">
-                <span>📌</span>
-                <span>{task.location}</span>
-              </p>
-            )}
-          </div>
+          {area && (
+            <p className="text-xs text-muted-foreground">
+              📍 Area: {area.name}
+            </p>
+          )}
+          {assignedUser && (
+            <p className="text-xs text-muted-foreground">
+              👤 Assigned to: {assignedUser.firstName} {assignedUser.lastName}
+            </p>
+          )}
+          {task.location && (
+            <p className="text-xs text-muted-foreground">
+              📌 Location: {task.location}
+            </p>
+          )}
         </div>
       </HoverCardContent>
     </HoverCard>
@@ -141,30 +133,17 @@ function DroppableDay({
   return (
     <div
       ref={setNodeRef}
-      className={`group min-h-[100px] border-r border-b border-border/30 last:border-r-0 p-2 cursor-pointer transition-colors ${
-        isToday 
-          ? "bg-primary/5" 
-          : "hover:bg-muted/30"
-      } ${isOver ? "bg-primary/10" : ""}`}
+      className={`min-h-[100px] border rounded-md p-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+        isToday ? "border-primary border-2" : ""
+      } ${isOver ? "bg-primary/5 border-primary" : ""}`}
       onClick={() => onDayClick(date)}
       data-testid={`calendar-day-${day}`}
     >
-      <div className="flex items-start justify-between mb-1.5">
-        <div className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${
-          isToday 
-            ? "bg-primary text-primary-foreground" 
-            : "text-foreground"
-        }`}>
-          {day}
-        </div>
-        {tasks.length > 0 && (
-          <div className="text-xs text-muted-foreground font-medium">
-            {tasks.length}
-          </div>
-        )}
+      <div className={`text-sm font-medium mb-2 ${isToday ? "text-primary" : ""}`}>
+        {day}
       </div>
       <div className="space-y-1">
-        {tasks.slice(0, 2).map((task) => {
+        {tasks.slice(0, 3).map((task) => {
           const assignedUser = users.find((u) => u.id === task.assignedToId);
           const area = areas.find((a) => a.id === task.areaId);
           return (
@@ -180,9 +159,9 @@ function DroppableDay({
             />
           );
         })}
-        {tasks.length > 2 && (
-          <div className="text-xs text-muted-foreground px-1.5 py-0.5">
-            +{tasks.length - 2} more
+        {tasks.length > 3 && (
+          <div className="text-xs text-muted-foreground">
+            +{tasks.length - 3} more
           </div>
         )}
       </div>
@@ -408,24 +387,22 @@ export default function Calendar() {
   const renderCalendarView = () => {
     if (view === "month") {
       return (
-        <div className="border border-border/50 rounded-lg bg-background overflow-hidden">
-          {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-border/50">
+        <Card className="p-3 md:p-6">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3 md:mb-4">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-xs font-medium text-center text-muted-foreground py-2.5 border-r border-border/30 last:border-r-0"
+                className="text-xs md:text-sm font-medium text-center text-muted-foreground py-1 md:py-2"
               >
-                {day.substring(0, 2)}
+                {day.substring(0, 3)}
               </div>
             ))}
           </div>
 
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
             {monthDays.map((day, index) => {
               if (day === null) {
-                return <div key={`empty-${index}`} className="min-h-[100px] border-r border-b border-border/30 last:border-r-0 bg-muted/5" />;
+                return <div key={`empty-${index}`} className="min-h-[100px]" />;
               }
 
               const date = new Date(
@@ -454,25 +431,23 @@ export default function Calendar() {
               );
             })}
           </div>
-        </div>
+        </Card>
       );
     } else if (view === "week") {
       return (
-        <div className="border border-border/50 rounded-lg bg-background overflow-hidden">
-          {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-border/50">
+        <Card className="p-3 md:p-6">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3 md:mb-4">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-xs font-medium text-center text-muted-foreground py-2.5 border-r border-border/30 last:border-r-0"
+                className="text-xs md:text-sm font-medium text-center text-muted-foreground py-1 md:py-2"
               >
-                {day.substring(0, 2)}
+                {day.substring(0, 3)}
               </div>
             ))}
           </div>
 
-          {/* Week grid */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
             {weekDays.map((date) => {
               const dateKey = date.toDateString();
               const dayTasks = tasksByDate.get(dateKey) || [];
@@ -496,7 +471,7 @@ export default function Calendar() {
               );
             })}
           </div>
-        </div>
+        </Card>
       );
     } else {
       // Day view
@@ -504,31 +479,18 @@ export default function Calendar() {
       const dayTasks = tasksByDate.get(dateKey) || [];
 
       return (
-        <Card className="p-6 border-border/50 bg-background">
+        <Card className="p-6">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-border/50">
-              <h3 className="text-lg font-semibold">
-                {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
-              </h3>
-              <Badge variant="secondary" className="text-xs h-5">
-                {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
-              </Badge>
-            </div>
+            <h3 className="text-lg font-semibold">
+              {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
+            </h3>
 
             {dayTasks.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-muted/30 mx-auto mb-3 flex items-center justify-center">
-                  <CalendarIcon className="w-8 h-8 text-muted-foreground/40" />
-                </div>
-                <p className="text-muted-foreground text-sm font-medium">
-                  No tasks scheduled
-                </p>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  Drag tasks here or create a new task
-                </p>
-              </div>
+              <p className="text-muted-foreground text-center py-8">
+                No tasks scheduled for this day
+              </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {dayTasks.map((task) => {
                   const assignedUser = users.find((u) => u.id === task.assignedToId);
                   const area = areas.find((a) => a.id === task.areaId);
@@ -537,41 +499,36 @@ export default function Calendar() {
                     <div
                       key={task.id}
                       onClick={() => handleTaskClick(task.id)}
-                      className="group flex items-start gap-3 p-3 rounded-md bg-background hover:bg-muted/50 cursor-pointer border border-border/30 transition-all"
+                      className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
                       data-testid={`day-task-${task.id}`}
                     >
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${urgencyColors[task.urgency]}`} />
-                      
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm mb-1 group-hover:text-primary transition-colors">
-                          {task.name}
-                        </h4>
-                        
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`w-3 h-3 rounded-full ${urgencyColors[task.urgency]}`} />
+                          <h4 className="font-medium">{task.name}</h4>
+                        </div>
                         {task.description && (
-                          <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
+                          <p className="text-sm text-muted-foreground truncate">
                             {task.description}
                           </p>
                         )}
-                        
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          {area && (
-                            <span className="flex items-center gap-1">
-                              <span>📍</span>
-                              <span>{area.name}</span>
-                            </span>
-                          )}
-                          {assignedUser && (
-                            <span className="flex items-center gap-1">
-                              <span>👤</span>
-                              <span>{assignedUser.firstName} {assignedUser.lastName}</span>
-                            </span>
-                          )}
-                        </div>
+                        {area && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            📍 {area.name}
+                          </p>
+                        )}
+                        {assignedUser && (
+                          <p className="text-xs text-muted-foreground">
+                            👤 {assignedUser.firstName} {assignedUser.lastName}
+                          </p>
+                        )}
                       </div>
-                      
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <Badge variant="outline" className={`${statusColors[task.status]} text-xs h-5`}>
+                        <Badge variant="outline" className={statusColors[task.status]}>
                           {task.status.replace("_", " ")}
+                        </Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {task.urgency}
                         </Badge>
                       </div>
                     </div>
@@ -591,140 +548,92 @@ export default function Calendar() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4">
-        {/* Clean minimal header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap pb-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground" data-testid="text-page-title">
-              Calendar
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+              Task Calendar
             </h1>
-            
-            {isMaintenanceOrAdmin && (
-              <Button 
-                onClick={() => navigate("/tasks/new")} 
-                data-testid="button-new-task"
-                variant="ghost"
-                size="sm"
-                className="text-sm"
-              >
-                <Plus className="w-4 h-4 mr-1.5" />
-                New task
-              </Button>
-            )}
+            <p className="text-muted-foreground mt-1">
+              {isMaintenanceOrAdmin
+                ? "Drag tasks to reschedule them"
+                : "View scheduled maintenance tasks"}
+            </p>
           </div>
-
-          {/* View toggles and navigation */}
-          <div className="flex items-center gap-2">
-            <ToggleGroup 
-              type="single" 
-              value={view} 
-              onValueChange={(v) => v && setView(v as CalendarView)}
-              className="border border-border/50 rounded-md"
-            >
-              <ToggleGroupItem 
-                value="month" 
-                aria-label="Month view"
-                className="data-[state=on]:bg-muted text-sm px-3 h-8"
-              >
+          <div className="flex items-center gap-2 flex-wrap">
+            <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as CalendarView)}>
+              <ToggleGroupItem value="month" aria-label="Month view">
                 Month
               </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="week" 
-                aria-label="Week view"
-                className="data-[state=on]:bg-muted text-sm px-3 h-8"
-              >
+              <ToggleGroupItem value="week" aria-label="Week view">
                 Week
               </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="day" 
-                aria-label="Day view"
-                className="data-[state=on]:bg-muted text-sm px-3 h-8"
-              >
+              <ToggleGroupItem value="day" aria-label="Day view">
                 Day
               </ToggleGroupItem>
             </ToggleGroup>
-
-            <div className="flex items-center gap-1 border border-border/50 rounded-md">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goToPrevious}
-                data-testid="button-prev"
-                className="h-8 w-8 hover:bg-muted"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                className="h-8 px-3 text-sm font-medium hover:bg-muted"
-                onClick={handleCalendarClick}
-                data-testid="button-calendar-display"
-              >
-                {getDisplayDate()}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goToNext}
-                data-testid="button-next"
-                className="h-8 w-8 hover:bg-muted"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <Button 
-              onClick={goToToday} 
-              data-testid="button-today"
+            <Button
               variant="outline"
-              size="sm"
-              className="text-sm h-8 border-border/50"
+              size="icon"
+              onClick={goToPrevious}
+              data-testid="button-prev"
             >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 px-4 py-2 min-w-[200px] justify-center"
+              onClick={handleCalendarClick}
+              data-testid="button-calendar-display"
+            >
+              <CalendarIcon className="w-4 h-4" />
+              <span className="font-medium text-sm">{getDisplayDate()}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNext}
+              data-testid="button-next"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Button onClick={goToToday} data-testid="button-today">
               Today
             </Button>
+            {isMaintenanceOrAdmin && (
+              <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
+                <Plus className="w-4 h-4 mr-2" />
+                New Task
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Calendar View */}
-        <div className="relative">
-          {renderCalendarView()}
-        </div>
+        {renderCalendarView()}
 
-        {/* Today's Tasks Panel - Only show if there are tasks */}
         {todayTasks.length > 0 && (
-          <Card className="p-4 border-border/50 bg-background">
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="font-medium text-sm">Today's Tasks</h3>
-              <Badge variant="secondary" className="h-5 text-xs">
-                {todayTasks.length}
-              </Badge>
-            </div>
-            <div className="space-y-2">
+          <Card className="p-6">
+            <h3 className="font-semibold text-lg mb-4">Today's Tasks</h3>
+            <div className="space-y-3">
               {todayTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => navigate(`/tasks/${task.id}`)}
-                  className="group flex items-center justify-between p-3 rounded-md bg-background hover:bg-muted/50 cursor-pointer border border-border/30 transition-all"
+                  className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
                   data-testid={`today-task-${task.id}`}
                 >
-                  <div className="flex-1 min-w-0 flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${urgencyColors[task.urgency]}`} />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm mb-0.5 group-hover:text-primary transition-colors truncate">
-                        {task.name}
-                      </h4>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium">{task.name}</h4>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {task.description}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    <Badge variant="outline" className={`${statusColors[task.status]} text-xs h-5`}>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge variant="outline" className={statusColors[task.status]}>
                       {task.status.replace("_", " ")}
+                    </Badge>
+                    <Badge variant="outline" className={urgencyColors[task.urgency]}>
+                      {task.urgency}
                     </Badge>
                   </div>
                 </div>
@@ -733,13 +642,14 @@ export default function Calendar() {
           </Card>
         )}
 
-        {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <div className="text-xs p-2.5 rounded-md bg-background shadow-lg border border-border">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${urgencyColors[activeTask.urgency]}`} />
-                <span className="truncate font-medium text-sm">{activeTask.name}</span>
+            <div className="text-xs p-1 rounded bg-muted shadow-lg border">
+              <div className="flex items-center gap-1">
+                <div
+                  className={`w-2 h-2 rounded-full ${urgencyColors[activeTask.urgency]}`}
+                />
+                <span className="truncate">{activeTask.name}</span>
               </div>
             </div>
           ) : null}
