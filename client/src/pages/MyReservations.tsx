@@ -183,9 +183,13 @@ export default function MyReservations() {
                       <FormControl>
                         <Input
                           type="datetime-local"
-                          {...field}
                           value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                          onChange={(e) => {
+                            const dateValue = e.target.value;
+                            if (dateValue) {
+                              field.onChange(new Date(dateValue).toISOString());
+                            }
+                          }}
                           data-testid="input-start-date"
                         />
                       </FormControl>
@@ -202,9 +206,13 @@ export default function MyReservations() {
                       <FormControl>
                         <Input
                           type="datetime-local"
-                          {...field}
                           value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                          onChange={(e) => {
+                            const dateValue = e.target.value;
+                            if (dateValue) {
+                              field.onChange(new Date(dateValue).toISOString());
+                            }
+                          }}
                           data-testid="input-end-date"
                         />
                       </FormControl>
