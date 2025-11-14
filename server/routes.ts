@@ -1198,6 +1198,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification counts endpoint
+  app.get("/api/notifications/counts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let pendingServiceRequests = 0;
+      let pendingVehicleReservations = 0;
+      let unreadMessages = 0;
+
+      if (currentUser.role === "admin" || currentUser.role === "maintenance") {
+        const serviceRequests = await storage.getServiceRequests({
+          status: "pending",
+        });
+        pendingServiceRequests = serviceRequests.length;
+
+        const underReviewRequests = await storage.getServiceRequests({
+          status: "under_review",
+        });
+        pendingServiceRequests += underReviewRequests.length;
+
+        const vehicleReservations = await storage.getVehicleReservations({
+          status: "pending",
+        });
+        pendingVehicleReservations = vehicleReservations.length;
+      }
+
+      const messages = await storage.getMessages();
+      unreadMessages = messages.filter(
+        (msg) => !msg.read && msg.senderId !== userId
+      ).length;
+
+      res.json({
+        pendingServiceRequests,
+        pendingVehicleReservations,
+        unreadMessages,
+      });
+    } catch (error) {
+      console.error("Error fetching notification counts:", error);
+      res.status(500).json({ message: "Failed to fetch notification counts" });
+    }
+  });
+
   // Object storage routes for uploads
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {
