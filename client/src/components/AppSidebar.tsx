@@ -27,7 +27,7 @@ import {
   Car,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 
 interface AppSidebarProps {
   userRole: "admin" | "maintenance" | "staff";
@@ -77,7 +77,7 @@ const roleMenus = {
 export default function AppSidebar({ userRole, userName, userInitials }: AppSidebarProps) {
   const [location] = useLocation();
   const menuItems = roleMenus[userRole];
-  const { unreadCount } = useUnreadMessages();
+  const notificationCounts = useNotificationCounts();
 
   return (
     <Sidebar>
@@ -97,23 +97,35 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <div className="flex items-center gap-2 flex-1">
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                        {item.title === "Messages" && unreadCount > 0 && (
-                          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white">
-                            {unreadCount > 9 ? "9+" : unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item) => {
+                let badgeCount = 0;
+                
+                if (item.title === "Messages" && notificationCounts.unreadMessages > 0) {
+                  badgeCount = notificationCounts.unreadMessages;
+                } else if (item.title === "Service Requests" && notificationCounts.pendingServiceRequests > 0) {
+                  badgeCount = notificationCounts.pendingServiceRequests;
+                } else if (item.title === "Vehicle Reservations" && notificationCounts.pendingVehicleReservations > 0) {
+                  badgeCount = notificationCounts.pendingVehicleReservations;
+                }
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={location === item.url}>
+                      <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <div className="flex items-center gap-2 flex-1">
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.title}</span>
+                          {badgeCount > 0 && (
+                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white" data-testid={`badge-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                              {badgeCount > 9 ? "9+" : badgeCount}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
