@@ -1712,13 +1712,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/vehicle-reservations", isAuthenticated, async (req, res) => {
     try {
-      const reservationData = insertVehicleReservationSchema.parse(req.body);
+      // Convert date strings to Date objects before validation
+      const bodyWithDates = {
+        ...req.body,
+        startDate: new Date(req.body.startDate),
+        endDate: new Date(req.body.endDate),
+      };
+      
+      const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
       
       // Check vehicle availability
       const isAvailable = await storage.checkVehicleAvailability(
         reservationData.vehicleId,
-        new Date(reservationData.startDate),
-        new Date(reservationData.endDate)
+        reservationData.startDate,
+        reservationData.endDate
       );
 
       if (!isAvailable) {
