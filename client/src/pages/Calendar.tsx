@@ -55,23 +55,25 @@ function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onCl
           {...listeners}
           {...attributes}
           onClick={onClick}
-          className={`text-xs p-1 rounded cursor-move hover-elevate bg-muted ${
-            isDragging ? "opacity-50" : ""
+          className={`group/task text-xs p-2 rounded-md cursor-move transition-all duration-200 bg-background border border-border/50 hover:shadow-sm hover:border-primary/30 ${
+            isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02]"
           }`}
           data-testid={`task-${task.id}`}
         >
-          <div className="flex items-center gap-1">
-            <div className={`w-2 h-2 rounded-full ${urgencyColors[task.urgency]}`} />
-            <span className="truncate flex-1">{task.name}</span>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${urgencyColors[task.urgency]} shadow-sm`} />
+            <span className="truncate flex-1 font-medium group-hover/task:text-primary transition-colors">
+              {task.name}
+            </span>
           </div>
         </div>
       </HoverCardTrigger>
-      <HoverCardContent className="w-80" side="top">
-        <div className="space-y-2">
+      <HoverCardContent className="w-80 shadow-lg" side="top">
+        <div className="space-y-3">
           <div>
-            <h4 className="font-semibold text-sm">{task.name}</h4>
+            <h4 className="font-semibold text-base mb-1">{task.name}</h4>
             {task.description && (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+              <p className="text-sm text-muted-foreground line-clamp-2">
                 {task.description}
               </p>
             )}
@@ -84,21 +86,26 @@ function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onCl
               {task.urgency}
             </Badge>
           </div>
-          {area && (
-            <p className="text-xs text-muted-foreground">
-              📍 Area: {area.name}
-            </p>
-          )}
-          {assignedUser && (
-            <p className="text-xs text-muted-foreground">
-              👤 Assigned to: {assignedUser.firstName} {assignedUser.lastName}
-            </p>
-          )}
-          {task.location && (
-            <p className="text-xs text-muted-foreground">
-              📌 Location: {task.location}
-            </p>
-          )}
+          <div className="space-y-1.5 pt-2 border-t">
+            {area && (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>📍</span>
+                <span>{area.name}</span>
+              </p>
+            )}
+            {assignedUser && (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>👤</span>
+                <span>{assignedUser.firstName} {assignedUser.lastName}</span>
+              </p>
+            )}
+            {task.location && (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>📌</span>
+                <span>{task.location}</span>
+              </p>
+            )}
+          </div>
         </div>
       </HoverCardContent>
     </HoverCard>
@@ -133,16 +140,29 @@ function DroppableDay({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[100px] border rounded-md p-2 cursor-pointer hover:bg-muted/50 transition-colors ${
-        isToday ? "border-primary border-2" : ""
-      } ${isOver ? "bg-primary/5 border-primary" : ""}`}
+      className={`group min-h-[120px] border rounded-lg p-3 cursor-pointer transition-all duration-200 ${
+        isToday 
+          ? "border-primary border-2 bg-primary/5 shadow-sm" 
+          : "border-border/50 hover:border-primary/30 hover:shadow-sm"
+      } ${isOver ? "bg-primary/10 border-primary shadow-md scale-[1.02]" : "hover:bg-muted/30"}`}
       onClick={() => onDayClick(date)}
       data-testid={`calendar-day-${day}`}
     >
-      <div className={`text-sm font-medium mb-2 ${isToday ? "text-primary" : ""}`}>
-        {day}
+      <div className={`flex items-center justify-between mb-3 ${isToday ? "text-primary" : "text-foreground"}`}>
+        <div className={`text-sm font-semibold ${isToday ? "text-base" : ""}`}>
+          {day}
+        </div>
+        {tasks.length > 0 && (
+          <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            isToday 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+          }`}>
+            {tasks.length}
+          </div>
+        )}
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {tasks.slice(0, 3).map((task) => {
           const assignedUser = users.find((u) => u.id === task.assignedToId);
           const area = areas.find((a) => a.id === task.areaId);
@@ -160,7 +180,7 @@ function DroppableDay({
           );
         })}
         {tasks.length > 3 && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-medium px-2 py-1 text-center bg-muted/50 rounded group-hover:bg-muted">
             +{tasks.length - 3} more
           </div>
         )}
@@ -387,22 +407,24 @@ export default function Calendar() {
   const renderCalendarView = () => {
     if (view === "month") {
       return (
-        <Card className="p-3 md:p-6">
-          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3 md:mb-4">
+        <Card className="p-4 md:p-6 shadow-sm border-border/50 overflow-hidden">
+          {/* Day headers with modern styling */}
+          <div className="grid grid-cols-7 gap-2 md:gap-3 mb-4">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-xs md:text-sm font-medium text-center text-muted-foreground py-1 md:py-2"
+                className="text-xs md:text-sm font-semibold text-center text-muted-foreground uppercase tracking-wider py-2 bg-muted/30 rounded-md"
               >
                 {day.substring(0, 3)}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 md:gap-2">
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7 gap-2 md:gap-3">
             {monthDays.map((day, index) => {
               if (day === null) {
-                return <div key={`empty-${index}`} className="min-h-[100px]" />;
+                return <div key={`empty-${index}`} className="min-h-[120px] bg-muted/10 rounded-lg" />;
               }
 
               const date = new Date(
@@ -435,19 +457,21 @@ export default function Calendar() {
       );
     } else if (view === "week") {
       return (
-        <Card className="p-3 md:p-6">
-          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3 md:mb-4">
+        <Card className="p-4 md:p-6 shadow-sm border-border/50 overflow-hidden">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 gap-2 md:gap-3 mb-4">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-xs md:text-sm font-medium text-center text-muted-foreground py-1 md:py-2"
+                className="text-xs md:text-sm font-semibold text-center text-muted-foreground uppercase tracking-wider py-2 bg-muted/30 rounded-md"
               >
                 {day.substring(0, 3)}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 md:gap-2">
+          {/* Week grid */}
+          <div className="grid grid-cols-7 gap-2 md:gap-3">
             {weekDays.map((date) => {
               const dateKey = date.toDateString();
               const dayTasks = tasksByDate.get(dateKey) || [];
@@ -474,23 +498,37 @@ export default function Calendar() {
         </Card>
       );
     } else {
-      // Day view
+      // Day view - Enhanced with timeline feel
       const dateKey = currentDate.toDateString();
       const dayTasks = tasksByDate.get(dateKey) || [];
 
       return (
-        <Card className="p-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">
-              {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
-            </h3>
+        <Card className="p-8 shadow-sm border-border/50 bg-gradient-to-br from-background to-muted/10">
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 pb-4 border-b">
+              <div className="w-1 h-10 bg-primary rounded-full" />
+              <h3 className="text-2xl font-bold">
+                {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
+              </h3>
+              <Badge variant="secondary" className="ml-auto">
+                {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
+              </Badge>
+            </div>
 
             {dayTasks.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No tasks scheduled for this day
-              </p>
+              <div className="text-center py-16">
+                <div className="w-20 h-20 rounded-full bg-muted/50 mx-auto mb-4 flex items-center justify-center">
+                  <CalendarIcon className="w-10 h-10 text-muted-foreground/50" />
+                </div>
+                <p className="text-muted-foreground text-lg font-medium">
+                  No tasks scheduled for this day
+                </p>
+                <p className="text-sm text-muted-foreground/70 mt-2">
+                  Drag tasks here from other days or create a new task
+                </p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {dayTasks.map((task) => {
                   const assignedUser = users.find((u) => u.id === task.assignedToId);
                   const area = areas.find((a) => a.id === task.areaId);
@@ -499,30 +537,40 @@ export default function Calendar() {
                     <div
                       key={task.id}
                       onClick={() => handleTaskClick(task.id)}
-                      className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
+                      className="group flex items-start gap-4 p-5 rounded-lg bg-background hover-elevate cursor-pointer border border-border/50 transition-all duration-200 hover:shadow-md"
                       data-testid={`day-task-${task.id}`}
                     >
+                      <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${urgencyColors[task.urgency]} shadow-sm`} />
+                      
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className={`w-3 h-3 rounded-full ${urgencyColors[task.urgency]}`} />
-                          <h4 className="font-medium">{task.name}</h4>
+                        <div className="flex items-start gap-3 mb-2">
+                          <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                            {task.name}
+                          </h4>
                         </div>
+                        
                         {task.description && (
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                             {task.description}
                           </p>
                         )}
-                        {area && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            📍 {area.name}
-                          </p>
-                        )}
-                        {assignedUser && (
-                          <p className="text-xs text-muted-foreground">
-                            👤 {assignedUser.firstName} {assignedUser.lastName}
-                          </p>
-                        )}
+                        
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                          {area && (
+                            <span className="flex items-center gap-1.5">
+                              <span>📍</span>
+                              <span>{area.name}</span>
+                            </span>
+                          )}
+                          {assignedUser && (
+                            <span className="flex items-center gap-1.5">
+                              <span>👤</span>
+                              <span>{assignedUser.firstName} {assignedUser.lastName}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge variant="outline" className={statusColors[task.status]}>
                           {task.status.replace("_", " ")}
@@ -548,91 +596,153 @@ export default function Calendar() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              Task Calendar
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {isMaintenanceOrAdmin
-                ? "Drag tasks to reschedule them"
-                : "View scheduled maintenance tasks"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as CalendarView)}>
-              <ToggleGroupItem value="month" aria-label="Month view">
-                Month
-              </ToggleGroupItem>
-              <ToggleGroupItem value="week" aria-label="Week view">
-                Week
-              </ToggleGroupItem>
-              <ToggleGroupItem value="day" aria-label="Day view">
-                Day
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goToPrevious}
-              data-testid="button-prev"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 px-4 py-2 min-w-[200px] justify-center"
-              onClick={handleCalendarClick}
-              data-testid="button-calendar-display"
-            >
-              <CalendarIcon className="w-4 h-4" />
-              <span className="font-medium text-sm">{getDisplayDate()}</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goToNext}
-              data-testid="button-next"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button onClick={goToToday} data-testid="button-today">
-              Today
-            </Button>
+      <div className="space-y-8">
+        {/* Modern Header with gradient accent */}
+        <div className="space-y-6">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold tracking-tight" data-testid="text-page-title">
+                Task Calendar
+              </h1>
+              <p className="text-muted-foreground text-base">
+                {isMaintenanceOrAdmin
+                  ? "✨ Drag and drop tasks to reschedule them effortlessly"
+                  : "📅 View and track your scheduled maintenance tasks"}
+              </p>
+            </div>
+            
             {isMaintenanceOrAdmin && (
-              <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
+              <Button 
+                onClick={() => navigate("/tasks/new")} 
+                data-testid="button-new-task"
+                className="shadow-sm"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create Task
               </Button>
             )}
           </div>
+
+          {/* Modern Controls Bar */}
+          <Card className="p-4 shadow-sm border-border/50">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <ToggleGroup 
+                type="single" 
+                value={view} 
+                onValueChange={(v) => v && setView(v as CalendarView)}
+                className="bg-muted/50 p-1 rounded-lg"
+              >
+                <ToggleGroupItem 
+                  value="month" 
+                  aria-label="Month view"
+                  className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-6"
+                >
+                  Month
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="week" 
+                  aria-label="Week view"
+                  className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-6"
+                >
+                  Week
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="day" 
+                  aria-label="Day view"
+                  className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-6"
+                >
+                  Day
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={goToPrevious}
+                    data-testid="button-prev"
+                    className="hover:bg-background"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 px-6 py-2 min-w-[220px] justify-center font-semibold hover:bg-background"
+                    onClick={handleCalendarClick}
+                    data-testid="button-calendar-display"
+                  >
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                    <span className="text-sm">{getDisplayDate()}</span>
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={goToNext}
+                    data-testid="button-next"
+                    className="hover:bg-background"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                <Button 
+                  onClick={goToToday} 
+                  data-testid="button-today"
+                  variant="outline"
+                  className="font-medium"
+                >
+                  Today
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        {renderCalendarView()}
+        {/* Calendar View */}
+        <div className="relative">
+          {renderCalendarView()}
+        </div>
 
+        {/* Today's Tasks Panel - Only show if there are tasks */}
         {todayTasks.length > 0 && (
-          <Card className="p-6">
-            <h3 className="font-semibold text-lg mb-4">Today's Tasks</h3>
+          <Card className="p-6 shadow-sm border-border/50 bg-gradient-to-br from-background to-muted/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-primary rounded-full" />
+              <h3 className="font-semibold text-xl">Today's Tasks</h3>
+              <Badge variant="secondary" className="ml-auto">
+                {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'}
+              </Badge>
+            </div>
             <div className="space-y-3">
               {todayTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => navigate(`/tasks/${task.id}`)}
-                  className="flex items-center justify-between p-4 rounded-md bg-muted hover-elevate cursor-pointer"
+                  className="group flex items-center justify-between p-5 rounded-lg bg-background hover-elevate cursor-pointer border border-border/50 transition-all duration-200 hover:shadow-md"
                   data-testid={`today-task-${task.id}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium">{task.name}</h4>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {task.description}
-                    </p>
+                  <div className="flex-1 min-w-0 flex items-start gap-4">
+                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${urgencyColors[task.urgency]} shadow-sm`} />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                        {task.name}
+                      </h4>
+                      {task.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                     <Badge variant="outline" className={statusColors[task.status]}>
                       {task.status.replace("_", " ")}
                     </Badge>
-                    <Badge variant="outline" className={urgencyColors[task.urgency]}>
+                    <Badge variant="outline" className="capitalize">
                       {task.urgency}
                     </Badge>
                   </div>
@@ -642,14 +752,15 @@ export default function Calendar() {
           </Card>
         )}
 
+        {/* Drag Overlay with enhanced styling */}
         <DragOverlay>
           {activeTask ? (
-            <div className="text-xs p-1 rounded bg-muted shadow-lg border">
-              <div className="flex items-center gap-1">
+            <div className="text-xs p-3 rounded-lg bg-background shadow-2xl border-2 border-primary/20 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
                 <div
-                  className={`w-2 h-2 rounded-full ${urgencyColors[activeTask.urgency]}`}
+                  className={`w-2.5 h-2.5 rounded-full ${urgencyColors[activeTask.urgency]} shadow-sm`}
                 />
-                <span className="truncate">{activeTask.name}</span>
+                <span className="truncate font-medium">{activeTask.name}</span>
               </div>
             </div>
           ) : null}
