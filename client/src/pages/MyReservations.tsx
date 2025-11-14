@@ -180,15 +180,32 @@ export default function MyReservations() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
-                          data-testid="input-start-date"
-                        />
-                      </FormControl>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ""}
+                            onChange={(e) => {
+                              const currentTime = field.value ? new Date(field.value).toTimeString().slice(0, 5) : "09:00";
+                              const newDateTime = new Date(`${e.target.value}T${currentTime}`);
+                              field.onChange(newDateTime);
+                            }}
+                            data-testid="input-start-date"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            value={field.value ? new Date(field.value).toTimeString().slice(0, 5) : ""}
+                            onChange={(e) => {
+                              const currentDate = field.value ? new Date(field.value).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                              const newDateTime = new Date(`${currentDate}T${e.target.value}`);
+                              field.onChange(newDateTime);
+                            }}
+                            data-testid="input-start-time"
+                          />
+                        </FormControl>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -199,15 +216,32 @@ export default function MyReservations() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
-                          data-testid="input-end-date"
-                        />
-                      </FormControl>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ""}
+                            onChange={(e) => {
+                              const currentTime = field.value ? new Date(field.value).toTimeString().slice(0, 5) : "17:00";
+                              const newDateTime = new Date(`${e.target.value}T${currentTime}`);
+                              field.onChange(newDateTime);
+                            }}
+                            data-testid="input-end-date"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            value={field.value ? new Date(field.value).toTimeString().slice(0, 5) : ""}
+                            onChange={(e) => {
+                              const currentDate = field.value ? new Date(field.value).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                              const newDateTime = new Date(`${currentDate}T${e.target.value}`);
+                              field.onChange(newDateTime);
+                            }}
+                            data-testid="input-end-time"
+                          />
+                        </FormControl>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
