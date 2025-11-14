@@ -1,0 +1,329 @@
+Enhance the existing Maintenance Portal by adding a fully integrated Vehicle & Trip Management System that works seamlessly with the current modules (tasks, messaging, calendar, users, etc.).
+
+This feature must feel native, share database models where appropriate, and reuse existing core functionalities (like the messaging portal) rather than creating duplicates.
+
+Do NOT build a separate website.
+This must expand the current portal.
+
+🚗 1. Vehicle Management Module (New Section in Portal)
+
+Add a new sidebar section: “Vehicle Fleet”
+
+Features:
+
+List of all vehicles
+
+Vehicle detail pages
+
+CRUD operations for admins
+
+Vehicle status badges:
+
+Available
+
+Reserved
+
+In Use
+
+Needs Cleaning
+
+Needs Maintenance
+
+Out of Service
+
+Fields stored per vehicle:
+
+Make, model, year
+
+Vehicle ID
+
+License plate
+
+Photo gallery
+
+Current mileage
+
+Notes
+
+Automatically generated QR code linking to that car’s check-in/out workflow
+
+Reuse the portal’s existing user authentication and permissions.
+
+📅 2. Vehicle Reservation System (Integrate Into Existing Calendar)
+
+Add reservation capabilities to the already existing Calendar module.
+
+Users should be able to:
+
+Check vehicle availability
+
+Create new reservations directly on the calendar
+
+Enter destination, purpose, dates, driver name
+
+Vehicle gets marked as Reserved during that time window
+
+Admin dashboard should link to the same reservations for approval (if enabled).
+
+Prevent double-booking using backend validation.
+
+🔄 3. Check-Out Workflow (Start Trip)
+
+Accessible via:
+
+QR code scan
+
+Vehicle page → “Start Trip” button
+
+User dashboard → “My Reservations”
+
+Steps:
+
+Load reservation + vehicle
+
+User fills:
+
+Current mileage
+
+Fuel level
+
+Cleanliness confirmation
+
+Upload 4 photos
+
+Damage notes
+
+User signs digitally
+
+Status changes → In Use
+
+A Check-Out Log is created
+
+This must integrate with the portal’s existing file upload and log components if available.
+
+🅿️ 4. Check-In Workflow (Return Trip)
+
+Triggered via QR code or user dashboard.
+
+Steps:
+
+Enter ending mileage
+
+Enter fuel level
+
+Declare cleanliness
+
+Upload return photos
+
+Report issues
+
+System compares photos (before vs after)
+
+Automatically assigns new status:
+
+Needs Cleaning
+
+Needs Maintenance
+
+Available
+
+Automatically create tasks (below).
+
+🧽 5. Cleaning and Maintenance Tasks (Use Existing Tasks Module)
+
+Do NOT create a new task system.
+Integrate with the already existing task management module.
+
+When a car is returned:
+
+If “Needs Cleaning” → Auto-create a Cleaning Task
+
+If reported issues → Auto-create a Maintenance Task
+
+Task includes:
+
+Vehicle ID
+
+Link to check-in log
+
+Priority level
+
+Photo evidence
+
+Maintenance staff marks tasks as completed using the same Task UI your portal already uses.
+
+Once task is completed:
+
+Car status → “Available”
+
+🛠️ 6. Preventive Maintenance Scheduling
+
+Use the existing scheduling or reminder system.
+
+Functions:
+
+Track mileage from check-in/out logs
+
+When mileage or time threshold is reached:
+
+Auto-generate a maintenance task
+
+Notify admin in the messaging portal
+
+All preventive maintenance history attaches to vehicle logs.
+
+🧍‍♂️ 7. Driver Accountability (Use Existing User System)
+
+Each trip links to the existing User database.
+
+Add a Driver Profile tab within each user:
+
+Trip history
+
+Frequent issues
+
+Dirty returns
+
+Late returns
+
+Damage linked to them
+
+Admins can see accountability metrics from user profiles.
+
+💬 8. Internal Messaging Notifications (Use Existing Messaging Portal)
+
+All system-generated notifications must appear in the already existing messaging portal.
+
+Examples:
+
+Reservation confirmation
+
+Reminder of upcoming trip
+
+“Check-out incomplete”
+
+“Car returned dirty – task created”
+
+“Car is ready for pickup”
+
+“Maintenance completed on your car”
+
+Unread messages use the same red badge system already in place.
+
+No email/SMS.
+
+📊 9. Integrated Dashboards
+
+Modify existing dashboards, don’t create new ones.
+
+Admin Dashboard Add-ons:
+
+Fleet status summary
+
+Vehicles needing cleaning
+
+Vehicles needing repair
+
+Upcoming reservations
+
+Overdue returns
+
+Top problematic drivers
+
+Maintenance Dashboard Add-ons:
+
+Newly created cleaning tasks
+
+Vehicle return alerts
+
+Vehicles currently in use
+
+Mileage alerts
+
+User Dashboard Add-ons:
+
+My Reservations
+
+My Trip History
+
+Vehicle instructions or policies
+
+📘 10. Vehicle Digital Logbook
+
+Inside each vehicle page, add a log tab tracking:
+
+All check-in/out records
+
+Mileage changes
+
+Fuel logs
+
+Cleaning tasks
+
+Maintenance tasks
+
+Driver names
+
+Condition/damage photos
+
+Timeline view
+
+This uses the same logging component your portal already has (if available).
+
+🗃️ 11. Data Model Extensions
+
+Extend existing models where possible.
+
+Add:
+
+Vehicles
+Reservations
+CheckOutLogs
+CheckInLogs
+VehicleMaintenanceSchedules
+
+Link them with foreign keys or references to:
+
+Users
+
+Tasks
+
+Messages
+
+Ensure consistent naming with the existing database schema.
+
+🎨 12. UI/UX Requirements
+
+Keep the style consistent with the current portal.
+
+Use existing components and layouts:
+
+Sidebar and header layouts
+
+Forms
+
+File uploads
+
+Modal dialogs
+
+Calendar
+
+Tasks UI
+
+Messaging UI
+
+Everything should feel native and integrated.
+
+🎯 13. Core Requirements
+
+Must be part of the existing Maintenance Portal
+
+All notifications and tasks use existing modules
+
+No external email/SMS
+
+Fully auditable logs
+
+Simple, intuitive, reliable
+
+Designed for non-technical staff
