@@ -62,6 +62,8 @@ export default function MyReservations() {
     mutationFn: async (data: Omit<InsertVehicleReservation, "userId">) => {
       return await apiRequest("POST", "/api/vehicle-reservations", {
         ...data,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
         userId: user!.id,
       });
     },
