@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +54,7 @@ export default function Landing() {
       } else {
         const errorData = await response.json();
         const errorMessage = errorData.message || "Invalid username or password. Please check your credentials and try again.";
-        
+
         setError(errorMessage);
         toast({
           title: "Authentication Failed",
@@ -162,7 +161,7 @@ export default function Landing() {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         backgroundImage: 'url(/hartland-building.jpg)',
