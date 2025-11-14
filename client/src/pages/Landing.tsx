@@ -171,12 +171,12 @@ export default function Landing() {
       }}
     >
       <div className="absolute inset-0 bg-black/40" />
-      <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/98 border-0 shadow-2xl">
+      <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/95 border-0 shadow-2xl">
         <CardHeader className="space-y-3 pb-8 pt-8">
-          <CardTitle className="text-3xl font-semibold text-center tracking-tight">
+          <CardTitle className="text-3xl font-bold text-center tracking-tight text-foreground">
             Hartland Maintenance
           </CardTitle>
-          <CardDescription className="text-center text-base">
+          <CardDescription className="text-center text-base font-medium text-foreground/80">
             Sign in to access your workspace
           </CardDescription>
           {error && error.includes("first") && (
@@ -188,7 +188,7 @@ export default function Landing() {
         <CardContent className="px-8 pb-8">
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+              <Label htmlFor="username" className="text-sm font-semibold text-foreground">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -205,7 +205,7 @@ export default function Landing() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <Label htmlFor="password" className="text-sm font-semibold text-foreground">Password</Label>
               <Input
                 id="password"
                 type="password"
