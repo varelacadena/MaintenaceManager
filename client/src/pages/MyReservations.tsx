@@ -184,6 +184,7 @@ export default function MyReservations() {
                         <FormControl>
                           <Input
                             type="date"
+                            min={new Date().toISOString().slice(0, 10)}
                             value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ""}
                             onChange={(e) => {
                               const currentTime = field.value ? new Date(field.value).toTimeString().slice(0, 5) : "09:00";
@@ -222,6 +223,7 @@ export default function MyReservations() {
                         <FormControl>
                           <Input
                             type="date"
+                            min={form.watch("startDate") ? new Date(form.watch("startDate")).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)}
                             value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ""}
                             onChange={(e) => {
                               const currentTime = field.value ? new Date(field.value).toTimeString().slice(0, 5) : "17:00";
