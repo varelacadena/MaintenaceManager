@@ -191,6 +191,7 @@ export default function MyReservations() {
                               field.onChange(newDateTime);
                             }}
                             data-testid="input-start-date"
+                            className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
                           />
                         </FormControl>
                         <FormControl>
@@ -228,6 +229,7 @@ export default function MyReservations() {
                               field.onChange(newDateTime);
                             }}
                             data-testid="input-end-date"
+                            className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
                           />
                         </FormControl>
                         <FormControl>
