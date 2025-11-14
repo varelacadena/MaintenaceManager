@@ -1797,6 +1797,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+      
+      // Send email notification if status is being updated
+      if (req.body.status && req.body.keyLocation) {
+        const user = await storage.getUser(reservation.userId);
+        const vehicle = await storage.getVehicle(reservation.vehicleId);
+        
+        if (user?.email && vehicle) {
+          const keyLocationText = req.body.keyLocation === 'mailbox' ? 'the mailbox' :
+                                  req.body.keyLocation === 'in_car' ? 'inside the car' :
+                                  'in person';
+          
+          if (req.body.status === 'approved') {
+            await notificationService.sendEmail(
+              user.email,
+              'Vehicle Reservation Approved',
+              `Your vehicle reservation for ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId}) has been approved.\n\nKey Location: ${keyLocationText}\n\nReservation Dates: ${new Date(reservation.startDate).toLocaleDateString()} - ${new Date(reservation.endDate).toLocaleDateString()}`
+            );
+          }
+        }
+      }
+      
+      // Send cancellation email if needed
+      if (req.body.status === 'cancelled' && req.body.cancellationReason) {
+        const user = await storage.getUser(reservation.userId);
+        const vehicle = await storage.getVehicle(reservation.vehicleId);
+        
+        if (user?.email && vehicle) {
+          await notificationService.sendEmail(
+            user.email,
+            'Vehicle Reservation Cancelled',
+            `Your vehicle reservation for ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId}) has been cancelled.\n\nReason: ${req.body.cancellationReason}\n\nReservation Dates: ${new Date(reservation.startDate).toLocaleDateString()} - ${new Date(reservation.endDate).toLocaleDateString()}`
+          );
+        }
+      }
+      
       res.json(reservation);
     } catch (error) {
       console.error("Error updating vehicle reservation:", error);
