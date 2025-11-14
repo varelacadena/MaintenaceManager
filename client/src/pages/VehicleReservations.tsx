@@ -1,9 +1,10 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Calendar, Car, User, Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { format } from "date-fns";
 import type { VehicleReservation, Vehicle, User as UserType } from "@shared/schema";
@@ -14,6 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/dialog";
 
 const statusColors = {
   pending: "secondary",
@@ -25,9 +39,54 @@ const statusColors = {
 export default function VehicleReservations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { toast } = useToast();
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations"],
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (reservationId: string) => {
+      return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
+        status: "active",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      toast({
+        title: "Success",
+        description: "Reservation approved successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (reservationId: string) => {
+      return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
+        status: "cancelled",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      toast({
+        title: "Success",
+        description: "Reservation cancelled successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const { data: vehicles } = useQuery<Vehicle[]>({
@@ -162,6 +221,49 @@ export default function VehicleReservations() {
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
               </CardContent>
+              {reservation.status === "pending" && (
+                <CardFooter className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => approveMutation.mutate(reservation.id)}
+                    disabled={approveMutation.isPending}
+                    data-testid={`button-approve-${reservation.id}`}
+                    className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20"
+                    variant="outline"
+                  >
+                    Approve
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20"
+                        data-testid={`button-cancel-${reservation.id}`}
+                      >
+                        Cancel
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Reservation</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to cancel this reservation? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Go Back</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => cancelMutation.mutate(reservation.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Cancel Reservation
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardFooter>
+              )}
             </Card>
           ))}
         </div>
