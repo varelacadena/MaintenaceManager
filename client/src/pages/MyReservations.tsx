@@ -329,14 +329,20 @@ export default function MyReservations() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Purpose:</span>
-                    <span>{reservation.purpose}</span>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")} -{" "}
+                      {format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}
+                    </span>
                   </div>
-                  {reservation.notes && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Notes: </span>
-                      <span>{reservation.notes}</span>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Car className="h-4 w-4" />
+                    <span>Purpose: {reservation.purpose}</span>
+                  </div>
+                  {reservation.status === "approved" && reservation.keyLocation && (
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <span>🔑 Key Location: {reservation.keyLocation}</span>
                     </div>
                   )}
                 </CardContent>

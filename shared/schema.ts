@@ -576,6 +576,8 @@ export const vehicleReservations = pgTable("vehicle_reservations", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   status: reservationStatusEnum("status").notNull().default("pending"),
+  keyLocation: varchar("key_location", { length: 100 }),
+  cancellationReason: text("cancellation_reason"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
