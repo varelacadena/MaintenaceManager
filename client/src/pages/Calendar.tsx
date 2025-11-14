@@ -55,52 +55,53 @@ function DraggableTask({ task, onClick, assignedUser, area }: { task: Task; onCl
           {...listeners}
           {...attributes}
           onClick={onClick}
-          className={`group/task text-xs p-2 rounded-md cursor-move transition-all duration-200 bg-background border border-border/50 hover:shadow-sm hover:border-primary/30 ${
-            isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02]"
+          className={`group/task text-xs p-1.5 rounded cursor-move transition-all bg-primary/10 border-l-2 ${
+            urgencyColors[task.urgency].replace('bg-', 'border-')
+          } hover:bg-primary/15 ${
+            isDragging ? "opacity-50" : ""
           }`}
           data-testid={`task-${task.id}`}
         >
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${urgencyColors[task.urgency]} shadow-sm`} />
-            <span className="truncate flex-1 font-medium group-hover/task:text-primary transition-colors">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate flex-1 font-medium text-xs leading-tight">
               {task.name}
             </span>
           </div>
         </div>
       </HoverCardTrigger>
-      <HoverCardContent className="w-80 shadow-lg" side="top">
+      <HoverCardContent className="w-80" side="top">
         <div className="space-y-3">
           <div>
-            <h4 className="font-semibold text-base mb-1">{task.name}</h4>
+            <h4 className="font-semibold text-sm mb-1">{task.name}</h4>
             {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {task.description}
               </p>
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={statusColors[task.status]}>
+            <Badge variant="outline" className={`${statusColors[task.status]} text-xs h-5`}>
               {task.status.replace("_", " ")}
             </Badge>
-            <Badge variant="outline" className="capitalize">
+            <Badge variant="outline" className="capitalize text-xs h-5">
               {task.urgency}
             </Badge>
           </div>
-          <div className="space-y-1.5 pt-2 border-t">
+          <div className="space-y-1 pt-2 border-t text-xs">
             {area && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <p className="text-muted-foreground flex items-center gap-2">
                 <span>📍</span>
                 <span>{area.name}</span>
               </p>
             )}
             {assignedUser && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <p className="text-muted-foreground flex items-center gap-2">
                 <span>👤</span>
                 <span>{assignedUser.firstName} {assignedUser.lastName}</span>
               </p>
             )}
             {task.location && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <p className="text-muted-foreground flex items-center gap-2">
                 <span>📌</span>
                 <span>{task.location}</span>
               </p>
@@ -140,30 +141,30 @@ function DroppableDay({
   return (
     <div
       ref={setNodeRef}
-      className={`group min-h-[120px] border rounded-lg p-3 cursor-pointer transition-all duration-200 ${
+      className={`group min-h-[100px] border-r border-b border-border/30 last:border-r-0 p-2 cursor-pointer transition-colors ${
         isToday 
-          ? "border-primary border-2 bg-primary/5 shadow-sm" 
-          : "border-border/50 hover:border-primary/30 hover:shadow-sm"
-      } ${isOver ? "bg-primary/10 border-primary shadow-md scale-[1.02]" : "hover:bg-muted/30"}`}
+          ? "bg-primary/5" 
+          : "hover:bg-muted/30"
+      } ${isOver ? "bg-primary/10" : ""}`}
       onClick={() => onDayClick(date)}
       data-testid={`calendar-day-${day}`}
     >
-      <div className={`flex items-center justify-between mb-3 ${isToday ? "text-primary" : "text-foreground"}`}>
-        <div className={`text-sm font-semibold ${isToday ? "text-base" : ""}`}>
+      <div className="flex items-start justify-between mb-1.5">
+        <div className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${
+          isToday 
+            ? "bg-primary text-primary-foreground" 
+            : "text-foreground"
+        }`}>
           {day}
         </div>
         {tasks.length > 0 && (
-          <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-            isToday 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-          }`}>
+          <div className="text-xs text-muted-foreground font-medium">
             {tasks.length}
           </div>
         )}
       </div>
-      <div className="space-y-1.5">
-        {tasks.slice(0, 3).map((task) => {
+      <div className="space-y-1">
+        {tasks.slice(0, 2).map((task) => {
           const assignedUser = users.find((u) => u.id === task.assignedToId);
           const area = areas.find((a) => a.id === task.areaId);
           return (
@@ -179,9 +180,9 @@ function DroppableDay({
             />
           );
         })}
-        {tasks.length > 3 && (
-          <div className="text-xs text-muted-foreground font-medium px-2 py-1 text-center bg-muted/50 rounded group-hover:bg-muted">
-            +{tasks.length - 3} more
+        {tasks.length > 2 && (
+          <div className="text-xs text-muted-foreground px-1.5 py-0.5">
+            +{tasks.length - 2} more
           </div>
         )}
       </div>
@@ -407,24 +408,24 @@ export default function Calendar() {
   const renderCalendarView = () => {
     if (view === "month") {
       return (
-        <Card className="p-4 md:p-6 shadow-sm border-border/50 overflow-hidden">
-          {/* Day headers with modern styling */}
-          <div className="grid grid-cols-7 gap-2 md:gap-3 mb-4">
+        <div className="border border-border/50 rounded-lg bg-background overflow-hidden">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 border-b border-border/50">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-xs md:text-sm font-semibold text-center text-muted-foreground uppercase tracking-wider py-2 bg-muted/30 rounded-md"
+                className="text-xs font-medium text-center text-muted-foreground py-2.5 border-r border-border/30 last:border-r-0"
               >
-                {day.substring(0, 3)}
+                {day.substring(0, 2)}
               </div>
             ))}
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-2 md:gap-3">
+          <div className="grid grid-cols-7">
             {monthDays.map((day, index) => {
               if (day === null) {
-                return <div key={`empty-${index}`} className="min-h-[120px] bg-muted/10 rounded-lg" />;
+                return <div key={`empty-${index}`} className="min-h-[100px] border-r border-b border-border/30 last:border-r-0 bg-muted/5" />;
               }
 
               const date = new Date(
@@ -453,25 +454,25 @@ export default function Calendar() {
               );
             })}
           </div>
-        </Card>
+        </div>
       );
     } else if (view === "week") {
       return (
-        <Card className="p-4 md:p-6 shadow-sm border-border/50 overflow-hidden">
+        <div className="border border-border/50 rounded-lg bg-background overflow-hidden">
           {/* Day headers */}
-          <div className="grid grid-cols-7 gap-2 md:gap-3 mb-4">
+          <div className="grid grid-cols-7 border-b border-border/50">
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className="text-xs md:text-sm font-semibold text-center text-muted-foreground uppercase tracking-wider py-2 bg-muted/30 rounded-md"
+                className="text-xs font-medium text-center text-muted-foreground py-2.5 border-r border-border/30 last:border-r-0"
               >
-                {day.substring(0, 3)}
+                {day.substring(0, 2)}
               </div>
             ))}
           </div>
 
           {/* Week grid */}
-          <div className="grid grid-cols-7 gap-2 md:gap-3">
+          <div className="grid grid-cols-7">
             {weekDays.map((date) => {
               const dateKey = date.toDateString();
               const dayTasks = tasksByDate.get(dateKey) || [];
@@ -495,40 +496,39 @@ export default function Calendar() {
               );
             })}
           </div>
-        </Card>
+        </div>
       );
     } else {
-      // Day view - Enhanced with timeline feel
+      // Day view
       const dateKey = currentDate.toDateString();
       const dayTasks = tasksByDate.get(dateKey) || [];
 
       return (
-        <Card className="p-8 shadow-sm border-border/50 bg-gradient-to-br from-background to-muted/10">
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 pb-4 border-b">
-              <div className="w-1 h-10 bg-primary rounded-full" />
-              <h3 className="text-2xl font-bold">
+        <Card className="p-6 border-border/50 bg-background">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border/50">
+              <h3 className="text-lg font-semibold">
                 {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
               </h3>
-              <Badge variant="secondary" className="ml-auto">
+              <Badge variant="secondary" className="text-xs h-5">
                 {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
               </Badge>
             </div>
 
             {dayTasks.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 rounded-full bg-muted/50 mx-auto mb-4 flex items-center justify-center">
-                  <CalendarIcon className="w-10 h-10 text-muted-foreground/50" />
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-muted/30 mx-auto mb-3 flex items-center justify-center">
+                  <CalendarIcon className="w-8 h-8 text-muted-foreground/40" />
                 </div>
-                <p className="text-muted-foreground text-lg font-medium">
-                  No tasks scheduled for this day
+                <p className="text-muted-foreground text-sm font-medium">
+                  No tasks scheduled
                 </p>
-                <p className="text-sm text-muted-foreground/70 mt-2">
-                  Drag tasks here from other days or create a new task
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Drag tasks here or create a new task
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {dayTasks.map((task) => {
                   const assignedUser = users.find((u) => u.id === task.assignedToId);
                   const area = areas.find((a) => a.id === task.areaId);
@@ -537,33 +537,31 @@ export default function Calendar() {
                     <div
                       key={task.id}
                       onClick={() => handleTaskClick(task.id)}
-                      className="group flex items-start gap-4 p-5 rounded-lg bg-background hover-elevate cursor-pointer border border-border/50 transition-all duration-200 hover:shadow-md"
+                      className="group flex items-start gap-3 p-3 rounded-md bg-background hover:bg-muted/50 cursor-pointer border border-border/30 transition-all"
                       data-testid={`day-task-${task.id}`}
                     >
-                      <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${urgencyColors[task.urgency]} shadow-sm`} />
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${urgencyColors[task.urgency]}`} />
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-3 mb-2">
-                          <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                            {task.name}
-                          </h4>
-                        </div>
+                        <h4 className="font-medium text-sm mb-1 group-hover:text-primary transition-colors">
+                          {task.name}
+                        </h4>
                         
                         {task.description && (
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
                             {task.description}
                           </p>
                         )}
                         
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                           {area && (
-                            <span className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1">
                               <span>📍</span>
                               <span>{area.name}</span>
                             </span>
                           )}
                           {assignedUser && (
-                            <span className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1">
                               <span>👤</span>
                               <span>{assignedUser.firstName} {assignedUser.lastName}</span>
                             </span>
@@ -572,11 +570,8 @@ export default function Calendar() {
                       </div>
                       
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <Badge variant="outline" className={statusColors[task.status]}>
+                        <Badge variant="outline" className={`${statusColors[task.status]} text-xs h-5`}>
                           {task.status.replace("_", " ")}
-                        </Badge>
-                        <Badge variant="outline" className="capitalize">
-                          {task.urgency}
                         </Badge>
                       </div>
                     </div>
@@ -596,110 +591,100 @@ export default function Calendar() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-8">
-        {/* Modern Header with gradient accent */}
-        <div className="space-y-6">
-          <div className="flex items-start justify-between gap-6 flex-wrap">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tight" data-testid="text-page-title">
-                Task Calendar
-              </h1>
-              <p className="text-muted-foreground text-base">
-                {isMaintenanceOrAdmin
-                  ? "✨ Drag and drop tasks to reschedule them effortlessly"
-                  : "📅 View and track your scheduled maintenance tasks"}
-              </p>
-            </div>
+      <div className="space-y-4">
+        {/* Clean minimal header */}
+        <div className="flex items-center justify-between gap-4 flex-wrap pb-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground" data-testid="text-page-title">
+              Calendar
+            </h1>
             
             {isMaintenanceOrAdmin && (
               <Button 
                 onClick={() => navigate("/tasks/new")} 
                 data-testid="button-new-task"
-                className="shadow-sm"
-                size="lg"
+                variant="ghost"
+                size="sm"
+                className="text-sm"
               >
-                <Plus className="w-5 h-5 mr-2" />
-                Create Task
+                <Plus className="w-4 h-4 mr-1.5" />
+                New task
               </Button>
             )}
           </div>
 
-          {/* Modern Controls Bar */}
-          <Card className="p-4 shadow-sm border-border/50">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <ToggleGroup 
-                type="single" 
-                value={view} 
-                onValueChange={(v) => v && setView(v as CalendarView)}
-                className="bg-muted/50 p-1 rounded-lg"
+          {/* View toggles and navigation */}
+          <div className="flex items-center gap-2">
+            <ToggleGroup 
+              type="single" 
+              value={view} 
+              onValueChange={(v) => v && setView(v as CalendarView)}
+              className="border border-border/50 rounded-md"
+            >
+              <ToggleGroupItem 
+                value="month" 
+                aria-label="Month view"
+                className="data-[state=on]:bg-muted text-sm px-3 h-8"
               >
-                <ToggleGroupItem 
-                  value="month" 
-                  aria-label="Month view"
-                  className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-6"
-                >
-                  Month
-                </ToggleGroupItem>
-                <ToggleGroupItem 
-                  value="week" 
-                  aria-label="Week view"
-                  className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-6"
-                >
-                  Week
-                </ToggleGroupItem>
-                <ToggleGroupItem 
-                  value="day" 
-                  aria-label="Day view"
-                  className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-6"
-                >
-                  Day
-                </ToggleGroupItem>
-              </ToggleGroup>
+                Month
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="week" 
+                aria-label="Week view"
+                className="data-[state=on]:bg-muted text-sm px-3 h-8"
+              >
+                Week
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="day" 
+                aria-label="Day view"
+                className="data-[state=on]:bg-muted text-sm px-3 h-8"
+              >
+                Day
+              </ToggleGroupItem>
+            </ToggleGroup>
 
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={goToPrevious}
-                    data-testid="button-prev"
-                    className="hover:bg-background"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    className="flex items-center gap-2 px-6 py-2 min-w-[220px] justify-center font-semibold hover:bg-background"
-                    onClick={handleCalendarClick}
-                    data-testid="button-calendar-display"
-                  >
-                    <CalendarIcon className="w-4 h-4 text-primary" />
-                    <span className="text-sm">{getDisplayDate()}</span>
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={goToNext}
-                    data-testid="button-next"
-                    className="hover:bg-background"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
-                </div>
-
-                <Button 
-                  onClick={goToToday} 
-                  data-testid="button-today"
-                  variant="outline"
-                  className="font-medium"
-                >
-                  Today
-                </Button>
-              </div>
+            <div className="flex items-center gap-1 border border-border/50 rounded-md">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goToPrevious}
+                data-testid="button-prev"
+                className="h-8 w-8 hover:bg-muted"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="h-8 px-3 text-sm font-medium hover:bg-muted"
+                onClick={handleCalendarClick}
+                data-testid="button-calendar-display"
+              >
+                {getDisplayDate()}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goToNext}
+                data-testid="button-next"
+                className="h-8 w-8 hover:bg-muted"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
             </div>
-          </Card>
+
+            <Button 
+              onClick={goToToday} 
+              data-testid="button-today"
+              variant="outline"
+              size="sm"
+              className="text-sm h-8 border-border/50"
+            >
+              Today
+            </Button>
+          </div>
         </div>
 
         {/* Calendar View */}
@@ -709,41 +694,37 @@ export default function Calendar() {
 
         {/* Today's Tasks Panel - Only show if there are tasks */}
         {todayTasks.length > 0 && (
-          <Card className="p-6 shadow-sm border-border/50 bg-gradient-to-br from-background to-muted/20">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-1 h-8 bg-primary rounded-full" />
-              <h3 className="font-semibold text-xl">Today's Tasks</h3>
-              <Badge variant="secondary" className="ml-auto">
-                {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'}
+          <Card className="p-4 border-border/50 bg-background">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="font-medium text-sm">Today's Tasks</h3>
+              <Badge variant="secondary" className="h-5 text-xs">
+                {todayTasks.length}
               </Badge>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {todayTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => navigate(`/tasks/${task.id}`)}
-                  className="group flex items-center justify-between p-5 rounded-lg bg-background hover-elevate cursor-pointer border border-border/50 transition-all duration-200 hover:shadow-md"
+                  className="group flex items-center justify-between p-3 rounded-md bg-background hover:bg-muted/50 cursor-pointer border border-border/30 transition-all"
                   data-testid={`today-task-${task.id}`}
                 >
-                  <div className="flex-1 min-w-0 flex items-start gap-4">
-                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${urgencyColors[task.urgency]} shadow-sm`} />
+                  <div className="flex-1 min-w-0 flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${urgencyColors[task.urgency]}`} />
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                      <h4 className="font-medium text-sm mb-0.5 group-hover:text-primary transition-colors truncate">
                         {task.name}
                       </h4>
                       {task.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
+                        <p className="text-xs text-muted-foreground line-clamp-1">
                           {task.description}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                    <Badge variant="outline" className={statusColors[task.status]}>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                    <Badge variant="outline" className={`${statusColors[task.status]} text-xs h-5`}>
                       {task.status.replace("_", " ")}
-                    </Badge>
-                    <Badge variant="outline" className="capitalize">
-                      {task.urgency}
                     </Badge>
                   </div>
                 </div>
@@ -752,15 +733,13 @@ export default function Calendar() {
           </Card>
         )}
 
-        {/* Drag Overlay with enhanced styling */}
+        {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <div className="text-xs p-3 rounded-lg bg-background shadow-2xl border-2 border-primary/20 backdrop-blur-sm">
+            <div className="text-xs p-2.5 rounded-md bg-background shadow-lg border border-border">
               <div className="flex items-center gap-2">
-                <div
-                  className={`w-2.5 h-2.5 rounded-full ${urgencyColors[activeTask.urgency]} shadow-sm`}
-                />
-                <span className="truncate font-medium">{activeTask.name}</span>
+                <div className={`w-2 h-2 rounded-full ${urgencyColors[activeTask.urgency]}`} />
+                <span className="truncate font-medium text-sm">{activeTask.name}</span>
               </div>
             </div>
           ) : null}
