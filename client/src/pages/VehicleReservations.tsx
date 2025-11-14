@@ -62,10 +62,9 @@ export default function VehicleReservations() {
 
   const approveMutation = useMutation({
     mutationFn: async ({ reservationId, keyLocation }: { reservationId: string; keyLocation: string }) => {
-      // Update reservation status to approved with key location
+      // Update reservation status to approved
       await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
         status: "approved",
-        keyLocation: keyLocation,
       });
 
       // Get reservation details to find the user
