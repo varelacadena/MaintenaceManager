@@ -569,9 +569,10 @@ export type Vehicle = typeof vehicles.$inferSelect;
 // Vehicle reservations table
 export const vehicleReservations = pgTable("vehicle_reservations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
   purpose: varchar("purpose", { length: 200 }).notNull(),
+  passengerCount: integer("passenger_count").notNull(),
   notes: text("notes"),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),

@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Calendar, Car, User, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -28,6 +27,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const statusColors = {
   pending: "secondary",
@@ -89,6 +98,29 @@ export default function VehicleReservations() {
     },
   });
 
+  const assignVehicleMutation = useMutation({
+    mutationFn: async ({ reservationId, vehicleId }: { reservationId: string; vehicleId: string }) => {
+      return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
+        vehicleId,
+        status: "active",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      toast({
+        title: "Success",
+        description: "Vehicle assigned successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: vehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
@@ -97,7 +129,8 @@ export default function VehicleReservations() {
     queryKey: ["/api/users"],
   });
 
-  const getVehicleName = (vehicleId: string) => {
+  const getVehicleName = (vehicleId: string | null) => {
+    if (!vehicleId) return "Not assigned";
     const vehicle = vehicles?.find(v => v.id === vehicleId);
     return vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})` : "Unknown Vehicle";
   };
@@ -108,17 +141,17 @@ export default function VehicleReservations() {
   };
 
   const filteredReservations = reservations?.filter(reservation => {
-    const vehicleName = getVehicleName(reservation.vehicleId).toLowerCase();
+    const vehicleName = reservation.vehicleId ? getVehicleName(reservation.vehicleId).toLowerCase() : "not assigned";
     const userName = getUserName(reservation.userId).toLowerCase();
     const purpose = reservation.purpose.toLowerCase();
-    
-    const matchesSearch = 
+
+    const matchesSearch =
       vehicleName.includes(searchTerm.toLowerCase()) ||
       userName.includes(searchTerm.toLowerCase()) ||
       purpose.includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || reservation.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -210,6 +243,10 @@ export default function VehicleReservations() {
                   <span className="text-muted-foreground">Purpose: </span>
                   <span>{reservation.purpose}</span>
                 </div>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Passengers: </span>
+                  <span>{reservation.passengers}</span>
+                </div>
                 {reservation.notes && (
                   <div className="text-sm">
                     <span className="text-muted-foreground">Notes: </span>
@@ -223,16 +260,50 @@ export default function VehicleReservations() {
               </CardContent>
               {reservation.status === "pending" && (
                 <CardFooter className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => approveMutation.mutate(reservation.id)}
-                    disabled={approveMutation.isPending}
-                    data-testid={`button-approve-${reservation.id}`}
-                    className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20"
-                    variant="outline"
-                  >
-                    Approve
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+                        data-testid={`button-assign-vehicle-${reservation.id}`}
+                      >
+                        Assign Vehicle
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Assign Vehicle</DialogTitle>
+                        <DialogDescription>
+                          Select a vehicle for this reservation.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="vehicle" className="text-right">
+                            Vehicle
+                          </Label>
+                          <Select onValueChange={(value) => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: value })} disabled={assignVehicleMutation.isPending}>
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Select a vehicle" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicles?.map((vehicle) => (
+                                <SelectItem key={vehicle.id} value={vehicle.id}>
+                                  {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.capacity}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit" onClick={() => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: "" })} disabled={assignVehicleMutation.isPending}>
+                          Save changes
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button

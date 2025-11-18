@@ -1768,21 +1768,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
       
-      // Check vehicle availability
-      const isAvailable = await storage.checkVehicleAvailability(
-        reservationData.vehicleId,
-        reservationData.startDate,
-        reservationData.endDate
-      );
+      // If vehicleId is provided, check availability
+      if (reservationData.vehicleId) {
+        const isAvailable = await storage.checkVehicleAvailability(
+          reservationData.vehicleId,
+          reservationData.startDate,
+          reservationData.endDate
+        );
 
-      if (!isAvailable) {
-        return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
+        if (!isAvailable) {
+          return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
+        }
+
+        // Update vehicle status to reserved
+        await storage.updateVehicleStatus(reservationData.vehicleId, "reserved");
       }
 
       const reservation = await storage.createVehicleReservation(reservationData);
-      
-      // Update vehicle status to reserved
-      await storage.updateVehicleStatus(reservationData.vehicleId, "reserved");
       
       res.json(reservation);
     } catch (error) {
@@ -1793,15 +1795,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
     try {
-      const reservation = await storage.updateVehicleReservation(req.params.id, req.body);
-      if (!reservation) {
+      const currentReservation = await storage.getVehicleReservation(req.params.id);
+      if (!currentReservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+
+      // If assigning a vehicle, check availability
+      if (req.body.vehicleId && req.body.vehicleId !== currentReservation.vehicleId) {
+        const isAvailable = await storage.checkVehicleAvailability(
+          req.body.vehicleId,
+          currentReservation.startDate,
+          currentReservation.endDate,
+          req.params.id
+        );
+
+        if (!isAvailable) {
+          return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
+        }
+
+        // Set old vehicle to available if it exists
+        if (currentReservation.vehicleId) {
+          const activeReservations = await storage.getVehicleReservations({
+            vehicleId: currentReservation.vehicleId,
+          });
+          
+          const hasOtherActiveReservations = activeReservations.some(
+            r => r.id !== currentReservation.id && 
+            (r.status === "pending" || r.status === "approved" || r.status === "active")
+          );
+          
+          if (!hasOtherActiveReservations) {
+            await storage.updateVehicleStatus(currentReservation.vehicleId, "available");
+          }
+        }
+
+        // Set new vehicle to reserved
+        await storage.updateVehicleStatus(req.body.vehicleId, "reserved");
+      }
+
+      const reservation = await storage.updateVehicleReservation(req.params.id, req.body);
       
       // Update vehicle status based on reservation status changes
-      if (req.body.status) {
+      if (req.body.status && reservation?.vehicleId) {
         if (req.body.status === "cancelled" || req.body.status === "completed") {
-          // Check if there are any other active reservations for this vehicle
           const activeReservations = await storage.getVehicleReservations({
             vehicleId: reservation.vehicleId,
           });

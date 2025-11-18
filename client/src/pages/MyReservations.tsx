@@ -43,17 +43,13 @@ export default function MyReservations() {
     enabled: !!user?.id,
   });
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles?status=available"],
-  });
-
   const form = useForm<InsertVehicleReservation>({
-    resolver: zodResolver(insertVehicleReservationSchema.omit({ userId: true })),
+    resolver: zodResolver(insertVehicleReservationSchema.omit({ userId: true, vehicleId: true })),
     defaultValues: {
-      vehicleId: "",
       startDate: new Date(),
       endDate: new Date(),
       purpose: "",
+      passengerCount: 1,
       notes: "",
     },
   });
@@ -152,24 +148,20 @@ export default function MyReservations() {
               <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="vehicleId"
+                  name="passengerCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Vehicle</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-vehicle">
-                            <SelectValue placeholder="Select a vehicle" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {vehicles?.map((vehicle) => (
-                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                              {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Number of Passengers</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="50"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          data-testid="input-passenger-count"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
