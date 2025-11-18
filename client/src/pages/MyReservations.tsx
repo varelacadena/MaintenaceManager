@@ -192,9 +192,11 @@ export default function MyReservations() {
                             type="time"
                             value={field.value ? new Date(field.value).toTimeString().slice(0, 5) : ""}
                             onChange={(e) => {
-                              const currentDate = field.value ? new Date(field.value).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                              const newDateTime = new Date(`${currentDate}T${e.target.value}`);
-                              field.onChange(newDateTime);
+                              if (!field.value) return;
+                              const currentDate = new Date(field.value);
+                              const [hours, minutes] = e.target.value.split(':');
+                              currentDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                              field.onChange(currentDate);
                             }}
                             data-testid="input-start-time"
                             className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
@@ -231,9 +233,11 @@ export default function MyReservations() {
                             type="time"
                             value={field.value ? new Date(field.value).toTimeString().slice(0, 5) : ""}
                             onChange={(e) => {
-                              const currentDate = field.value ? new Date(field.value).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                              const newDateTime = new Date(`${currentDate}T${e.target.value}`);
-                              field.onChange(newDateTime);
+                              if (!field.value) return;
+                              const currentDate = new Date(field.value);
+                              const [hours, minutes] = e.target.value.split(':');
+                              currentDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                              field.onChange(currentDate);
                             }}
                             data-testid="input-end-time"
                             className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
