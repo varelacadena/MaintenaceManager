@@ -10,7 +10,7 @@ import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/api";
 import {
