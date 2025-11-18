@@ -1797,6 +1797,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+      
+      // Update vehicle status based on reservation status changes
+      if (req.body.status) {
+        if (req.body.status === "cancelled" || req.body.status === "completed") {
+          // Check if there are any other active reservations for this vehicle
+          const activeReservations = await storage.getVehicleReservations({
+            vehicleId: reservation.vehicleId,
+          });
+          
+          const hasActiveReservations = activeReservations.some(
+            r => r.id !== reservation.id && 
+            (r.status === "pending" || r.status === "approved" || r.status === "active")
+          );
+          
+          if (!hasActiveReservations) {
+            await storage.updateVehicleStatus(reservation.vehicleId, "available");
+          }
+        } else if (req.body.status === "approved" || req.body.status === "active") {
+          await storage.updateVehicleStatus(reservation.vehicleId, "reserved");
+        }
+      }
+      
       res.json(reservation);
     } catch (error) {
       console.error("Error updating vehicle reservation:", error);
