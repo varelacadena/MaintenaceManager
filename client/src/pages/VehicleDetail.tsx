@@ -1,5 +1,5 @@
-import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, Link as RouterLink } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Car, Calendar, ClipboardList, QrCode, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,20 @@ import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
+import { useToast } from "@/components/ui/use-toast";
+import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const statusColors = {
   available: "default",
@@ -23,6 +37,23 @@ const statusColors = {
 export default function VehicleDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const deleteVehicleMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", `/api/vehicles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      toast({ title: "Vehicle deleted successfully" });
+      navigate("/vehicles");
+    },
+    onError: () => {
+      toast({ title: "Failed to delete vehicle", variant: "destructive" });
+    },
+  });
 
   const { data: vehicle, isLoading } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${id}`],
@@ -72,11 +103,11 @@ export default function VehicleDetail() {
     <div className="flex-1 space-y-4 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/vehicles">
+          <RouterLink href="/vehicles">
             <Button variant="ghost" size="icon" data-testid="button-back">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-          </Link>
+          </RouterLink>
           <div>
             <h2 className="text-3xl font-bold tracking-tight" data-testid="text-vehicle-name">
               {vehicle.make} {vehicle.model}
@@ -86,14 +117,36 @@ export default function VehicleDetail() {
         </div>
         {canManageVehicles && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" data-testid="button-edit-vehicle">
-              <Edit className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={() => navigate(`/vehicles/${id}/edit`)}>
+              <Edit className="w-4 h-4 mr-2" />
               Edit
             </Button>
-            <Button variant="destructive" size="sm" data-testid="button-delete-vehicle">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" data-testid="button-delete-vehicle">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Vehicle?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this vehicle and all associated data. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteVehicleMutation.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    data-testid="button-confirm-delete-vehicle"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>
