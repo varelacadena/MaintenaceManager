@@ -580,6 +580,7 @@ export const vehicleReservations = pgTable("vehicle_reservations", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   status: reservationStatusEnum("status").notNull().default("pending"),
+  lastViewedStatus: varchar("last_viewed_status", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

@@ -1229,12 +1229,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         pendingVehicleReservations = vehicleReservations.length;
       } else {
-        // For staff users, count approved reservations that haven't been acknowledged
+        // For staff users, count approved reservations that haven't been viewed
         const myReservations = await storage.getVehicleReservations({
           userId: userId,
-          status: "approved",
         });
-        approvedReservations = myReservations.filter(r => !r.advisoryAccepted).length;
+        approvedReservations = myReservations.filter(r => 
+          r.lastViewedStatus === "pending" && r.status === "approved"
+        ).length;
       }
 
       const messages = await storage.getMessages();
@@ -1905,6 +1906,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking vehicle availability:", error);
       res.status(500).json({ message: "Failed to check vehicle availability" });
+    }
+  });
+
+  // Mark reservation status as viewed
+  app.post("/api/vehicle-reservations/:id/mark-viewed", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const reservationId = req.params.id;
+
+      const reservation = await storage.getVehicleReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Only the reservation owner can mark it as viewed
+      if (reservation.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await storage.updateVehicleReservation(reservationId, {
+        lastViewedStatus: reservation.status,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking reservation as viewed:", error);
+      res.status(500).json({ message: "Failed to mark reservation as viewed" });
     }
   });
 

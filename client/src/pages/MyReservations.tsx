@@ -163,6 +163,26 @@ export default function MyReservations() {
     },
   });
 
+  const markAsViewedMutation = useMutation({
+    mutationFn: async (reservationId: string) => {
+      return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/mark-viewed`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
+        }
+      });
+    },
+  });
+
+  const handleViewDetails = (reservationId: string) => {
+    markAsViewedMutation.mutate(reservationId);
+    setSelectedReservationForDetails(reservationId);
+    setAdvisoryDialogOpen(true);
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4">
       <div className="flex items-center justify-between">
@@ -348,7 +368,10 @@ export default function MyReservations() {
         <div className="space-y-4">
           {reservations.map((reservation) => {
             const vehicle = vehicles?.find(v => v.id === reservation.vehicleId);
-            const hasNewStatusUpdate = reservation.status !== "completed" && reservation.status !== "cancelled";
+            // Show badge only if status changed from pending to approved/cancelled and user hasn't viewed it yet
+            const hasNewStatusUpdate = 
+              reservation.lastViewedStatus === "pending" &&
+              (reservation.status === "approved" || reservation.status === "cancelled");
 
             return (
               <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
@@ -434,10 +457,7 @@ export default function MyReservations() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setSelectedReservationForDetails(reservation.id);
-                        setAdvisoryDialogOpen(true);
-                      }}
+                      onClick={() => handleViewDetails(reservation.id)}
                       data-testid={`button-details-${reservation.id}`}
                     >
                       View Details
@@ -448,6 +468,7 @@ export default function MyReservations() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => markAsViewedMutation.mutate(reservation.id)}
                         data-testid={`button-details-${reservation.id}`}
                       >
                         View Details
