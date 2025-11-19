@@ -157,8 +157,11 @@ export default function MyReservations() {
                           type="number"
                           min="1"
                           max="50"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          value={field.value}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                            field.onChange(value);
+                          }}
                           data-testid="input-passenger-count"
                         />
                       </FormControl>
