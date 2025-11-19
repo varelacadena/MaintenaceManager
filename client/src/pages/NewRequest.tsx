@@ -345,7 +345,7 @@ export default function NewRequest() {
                           data-testid="input-requested-date"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
+                          {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
