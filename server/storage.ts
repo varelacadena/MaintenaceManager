@@ -795,19 +795,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
     return await this.db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        vehicleId: uploads.vehicleId,
-        checkOutLogId: uploads.checkOutLogId,
-        checkInLogId: uploads.checkInLogId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        createdAt: uploads.createdAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.requestId, requestId));
   }
