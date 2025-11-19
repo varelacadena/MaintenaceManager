@@ -16,7 +16,6 @@ import {
   MapPin,
   MessageSquare,
   PlayCircle,
-  Car,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -227,12 +226,6 @@ export default function Dashboard() {
               <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-view-all">
                 <ClipboardList className="w-4 h-4 mr-2" />
                 View My Requests
-              </Button>
-            </Link>
-            <Link href="/my-reservations" className="block">
-              <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-new-car-reservation">
-                <Car className="w-4 h-4 mr-2" />
-                New Car Reservation
               </Button>
             </Link>
             <Link href="/messages" className="block">
