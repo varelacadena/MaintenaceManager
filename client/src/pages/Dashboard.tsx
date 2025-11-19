@@ -184,17 +184,17 @@ export default function Dashboard() {
   // Staff view - simplified dashboard
   if (user?.role === "staff") {
     return (
-      <div className="space-y-6 md:space-y-8 pb-8">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="space-y-4 md:space-y-8 pb-8">
+        <div className="space-y-4">
           <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight" data-testid="text-dashboard-title">
               Dashboard
             </h1>
-            <p className="text-base text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Welcome back, {user?.firstName || "User"}
             </p>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Link href="/new-request" className="flex-1 sm:flex-initial">
               <Button size="lg" className="w-full" data-testid="button-new-request">
                 <Plus className="w-4 h-4 mr-2" />
