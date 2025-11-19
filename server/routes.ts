@@ -1211,6 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let pendingServiceRequests = 0;
       let pendingVehicleReservations = 0;
       let unreadMessages = 0;
+      let approvedReservations = 0;
 
       if (currentUser.role === "admin" || currentUser.role === "maintenance") {
         const serviceRequests = await storage.getServiceRequests({
@@ -1227,6 +1228,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "pending",
         });
         pendingVehicleReservations = vehicleReservations.length;
+      } else {
+        // For staff users, count approved reservations that haven't been acknowledged
+        const myReservations = await storage.getVehicleReservations({
+          userId: userId,
+          status: "approved",
+        });
+        approvedReservations = myReservations.filter(r => !r.advisoryAccepted).length;
       }
 
       const messages = await storage.getMessages();
@@ -1238,6 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pendingServiceRequests,
         pendingVehicleReservations,
         unreadMessages,
+        approvedReservations,
       });
     } catch (error) {
       console.error("Error fetching notification counts:", error);

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
+import { Badge } from "@/components/ui/badge";
 
 interface AppSidebarProps {
   userRole: "admin" | "maintenance" | "staff";
@@ -99,7 +100,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
             <SidebarMenu>
               {menuItems.map((item) => {
                 let badgeCount = 0;
-                
+
                 if (item.title === "Messages" && notificationCounts.unreadMessages > 0) {
                   badgeCount = notificationCounts.unreadMessages;
                 } else if (item.title === "Service Requests" && notificationCounts.pendingServiceRequests > 0) {

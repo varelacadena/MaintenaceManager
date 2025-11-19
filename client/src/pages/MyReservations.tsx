@@ -32,10 +32,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function MyReservations() {
   const { user } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false);
+  const [advisoryAccepted, setAdvisoryAccepted] = useState(false);
+  const [selectedReservationForDetails, setSelectedReservationForDetails] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: reservations, isLoading } = useQuery<VehicleReservation[]>({
@@ -122,6 +127,39 @@ export default function MyReservations() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const acceptAdvisoryMutation = useMutation({
+    mutationFn: async (reservationId: string) => {
+      return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/accept-advisory`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Reservation details accepted.",
+      });
+      setAdvisoryDialogOpen(false);
+      setAdvisoryAccepted(false);
+      if (selectedReservationForDetails) {
+        window.location.href = `/vehicle-reservation-details/${selectedReservationForDetails}`;
+      }
+      setSelectedReservationForDetails(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      setAdvisoryAccepted(false);
+      setSelectedReservationForDetails(null);
     },
   });
 
@@ -310,6 +348,8 @@ export default function MyReservations() {
         <div className="space-y-4">
           {reservations.map((reservation) => {
             const vehicle = vehicles?.find(v => v.id === reservation.vehicleId);
+            const hasNewStatusUpdate = reservation.status !== "completed" && reservation.status !== "cancelled";
+
             return (
               <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
                 <CardHeader>
@@ -326,9 +366,16 @@ export default function MyReservations() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant={reservation.status === "completed" ? "default" : "secondary"} data-testid={`badge-status-${reservation.id}`}>
-                      {reservation.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {hasNewStatusUpdate && (
+                        <Badge variant="destructive" className="animate-pulse">
+                          New Update
+                        </Badge>
+                      )}
+                      <Badge variant={reservation.status === "completed" ? "default" : "secondary"} data-testid={`badge-status-${reservation.id}`}>
+                        {reservation.status}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -340,6 +387,18 @@ export default function MyReservations() {
                     <div className="text-sm">
                       <span className="text-muted-foreground">Notes: </span>
                       <span>{reservation.notes}</span>
+                    </div>
+                  )}
+                  {reservation.status === "approved" && reservation.keyPickupMethod && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Key Pickup: </span>
+                      <span>{reservation.keyPickupMethod}</span>
+                    </div>
+                  )}
+                  {reservation.status === "approved" && reservation.additionalDetails && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Additional Instructions: </span>
+                      <span>{reservation.additionalDetails}</span>
                     </div>
                   )}
                 </CardContent>
@@ -362,6 +421,19 @@ export default function MyReservations() {
                       </Button>
                     </>
                   )}
+                  {reservation.status === "approved" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedReservationForDetails(reservation.id);
+                        setAdvisoryDialogOpen(true);
+                      }}
+                      data-testid={`button-details-${reservation.id}`}
+                    >
+                      Details
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );
@@ -378,6 +450,52 @@ export default function MyReservations() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={advisoryDialogOpen} onOpenChange={setAdvisoryDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vehicle Use Advisory</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>Before viewing the details and checking out this vehicle, please review and agree to the following:</p>
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                <li><strong>Return the vehicle clean:</strong> The vehicle must be returned in a clean condition, similar to how you received it.</li>
+                <li><strong>Refill the fuel tank:</strong> Please ensure the fuel tank is full before returning the vehicle.</li>
+              </ul>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="advisory-accept"
+                  checked={advisoryAccepted}
+                  onCheckedChange={(checked) => setAdvisoryAccepted(checked as boolean)}
+                />
+                <label
+                  htmlFor="advisory-accept"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I agree to the terms above
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setAdvisoryAccepted(false);
+              setSelectedReservationForDetails(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!advisoryAccepted || acceptAdvisoryMutation.isPending}
+              onClick={() => {
+                if (selectedReservationForDetails) {
+                  acceptAdvisoryMutation.mutate(selectedReservationForDetails);
+                }
+              }}
+            >
+              {acceptAdvisoryMutation.isPending ? "Processing..." : "Accept & Continue"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

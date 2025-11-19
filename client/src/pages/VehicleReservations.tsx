@@ -37,6 +37,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const statusColors = {
   pending: "secondary",
@@ -48,6 +49,10 @@ const statusColors = {
 export default function VehicleReservations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
+  const [selectedReservationForHandoff, setSelectedReservationForHandoff] = useState<string | null>(null);
+  const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
+  const [adminNotes, setAdminNotes] = useState<string>("");
   const { toast } = useToast();
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
@@ -102,15 +107,41 @@ export default function VehicleReservations() {
     mutationFn: async ({ reservationId, vehicleId }: { reservationId: string; vehicleId: string }) => {
       return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
         vehicleId,
-        status: "active",
+        status: "approved",
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      setSelectedReservationForHandoff(variables.reservationId);
+      setHandoffDialogOpen(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveHandoffDetailsMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedReservationForHandoff) return;
+      return await apiRequest("PATCH", `/api/vehicle-reservations/${selectedReservationForHandoff}`, {
+        keyPickupMethod,
+        adminNotes,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
       toast({
         title: "Success",
-        description: "Vehicle assigned successfully",
+        description: "Handoff details saved successfully",
       });
+      setHandoffDialogOpen(false);
+      setKeyPickupMethod("");
+      setAdminNotes("");
+      setSelectedReservationForHandoff(null);
     },
     onError: (error: Error) => {
       toast({
@@ -351,6 +382,61 @@ export default function VehicleReservations() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={handoffDialogOpen} onOpenChange={setHandoffDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Reservation Handoff Details</DialogTitle>
+            <DialogDescription>
+              Provide pickup instructions and additional details for the requestor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="key-pickup">Key Pickup Method</Label>
+              <Select value={keyPickupMethod} onValueChange={setKeyPickupMethod}>
+                <SelectTrigger id="key-pickup">
+                  <SelectValue placeholder="Select pickup method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_person">In Person</SelectItem>
+                  <SelectItem value="mailbox">Mailbox</SelectItem>
+                  <SelectItem value="inside_vehicle">Inside the Vehicle</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="admin-notes">Additional Details</Label>
+              <Textarea
+                id="admin-notes"
+                placeholder="Enter any custom instructions or notes..."
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setHandoffDialogOpen(false);
+                setKeyPickupMethod("");
+                setAdminNotes("");
+                setSelectedReservationForHandoff(null);
+              }}
+            >
+              Skip
+            </Button>
+            <Button
+              onClick={() => saveHandoffDetailsMutation.mutate()}
+              disabled={saveHandoffDetailsMutation.isPending}
+            >
+              {saveHandoffDetailsMutation.isPending ? "Saving..." : "Save Details"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
