@@ -340,11 +340,16 @@ export default function VehicleReservations() {
                                 <SelectValue placeholder="Select a vehicle" />
                               </SelectTrigger>
                               <SelectContent>
-                                {vehicles?.map((vehicle) => (
-                                  <SelectItem key={vehicle.id} value={vehicle.id}>
-                                    {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.passengerCapacity}
-                                  </SelectItem>
-                                ))}
+                                {vehicles
+                                  ?.filter((vehicle) => 
+                                    vehicle.passengerCapacity && 
+                                    vehicle.passengerCapacity >= reservation.passengerCount
+                                  )
+                                  .map((vehicle) => (
+                                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                                      {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.passengerCapacity}
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                           </div>
