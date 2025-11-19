@@ -41,6 +41,7 @@ export async function applyMigrations() {
     { file: "014_add_contact_information_to_tasks.sql", name: "014_add_contact_information_to_tasks" },
     { file: "015_add_key_location_to_reservations.sql", name: "015_add_key_location_to_reservations" },
     { file: "016_add_passenger_count_to_reservations.sql", name: "016_add_passenger_count_to_reservations" },
+    { file: "017_add_reservation_handoff_details.sql", name: "017_add_reservation_handoff_details" },
   ];
 
   try {
