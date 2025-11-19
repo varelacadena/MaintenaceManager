@@ -136,9 +136,9 @@ export default function MyReservations() {
     mutationFn: async (reservationId: string) => {
       return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/accept-advisory`);
     },
-    onSuccess: (_, reservationId) => {
-      // Wait for queries to invalidate and refetch
-      queryClient.invalidateQueries({
+    onSuccess: async (_, reservationId) => {
+      // Invalidate and wait for queries to refetch
+      await queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
@@ -181,9 +181,12 @@ export default function MyReservations() {
   });
 
   const handleViewDetails = (reservationId: string) => {
-    markAsViewedMutation.mutate(reservationId);
     setSelectedReservationForDetails(reservationId);
     setAdvisoryDialogOpen(true);
+    // Mark as viewed after a short delay to ensure dialog is shown first
+    setTimeout(() => {
+      markAsViewedMutation.mutate(reservationId);
+    }, 100);
   };
 
   return (
@@ -452,9 +455,8 @@ export default function MyReservations() {
                   {reservation.status === "approved" && !reservation.advisoryAccepted && (
                     <Button
                       size="sm"
-                      variant="outline"
                       onClick={() => handleViewDetails(reservation.id)}
-                      data-testid={`button-details-${reservation.id}`}
+                      data-testid={`button-view-details-${reservation.id}`}
                     >
                       View Details
                     </Button>
@@ -470,7 +472,6 @@ export default function MyReservations() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => markAsViewedMutation.mutate(reservation.id)}
                           data-testid={`button-details-${reservation.id}`}
                         >
                           View Details

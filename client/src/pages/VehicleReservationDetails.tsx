@@ -23,12 +23,6 @@ export default function VehicleReservationDetails() {
     enabled: !!reservation?.vehicleId,
   });
 
-  // Redirect if advisory not accepted
-  if (reservation && !reservation.advisoryAccepted) {
-    setLocation("/my-reservations");
-    return null;
-  }
-
   if (reservationLoading) {
     return (
       <div className="flex-1 space-y-4 p-4">
@@ -47,6 +41,24 @@ export default function VehicleReservationDetails() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Car className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium">Reservation not found</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If advisory not accepted yet, show message
+  if (!reservation.advisoryAccepted) {
+    return (
+      <div className="flex-1 space-y-4 p-4">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Car className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium">Please accept the vehicle use advisory first</p>
+            <p className="text-sm text-muted-foreground mt-2">Return to My Reservations and click "View Details" to continue</p>
+            <Link href="/my-reservations" className="mt-4">
+              <Button>Go to My Reservations</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

@@ -1909,6 +1909,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Accept advisory for reservation
+  app.post("/api/vehicle-reservations/:id/accept-advisory", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const reservationId = req.params.id;
+
+      const reservation = await storage.getVehicleReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Only the reservation owner can accept the advisory
+      if (reservation.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await storage.updateVehicleReservation(reservationId, {
+        advisoryAccepted: true,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error accepting advisory:", error);
+      res.status(500).json({ message: "Failed to accept advisory" });
+    }
+  });
+
   // Mark reservation status as viewed
   app.post("/api/vehicle-reservations/:id/mark-viewed", isAuthenticated, async (req: any, res) => {
     try {
