@@ -600,25 +600,31 @@ export default function RequestDetail() {
                   </div>
                 )}
 
-                <div className="border-2 border-dashed rounded-lg p-3 flex items-center justify-center">
-                  <ObjectUploader
-                    maxNumberOfFiles={5}
-                    maxFileSize={10485760}
-                    onGetUploadParameters={getUploadParameters}
-                    onComplete={handleFileUpload}
-                    onError={(error) => {
-                      console.error("Upload error:", error);
-                      toast({
-                        title: "Upload failed",
-                        description: error.message,
-                        variant: "destructive"
-                      });
-                    }}
-                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8"
-                  >
-                    Browse
-                  </ObjectUploader>
-                </div>
+                {(isMaintenanceOrAdmin || request.requesterId === user?.id) ? (
+                  <div className="border-2 border-dashed rounded-lg p-3 flex items-center justify-center">
+                    <ObjectUploader
+                      maxNumberOfFiles={5}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={handleFileUpload}
+                      onError={(error) => {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "Upload failed",
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      }}
+                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8"
+                    >
+                      Browse
+                    </ObjectUploader>
+                  </div>
+                ) : uploads.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    No attachments
+                  </p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
