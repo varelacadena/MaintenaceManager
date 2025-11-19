@@ -43,6 +43,10 @@ export default function MyReservations() {
     enabled: !!user?.id,
   });
 
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
   const form = useForm<InsertVehicleReservation>({
     resolver: zodResolver(insertVehicleReservationSchema.omit({ userId: true, vehicleId: true })),
     defaultValues: {
