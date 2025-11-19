@@ -436,22 +436,15 @@ export default function MyReservations() {
                 </CardContent>
                 <CardFooter className="flex gap-2">
                   {reservation.status === "pending" && (
-                    <>
-                      <Link href={`/vehicle-checkout/${reservation.id}`}>
-                        <Button size="sm" data-testid={`button-checkout-${reservation.id}`}>
-                          Check Out
-                        </Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => cancelMutation.mutate(reservation.id)}
-                        disabled={cancelMutation.isPending}
-                        data-testid={`button-cancel-${reservation.id}`}
-                      >
-                        Cancel
-                      </Button>
-                    </>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => cancelMutation.mutate(reservation.id)}
+                      disabled={cancelMutation.isPending}
+                      data-testid={`button-cancel-${reservation.id}`}
+                    >
+                      Cancel
+                    </Button>
                   )}
                   {reservation.status === "approved" && !reservation.advisoryAccepted && (
                     <Button
@@ -464,16 +457,23 @@ export default function MyReservations() {
                     </Button>
                   )}
                   {reservation.status === "approved" && reservation.advisoryAccepted && (
-                    <Link href={`/vehicle-reservation-details/${reservation.id}`}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => markAsViewedMutation.mutate(reservation.id)}
-                        data-testid={`button-details-${reservation.id}`}
-                      >
-                        View Details
-                      </Button>
-                    </Link>
+                    <>
+                      <Link href={`/vehicle-checkout/${reservation.id}`}>
+                        <Button size="sm" data-testid={`button-checkout-${reservation.id}`}>
+                          Check Out
+                        </Button>
+                      </Link>
+                      <Link href={`/vehicle-reservation-details/${reservation.id}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => markAsViewedMutation.mutate(reservation.id)}
+                          data-testid={`button-details-${reservation.id}`}
+                        >
+                          View Details
+                        </Button>
+                      </Link>
+                    </>
                   )}
                 </CardFooter>
               </Card>
