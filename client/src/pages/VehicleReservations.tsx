@@ -309,111 +309,113 @@ export default function VehicleReservations() {
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
               </CardContent>
-              {reservation.status === "pending" && (
-                <CardFooter className="flex gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
-                        data-testid={`button-assign-vehicle-${reservation.id}`}
-                      >
-                        Assign Vehicle
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Assign Vehicle</DialogTitle>
-                        <DialogDescription>
-                          Select a vehicle for this reservation.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="vehicle" className="text-right">
-                            Vehicle
-                          </Label>
-                          <Select onValueChange={(value) => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: value })} disabled={assignVehicleMutation.isPending}>
-                            <SelectTrigger className="col-span-3">
-                              <SelectValue placeholder="Select a vehicle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {vehicles?.map((vehicle) => (
-                                <SelectItem key={vehicle.id} value={vehicle.id}>
-                                  {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.passengerCapacity}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit" onClick={() => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: "" })} disabled={assignVehicleMutation.isPending}>
-                          Save changes
+              <CardFooter className="flex gap-2">
+                {reservation.status === "pending" && (
+                  <>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+                          data-testid={`button-assign-vehicle-${reservation.id}`}
+                        >
+                          Assign Vehicle
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20"
-                        data-testid={`button-cancel-${reservation.id}`}
-                      >
-                        Cancel
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Cancel Reservation</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to cancel this reservation? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Go Back</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => cancelMutation.mutate(reservation.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Assign Vehicle</DialogTitle>
+                          <DialogDescription>
+                            Select a vehicle for this reservation.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="vehicle" className="text-right">
+                              Vehicle
+                            </Label>
+                            <Select onValueChange={(value) => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: value })} disabled={assignVehicleMutation.isPending}>
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a vehicle" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {vehicles?.map((vehicle) => (
+                                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                                    {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.passengerCapacity}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit" onClick={() => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: "" })} disabled={assignVehicleMutation.isPending}>
+                            Save changes
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20"
+                          data-testid={`button-cancel-${reservation.id}`}
                         >
-                          Cancel Reservation
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        data-testid={`button-delete-${reservation.id}`}
+                          Cancel
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel Reservation</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to cancel this reservation? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Go Back</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => cancelMutation.mutate(reservation.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Cancel Reservation
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      data-testid={`button-delete-${reservation.id}`}
+                    >
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this reservation? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Go Back</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate(reservation.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this reservation? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Go Back</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteMutation.mutate(reservation.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Delete Reservation
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </CardFooter>
-              )}
+                        Delete Reservation
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardFooter>
             </Card>
           ))}
         </div>
