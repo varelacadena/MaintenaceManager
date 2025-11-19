@@ -287,151 +287,166 @@ export default function RequestDetail() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-muted/30">
-      <div className="bg-background border-b">
-        <div className="max-w-5xl mx-auto p-4">
-          <div className="flex items-center gap-3 mb-3">
+    <div className="flex flex-col h-full bg-background">
+      {/* Compact Mobile Header */}
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="p-3 sm:p-4">
+          <div className="flex items-start gap-2 mb-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/requests")}
               data-testid="button-back"
+              className="h-8 w-8 shrink-0"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-xl font-semibold" data-testid="text-request-title">{request.title}</h1>
-              <p className="text-xs text-muted-foreground" data-testid="text-request-id">Request #{request.id}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className={getStatusColor(request.status)} data-testid="badge-status">
-                {request.status.replace("_", " ").toUpperCase()}
-              </Badge>
-              <Badge className={getUrgencyColor(request.urgency)} data-testid="badge-urgency">
-                {request.urgency.toUpperCase()}
-              </Badge>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base sm:text-xl font-semibold leading-tight line-clamp-2" data-testid="text-request-title">
+                {request.title}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-request-id">
+                #{request.id.substring(0, 8)}
+              </p>
             </div>
           </div>
           
-          {isMaintenanceOrAdmin && (
-            <div className="flex justify-end gap-2">
-              {request.status === "pending" && (
-                <>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge 
+              variant="outline" 
+              className={`${getStatusColor(request.status)} text-xs px-2 py-0.5`} 
+              data-testid="badge-status"
+            >
+              {request.status.replace("_", " ")}
+            </Badge>
+            <Badge 
+              variant="outline" 
+              className={`${getUrgencyColor(request.urgency)} text-xs px-2 py-0.5`} 
+              data-testid="badge-urgency"
+            >
+              {request.urgency}
+            </Badge>
+          </div>
+          
+          {isMaintenanceOrAdmin && request.status === "pending" && (
+            <div className="flex gap-2 mt-3">
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="flex-1 bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20 h-8 text-xs"
+                onClick={() => approveRequestMutation.mutate(id)}
+                disabled={approveRequestMutation.isPending}
+                data-testid="button-approve-request"
+              >
+                Approve
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20"
-                    onClick={() => approveRequestMutation.mutate(id)}
-                    disabled={approveRequestMutation.isPending}
-                    data-testid="button-approve-request"
+                    className="flex-1 bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20 h-8 text-xs"
+                    data-testid="button-reject-request"
                   >
-                    Approve
+                    Reject
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20"
-                        data-testid="button-reject-request"
-                      >
-                        Reject
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Reject Request</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Please provide a reason for rejecting this request. The requester will be notified.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <Textarea
-                        placeholder="Enter rejection reason..."
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        className="min-h-[100px]"
-                        data-testid="textarea-rejection-reason"
-                      />
-                      <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setRejectionReason("")}>
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            if (!rejectionReason.trim()) {
-                              toast({ 
-                                title: "Please provide a rejection reason", 
-                                variant: "destructive" 
-                              });
-                              return;
-                            }
-                            rejectRequestMutation.mutate({ 
-                              requestId: id, 
-                              reason: rejectionReason 
-                            });
-                            setRejectionReason("");
-                          }}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          data-testid="button-confirm-reject"
-                        >
-                          Reject Request
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              )}
-              {canConvertToTask && (
-                <Link href={`/tasks/new?requestId=${id}`}>
-                  <Button size="sm" data-testid="button-convert-to-task">
-                    Convert to Task
-                  </Button>
-                </Link>
-              )}
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Please provide a reason for rejecting this request.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Textarea
+                    placeholder="Enter rejection reason..."
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="min-h-[80px]"
+                    data-testid="textarea-rejection-reason"
+                  />
+                  <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                    <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full sm:w-auto">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (!rejectionReason.trim()) {
+                          toast({ 
+                            title: "Please provide a rejection reason", 
+                            variant: "destructive" 
+                          });
+                          return;
+                        }
+                        rejectRequestMutation.mutate({ 
+                          requestId: id, 
+                          reason: rejectionReason 
+                        });
+                        setRejectionReason("");
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+                      data-testid="button-confirm-reject"
+                    >
+                      Reject
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
+          )}
+          
+          {isMaintenanceOrAdmin && canConvertToTask && (
+            <Link href={`/tasks/new?requestId=${id}`} className="block mt-2">
+              <Button size="sm" className="w-full h-8 text-xs" data-testid="button-convert-to-task">
+                Convert to Task
+              </Button>
+            </Link>
           )}
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto p-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Details</CardTitle>
+        <div className="p-3 sm:p-4 space-y-3">
+          {/* Compact Details Card */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3">
+              <CardTitle className="text-sm font-semibold">Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="px-3 pb-3 space-y-2">
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
-                <p className="text-sm" data-testid="text-description">{request.description}</p>
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="text-sm leading-snug" data-testid="text-description">{request.description}</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 pt-2 border-t">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
                 {area && (
                   <div>
-                    <h3 className="text-xs font-medium text-muted-foreground mb-1">Area</h3>
-                    <p className="text-sm" data-testid="text-area">{area.name}</p>
+                    <p className="text-muted-foreground mb-0.5">Area</p>
+                    <p className="font-medium" data-testid="text-area">{area.name}</p>
                   </div>
                 )}
-
                 {subdivision && (
                   <div>
-                    <h3 className="text-xs font-medium text-muted-foreground mb-1">Subdivision</h3>
-                    <p className="text-sm" data-testid="text-subdivision">{subdivision.name}</p>
+                    <p className="text-muted-foreground mb-0.5">Subdivision</p>
+                    <p className="font-medium" data-testid="text-subdivision">{subdivision.name}</p>
                   </div>
                 )}
-
                 <div>
-                  <h3 className="text-xs font-medium text-muted-foreground mb-1">Created</h3>
-                  <p className="text-sm" data-testid="text-created-at">
-                    {new Date(request.createdAt!).toLocaleDateString()}
+                  <p className="text-muted-foreground mb-0.5">Created</p>
+                  <p className="font-medium" data-testid="text-created-at">
+                    {new Date(request.createdAt!).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
                   </p>
                 </div>
               </div>
 
               {request.status === "rejected" && request.rejectionReason && (
                 <div className="pt-2 border-t">
-                  <h3 className="text-sm font-medium text-destructive mb-1">Rejection Reason</h3>
-                  <p className="text-sm text-muted-foreground" data-testid="text-rejection-reason">
+                  <p className="text-xs font-medium text-destructive mb-1">Rejection Reason</p>
+                  <p className="text-xs text-muted-foreground leading-snug" data-testid="text-rejection-reason">
                     {request.rejectionReason}
                   </p>
                 </div>
@@ -439,103 +454,100 @@ export default function RequestDetail() {
             </CardContent>
           </Card>
 
+          {/* Compact Contact Card */}
           {requester && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Requester Contact Information</CardTitle>
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2 px-3 pt-3">
+                <CardTitle className="text-sm font-semibold">Requester Contact</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <CardContent className="px-3 pb-3">
+                <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Name</p>
-                      <p className="text-sm font-medium" data-testid="text-requester-name">
+                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-muted-foreground">Name</p>
+                      <p className="font-medium truncate" data-testid="text-requester-name">
                         {requester.firstName} {requester.lastName}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
-                      <p className="text-sm font-medium" data-testid="text-requester-email">
-                        {requester.email || "Not provided"}
-                      </p>
+                  {requester.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-muted-foreground">Email</p>
+                        <p className="font-medium truncate" data-testid="text-requester-email">
+                          {requester.email}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Phone Number</p>
-                      <p className="text-sm font-medium" data-testid="text-requester-phone">
-                        {requester.phoneNumber || "Not provided"}
-                      </p>
+                  )}
+                  {requester.phoneNumber && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-muted-foreground">Phone</p>
+                        <p className="font-medium" data-testid="text-requester-phone">
+                          {requester.phoneNumber}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Username</p>
-                      <p className="text-sm font-medium" data-testid="text-requester-username">
-                        {requester.username}
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Paperclip className="h-4 w-4" />
-                Attachments
+          {/* Compact Attachments Card */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" />
+                Attachments {uploads.length > 0 && `(${uploads.length})`}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="px-3 pb-3">
+              <div className="space-y-2">
                 {uploads.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {uploads.map((upload) => (
                       <div
                         key={upload.id}
-                        className="flex items-center justify-between p-2 rounded border bg-muted/30"
+                        className="flex items-center gap-2 p-2 rounded border bg-muted/30 text-xs"
                       >
                         <a
                           href={upload.objectPath}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 flex-1"
+                          className="flex items-center gap-1.5 flex-1 min-w-0"
                           data-testid={`link-attachment-${upload.id}`}
                         >
-                          <Paperclip className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm truncate">{upload.fileName}</span>
+                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">{upload.fileName}</span>
                         </a>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-6 w-6 p-0 shrink-0"
                               data-testid={`button-delete-attachment-${upload.id}`}
                             >
-                              <Trash2 className="w-4 h-4 text-red-500" />
+                              <Trash2 className="w-3 h-3 text-red-500" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete this attachment? This action cannot be undone.
+                                Are you sure? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                              <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => deleteUploadMutation.mutate(upload.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
                               >
                                 Delete
                               </AlertDialogAction>
@@ -548,24 +560,22 @@ export default function RequestDetail() {
                 )}
 
                 {pendingUploads.length > 0 && (
-                  <div className="space-y-2 border-t pt-3">
+                  <div className="space-y-1.5 pt-2 border-t">
                     {pendingUploads.map((upload, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 rounded border bg-blue-50 dark:bg-blue-950"
+                        className="flex items-center gap-2 p-2 rounded border bg-blue-50 dark:bg-blue-950 text-xs"
                       >
-                        <div className="flex items-center gap-2">
-                          <Paperclip className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">{upload.name}</span>
-                        </div>
+                        <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <span className="flex-1 truncate">{upload.name}</span>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-6 w-6 p-0 shrink-0"
                           onClick={() => removePendingUpload(index)}
                           data-testid={`button-remove-pending-upload-${index}`}
                         >
-                          <X className="w-4 h-4 text-red-500" />
+                          <X className="w-3 h-3 text-red-500" />
                         </Button>
                       </div>
                     ))}
@@ -581,16 +591,16 @@ export default function RequestDetail() {
                         setPendingUploads([]);
                       }}
                       disabled={addUploadMutation.isPending}
-                      className="w-full"
+                      className="w-full h-8 text-xs"
                       size="sm"
                       data-testid="button-save-attachments"
                     >
-                      {addUploadMutation.isPending ? "Saving..." : "Save Attachments"}
+                      {addUploadMutation.isPending ? "Saving..." : "Save"}
                     </Button>
                   </div>
                 )}
 
-                <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center">
+                <div className="border-2 border-dashed rounded-lg p-3 flex items-center justify-center">
                   <ObjectUploader
                     maxNumberOfFiles={5}
                     maxFileSize={10485760}
@@ -604,7 +614,7 @@ export default function RequestDetail() {
                         variant: "destructive"
                       });
                     }}
-                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8"
                   >
                     Browse
                   </ObjectUploader>
@@ -613,17 +623,18 @@ export default function RequestDetail() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
+          {/* Compact Messages Card */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" />
                 Messages ({messages.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="px-3 pb-3">
+              <div className="space-y-3">
                 {messages.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {messages.map((message) => {
                       const isOwn = message.senderId === user?.id;
                       const sender = users.find(u => u.id === message.senderId);
@@ -644,19 +655,19 @@ export default function RequestDetail() {
                           className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <span className="text-xs font-medium text-muted-foreground mb-1" data-testid={`text-sender-${message.id}`}>
+                          <span className="text-[10px] font-medium text-muted-foreground mb-0.5" data-testid={`text-sender-${message.id}`}>
                             {senderName}
                           </span>
                           <div
-                            className={`max-w-[70%] rounded-lg px-3 py-2 ${
+                            className={`max-w-[85%] rounded-lg px-2.5 py-1.5 ${
                               isOwn
                                 ? "bg-[#1E90FF] text-white"
                                 : "bg-muted text-foreground"
                             }`}
                           >
-                            <p className="text-sm" data-testid={`text-content-${message.id}`}>{message.content}</p>
+                            <p className="text-xs leading-snug" data-testid={`text-content-${message.id}`}>{message.content}</p>
                           </div>
-                          <span className="text-xs text-muted-foreground mt-1">
+                          <span className="text-[10px] text-muted-foreground mt-0.5">
                             {message.createdAt &&
                               new Date(message.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -668,8 +679,8 @@ export default function RequestDetail() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground py-8 text-sm">
-                    No messages yet. Start the conversation!
+                  <div className="text-center text-muted-foreground py-6 text-xs">
+                    No messages yet
                   </div>
                 )}
 
@@ -678,7 +689,8 @@ export default function RequestDetail() {
                     placeholder="Type a message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 resize-none min-h-[60px]"
+                    className="flex-1 resize-none min-h-[60px] text-xs"
+                    rows={2}
                     data-testid="textarea-message"
                   />
                   <Button
@@ -689,9 +701,10 @@ export default function RequestDetail() {
                     }}
                     disabled={!newMessage.trim() || sendMessageMutation.isPending}
                     size="icon"
+                    className="h-8 w-8 shrink-0"
                     data-testid="button-send-message"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
