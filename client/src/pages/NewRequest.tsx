@@ -361,6 +361,13 @@ export default function NewRequest() {
                             field.onChange(`${year}-${month}-${day}`);
                           }
                         }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const checkDate = new Date(date);
+                          checkDate.setHours(0, 0, 0, 0);
+                          return checkDate.getTime() !== today.getTime();
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
