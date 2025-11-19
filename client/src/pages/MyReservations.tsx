@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Select,
   SelectContent,
@@ -42,6 +42,8 @@ export default function MyReservations() {
   const [advisoryAccepted, setAdvisoryAccepted] = useState(false);
   const [selectedReservationForDetails, setSelectedReservationForDetails] = useState<string | null>(null);
   const { toast } = useToast();
+  const setLocation = useLocation()[1];
+
 
   const { data: reservations, isLoading } = useQuery<VehicleReservation[]>({
     queryKey: [`/api/vehicle-reservations?userId=${user?.id}`],
@@ -134,15 +136,15 @@ export default function MyReservations() {
     mutationFn: async (reservationId: string) => {
       return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/accept-advisory`);
     },
-    onSuccess: async () => {
+    onSuccess: (_, reservationId) => {
       // Wait for queries to invalidate and refetch
-      await queryClient.invalidateQueries({
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
         }
       });
-      
+
       toast({
         title: "Success",
         description: "Reservation details accepted.",
@@ -150,6 +152,8 @@ export default function MyReservations() {
       setAdvisoryDialogOpen(false);
       setAdvisoryAccepted(false);
       setSelectedReservationForDetails(null);
+      // Redirect to the reservation details page
+      setLocation(`/vehicle-reservation/${reservationId}`);
     },
     onError: (error: Error) => {
       toast({
@@ -368,7 +372,7 @@ export default function MyReservations() {
           {reservations.map((reservation) => {
             const vehicle = vehicles?.find(v => v.id === reservation.vehicleId);
             // Show badge only if status changed from pending to approved/cancelled and user hasn't viewed it yet
-            const hasNewStatusUpdate = 
+            const hasNewStatusUpdate =
               reservation.lastViewedStatus === "pending" &&
               (reservation.status === "approved" || reservation.status === "cancelled");
 
@@ -411,7 +415,7 @@ export default function MyReservations() {
                       <span>{reservation.notes}</span>
                     </div>
                   )}
-                  
+
                   {/* Show key pickup info only after advisory acceptance */}
                   {reservation.status === "approved" && reservation.advisoryAccepted && (
                     <div className="mt-3 pt-3 border-t space-y-2">
