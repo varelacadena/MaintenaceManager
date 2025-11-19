@@ -310,19 +310,9 @@ export default function MyReservations() {
           <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center px-4">
             <Car className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
             <h3 className="text-base sm:text-lg font-semibold mb-2">No reservations yet</h3>
-            <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-              You haven't made any vehicle reservations. Click the button above to reserve a vehicle.
+            <p className="text-sm text-muted-foreground max-w-sm">
+              You haven't made any vehicle reservations yet.
             </p>
-            <Button 
-              onClick={() => {
-                console.log("Navigating to /vehicles from empty state");
-                setLocation("/vehicles");
-              }} 
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Make a Reservation
-            </Button>
           </CardContent>
         </Card>
       ) : (
