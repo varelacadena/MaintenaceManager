@@ -6,6 +6,19 @@ import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { Calendar, Car, MapPin, Users, Plus, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import type { Vehicle } from "@shared/schema";
 
 interface VehicleReservation {
   id: string;
@@ -25,9 +38,62 @@ export default function MyReservations() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [passengerCount, setPassengerCount] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [notes, setNotes] = useState("");
 
   const { data: reservations = [], isLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations/my"],
+  });
+
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+    enabled: createDialogOpen,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/vehicle-reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create reservation");
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
+      toast({
+        title: "Success",
+        description: "Reservation request submitted successfully",
+      });
+      setCreateDialogOpen(false);
+      setStartDate("");
+      setStartTime("");
+      setEndDate("");
+      setEndTime("");
+      setPassengerCount("");
+      setPurpose("");
+      setNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const cancelMutation = useMutation({
@@ -59,6 +125,29 @@ export default function MyReservations() {
       });
     },
   });
+
+  const handleCreateReservation = () => {
+    if (!startDate || !startTime || !endDate || !endTime || !passengerCount || !purpose) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const startDateTime = new Date(`${startDate}T${startTime}`);
+    const endDateTime = new Date(`${endDate}T${endTime}`);
+
+    createMutation.mutate({
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString(),
+      passengerCount: parseInt(passengerCount),
+      purpose,
+      notes,
+      status: "pending",
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -105,17 +194,114 @@ export default function MyReservations() {
           <h1 className="text-2xl sm:text-3xl font-semibold truncate">My Reservations</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage your vehicle reservations</p>
         </div>
-        <Button
-          onClick={() => {
-            console.log("Navigating to /vehicles");
-            setLocation("/vehicles");
-          }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
-          size="default"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="whitespace-nowrap">New Reservation</span>
-        </Button>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
+            size="default"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="whitespace-nowrap">New Reservation</span>
+          </Button>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Reservation</DialogTitle>
+              <DialogDescription>
+                Reserve a vehicle for your upcoming trip
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="passengerCount">Number of Passengers *</Label>
+                  <Input
+                    id="passengerCount"
+                    type="number"
+                    min="1"
+                    value={passengerCount}
+                    onChange={(e) => setPassengerCount(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start Time *</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date *</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endTime">End Time *</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="purpose">Purpose *</Label>
+                <Input
+                  id="purpose"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g., Trip to Washington"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any additional information..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={handleCreateReservation}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Create Reservation"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Reservations List */}
