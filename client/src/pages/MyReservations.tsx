@@ -106,7 +106,10 @@ export default function MyReservations() {
           <p className="text-sm text-muted-foreground mt-1">Manage your vehicle reservations</p>
         </div>
         <Button
-          onClick={() => setLocation("/vehicles")}
+          onClick={() => {
+            console.log("Navigating to /vehicles");
+            setLocation("/vehicles");
+          }}
           className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
           size="default"
         >
@@ -124,7 +127,13 @@ export default function MyReservations() {
             <p className="text-sm text-muted-foreground mb-4 max-w-sm">
               You haven't made any vehicle reservations. Click the button above to reserve a vehicle.
             </p>
-            <Button onClick={() => setLocation("/vehicles")} size="sm">
+            <Button 
+              onClick={() => {
+                console.log("Navigating to /vehicles from empty state");
+                setLocation("/vehicles");
+              }} 
+              size="sm"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Make a Reservation
             </Button>
