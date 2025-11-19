@@ -383,8 +383,8 @@ export default function NewRequest() {
                 Upload photos or documents related to this request
               </p>
 
-              <div className="bg-muted/30 rounded-lg border-2 border-dashed p-8">
-                <div className="flex gap-8">
+              <div className="bg-muted/30 rounded-lg border-2 border-dashed p-4 md:p-8">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                   {/* Left side - Upload area */}
                   <div className="flex-1 flex items-center justify-center">
                     <ObjectUploader
@@ -392,7 +392,7 @@ export default function NewRequest() {
                       maxFileSize={10485760}
                       onGetUploadParameters={getUploadParameters}
                       onComplete={handleFileUpload}
-                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 px-12"
+                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 px-8 md:px-12 w-full md:w-auto"
                     >
                       Browse
                     </ObjectUploader>
