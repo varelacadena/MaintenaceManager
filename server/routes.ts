@@ -1785,6 +1785,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
 
+      // Validate business rules
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const startDate = new Date(reservationData.startDate);
+      const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+
+      // Rule 1: No past dates
+      if (startDateOnly < today) {
+        return res.status(400).json({ message: "Cannot create reservations for past dates" });
+      }
+
+      // Rule 3: If reservation is for tomorrow, start time must be >= 9:00 AM
+      if (startDateOnly.getTime() === tomorrow.getTime()) {
+        const startHour = startDate.getHours();
+        const startMinute = startDate.getMinutes();
+        const startTimeInMinutes = startHour * 60 + startMinute;
+        const nineAMInMinutes = 9 * 60; // 9:00 AM = 540 minutes
+
+        if (startTimeInMinutes < nineAMInMinutes) {
+          return res.status(400).json({ 
+            message: "Reservations for tomorrow must start at or after 9:00 AM" 
+          });
+        }
+      }
+
+      // Validate end time is after start time
+      if (reservationData.endDate <= reservationData.startDate) {
+        return res.status(400).json({ message: "End date/time must be after start date/time" });
+      }
+
       // If vehicleId is provided, check availability
       if (reservationData.vehicleId) {
         const isAvailable = await storage.checkVehicleAvailability(

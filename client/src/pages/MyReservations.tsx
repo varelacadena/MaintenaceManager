@@ -47,6 +47,34 @@ export default function MyReservations() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Get today's date in YYYY-MM-DD format (local timezone)
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Check if selected start date is tomorrow
+  const isTomorrow = (dateString: string) => {
+    if (!dateString) return false;
+    const selected = new Date(dateString + 'T00:00:00');
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    selected.setHours(0, 0, 0, 0);
+    return selected.getTime() === tomorrow.getTime();
+  };
+
+  // Get minimum allowed time for selected date
+  const getMinTime = () => {
+    if (isTomorrow(startDate)) {
+      return "09:00"; // 9:00 AM minimum for tomorrow
+    }
+    return "00:00"; // No restriction for dates after tomorrow
+  };
+
   const { data: reservations = [], isLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations/my"],
   });
@@ -136,8 +164,39 @@ export default function MyReservations() {
       return;
     }
 
+    // Validate no past dates
+    const today = getTodayDateString();
+    if (startDate < today) {
+      toast({
+        title: "Error",
+        description: "Cannot create reservations for past dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate 9 AM rule for tomorrow
+    if (isTomorrow(startDate) && startTime < "09:00") {
+      toast({
+        title: "Error",
+        description: "Reservations for tomorrow must start at or after 9:00 AM",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
+
+    // Validate end time is after start time
+    if (endDateTime <= startDateTime) {
+      toast({
+        title: "Error",
+        description: "End date/time must be after start date/time",
+        variant: "destructive",
+      });
+      return;
+    }
 
     createMutation.mutate({
       startDate: startDateTime.toISOString(),
@@ -232,7 +291,14 @@ export default function MyReservations() {
                     id="startDate"
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      // Reset time if tomorrow is selected and current time is before 9 AM
+                      if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
+                        setStartTime("09:00");
+                      }
+                    }}
+                    min={getTodayDateString()}
                     required
                   />
                 </div>
@@ -243,8 +309,14 @@ export default function MyReservations() {
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
+                    min={getMinTime()}
                     required
                   />
+                  {isTomorrow(startDate) && (
+                    <p className="text-xs text-muted-foreground">
+                      Minimum start time for tomorrow: 9:00 AM
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -256,6 +328,7 @@ export default function MyReservations() {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || getTodayDateString()}
                     required
                   />
                 </div>
