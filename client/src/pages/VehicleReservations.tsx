@@ -290,7 +290,7 @@ export default function VehicleReservations() {
                             <SelectContent>
                               {vehicles?.map((vehicle) => (
                                 <SelectItem key={vehicle.id} value={vehicle.id}>
-                                  {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.capacity}
+                                  {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.passengerCapacity}
                                 </SelectItem>
                               ))}
                             </SelectContent>
