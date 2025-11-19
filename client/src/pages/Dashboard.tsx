@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,10 +30,60 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ServiceRequest, Message, Task, VehicleReservation, Vehicle } from "@shared/schema";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [passengerCount, setPassengerCount] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Get today's date in YYYY-MM-DD format (local timezone)
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Check if selected start date is tomorrow
+  const isTomorrow = (dateString: string) => {
+    if (!dateString) return false;
+    const selected = new Date(dateString + 'T00:00:00');
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    selected.setHours(0, 0, 0, 0);
+    return selected.getTime() === tomorrow.getTime();
+  };
+
+  // Get minimum allowed time for selected date
+  const getMinTime = () => {
+    if (isTomorrow(startDate)) {
+      return "09:00"; // 9:00 AM minimum for tomorrow
+    }
+    return "00:00"; // No restriction for dates after tomorrow
+  };
 
   const { data: requests = [], isLoading: requestsLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
@@ -53,7 +103,102 @@ export default function Dashboard() {
 
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+    enabled: createDialogOpen,
   });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/vehicle-reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create reservation");
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
+      toast({
+        title: "Success",
+        description: "Reservation request submitted successfully",
+      });
+      setCreateDialogOpen(false);
+      setStartDate("");
+      setStartTime("");
+      setEndDate("");
+      setEndTime("");
+      setPassengerCount("");
+      setPurpose("");
+      setNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateReservation = () => {
+    if (!startDate || !startTime || !endDate || !endTime || !passengerCount || !purpose) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate no past dates
+    const today = getTodayDateString();
+    if (startDate < today) {
+      toast({
+        title: "Error",
+        description: "Cannot create reservations for past dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate 9 AM rule for tomorrow
+    if (isTomorrow(startDate) && startTime < "09:00") {
+      toast({
+        title: "Error",
+        description: "Reservations for tomorrow must start at or after 9:00 AM",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const startDateTime = new Date(`${startDate}T${startTime}`);
+    const endDateTime = new Date(`${endDate}T${endTime}`);
+
+    // Validate end time is after start time
+    if (endDateTime <= startDateTime) {
+      toast({
+        title: "Error",
+        description: "End date/time must be after start date/time",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createMutation.mutate({
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString(),
+      passengerCount: parseInt(passengerCount),
+      purpose,
+      notes,
+      status: "pending",
+    });
+  };
 
   const isLoading = requestsLoading || tasksLoading || reservationsLoading;
 
@@ -201,12 +346,16 @@ export default function Dashboard() {
                 New Request
               </Button>
             </Link>
-            <Link href="/my-reservations" className="flex-1 sm:flex-initial">
-              <Button size="lg" className="w-full" variant="outline" data-testid="button-new-car-reservation">
-                <Car className="w-4 h-4 mr-2" />
-                New Car Reservation
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              className="flex-1 sm:flex-initial w-full" 
+              variant="outline" 
+              data-testid="button-new-car-reservation"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <Car className="w-4 h-4 mr-2" />
+              New Car Reservation
+            </Button>
           </div>
         </div>
 
@@ -306,6 +455,121 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* Reservation Creation Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Reservation</DialogTitle>
+              <DialogDescription>
+                Reserve a vehicle for your upcoming trip
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="passengerCount">Number of Passengers *</Label>
+                  <Input
+                    id="passengerCount"
+                    type="number"
+                    min="1"
+                    value={passengerCount}
+                    onChange={(e) => setPassengerCount(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      // Reset time if tomorrow is selected and current time is before 9 AM
+                      if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
+                        setStartTime("09:00");
+                      }
+                    }}
+                    min={getTodayDateString()}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start Time *</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    min={getMinTime()}
+                    required
+                  />
+                  {isTomorrow(startDate) && (
+                    <p className="text-xs text-muted-foreground">
+                      Minimum start time for tomorrow: 9:00 AM
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date *</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || getTodayDateString()}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endTime">End Time *</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="purpose">Purpose *</Label>
+                <Input
+                  id="purpose"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g., Trip to Washington"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any additional information..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={handleCreateReservation}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Create Reservation"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         </div>
     );
   }
