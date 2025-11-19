@@ -35,6 +35,7 @@ import MyReservations from "./pages/MyReservations";
 import VehicleCheckOut from "./pages/VehicleCheckOut";
 import VehicleCheckIn from "./pages/VehicleCheckIn";
 import VehicleReservations from "./pages/VehicleReservations";
+import VehicleReservationDetails from "./pages/VehicleReservationDetails"; // Assuming this component exists
 import { ScrollToTop } from "./components/ScrollToTop";
 
 function AuthenticatedApp() {
@@ -118,8 +119,9 @@ function AuthenticatedApp() {
                 <Route path="/vehicles/:id/check-out" component={VehicleCheckOut} />
                 <Route path="/my-reservations" component={MyReservations} />
                 <Route path="/vehicle-reservations" component={VehicleReservations} />
+                <Route path="/vehicle-reservation-details/:reservationId" component={VehicleReservationDetails} />
                 <Route path="/vehicle-checkout/:reservationId" component={VehicleCheckOut} />
-                <Route path="/vehicle-checkin/:reservationId" component={VehicleCheckIn} />
+                <Route path="/vehicle-checkin/:checkOutLogId" component={VehicleCheckIn} />
                 <Route component={NotFound} />
               </Switch>
             </main>

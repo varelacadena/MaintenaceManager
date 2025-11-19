@@ -64,10 +64,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if this is first-time setup (no users exist)
       const allUsers = await storage.getAllUsers();
-      
+
       if (allUsers.length === 0) {
         console.log("First-time setup detected - creating initial admin account");
-        
+
         // Create the first admin account with provided credentials
         const hashedPassword = await bcrypt.hash(password, 10);
         const newAdmin = await storage.createUser({
@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -720,7 +720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = req.userId;
         const currentUser = await storage.getUser(userId);
         const request = await storage.getServiceRequest(req.params.id);
-        
+
         if (!request) {
           return res.status(404).json({ message: "Request not found" });
         }
@@ -1620,7 +1620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         equipment = await storage.getEquipment();
       }
-      
+
       res.json(equipment);
     } catch (error) {
       console.error("Error fetching equipment:", error);
@@ -1740,7 +1740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vehicleId = req.query.vehicleId as string | undefined;
       const userId = req.query.userId as string | undefined;
       const status = req.query.status as string | undefined;
-      
+
       const reservations = await storage.getVehicleReservations({
         vehicleId,
         userId,
@@ -1753,16 +1753,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const reservation = await storage.getVehicleReservation(req.params.id);
+      const reservationId = req.params.id;
+      const reservation = await storage.getVehicleReservation(reservationId);
+
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+
+      if (reservation.userId !== req.userId && req.userRole !== "admin" && req.userRole !== "maintenance") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
       res.json(reservation);
     } catch (error) {
-      console.error("Error fetching vehicle reservation:", error);
-      res.status(500).json({ message: "Failed to fetch vehicle reservation" });
+      console.error("Error fetching reservation:", error);
+      res.status(500).json({ message: "Failed to fetch reservation" });
     }
   });
 
@@ -1774,9 +1781,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: new Date(req.body.startDate),
         endDate: new Date(req.body.endDate),
       };
-      
+
       const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
-      
+
       // If vehicleId is provided, check availability
       if (reservationData.vehicleId) {
         const isAvailable = await storage.checkVehicleAvailability(
@@ -1794,7 +1801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const reservation = await storage.createVehicleReservation(reservationData);
-      
+
       res.json(reservation);
     } catch (error) {
       console.error("Error creating vehicle reservation:", error);
@@ -1827,12 +1834,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const activeReservations = await storage.getVehicleReservations({
             vehicleId: currentReservation.vehicleId,
           });
-          
+
           const hasOtherActiveReservations = activeReservations.some(
             r => r.id !== currentReservation.id && 
             (r.status === "pending" || r.status === "approved" || r.status === "active")
           );
-          
+
           if (!hasOtherActiveReservations) {
             await storage.updateVehicleStatus(currentReservation.vehicleId, "available");
           }
@@ -1843,19 +1850,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const reservation = await storage.updateVehicleReservation(req.params.id, req.body);
-      
+
       // Update vehicle status based on reservation status changes
       if (req.body.status && reservation?.vehicleId) {
         if (req.body.status === "cancelled" || req.body.status === "completed") {
           const activeReservations = await storage.getVehicleReservations({
             vehicleId: reservation.vehicleId,
           });
-          
+
           const hasActiveReservations = activeReservations.some(
             r => r.id !== reservation.id && 
             (r.status === "pending" || r.status === "approved" || r.status === "active")
           );
-          
+
           if (!hasActiveReservations) {
             await storage.updateVehicleStatus(reservation.vehicleId, "available");
           }
@@ -1863,7 +1870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateVehicleStatus(reservation.vehicleId, "reserved");
         }
       }
-      
+
       res.json(reservation);
     } catch (error) {
       console.error("Error updating vehicle reservation:", error);
@@ -1906,7 +1913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const vehicleId = req.query.vehicleId as string | undefined;
       const userId = req.query.userId as string | undefined;
-      
+
       const logs = await storage.getVehicleCheckOutLogs({ vehicleId, userId });
       res.json(logs);
     } catch (error) {
@@ -1931,7 +1938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vehicle-checkout-logs", isAuthenticated, async (req: any, res) => {
     try {
       const logData = insertVehicleCheckOutLogSchema.parse(req.body);
-      
+
       // Verify reservation belongs to current user
       const reservation = await storage.getVehicleReservation(logData.reservationId);
       if (!reservation) {
@@ -1943,16 +1950,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (reservation.vehicleId !== logData.vehicleId) {
         return res.status(400).json({ message: "Vehicle mismatch: This reservation is for a different vehicle" });
       }
-      
+
       const log = await storage.createVehicleCheckOutLog(logData);
-      
+
       // Update vehicle status to in_use and mileage
       await storage.updateVehicleStatus(logData.vehicleId, "in_use");
       await storage.updateVehicleMileage(logData.vehicleId, logData.startMileage);
-      
+
       // Update reservation status to active
       await storage.updateReservationStatus(logData.reservationId, "active");
-      
+
       res.json(log);
     } catch (error) {
       console.error("Error creating vehicle check-out log:", error);
@@ -1975,7 +1982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const vehicleId = req.query.vehicleId as string | undefined;
       const userId = req.query.userId as string | undefined;
-      
+
       const logs = await storage.getVehicleCheckInLogs({ vehicleId, userId });
       res.json(logs);
     } catch (error) {
@@ -2000,7 +2007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vehicle-checkin-logs", isAuthenticated, async (req: any, res) => {
     try {
       const logData = insertVehicleCheckInLogSchema.parse(req.body);
-      
+
       // Verify check-out log belongs to current user
       const checkOutLog = await storage.getVehicleCheckOutLog(logData.checkOutLogId);
       if (!checkOutLog) {
@@ -2012,12 +2019,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (checkOutLog.vehicleId !== logData.vehicleId) {
         return res.status(400).json({ message: "Vehicle mismatch: This check-out was for a different vehicle" });
       }
-      
+
       const log = await storage.createVehicleCheckInLog(logData);
-      
+
       // Update vehicle mileage
       await storage.updateVehicleMileage(logData.vehicleId, logData.endMileage);
-      
+
       // Determine new vehicle status based on cleanliness and issues
       let newStatus = "available";
       if (logData.cleanlinessStatus === "needs_cleaning") {
@@ -2025,17 +2032,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (logData.issues && logData.issues.trim().length > 0) {
         newStatus = "needs_maintenance";
       }
-      
+
       await storage.updateVehicleStatus(logData.vehicleId, newStatus);
-      
+
       // Update reservation status
       await storage.updateReservationStatus(checkOutLog.reservationId, "completed");
-      
+
       // Auto-create cleaning task if needed
       if (logData.cleanlinessStatus === "needs_cleaning") {
         const userId = req.userId;
         const vehicle = await storage.getVehicle(logData.vehicleId);
-        
+
         if (vehicle) {
           await storage.createTask({
             vehicleId: logData.vehicleId,
@@ -2049,12 +2056,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Auto-create maintenance task if issues reported
       if (logData.issues && logData.issues.trim().length > 0) {
         const userId = req.userId;
         const vehicle = await storage.getVehicle(logData.vehicleId);
-        
+
         if (vehicle) {
           await storage.createTask({
             vehicleId: logData.vehicleId,
@@ -2068,7 +2075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       res.json(log);
     } catch (error) {
       console.error("Error creating vehicle check-in log:", error);

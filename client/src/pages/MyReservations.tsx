@@ -389,18 +389,7 @@ export default function MyReservations() {
                       <span>{reservation.notes}</span>
                     </div>
                   )}
-                  {reservation.status === "approved" && reservation.keyPickupMethod && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Key Pickup: </span>
-                      <span>{reservation.keyPickupMethod}</span>
-                    </div>
-                  )}
-                  {reservation.status === "approved" && reservation.additionalDetails && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Additional Instructions: </span>
-                      <span>{reservation.additionalDetails}</span>
-                    </div>
-                  )}
+                  
                 </CardContent>
                 <CardFooter className="flex gap-2">
                   {reservation.status === "pending" && (
@@ -421,7 +410,7 @@ export default function MyReservations() {
                       </Button>
                     </>
                   )}
-                  {reservation.status === "approved" && (
+                  {reservation.status === "approved" && !reservation.advisoryAccepted && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -431,8 +420,19 @@ export default function MyReservations() {
                       }}
                       data-testid={`button-details-${reservation.id}`}
                     >
-                      Details
+                      View Details
                     </Button>
+                  )}
+                  {reservation.status === "approved" && reservation.advisoryAccepted && (
+                    <Link href={`/vehicle-reservation-details/${reservation.id}`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid={`button-details-${reservation.id}`}
+                      >
+                        View Details
+                      </Button>
+                    </Link>
                   )}
                 </CardFooter>
               </Card>
