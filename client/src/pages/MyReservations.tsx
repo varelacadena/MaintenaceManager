@@ -390,6 +390,26 @@ export default function MyReservations() {
                     </div>
                   )}
                   
+                  {/* Show key pickup info only after advisory acceptance */}
+                  {reservation.status === "approved" && reservation.advisoryAccepted && (
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      <div className="text-sm">
+                        <span className="text-muted-foreground font-semibold">Key Pickup: </span>
+                        <span>
+                          {reservation.keyPickupMethod === "in_person" && "In Person Pickup"}
+                          {reservation.keyPickupMethod === "mailbox" && "Mailbox Pickup"}
+                          {reservation.keyPickupMethod === "inside_vehicle" && "Inside the Vehicle"}
+                          {!reservation.keyPickupMethod && "Not specified"}
+                        </span>
+                      </div>
+                      {reservation.adminNotes && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground font-semibold">Instructions: </span>
+                          <span className="whitespace-pre-wrap">{reservation.adminNotes}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex gap-2">
                   {reservation.status === "pending" && (
