@@ -153,7 +153,7 @@ export default function MyReservations() {
       setAdvisoryAccepted(false);
       setSelectedReservationForDetails(null);
       // Redirect to the reservation details page
-      setLocation(`/vehicle-reservation/${reservationId}`);
+      setLocation(`/vehicle-reservation-details/${reservationId}`);
     },
     onError: (error: Error) => {
       toast({
