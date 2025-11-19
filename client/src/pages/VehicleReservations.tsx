@@ -296,7 +296,7 @@ export default function VehicleReservations() {
                 </div>
                 <div className="text-sm">
                   <span className="text-muted-foreground">Passengers: </span>
-                  <span>{reservation.passengers}</span>
+                  <span>{reservation.passengerCount}</span>
                 </div>
                 {reservation.notes && (
                   <div className="text-sm">
