@@ -16,6 +16,7 @@ import {
   MapPin,
   MessageSquare,
   PlayCircle,
+  Car,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -155,12 +156,20 @@ export default function Dashboard() {
               Welcome back, {user?.firstName || "User"}
             </p>
           </div>
-          <Link href="/new-request" className="w-full sm:w-auto">
-            <Button size="lg" className="w-full sm:w-auto" data-testid="button-new-request">
-              <Plus className="w-4 h-4 mr-2" />
-              New Request
-            </Button>
-          </Link>
+          <div className="flex gap-3 w-full sm:w-auto">
+            <Link href="/new-request" className="flex-1 sm:flex-initial">
+              <Button size="lg" className="w-full" data-testid="button-new-request">
+                <Plus className="w-4 h-4 mr-2" />
+                New Request
+              </Button>
+            </Link>
+            <Link href="/my-reservations" className="flex-1 sm:flex-initial">
+              <Button size="lg" className="w-full" variant="outline" data-testid="button-new-car-reservation">
+                <Car className="w-4 h-4 mr-2" />
+                New Car Reservation
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Card>
@@ -211,32 +220,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6">
-            <CardTitle className="text-base md:text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pt-0 px-3 pb-3 md:px-6 md:pb-6">
-            <Link href="/new-request" className="block">
-              <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-create-request">
-                <Plus className="w-4 h-4 mr-2" />
-                Create New Request
-              </Button>
-            </Link>
-            <Link href="/requests" className="block">
-              <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-view-all">
-                <ClipboardList className="w-4 h-4 mr-2" />
-                View My Requests
-              </Button>
-            </Link>
-            <Link href="/messages" className="block">
-              <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-view-messages">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                View Messages
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
     );
   }
 
@@ -393,41 +377,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6 md:pb-3">
-          <CardTitle className="text-base md:text-lg">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 pt-0 px-3 pb-3 md:px-6 md:pb-6">
-          <Link href="/requests" className="block">
-            <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-view-all">
-              <ClipboardList className="w-4 h-4 mr-2" />
-              View All Tasks
-            </Button>
-          </Link>
-          {user?.role === "admin" && (
-            <>
-              <Link href="/users" className="block">
-                <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-manage-users">
-                  <Users className="w-4 h-4 mr-2" />
-                  Manage Users
-                </Button>
-              </Link>
-              <Link href="/areas" className="block">
-                <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-manage-areas">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Manage Areas
-                </Button>
-              </Link>
-            </>
-          )}
-          <Link href="/calendar" className="block">
-            <Button className="w-full justify-start text-sm md:text-base" variant="outline" data-testid="button-view-calendar">
-              <Clock className="w-4 h-4 mr-2" />
-              View Calendar
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+      </div>
   );
 }
