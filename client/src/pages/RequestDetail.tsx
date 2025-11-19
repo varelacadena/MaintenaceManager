@@ -564,6 +564,80 @@ export default function RequestDetail() {
                     No attachments
                   </p>
                 )}
+
+                {/* Pending Uploads */}
+                {pendingUploads.length > 0 && (
+                  <div className="space-y-2 mt-3 pt-3 border-t">
+                    <p className="text-xs font-medium text-muted-foreground">Pending uploads</p>
+                    <div className="space-y-1.5">
+                      {pendingUploads.map((upload, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 p-2 rounded border bg-muted/30 text-xs"
+                        >
+                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="flex-1 truncate">{upload.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 shrink-0"
+                            onClick={() => removePendingUpload(index)}
+                            data-testid={`button-remove-pending-upload-${index}`}
+                          >
+                            <X className="w-3 h-3 text-red-500" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          for (const upload of pendingUploads) {
+                            await addUploadMutation.mutateAsync({
+                              fileName: upload.name,
+                              fileType: upload.type,
+                              objectUrl: upload.url,
+                            });
+                          }
+                          // Only clear pending uploads if all mutations succeeded
+                          setPendingUploads([]);
+                        } catch (error) {
+                          // Error is already handled by mutation's onError
+                          // Keep pending uploads so user can retry
+                          console.error("Failed to save some attachments:", error);
+                        }
+                      }}
+                      disabled={addUploadMutation.isPending}
+                      className="w-full h-8 text-xs"
+                      data-testid="button-save-attachments"
+                    >
+                      {addUploadMutation.isPending ? "Saving..." : "Save Attachments"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Upload Button */}
+                <div className="mt-3 pt-3 border-t">
+                  <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center">
+                    <ObjectUploader
+                      maxNumberOfFiles={5}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={handleFileUpload}
+                      onError={(error) => {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "Upload failed",
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      }}
+                      buttonClassName="h-8 text-xs"
+                    >
+                      Browse Files
+                    </ObjectUploader>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
