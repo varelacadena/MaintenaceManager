@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   ClipboardList,
   Clock,
@@ -43,6 +43,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+
+const [, navigate] = useLocation();
 
 export default function Dashboard() {
   const { user } = useAuth();
