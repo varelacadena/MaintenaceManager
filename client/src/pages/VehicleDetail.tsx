@@ -75,9 +75,9 @@ export default function VehicleDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 space-y-4 p-4">
+      <div className="space-y-4 sm:space-y-6 pb-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/4" />
+          <div className="h-8 bg-muted rounded w-3/4" />
           <div className="h-64 bg-muted rounded" />
         </div>
       </div>
@@ -86,7 +86,7 @@ export default function VehicleDetail() {
 
   if (!vehicle) {
     return (
-      <div className="flex-1 space-y-4 p-4">
+      <div className="space-y-4 sm:space-y-6 pb-6">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Car className="h-12 w-12 text-muted-foreground mb-4" />
@@ -100,46 +100,49 @@ export default function VehicleDetail() {
   const qrCodeUrl = `${window.location.origin}/vehicles/${vehicle.id}`;
 
   return (
-    <div className="flex-1 space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-4 sm:space-y-6 pb-6">
+      {/* Header Section - Mobile Optimized */}
+      <div className="space-y-3 sm:space-y-0">
+        <div className="flex items-center gap-2 sm:gap-4">
           <RouterLink href="/vehicles">
-            <Button variant="ghost" size="icon" data-testid="button-back">
+            <Button variant="ghost" size="icon" data-testid="button-back" className="shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </RouterLink>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight" data-testid="text-vehicle-name">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate" data-testid="text-vehicle-name">
               {vehicle.make} {vehicle.model}
             </h2>
-            <p className="text-muted-foreground">{vehicle.year} • {vehicle.vehicleId}</p>
+            <p className="text-sm text-muted-foreground truncate">{vehicle.year} • {vehicle.vehicleId}</p>
           </div>
         </div>
+
+        {/* Action Buttons - Full width on mobile, inline on desktop */}
         {canManageVehicles && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate(`/vehicles/${id}/edit`)}>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => navigate(`/vehicles/${id}/edit`)} className="w-full sm:w-auto">
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" data-testid="button-delete-vehicle">
+                <Button variant="destructive" data-testid="button-delete-vehicle" className="w-full sm:w-auto">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Vehicle?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will permanently delete this vehicle and all associated data. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                  <AlertDialogCancel className="w-full sm:w-auto mt-0">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => deleteVehicleMutation.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
                     data-testid="button-confirm-delete-vehicle"
                   >
                     Delete
@@ -152,65 +155,69 @@ export default function VehicleDetail() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-          <TabsTrigger value="reservations" data-testid="tab-reservations">Reservations</TabsTrigger>
-          <TabsTrigger value="logbook" data-testid="tab-logbook">Logbook</TabsTrigger>
-          <TabsTrigger value="qr-code" data-testid="tab-qr-code">QR Code</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="reservations" className="text-xs sm:text-sm">Reservations</TabsTrigger>
+          <TabsTrigger value="logbook" className="text-xs sm:text-sm">Logbook</TabsTrigger>
+          <TabsTrigger value="qr-code" className="text-xs sm:text-sm">QR Code</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle>Vehicle Information</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base sm:text-lg">Vehicle Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge variant={statusColors[vehicle.status]} data-testid="badge-status">
+                  <Badge variant={statusColors[vehicle.status]} className="text-xs">
                     {vehicle.status.replace(/_/g, " ")}
                   </Badge>
                 </div>
                 <Separator />
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">VIN</span>
-                  <span className="text-sm font-medium">{vehicle.vin || "N/A"}</span>
+                <div className="flex justify-between items-start gap-2">
+                  <span className="text-sm text-muted-foreground shrink-0">VIN</span>
+                  <span className="font-mono text-xs sm:text-sm text-right break-all">{vehicle.vin || "N/A"}</span>
                 </div>
-                <div className="flex justify-between">
+                <Separator />
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">License Plate</span>
-                  <span className="text-sm font-medium">{vehicle.licensePlate || "N/A"}</span>
+                  <span className="font-mono text-sm">{vehicle.licensePlate || "N/A"}</span>
                 </div>
-                <div className="flex justify-between">
+                <Separator />
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Category</span>
-                  <span className="text-sm font-medium">{vehicle.category}</span>
+                  <span className="text-sm">{vehicle.category}</span>
                 </div>
-                <div className="flex justify-between">
+                <Separator />
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Fuel Type</span>
-                  <span className="text-sm font-medium">{vehicle.fuelType}</span>
+                  <span className="text-sm">{vehicle.fuelType}</span>
                 </div>
-                <div className="flex justify-between">
+                <Separator />
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Passenger Capacity</span>
-                  <span className="text-sm font-medium">{vehicle.passengerCapacity}</span>
+                  <span className="text-sm">{vehicle.passengerCapacity}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Mileage & Maintenance</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base sm:text-lg">Mileage & Maintenance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Current Mileage</span>
-                  <span className="text-sm font-medium" data-testid="text-mileage">
+                  <span className="text-sm" data-testid="text-mileage">
                     {vehicle.currentMileage?.toLocaleString()} mi
                   </span>
                 </div>
                 <Separator />
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Color</span>
-                  <span className="text-sm font-medium">{vehicle.color || "N/A"}</span>
+                  <span className="text-sm">{vehicle.color || "N/A"}</span>
                 </div>
                 {vehicle.notes && (
                   <>
@@ -231,25 +238,25 @@ export default function VehicleDetail() {
             <div className="space-y-4">
               {reservations.map((reservation) => (
                 <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <CardTitle className="text-sm sm:text-base md:text-lg">
                         {format(new Date(reservation.startDate), "MMM d, yyyy")} - {format(new Date(reservation.endDate), "MMM d, yyyy")}
                       </CardTitle>
-                      <Badge variant={reservation.status === "completed" ? "default" : "secondary"}>
+                      <Badge variant={reservation.status === "completed" ? "default" : "secondary"} className="text-xs self-start sm:self-auto">
                         {reservation.status}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Purpose</span>
-                      <span>{reservation.purpose}</span>
+                    <div className="flex justify-between items-start gap-2 text-sm">
+                      <span className="text-muted-foreground shrink-0">Purpose</span>
+                      <span className="text-right break-words">{reservation.purpose}</span>
                     </div>
                     {reservation.notes && (
                       <div className="text-sm">
                         <span className="text-muted-foreground">Notes: </span>
-                        <span>{reservation.notes}</span>
+                        <span className="break-words">{reservation.notes}</span>
                       </div>
                     )}
                   </CardContent>
@@ -258,91 +265,122 @@ export default function VehicleDetail() {
             </div>
           ) : (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">No reservations</p>
-                <p className="text-sm text-muted-foreground">
-                  No reservations have been made for this vehicle
-                </p>
+              <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
+                <p className="text-base sm:text-lg font-medium">No reservations</p>
+                <p className="text-sm text-muted-foreground text-center">This vehicle has no reservations yet</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="logbook" className="space-y-4">
-          {checkOutLogs && checkOutLogs.length > 0 ? (
-            <div className="space-y-4">
-              {checkOutLogs.map((log) => {
-                const checkInLog = checkInLogs?.find(cil => cil.checkOutLogId === log.id);
-                return (
-                  <Card key={log.id} data-testid={`card-checkout-log-${log.id}`}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        {format(new Date(log.checkOutDate), "MMM d, yyyy h:mm a")}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Check-Out</p>
-                          <p className="text-sm font-medium">Mileage: {log.startMileage} mi</p>
-                          <p className="text-sm font-medium">Fuel: {log.startFuelLevel}%</p>
-                        </div>
-                        {checkInLog && (
+        <TabsContent value="logbook" className="space-y-4 sm:space-y-6">
+          <div className="space-y-4 sm:space-y-6">
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Check-Out Logs</h3>
+              {checkOutLogs && checkOutLogs.length > 0 ? (
+                <div className="space-y-3 sm:space-y-4">
+                  {checkOutLogs.map((log) => (
+                    <Card key={log.id}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm sm:text-base">
+                          {format(new Date(log.checkOutDate), "MMM d, yyyy h:mm a")}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Check-In</p>
-                            <p className="text-sm font-medium">Mileage: {checkInLog.endMileage} mi</p>
-                            <p className="text-sm font-medium">Fuel: {checkInLog.endFuelLevel}%</p>
+                            <p className="text-sm text-muted-foreground">Check-Out</p>
+                            <p className="text-sm font-medium">Mileage: {log.startMileage} mi</p>
+                            <p className="text-sm font-medium">Fuel: {log.startFuelLevel}%</p>
+                          </div>
+                        </div>
+                        {log.inspectionNotes && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Inspection Notes</p>
+                            <p className="text-sm">{log.inspectionNotes}</p>
                           </div>
                         )}
-                      </div>
-                      {log.inspectionNotes && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Inspection Notes</p>
-                          <p className="text-sm">{log.inspectionNotes}</p>
-                        </div>
-                      )}
-                      {checkInLog?.issues && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Issues Reported</p>
-                          <p className="text-sm text-destructive">{checkInLog.issues}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                    <p className="text-sm text-muted-foreground">No check-out logs</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">No logbook entries</p>
-                <p className="text-sm text-muted-foreground">
-                  Check-out and check-in logs will appear here
-                </p>
-              </CardContent>
-            </Card>
-          )}
+
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Check-In Logs</h3>
+              {checkInLogs && checkInLogs.length > 0 ? (
+                <div className="space-y-3 sm:space-y-4">
+                  {checkInLogs.map((log) => {
+                    const checkInLog = checkOutLogs?.find(cil => cil.checkOutLogId === log.id);
+                    return (
+                      <Card key={log.id}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm sm:text-base">
+                            {format(new Date(log.checkInDate), "MMM d, yyyy h:mm a")}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Check-In</p>
+                              <p className="text-sm font-medium">Mileage: {log.endMileage} mi</p>
+                              <p className="text-sm font-medium">Fuel: {log.endFuelLevel}%</p>
+                            </div>
+                            {checkInLog && (
+                              <div>
+                                {checkInLog.issues && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Issues Reported</p>
+                                    <p className="text-sm text-destructive">{checkInLog.issues}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                    <p className="text-sm text-muted-foreground">No check-in logs</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="qr-code" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Vehicle QR Code</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg">Vehicle QR Code</CardTitle>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Scan this QR code to quickly access this vehicle's details
+              </p>
             </CardHeader>
-            <CardContent className="flex flex-col items-center space-y-4">
+            <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 px-4">
               <div className="bg-white p-4 rounded-lg">
                 <QRCode
                   value={qrCodeUrl}
-                  size={256}
+                  size={Math.min(200, window.innerWidth - 100)}
                   data-testid="qr-code"
                 />
               </div>
-              <p className="text-sm text-muted-foreground text-center">
-                Scan this QR code to quickly access this vehicle's details
+              <p className="text-xs sm:text-sm text-muted-foreground mt-4 text-center break-words">
+                {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
               </p>
-              <Button variant="outline" onClick={() => window.print()} data-testid="button-print-qr">
+              <Button variant="outline" onClick={() => window.print()} data-testid="button-print-qr" className="mt-4">
                 <QrCode className="h-4 w-4 mr-2" />
                 Print QR Code
               </Button>
