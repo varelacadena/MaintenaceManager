@@ -134,22 +134,21 @@ export default function MyReservations() {
     mutationFn: async (reservationId: string) => {
       return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/accept-advisory`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Wait for queries to invalidate and refetch
+      await queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
         }
       });
+      
       toast({
         title: "Success",
         description: "Reservation details accepted.",
       });
       setAdvisoryDialogOpen(false);
       setAdvisoryAccepted(false);
-      if (selectedReservationForDetails) {
-        window.location.href = `/vehicle-reservation-details/${selectedReservationForDetails}`;
-      }
       setSelectedReservationForDetails(null);
     },
     onError: (error: Error) => {
