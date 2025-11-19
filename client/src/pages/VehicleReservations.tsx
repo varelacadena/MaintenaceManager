@@ -103,6 +103,26 @@ export default function VehicleReservations() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (reservationId: string) => {
+      return await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      toast({
+        title: "Success",
+        description: "Reservation deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const assignVehicleMutation = useMutation({
     mutationFn: async ({ reservationId, vehicleId }: { reservationId: string; vehicleId: string }) => {
       return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
@@ -360,6 +380,34 @@ export default function VehicleReservations() {
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           Cancel Reservation
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        data-testid={`button-delete-${reservation.id}`}
+                      >
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this reservation? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Go Back</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(reservation.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete Reservation
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
