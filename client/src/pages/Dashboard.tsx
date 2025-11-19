@@ -29,7 +29,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type { ServiceRequest, Message, Task } from "@shared/schema";
+import type { ServiceRequest, Message, Task, VehicleReservation, Vehicle } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -47,7 +47,15 @@ export default function Dashboard() {
     queryKey: ["/api/messages"],
   });
 
-  const isLoading = requestsLoading || tasksLoading;
+  const { data: vehicleReservations = [], isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
+    queryKey: ["/api/vehicle-reservations/my"],
+  });
+
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  const isLoading = requestsLoading || tasksLoading || reservationsLoading;
 
   if (isLoading) {
     return (
@@ -86,6 +94,36 @@ export default function Dashboard() {
       return dateB - dateA;
     })
     .slice(0, 5);
+
+  const recentReservations = vehicleReservations
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
+    .slice(0, 5);
+
+  const getVehicleName = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    return vehicle ? `${vehicle.make} ${vehicle.model}` : 'Unknown Vehicle';
+  };
+
+  const getReservationStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-500";
+      case "approved":
+        return "bg-blue-500";
+      case "active":
+        return "bg-green-500";
+      case "completed":
+        return "bg-gray-500";
+      case "cancelled":
+        return "bg-red-500";
+      default:
+        return "bg-muted";
+    }
+  };
 
   // Weekly work chart data
   const getWeeklyData = () => {
@@ -209,6 +247,54 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">
                             {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6">
+            <CardTitle className="text-base md:text-lg">Last Car Reservations</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 px-3 pb-3 md:px-6 md:pb-6">
+            {recentReservations.length === 0 ? (
+              <div className="text-center py-6 md:py-8 text-sm md:text-base text-muted-foreground">
+                No reservations yet
+              </div>
+            ) : (
+              <div className="space-y-2 md:space-y-3">
+                {recentReservations.map((reservation) => (
+                  <Link
+                    key={reservation.id}
+                    href={`/my-reservations`}
+                  >
+                    <div className="flex items-start gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-reservation-${reservation.id}`}>
+                      <div
+                        className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 flex-shrink-0 ${getReservationStatusColor(
+                          reservation.status
+                        )}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start md:items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-medium text-sm md:text-base truncate">
+                            {getVehicleName(reservation.vehicleId)}
+                          </span>
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
+                            {reservation.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">
+                          {reservation.purpose}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {reservation.startDate ? new Date(reservation.startDate).toLocaleDateString() : 'N/A'}
                           </span>
                         </div>
                       </div>
