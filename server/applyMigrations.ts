@@ -42,6 +42,7 @@ export async function applyMigrations() {
     { file: "015_add_key_location_to_reservations.sql", name: "015_add_key_location_to_reservations" },
     { file: "016_add_passenger_count_to_reservations.sql", name: "016_add_passenger_count_to_reservations" },
     { file: "017_add_reservation_handoff_details.sql", name: "017_add_reservation_handoff_details" },
+    { file: "018_add_last_viewed_status_to_reservations.sql", name: "018_add_last_viewed_status_to_reservations" },
   ];
 
   try {
