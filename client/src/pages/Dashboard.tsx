@@ -47,7 +47,8 @@ import { queryClient } from "@/lib/queryClient";
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
+  const navigate = (path: string) => setLocation(path);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -342,7 +343,7 @@ export default function Dashboard() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
-              onClick={() => navigate("/requests/new")}
+              onClick={() => navigate("/new-request")}
               className="h-10 sm:h-11 px-5 sm:px-8 text-sm sm:text-base flex-1"
             >
               <Plus className="mr-2 h-4 w-4" />
