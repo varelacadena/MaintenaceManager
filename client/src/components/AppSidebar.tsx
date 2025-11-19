@@ -9,6 +9,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -79,6 +80,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
   const [location] = useLocation();
   const menuItems = roleMenus[userRole];
   const notificationCounts = useNotificationCounts();
+  const { setOpenMobile, isMobile } = useSidebar();
 
   return (
     <Sidebar>
@@ -112,7 +114,15 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={location === item.url}>
-                      <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <Link 
+                        href={item.url} 
+                        data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                        onClick={() => {
+                          if (isMobile) {
+                            setOpenMobile(false);
+                          }
+                        }}
+                      >
                         <div className="flex items-center gap-2 flex-1">
                           <item.icon className="w-4 h-4" />
                           <span>{item.title}</span>
