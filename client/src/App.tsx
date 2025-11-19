@@ -116,6 +116,7 @@ function AuthenticatedApp() {
                 <Route path="/vehicles/:id" component={VehicleDetail} />
                 <Route path="/vehicles/:id/edit" component={VehicleEdit} />
                 <Route path="/vehicles/:id/check-out" component={VehicleCheckOut} />
+                <Route path="/my-reservations" component={MyReservations} />
                 <Route path="/vehicle-reservations" component={VehicleReservations} />
                 <Route path="/vehicle-checkout/:reservationId" component={VehicleCheckOut} />
                 <Route path="/vehicle-checkin/:reservationId" component={VehicleCheckIn} />
