@@ -1,123 +1,51 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Car } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
-import type { VehicleReservation, Vehicle } from "@shared/schema";
+import { useLocation } from "wouter";
 import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertVehicleReservationSchema, type InsertVehicleReservation } from "@shared/schema";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Calendar, Car, MapPin, Users, Plus, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Link, useLocation } from "wouter";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+
+interface VehicleReservation {
+  id: string;
+  vehicleId: string;
+  vehicleName: string;
+  startTime: string;
+  endTime: string;
+  purpose: string;
+  status: string;
+  passengerCount: number | null;
+  keyPickupLocation: string | null;
+  handoffInstructions: string | null;
+  createdAt: string;
+}
 
 export default function MyReservations() {
-  const { user } = useAuth();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false);
-  const [advisoryAccepted, setAdvisoryAccepted] = useState(false);
-  const [selectedReservationForDetails, setSelectedReservationForDetails] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const setLocation = useLocation()[1];
+  const queryClient = useQueryClient();
 
-
-  const { data: reservations, isLoading } = useQuery<VehicleReservation[]>({
-    queryKey: [`/api/vehicle-reservations?userId=${user?.id}`],
-    enabled: !!user?.id,
-  });
-
-  const { data: vehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
-  });
-
-  const form = useForm<InsertVehicleReservation>({
-    resolver: zodResolver(insertVehicleReservationSchema.omit({ userId: true, vehicleId: true })),
-    defaultValues: {
-      startDate: new Date(),
-      endDate: new Date(),
-      purpose: "",
-      passengerCount: 1,
-      notes: "",
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: Omit<InsertVehicleReservation, "userId">) => {
-      return await apiRequest("POST", "/api/vehicle-reservations", {
-        ...data,
-        userId: user!.id,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
-        }
-      });
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicles');
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Reservation created successfully",
-      });
-      setCreateDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+  const { data: reservations = [], isLoading } = useQuery<VehicleReservation[]>({
+    queryKey: ["/api/vehicle-reservations/my"],
   });
 
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
-      return await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
+      const res = await fetch(`/api/vehicle-reservations/${reservationId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to cancel reservation");
+      }
+
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
-        }
-      });
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicles');
-        }
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
       toast({
         title: "Success",
         description: "Reservation cancelled successfully",
@@ -132,415 +60,188 @@ export default function MyReservations() {
     },
   });
 
-  const acceptAdvisoryMutation = useMutation({
-    mutationFn: async (reservationId: string) => {
-      return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/accept-advisory`);
-    },
-    onSuccess: async (_, reservationId) => {
-      // Invalidate and wait for queries to refetch
-      await queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
-        }
-      });
-
-      toast({
-        title: "Success",
-        description: "Reservation details accepted.",
-      });
-      setAdvisoryDialogOpen(false);
-      setAdvisoryAccepted(false);
-      setSelectedReservationForDetails(null);
-      // Redirect to the reservation details page
-      setLocation(`/vehicle-reservation-details/${reservationId}`);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-      setAdvisoryAccepted(false);
-      setSelectedReservationForDetails(null);
-    },
-  });
-
-  const markAsViewedMutation = useMutation({
-    mutationFn: async (reservationId: string) => {
-      return await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/mark-viewed`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicle-reservations');
-        }
-      });
-    },
-  });
-
-  const handleViewDetails = (reservationId: string) => {
-    setSelectedReservationForDetails(reservationId);
-    setAdvisoryDialogOpen(true);
-    // Mark as viewed after a short delay to ensure dialog is shown first
-    setTimeout(() => {
-      markAsViewedMutation.mutate(reservationId);
-    }, 100);
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "approved":
+        return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
+      case "pending":
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
+      case "rejected":
+        return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
+      case "completed":
+        return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
+      default:
+        return "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20";
+    }
   };
 
-  return (
-    <div className="flex-1 space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">My Reservations</h2>
-          <p className="text-muted-foreground">
-            Manage your vehicle reservations
-          </p>
+  const canCheckOut = (reservation: VehicleReservation) => {
+    if (reservation.status.toLowerCase() !== "approved") return false;
+    const now = new Date();
+    const startTime = new Date(reservation.startTime);
+    const hoursBefore = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return hoursBefore <= 2 && hoursBefore >= -1;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold">My Reservations</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage your vehicle reservations</p>
+          </div>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-new-reservation">
-              <Plus className="mr-2 h-4 w-4" />
-              New Reservation
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Reservation</DialogTitle>
-              <DialogDescription>
-                Reserve a vehicle for your upcoming trip
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="passengerCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Passengers</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="50"
-                          value={field.value}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? '' : parseInt(e.target.value, 10);
-                            field.onChange(value);
-                          }}
-                          data-testid="input-passenger-count"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <div className="grid grid-cols-2 gap-2">
-                        <FormControl>
-                          <Input
-                            type="date"
-                            min={new Date().toISOString().slice(0, 10)}
-                            value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ""}
-                            onChange={(e) => {
-                              const currentTime = field.value ? new Date(field.value).toTimeString().slice(0, 5) : "09:00";
-                              const newDateTime = new Date(`${e.target.value}T${currentTime}`);
-                              field.onChange(newDateTime);
-                            }}
-                            data-testid="input-start-date"
-                            className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
-                          />
-                        </FormControl>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value ? new Date(field.value).toTimeString().slice(0, 5) : ""}
-                            onChange={(e) => {
-                              if (!field.value) return;
-                              const currentDate = new Date(field.value);
-                              const [hours, minutes] = e.target.value.split(':');
-                              currentDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-                              field.onChange(currentDate);
-                            }}
-                            data-testid="input-start-time"
-                            className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <div className="grid grid-cols-2 gap-2">
-                        <FormControl>
-                          <Input
-                            type="date"
-                            min={form.watch("startDate") ? new Date(form.watch("startDate")).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)}
-                            value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ""}
-                            onChange={(e) => {
-                              const currentTime = field.value ? new Date(field.value).toTimeString().slice(0, 5) : "17:00";
-                              const newDateTime = new Date(`${e.target.value}T${currentTime}`);
-                              field.onChange(newDateTime);
-                            }}
-                            data-testid="input-end-date"
-                            className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
-                          />
-                        </FormControl>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value ? new Date(field.value).toTimeString().slice(0, 5) : ""}
-                            onChange={(e) => {
-                              if (!field.value) return;
-                              const currentDate = new Date(field.value);
-                              const [hours, minutes] = e.target.value.split(':');
-                              currentDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-                              field.onChange(currentDate);
-                            }}
-                            data-testid="input-end-time"
-                            className="cursor-pointer relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:z-10"
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="purpose"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Purpose</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-purpose" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} value={field.value || ""} data-testid="textarea-notes" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-reservation">
-                    {createMutation.isPending ? "Creating..." : "Create Reservation"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <div className="text-center py-8 sm:py-12">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6 pb-6">
+      {/* Header Section - Mobile Optimized */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold truncate">My Reservations</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your vehicle reservations</p>
+        </div>
+        <Button
+          onClick={() => setLocation("/vehicles")}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
+          size="default"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="whitespace-nowrap">New Reservation</span>
+        </Button>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader className="animate-pulse">
-                <div className="h-4 bg-muted rounded w-3/4" />
+      {/* Reservations List */}
+      {reservations.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center px-4">
+            <Car className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">No reservations yet</h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+              You haven't made any vehicle reservations. Click the button above to reserve a vehicle.
+            </p>
+            <Button onClick={() => setLocation("/vehicles")} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Make a Reservation
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:gap-6">
+          {reservations.map((reservation) => (
+            <Card key={reservation.id} className="overflow-hidden">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg sm:text-xl flex items-center gap-2 mb-2">
+                      <Car className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{reservation.vehicleName}</span>
+                    </CardTitle>
+                  </div>
+                  <Badge className={`${getStatusColor(reservation.status)} shrink-0 self-start`}>
+                    {reservation.status}
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent className="animate-pulse space-y-2">
-                <div className="h-3 bg-muted rounded" />
-                <div className="h-3 bg-muted rounded w-5/6" />
+
+              <CardContent className="space-y-3 sm:space-y-4">
+                {/* Date & Time - Stacked on mobile */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground">Start</p>
+                      <p className="text-sm font-medium break-words">
+                        {format(new Date(reservation.startTime), "MMM dd, yyyy h:mm a")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground">End</p>
+                      <p className="text-sm font-medium break-words">
+                        {format(new Date(reservation.endTime), "MMM dd, yyyy h:mm a")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Purpose */}
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Purpose:</p>
+                  <p className="text-sm break-words">{reservation.purpose}</p>
+                </div>
+
+                {/* Passenger Count */}
+                {reservation.passengerCount && (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">Passengers:</span>{" "}
+                      {reservation.passengerCount}
+                    </p>
+                  </div>
+                )}
+
+                {/* Key Pickup Location */}
+                {reservation.keyPickupLocation && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <MapPin className="h-4 w-4 shrink-0" />
+                      Key Pickup:
+                    </p>
+                    <p className="text-sm break-words pl-6">{reservation.keyPickupLocation}</p>
+                  </div>
+                )}
+
+                {/* Handoff Instructions */}
+                {reservation.handoffInstructions && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Instructions:</p>
+                    <p className="text-sm break-words whitespace-pre-wrap bg-muted/50 p-2 sm:p-3 rounded-md">
+                      {reservation.handoffInstructions}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action Buttons - Full width on mobile, inline on desktop */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+                  {canCheckOut(reservation) && (
+                    <Button
+                      onClick={() => setLocation(`/vehicles/${reservation.vehicleId}/check-out?reservationId=${reservation.id}`)}
+                      className="w-full sm:w-auto"
+                    >
+                      Check Out
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation(`/vehicle-reservation-details/${reservation.id}`)}
+                    className="w-full sm:w-auto"
+                  >
+                    View Details
+                  </Button>
+                  {reservation.status.toLowerCase() === "pending" && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => cancelMutation.mutate(reservation.id)}
+                      disabled={cancelMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {cancelMutation.isPending ? "Cancelling..." : "Cancel"}
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      ) : reservations && reservations.length > 0 ? (
-        <div className="space-y-4">
-          {reservations.map((reservation) => {
-            const vehicle = vehicles?.find(v => v.id === reservation.vehicleId);
-            // Show badge only if status changed from pending to approved/cancelled and user hasn't viewed it yet
-            const hasNewStatusUpdate =
-              reservation.lastViewedStatus === "pending" &&
-              (reservation.status === "approved" || reservation.status === "cancelled");
-
-            return (
-              <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Car className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <CardTitle className="text-lg">
-                          {vehicle ? `${vehicle.make} ${vehicle.model}` : "Vehicle"}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")} -{" "}
-                          {format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {hasNewStatusUpdate && (
-                        <Badge variant="destructive" className="animate-pulse">
-                          New Update
-                        </Badge>
-                      )}
-                      <Badge variant={reservation.status === "completed" ? "default" : "secondary"} data-testid={`badge-status-${reservation.id}`}>
-                        {reservation.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Purpose:</span>
-                    <span>{reservation.purpose}</span>
-                  </div>
-                  {reservation.notes && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Notes: </span>
-                      <span>{reservation.notes}</span>
-                    </div>
-                  )}
-
-                  {/* Show key pickup info only after advisory acceptance */}
-                  {reservation.status === "approved" && reservation.advisoryAccepted && (
-                    <div className="mt-3 pt-3 border-t space-y-2">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground font-semibold">Key Pickup: </span>
-                        <span>
-                          {reservation.keyPickupMethod === "in_person" && "In Person Pickup"}
-                          {reservation.keyPickupMethod === "mailbox" && "Mailbox Pickup"}
-                          {reservation.keyPickupMethod === "inside_vehicle" && "Inside the Vehicle"}
-                          {!reservation.keyPickupMethod && "Not specified"}
-                        </span>
-                      </div>
-                      {reservation.adminNotes && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground font-semibold">Instructions: </span>
-                          <span className="whitespace-pre-wrap">{reservation.adminNotes}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="flex gap-2">
-                  {reservation.status === "pending" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => cancelMutation.mutate(reservation.id)}
-                      disabled={cancelMutation.isPending}
-                      data-testid={`button-cancel-${reservation.id}`}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                  {reservation.status === "approved" && !reservation.advisoryAccepted && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleViewDetails(reservation.id)}
-                      data-testid={`button-view-details-${reservation.id}`}
-                    >
-                      View Details
-                    </Button>
-                  )}
-                  {reservation.status === "approved" && reservation.advisoryAccepted && (
-                    <>
-                      <Link href={`/vehicle-checkout/${reservation.id}`}>
-                        <Button size="sm" data-testid={`button-checkout-${reservation.id}`}>
-                          Check Out
-                        </Button>
-                      </Link>
-                      <Link href={`/vehicle-reservation-details/${reservation.id}`}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          data-testid={`button-details-${reservation.id}`}
-                        >
-                          View Details
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">No reservations</p>
-            <p className="text-sm text-muted-foreground">
-              Create your first reservation to get started
-            </p>
-          </CardContent>
-        </Card>
       )}
-
-      <AlertDialog open={advisoryDialogOpen} onOpenChange={setAdvisoryDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Vehicle Use Advisory</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-4">
-              <p>Before viewing the details and checking out this vehicle, please review and agree to the following:</p>
-              <ul className="list-disc list-inside space-y-2 text-sm">
-                <li><strong>Return the vehicle clean:</strong> The vehicle must be returned in a clean condition, similar to how you received it.</li>
-                <li><strong>Refill the fuel tank:</strong> Please ensure the fuel tank is full before returning the vehicle.</li>
-              </ul>
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox
-                  id="advisory-accept"
-                  checked={advisoryAccepted}
-                  onCheckedChange={(checked) => setAdvisoryAccepted(checked as boolean)}
-                />
-                <label
-                  htmlFor="advisory-accept"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  I agree to the terms above
-                </label>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setAdvisoryAccepted(false);
-              setSelectedReservationForDetails(null);
-            }}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!advisoryAccepted || acceptAdvisoryMutation.isPending}
-              onClick={() => {
-                if (selectedReservationForDetails) {
-                  acceptAdvisoryMutation.mutate(selectedReservationForDetails);
-                }
-              }}
-            >
-              {acceptAdvisoryMutation.isPending ? "Processing..." : "Accept & Continue"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
