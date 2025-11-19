@@ -508,7 +508,7 @@ export default function RequestDetail() {
             </CardHeader>
             <CardContent className="px-3 pb-3">
               <div className="space-y-2">
-                {uploads.length > 0 && (
+                {uploads.length > 0 ? (
                   <div className="space-y-1.5">
                     {uploads.map((upload) => (
                       <div
@@ -525,106 +525,45 @@ export default function RequestDetail() {
                           <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate">{upload.fileName}</span>
                         </a>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 shrink-0"
-                              data-testid={`button-delete-attachment-${upload.id}`}
-                            >
-                              <Trash2 className="w-3 h-3 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                              <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteUploadMutation.mutate(upload.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+                        {(isMaintenanceOrAdmin || request.requesterId === user?.id) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 shrink-0"
+                                data-testid={`button-delete-attachment-${upload.id}`}
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                                <Trash2 className="w-3 h-3 text-red-500" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteUploadMutation.mutate(upload.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     ))}
                   </div>
-                )}
-
-                {pendingUploads.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t">
-                    {pendingUploads.map((upload, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 p-2 rounded border bg-blue-50 dark:bg-blue-950 text-xs"
-                      >
-                        <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="flex-1 truncate">{upload.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 shrink-0"
-                          onClick={() => removePendingUpload(index)}
-                          data-testid={`button-remove-pending-upload-${index}`}
-                        >
-                          <X className="w-3 h-3 text-red-500" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      onClick={async () => {
-                        for (const upload of pendingUploads) {
-                          await addUploadMutation.mutateAsync({
-                            fileName: upload.name,
-                            fileType: upload.type,
-                            objectUrl: upload.url,
-                          });
-                        }
-                        setPendingUploads([]);
-                      }}
-                      disabled={addUploadMutation.isPending}
-                      className="w-full h-8 text-xs"
-                      size="sm"
-                      data-testid="button-save-attachments"
-                    >
-                      {addUploadMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                  </div>
-                )}
-
-                {(isMaintenanceOrAdmin || request.requesterId === user?.id) ? (
-                  <div className="border-2 border-dashed rounded-lg p-3 flex items-center justify-center">
-                    <ObjectUploader
-                      maxNumberOfFiles={5}
-                      maxFileSize={10485760}
-                      onGetUploadParameters={getUploadParameters}
-                      onComplete={handleFileUpload}
-                      onError={(error) => {
-                        console.error("Upload error:", error);
-                        toast({
-                          title: "Upload failed",
-                          description: error.message,
-                          variant: "destructive"
-                        });
-                      }}
-                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8"
-                    >
-                      Browse
-                    </ObjectUploader>
-                  </div>
-                ) : uploads.length === 0 ? (
+                ) : (
                   <p className="text-xs text-muted-foreground text-center py-4">
                     No attachments
                   </p>
-                ) : null}
+                )}
               </div>
             </CardContent>
           </Card>
