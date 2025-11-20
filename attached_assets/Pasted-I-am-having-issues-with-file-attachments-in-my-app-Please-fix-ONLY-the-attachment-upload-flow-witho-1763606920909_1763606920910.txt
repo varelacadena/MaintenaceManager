@@ -1,0 +1,65 @@
+I am having issues with file attachments in my app. Please fix ONLY the attachment upload flow without modifying or creating anything related to vehicles, vehicle logs, check-in/check-out logs, or any other functionality. Focus solely on uploads tied to service requests.
+
+Here is the problem:
+
+On the “New Service Request” page, users can upload attachments (files).
+
+When the request is submitted, the file is not being saved into the database table used for uploads.
+
+On the “Service Request Details” page, the attachments are not being displayed.
+
+Replit previously tried to fix it by adding check_out_log_id and check_in_log_id to the uploads table, but those columns are not part of this feature and must NOT be added or referenced.
+
+Do not modify any vehicle-related tables or logic.
+
+Here is what I need you to fix:
+
+✅ Ensure the uploaded file is properly:
+
+Received by the backend
+
+Saved to the server (or storage directory being used)
+
+Inserted into the correct uploads table in the database
+
+Associated ONLY to a service_request_id
+
+Returned by the API
+
+Displayed in the "Service Request Details" page
+
+Your tasks:
+
+Review the current uploads handler (backend route / controller / storage function).
+
+Fix the database INSERT so attachments correctly save to the uploads table with the right foreign key (service_request_id).
+
+Fix the SELECT query so the request detail page retrieves all uploads for that service request.
+
+Ensure the frontend component responsible for rendering attachments displays them correctly.
+
+Do NOT create, alter, or reference:
+
+vehicle_id
+
+check_out_log_id
+
+check_in_log_id
+
+Anything related to vehicles or logs
+
+Any unrelated migrations
+
+Output required:
+
+The corrected backend code block(s)
+
+The corrected frontend code block(s) if needed
+
+The corrected migration ONLY if something is missing in the uploads table (but only fields related to service requests)
+
+A note if the server needs to be restarted
+
+Goal:
+
+Fix attachment persistence and display for service requests only, without touching any other module.
