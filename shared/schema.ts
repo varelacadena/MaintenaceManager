@@ -234,7 +234,7 @@ export const uploads = pgTable("uploads", {
   checkInLogId: varchar("check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   fileName: varchar("file_name", { length: 255 }).notNull(),
-  fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
+  fileType: varchar("file_type", { length: 50 }).notNull(),
   objectPath: varchar("object_path", { length: 500 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
