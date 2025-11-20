@@ -1361,12 +1361,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         objectPath: objectPath,
       };
 
-      // Set either requestId or taskId, but not both
+      // Set either requestId or taskId
       if (req.body.requestId) {
         uploadData.requestId = req.body.requestId;
-        uploadData.taskId = null;
-      } else {
-        uploadData.requestId = null;
+      } else if (req.body.taskId) {
         uploadData.taskId = req.body.taskId;
       }
 
