@@ -757,20 +757,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Service Requests
-  app.post("/api/service-requests", async (req: any, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
+  app.post("/api/service-requests", isAuthenticated, async (req: any, res) => {
     const result = insertServiceRequestSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ message: "Invalid request data", errors: result.error.issues });
     }
 
     try {
+      const userId = req.userId;
       const request = await storage.createServiceRequest({
         ...result.data,
-        submittedBy: req.user.id,
+        requesterId: userId,
         status: "pending",
       });
 
