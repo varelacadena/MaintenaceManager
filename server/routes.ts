@@ -29,9 +29,10 @@ import {
   insertVehicleCheckOutLogSchema,
   insertVehicleCheckInLogSchema,
   insertVehicleMaintenanceScheduleSchema,
+  uploads,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
-import { db, uploads } from "./db"; // Assuming drizzle setup and uploads table
+import { db } from "./db";
 import { log } from "console";
 
 // Helper function to get authenticated user
