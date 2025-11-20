@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -66,6 +65,10 @@ export default function NewRequest() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [pendingUploads, setPendingUploads] = useState<Array<{ name: string; url: string; type: string }>>([]);
+  // Placeholder for uploaded files, to be replaced with actual attachment IDs
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ id: string, name: string, url: string, type: string }>>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false); // To track submission state
+  const [error, setError] = useState<string | null>(null); // To display submission errors
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -92,13 +95,16 @@ export default function NewRequest() {
       const response = await apiRequest("POST", "/api/service-requests", {
         ...data,
         requestedDate: new Date(data.requestedDate),
+        attachmentIds: uploadedFiles.map(f => f.id), // Add attachment IDs here
       });
       return response.json();
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
 
-      // Upload files if any
+      // Upload files if any (this part might need adjustment based on how attachmentIds are handled)
+      // The logic here assumes files are uploaded and then their IDs are associated.
+      // If the upload itself returns an ID, this part needs to be integrated with the upload process.
       if (pendingUploads.length > 0) {
         try {
           for (const upload of pendingUploads) {
@@ -137,12 +143,13 @@ export default function NewRequest() {
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       const newUploads = result.successful.map((file: any) => ({
+        id: file.id, // Assuming file.id is the attachment ID
         name: file.name,
         url: file.uploadURL,
         type: file.type || "application/octet-stream",
       }));
 
-      setPendingUploads((prev) => [...prev, ...newUploads]);
+      setUploadedFiles((prev) => [...prev, ...newUploads]);
 
       toast({
         title: "Files Ready",
@@ -151,8 +158,8 @@ export default function NewRequest() {
     }
   };
 
-  const removeUpload = (index: number) => {
-    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
+  const removeUpload = (id: string) => { // Use ID to remove
+    setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
   const getUploadParameters = async () => {
@@ -170,6 +177,7 @@ export default function NewRequest() {
       return {
         method: "PUT" as const,
         url: data.uploadURL,
+        id: data.id, // Assuming the backend returns an ID for the upload
       };
     } catch (error) {
       console.error("Error getting upload URL:", error);
@@ -366,7 +374,7 @@ export default function NewRequest() {
                           today.setHours(0, 0, 0, 0);
                           const checkDate = new Date(date);
                           checkDate.setHours(0, 0, 0, 0);
-                          return checkDate.getTime() !== today.getTime();
+                          return checkDate.getTime() < today.getTime(); // Allow today and future dates
                         }}
                         initialFocus
                       />
@@ -399,11 +407,11 @@ export default function NewRequest() {
                   </div>
 
                   {/* Right side - File list */}
-                  {pendingUploads.length > 0 && (
+                  {uploadedFiles.length > 0 && (
                     <div className="flex-1 space-y-2 max-h-64 overflow-y-auto pr-2">
-                      {pendingUploads.map((upload, index) => (
+                      {uploadedFiles.map((upload) => ( // Use upload.id for key
                         <div
-                          key={index}
+                          key={upload.id}
                           className="flex items-center gap-3 p-2 bg-background rounded-md border"
                         >
                           {/* File type icon */}
@@ -412,7 +420,7 @@ export default function NewRequest() {
                               {getFileExtension(upload.name)}
                             </span>
                           </div>
-                          
+
                           {/* File info */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{upload.name}</p>
@@ -424,7 +432,7 @@ export default function NewRequest() {
                           {/* Status/Remove button */}
                           <button
                             type="button"
-                            onClick={() => removeUpload(index)}
+                            onClick={() => removeUpload(upload.id)} // Use upload.id to remove
                             className="p-1 hover:bg-muted rounded-full transition-colors flex-shrink-0"
                           >
                             <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
@@ -437,13 +445,19 @@ export default function NewRequest() {
               </div>
             </div>
 
+            {error && (
+              <p className="text-destructive text-center" data-testid="submission-error">
+                {error}
+              </p>
+            )}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={createRequestMutation.isPending}
+              disabled={isSubmitting || createRequestMutation.isPending}
               data-testid="button-submit-request"
             >
-              {createRequestMutation.isPending
+              {isSubmitting || createRequestMutation.isPending
                 ? "Submitting..."
                 : "Submit Request"}
             </Button>

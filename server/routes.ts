@@ -30,6 +30,9 @@ import {
   insertVehicleCheckInLogSchema,
   insertVehicleMaintenanceScheduleSchema,
 } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
+import { db, uploads } from "./db"; // Assuming drizzle setup and uploads table
+import { log } from "console";
 
 // Helper function to get authenticated user
 async function getAuthUser(req: any) {
@@ -45,6 +48,20 @@ async function getAuthUser(req: any) {
     return null;
   }
 }
+
+// Placeholder for uploadFile function, which is assumed to exist and handle file uploads
+async function uploadFile(req: any): Promise<{ fileName: string; fileKey: string; fileSize: number; mimeType: string }> {
+  // This is a placeholder. In a real application, this would handle the actual file upload
+  // and return details about the uploaded file.
+  console.log("Simulating file upload...");
+  return {
+    fileName: "example.pdf",
+    fileKey: "example-key",
+    fileSize: 1024,
+    mimeType: "application/pdf",
+  };
+}
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -86,8 +103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (err) {
             return res.status(500).json({ message: "Login failed" });
           }
-          res.json({ 
-            success: true, 
+          res.json({
+            success: true,
             firstTimeSetup: true,
             user: {
               id: newAdmin.id,
@@ -738,18 +755,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  app.post("/api/service-requests", isAuthenticated, async (req: any, res) => {
+  // Service Requests
+  app.post("/api/service-requests", async (req: any, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const result = insertServiceRequestSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid request data", errors: result.error.issues });
+    }
+
     try {
-      const userId = req.userId;
-      const requestData = insertServiceRequestSchema.parse({
-        ...req.body,
-        requesterId: userId,
+      const request = await storage.createServiceRequest({
+        ...result.data,
+        submittedBy: req.user.id,
+        status: "pending",
       });
-      const request = await storage.createServiceRequest(requestData);
+
+      // Handle attachments if provided
+      if (req.body.attachmentIds && Array.isArray(req.body.attachmentIds)) {
+        for (const uploadId of req.body.attachmentIds) {
+          await db
+            .update(uploads)
+            .set({ serviceRequestId: request.id })
+            .where(eq(uploads.id, uploadId));
+        }
+      }
+
       res.json(request);
-    } catch (error) {
-      console.error("Error creating service request:", error);
-      res.status(500).json({ message: "Failed to create service request" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
@@ -1233,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const myReservations = await storage.getVehicleReservations({
           userId: userId,
         });
-        approvedReservations = myReservations.filter(r => 
+        approvedReservations = myReservations.filter(r =>
           r.lastViewedStatus === "pending" && r.status === "approved"
         ).length;
       }
@@ -1371,7 +1407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const request = await storage.getServiceRequest(upload.requestId);
         if (request) {
           // Requester, admin, or maintenance can view
-          hasPermission = 
+          hasPermission =
             request.requesterId === userId ||
             currentUser?.role === "admin" ||
             currentUser?.role === "maintenance";
@@ -1383,7 +1419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const task = await storage.getTask(upload.taskId);
         if (task) {
           // Assigned user, admin, or maintenance can view
-          hasPermission = 
+          hasPermission =
             task.assignedToId === userId ||
             currentUser?.role === "admin" ||
             currentUser?.role === "maintenance";
@@ -1790,7 +1826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       const startDate = new Date(reservationData.startDate);
       const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
 
@@ -1807,8 +1843,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const nineAMInMinutes = 9 * 60; // 9:00 AM = 540 minutes
 
         if (startTimeInMinutes < nineAMInMinutes) {
-          return res.status(400).json({ 
-            message: "Reservations for tomorrow must start at or after 9:00 AM" 
+          return res.status(400).json({
+            message: "Reservations for tomorrow must start at or after 9:00 AM"
           });
         }
       }
@@ -1870,7 +1906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           const hasOtherActiveReservations = activeReservations.some(
-            r => r.id !== currentReservation.id && 
+            r => r.id !== currentReservation.id &&
             (r.status === "pending" || r.status === "approved" || r.status === "active")
           );
 
@@ -1893,7 +1929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           const hasActiveReservations = activeReservations.some(
-            r => r.id !== reservation.id && 
+            r => r.id !== reservation.id &&
             (r.status === "pending" || r.status === "approved" || r.status === "active")
           );
 
@@ -2237,6 +2273,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting vehicle maintenance schedule:", error);
       res.status(500).json({ message: "Failed to delete vehicle maintenance schedule" });
+    }
+  });
+
+  // Upload endpoint
+  app.post("/api/upload", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const result = await uploadFile(req);
+
+      // Create upload record in database
+      const upload = await storage.createUpload({
+        fileName: result.fileName,
+        fileKey: result.fileKey,
+        fileSize: result.fileSize,
+        mimeType: result.mimeType,
+        userId: req.user.id, // Assuming req.user is populated by authentication middleware
+      });
+
+      res.json(upload);
+    } catch (error: any) {
+      log(`Upload error: ${error.message}`);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Modified service request detail endpoint to include uploads
+  app.get("/api/service-requests/:id", async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      const request = await storage.getServiceRequest(req.params.id);
+
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Staff can only view their own requests, admin and maintenance can view all
+      if (currentUser?.role === "staff" && request.requesterId !== userId) {
+        return res.status(403).json({ message: "Forbidden: Cannot view this request" });
+      }
+
+      // Get attachments for this request
+      const attachments = await storage.getUploadsByServiceRequest(request.id);
+
+      res.json({
+        ...request,
+        attachments, // Include attachments in the response
+      });
+    } catch (error) {
+      console.error("Error fetching service request:", error);
+      res.status(500).json({ message: "Failed to fetch service request" });
     }
   });
 

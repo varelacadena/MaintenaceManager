@@ -170,6 +170,7 @@ export interface IStorage {
   getUploadByObjectPath(objectPath: string): Promise<Upload | undefined>;
   getUploadsByRequest(requestId: string): Promise<Upload[]>;
   getUploadsByTask(taskId: string): Promise<Upload[]>;
+  getUploadsByServiceRequest(serviceRequestId: string): Promise<Upload[]>;
   deleteUpload(id: string): Promise<void>;
 
   // Task note operations (linked to tasks)
@@ -774,8 +775,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Upload operations
-  async createUpload(uploadData: InsertUpload): Promise<Upload> {
-    const [upload] = await this.db.insert(uploads).values(uploadData).returning();
+  async createUpload(uploadData: {
+    fileName: string;
+    fileKey: string;
+    fileSize: number;
+    mimeType: string;
+    userId: number;
+    serviceRequestId?: number;
+  }): Promise<Upload> {
+    const [upload] = await this.db
+      .insert(uploads)
+      .values({
+        fileName: uploadData.fileName,
+        fileKey: uploadData.fileKey,
+        fileSize: uploadData.fileSize,
+        mimeType: uploadData.mimeType,
+        userId: uploadData.userId,
+        serviceRequestId: uploadData.serviceRequestId,
+      })
+      .returning();
     return upload;
   }
 
@@ -811,6 +829,14 @@ export class DatabaseStorage implements IStorage {
       .from(uploads)
       .where(eq(uploads.taskId, taskId))
       .execute();
+  }
+
+  async getUploadsByServiceRequest(serviceRequestId: string): Promise<Upload[]> {
+    const results = await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.serviceRequestId, serviceRequestId));
+    return results;
   }
 
   async deleteUpload(id: string): Promise<void> {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -310,7 +309,7 @@ export default function RequestDetail() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-1.5 flex-wrap">
             <Badge 
               variant="outline" 
@@ -327,7 +326,7 @@ export default function RequestDetail() {
               {request.urgency}
             </Badge>
           </div>
-          
+
           {isMaintenanceOrAdmin && request.status === "pending" && (
             <div className="flex gap-2 mt-3">
               <Button 
@@ -394,7 +393,7 @@ export default function RequestDetail() {
               </AlertDialog>
             </div>
           )}
-          
+
           {isMaintenanceOrAdmin && canConvertToTask && (
             <Link href={`/tasks/new?requestId=${id}`} className="block mt-2">
               <Button size="sm" className="w-full h-8 text-xs" data-testid="button-convert-to-task">
@@ -733,6 +732,58 @@ export default function RequestDetail() {
               </div>
             </CardContent>
           </Card>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Attachments</h3>
+            {request.attachments && request.attachments.length > 0 ? (
+              <div className="space-y-2">
+                {request.attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-center justify-between border rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      <span className="text-sm font-medium">{attachment.fileName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({(attachment.fileSize / 1024).toFixed(2)} KB)
+                      </span>
+                    </div>
+                    <a
+                      href={`/api/uploads/${attachment.id}/download`}
+                      download={attachment.fileName}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Download
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No attachments</p>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Notes</h3>
+            {request.notes && request.notes.length > 0 ? (
+              <div className="space-y-3">
+                {request.notes.map((note) => (
+                  <div key={note.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-medium">{note.createdBy}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(note.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No notes yet</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
