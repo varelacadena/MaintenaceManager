@@ -340,15 +340,15 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/new-request" className="flex-1 sm:flex-initial">
-              <Button size="lg" className="w-full" data-testid="button-new-request">
+            <Link href="/new-request">
+              <Button size="lg" className="w-full sm:w-auto" data-testid="button-new-request">
                 <Plus className="w-4 h-4 mr-2" />
                 New Request
               </Button>
             </Link>
             <Button 
               size="lg" 
-              className="flex-1 sm:flex-initial w-full" 
+              className="w-full sm:w-auto" 
               variant="outline" 
               data-testid="button-new-car-reservation"
               onClick={() => setCreateDialogOpen(true)}
