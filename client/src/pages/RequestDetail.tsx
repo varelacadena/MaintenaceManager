@@ -49,10 +49,6 @@ export default function RequestDetail() {
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [pendingUploads, setPendingUploads] = useState<
-    { name: string; url: string; type: string }[]
-  >([]);
-
   const { data: request, isLoading } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", id],
   });
@@ -161,30 +157,6 @@ export default function RequestDetail() {
     },
   });
 
-  const addUploadMutation = useMutation({
-    mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
-      const response = await apiRequest("PUT", "/api/uploads", {
-        requestId: id,
-        fileName,
-        fileType,
-        objectUrl,
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
-      toast({ title: "File uploaded successfully" });
-    },
-    onError: (error: any) => {
-      console.error("Error saving upload:", error);
-      toast({
-        title: "Upload failed",
-        description: "File uploaded but couldn't be saved to database",
-        variant: "destructive",
-      });
-    },
-  });
-
   const deleteUploadMutation = useMutation({
     mutationFn: async (uploadId: string) => {
       return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
@@ -202,44 +174,6 @@ export default function RequestDetail() {
       });
     },
   });
-
-  const getUploadParameters = async () => {
-    try {
-      const response = await fetch("/api/objects/upload", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get upload URL");
-      }
-
-      const data = await response.json();
-      return {
-        method: "PUT" as const,
-        url: data.uploadURL,
-      };
-    } catch (error) {
-      console.error("Error getting upload URL:", error);
-      throw error;
-    }
-  };
-
-  const handleFileUpload = async (result: any) => {
-    if (result.successful?.length > 0) {
-      const newUploads = result.successful.map((file: any) => ({
-        name: file.name,
-        url: file.uploadURL,
-        type: file.type || "application/octet-stream",
-      }));
-
-      setPendingUploads((prev) => [...prev, ...newUploads]);
-    }
-  };
-
-  const removePendingUpload = (index: number) => {
-    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
-  };
 
   if (isLoading) {
     return <div className="p-8">Loading...</div>;
@@ -564,83 +498,7 @@ export default function RequestDetail() {
                   </p>
                 )}
 
-                {/* Pending Uploads */}
-                {pendingUploads.length > 0 && (
-                  <div className="space-y-2 mt-3 pt-3 border-t">
-                    <p className="text-xs font-medium text-muted-foreground">Pending uploads</p>
-                    <div className="space-y-1.5">
-                      {pendingUploads.map((upload, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 p-2 rounded border bg-muted/30 text-xs"
-                        >
-                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <span className="flex-1 truncate">{upload.name}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 shrink-0"
-                            onClick={() => removePendingUpload(index)}
-                            data-testid={`button-remove-pending-upload-${index}`}
-                          >
-                            <X className="w-3 h-3 text-red-500" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      onClick={async () => {
-                        try {
-                          for (const upload of pendingUploads) {
-                            await addUploadMutation.mutateAsync({
-                              fileName: upload.name,
-                              fileType: upload.type,
-                              objectUrl: upload.url,
-                            });
-                          }
-                          // Only clear pending uploads if all mutations succeeded
-                          setPendingUploads([]);
-                        } catch (error) {
-                          // Error is already handled by mutation's onError
-                          // Keep pending uploads so user can retry
-                          console.error("Failed to save some attachments:", error);
-                        }
-                      }}
-                      disabled={addUploadMutation.isPending}
-                      className="w-full h-8 text-xs"
-                      data-testid="button-save-attachments"
-                    >
-                      {addUploadMutation.isPending ? "Saving..." : "Save Attachments"}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Upload Button - Only show if user can upload */}
-                {request && (isMaintenanceOrAdmin || request.requesterId === user?.id) && 
-                 request.status !== "converted_to_task" && 
-                 request.status !== "rejected" && (
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center">
-                      <ObjectUploader
-                        maxNumberOfFiles={5}
-                        maxFileSize={10485760}
-                        onGetUploadParameters={getUploadParameters}
-                        onComplete={handleFileUpload}
-                        onError={(error) => {
-                          console.error("Upload error:", error);
-                          toast({
-                            title: "Upload failed",
-                            description: error.message,
-                            variant: "destructive"
-                          });
-                        }}
-                        buttonClassName="h-8 text-xs"
-                      >
-                        Browse Files
-                      </ObjectUploader>
-                    </div>
-                  </div>
-                )}
+                
               </div>
             </CardContent>
           </Card>

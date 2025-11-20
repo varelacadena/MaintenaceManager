@@ -64,11 +64,7 @@ export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [pendingUploads, setPendingUploads] = useState<Array<{ name: string; url: string; type: string }>>([]);
-  // Placeholder for uploaded files, to be replaced with actual attachment IDs
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ id: string, name: string, url: string, type: string }>>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false); // To track submission state
-  const [error, setError] = useState<string | null>(null); // To display submission errors
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string, url: string, type: string }>>([]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -92,38 +88,30 @@ export default function NewRequest() {
 
   const createRequestMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      // First create the service request
       const response = await apiRequest("POST", "/api/service-requests", {
         ...data,
         requestedDate: new Date(data.requestedDate),
-        attachmentIds: uploadedFiles.map(f => f.id), // Add attachment IDs here
       });
-      return response.json();
-    },
-    onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      const serviceRequest = await response.json();
 
-      // Upload files if any (this part might need adjustment based on how attachmentIds are handled)
-      // The logic here assumes files are uploaded and then their IDs are associated.
-      // If the upload itself returns an ID, this part needs to be integrated with the upload process.
-      if (pendingUploads.length > 0) {
-        try {
-          for (const upload of pendingUploads) {
-            await apiRequest("PUT", "/api/uploads", {
-              requestId: data.id,
-              fileName: upload.name,
-              fileType: upload.type,
-              objectUrl: upload.url,
-            });
-          }
-          queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
-        } catch (error: any) {
-          toast({
-            title: "Upload Error",
-            description: error.message || "Request created but some files failed to upload",
-            variant: "destructive",
+      // Then upload and associate files if any
+      if (uploadedFiles.length > 0) {
+        for (const upload of uploadedFiles) {
+          await apiRequest("PUT", "/api/uploads", {
+            requestId: serviceRequest.id,
+            fileName: upload.name,
+            fileType: upload.type,
+            objectUrl: upload.url,
           });
         }
       }
+
+      return serviceRequest;
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
 
       toast({
         title: "Request Submitted",
@@ -143,7 +131,6 @@ export default function NewRequest() {
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       const newUploads = result.successful.map((file: any) => ({
-        id: file.id, // Assuming file.id is the attachment ID
         name: file.name,
         url: file.uploadURL,
         type: file.type || "application/octet-stream",
@@ -158,8 +145,8 @@ export default function NewRequest() {
     }
   };
 
-  const removeUpload = (id: string) => { // Use ID to remove
-    setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
+  const removeUpload = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getUploadParameters = async () => {
@@ -177,7 +164,6 @@ export default function NewRequest() {
       return {
         method: "PUT" as const,
         url: data.uploadURL,
-        id: data.id, // Assuming the backend returns an ID for the upload
       };
     } catch (error) {
       console.error("Error getting upload URL:", error);
@@ -409,9 +395,9 @@ export default function NewRequest() {
                   {/* Right side - File list */}
                   {uploadedFiles.length > 0 && (
                     <div className="flex-1 space-y-2 max-h-64 overflow-y-auto pr-2">
-                      {uploadedFiles.map((upload) => ( // Use upload.id for key
+                      {uploadedFiles.map((upload, index) => (
                         <div
-                          key={upload.id}
+                          key={index}
                           className="flex items-center gap-3 p-2 bg-background rounded-md border"
                         >
                           {/* File type icon */}
@@ -432,7 +418,7 @@ export default function NewRequest() {
                           {/* Status/Remove button */}
                           <button
                             type="button"
-                            onClick={() => removeUpload(upload.id)} // Use upload.id to remove
+                            onClick={() => removeUpload(index)}
                             className="p-1 hover:bg-muted rounded-full transition-colors flex-shrink-0"
                           >
                             <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
@@ -445,19 +431,13 @@ export default function NewRequest() {
               </div>
             </div>
 
-            {error && (
-              <p className="text-destructive text-center" data-testid="submission-error">
-                {error}
-              </p>
-            )}
-
             <Button
               type="submit"
               className="w-full"
-              disabled={isSubmitting || createRequestMutation.isPending}
+              disabled={createRequestMutation.isPending}
               data-testid="button-submit-request"
             >
-              {isSubmitting || createRequestMutation.isPending
+              {createRequestMutation.isPending
                 ? "Submitting..."
                 : "Submit Request"}
             </Button>
