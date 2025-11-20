@@ -112,9 +112,7 @@ export const serviceRequests = pgTable("service_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
-  category: varchar("category", { length: 100 }).notNull(),
   urgency: urgencyEnum("urgency").notNull(),
-  requestedDate: timestamp("requested_date").notNull(),
   status: requestStatusEnum("status").notNull().default("pending"),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
   propertyId: varchar("property_id").references(() => properties.id),
@@ -236,7 +234,7 @@ export const uploads = pgTable("uploads", {
   checkInLogId: varchar("check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   fileName: varchar("file_name", { length: 255 }).notNull(),
-  fileType: varchar("file_type", { length: 50 }).notNull(),
+  fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
   objectPath: varchar("object_path", { length: 500 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

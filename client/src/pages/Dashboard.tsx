@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import {
   ClipboardList,
   Clock,
@@ -47,8 +47,6 @@ import { queryClient } from "@/lib/queryClient";
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const navigate = (path: string) => setLocation(path);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -342,19 +340,20 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={() => navigate("/new-request")}
-              className="h-10 sm:h-11 px-5 sm:px-8 text-sm sm:text-base flex-1"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Request
-            </Button>
-            <Button
+            <Link href="/new-request" className="flex-1 sm:flex-initial">
+              <Button size="lg" className="w-full" data-testid="button-new-request">
+                <Plus className="w-4 h-4 mr-2" />
+                New Request
+              </Button>
+            </Link>
+            <Button 
+              size="lg" 
+              className="flex-1 sm:flex-initial w-full" 
+              variant="outline" 
+              data-testid="button-new-car-reservation"
               onClick={() => setCreateDialogOpen(true)}
-              variant="outline"
-              className="h-10 sm:h-11 px-5 sm:px-8 text-sm sm:text-base flex-1"
             >
-              <Car className="mr-2 h-4 w-4" />
+              <Car className="w-4 h-4 mr-2" />
               New Car Reservation
             </Button>
           </div>

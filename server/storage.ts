@@ -170,7 +170,6 @@ export interface IStorage {
   getUploadByObjectPath(objectPath: string): Promise<Upload | undefined>;
   getUploadsByRequest(requestId: string): Promise<Upload[]>;
   getUploadsByTask(taskId: string): Promise<Upload[]>;
-  getUploadsByServiceRequest(serviceRequestId: string): Promise<Upload[]>;
   deleteUpload(id: string): Promise<void>;
 
   // Task note operations (linked to tasks)
@@ -726,6 +725,10 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
+  async getMessagesByRequest(requestId: string): Promise<Message[]>;
+  async getMessagesByTask(taskId: string): Promise<Message[]>;
+  async getMessages(): Promise<Message[]>;
+
   async getMessagesByRequest(requestId: string): Promise<Message[]> {
     return await this.db
       .select()
@@ -776,63 +779,44 @@ export class DatabaseStorage implements IStorage {
 
   // Upload operations
   async createUpload(uploadData: InsertUpload): Promise<Upload> {
-    const [upload] = await this.db
-      .insert(uploads)
-      .values(uploadData)
-      .returning();
+    const [upload] = await this.db.insert(uploads).values(uploadData).returning();
     return upload;
   }
 
   async getUpload(id: string): Promise<Upload | undefined> {
-    const results = await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.id, id))
-      .execute();
-    return results[0];
+    const result = await this.db.select().from(uploads).where(eq(uploads.id, id)).limit(1);
+    return result[0] || null;
   }
 
   async getUploadByObjectPath(objectPath: string): Promise<Upload | undefined> {
-    const results = await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.objectPath, objectPath))
-      .execute();
-    return results[0];
+    const result = await this.db.select().from(uploads).where(eq(uploads.objectPath, objectPath)).limit(1);
+    return result[0] || null;
   }
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
     return await this.db
-      .select()
+      .select({
+        id: uploads.id,
+        taskId: uploads.taskId,
+        requestId: uploads.requestId,
+        vehicleId: uploads.vehicleId,
+        checkOutLogId: uploads.checkOutLogId,
+        checkInLogId: uploads.checkInLogId,
+        uploadedById: uploads.uploadedById,
+        fileName: uploads.fileName,
+        fileType: uploads.fileType,
+        objectPath: uploads.objectPath,
+        createdAt: uploads.createdAt,
+      })
       .from(uploads)
-      .where(eq(uploads.requestId, requestId))
-      .execute();
+      .where(eq(uploads.requestId, requestId));
   }
 
   async getUploadsByTask(taskId: string): Promise<Upload[]> {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.taskId, taskId))
-      .execute();
-  }
-
-  async getUploadsByServiceRequest(serviceRequestId: string): Promise<Upload[]> {
-    const results = await this.db
-      .select({
-        id: uploads.id,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        requestId: uploads.requestId,
-        taskId: uploads.taskId,
-        serviceRequestId: uploads.serviceRequestId,
-        createdAt: uploads.createdAt,
-      })
-      .from(uploads)
-      .where(eq(uploads.serviceRequestId, serviceRequestId));
-    return results;
+      .where(eq(uploads.taskId, taskId));
   }
 
   async deleteUpload(id: string): Promise<void> {
@@ -974,7 +958,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(vehicles.status, filters.status as any));
     }
-
+    
     const query = this.db.select().from(vehicles);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(vehicles.vehicleId);
@@ -1044,7 +1028,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(vehicleReservations.status, filters.status as any));
     }
-
+    
     const query = this.db.select().from(vehicleReservations);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleReservations.startDate));
@@ -1122,7 +1106,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.userId) {
       conditions.push(eq(vehicleCheckOutLogs.userId, filters.userId));
     }
-
+    
     const query = this.db.select().from(vehicleCheckOutLogs);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleCheckOutLogs.checkOutTime));
@@ -1161,7 +1145,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.userId) {
       conditions.push(eq(vehicleCheckInLogs.userId, filters.userId));
     }
-
+    
     const query = this.db.select().from(vehicleCheckInLogs);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleCheckInLogs.checkInTime));
@@ -1237,24 +1221,21 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.vehicleId, vehicleId))
-      .execute();
+      .where(eq(uploads.vehicleId, vehicleId));
   }
 
   async getUploadsByCheckOutLog(checkOutLogId: string): Promise<Upload[]> {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.checkOutLogId, checkOutLogId))
-      .execute();
+      .where(eq(uploads.checkOutLogId, checkOutLogId));
   }
 
   async getUploadsByCheckInLog(checkInLogId: string): Promise<Upload[]> {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.checkInLogId, checkInLogId))
-      .execute();
+      .where(eq(uploads.checkInLogId, checkInLogId));
   }
 }
 

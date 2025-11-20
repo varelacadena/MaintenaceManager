@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -64,7 +65,7 @@ export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string, url: string, type: string }>>([]);
+  const [pendingUploads, setPendingUploads] = useState<Array<{ name: string; url: string; type: string }>>([]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -88,30 +89,35 @@ export default function NewRequest() {
 
   const createRequestMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      // First create the service request
       const response = await apiRequest("POST", "/api/service-requests", {
         ...data,
         requestedDate: new Date(data.requestedDate),
       });
-      const serviceRequest = await response.json();
-
-      // Then upload and associate files if any
-      if (uploadedFiles.length > 0) {
-        for (const upload of uploadedFiles) {
-          await apiRequest("PUT", "/api/uploads", {
-            requestId: serviceRequest.id,
-            fileName: upload.name,
-            fileType: upload.type,
-            objectUrl: upload.url,
-          });
-        }
-      }
-
-      return serviceRequest;
+      return response.json();
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
+
+      // Upload files if any
+      if (pendingUploads.length > 0) {
+        try {
+          for (const upload of pendingUploads) {
+            await apiRequest("PUT", "/api/uploads", {
+              requestId: data.id,
+              fileName: upload.name,
+              fileType: upload.type,
+              objectUrl: upload.url,
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
+        } catch (error: any) {
+          toast({
+            title: "Upload Error",
+            description: error.message || "Request created but some files failed to upload",
+            variant: "destructive",
+          });
+        }
+      }
 
       toast({
         title: "Request Submitted",
@@ -136,7 +142,7 @@ export default function NewRequest() {
         type: file.type || "application/octet-stream",
       }));
 
-      setUploadedFiles((prev) => [...prev, ...newUploads]);
+      setPendingUploads((prev) => [...prev, ...newUploads]);
 
       toast({
         title: "Files Ready",
@@ -146,7 +152,7 @@ export default function NewRequest() {
   };
 
   const removeUpload = (index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getUploadParameters = async () => {
@@ -360,7 +366,7 @@ export default function NewRequest() {
                           today.setHours(0, 0, 0, 0);
                           const checkDate = new Date(date);
                           checkDate.setHours(0, 0, 0, 0);
-                          return checkDate.getTime() < today.getTime(); // Allow today and future dates
+                          return checkDate.getTime() !== today.getTime();
                         }}
                         initialFocus
                       />
@@ -393,9 +399,9 @@ export default function NewRequest() {
                   </div>
 
                   {/* Right side - File list */}
-                  {uploadedFiles.length > 0 && (
+                  {pendingUploads.length > 0 && (
                     <div className="flex-1 space-y-2 max-h-64 overflow-y-auto pr-2">
-                      {uploadedFiles.map((upload, index) => (
+                      {pendingUploads.map((upload, index) => (
                         <div
                           key={index}
                           className="flex items-center gap-3 p-2 bg-background rounded-md border"
@@ -406,7 +412,7 @@ export default function NewRequest() {
                               {getFileExtension(upload.name)}
                             </span>
                           </div>
-
+                          
                           {/* File info */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{upload.name}</p>
