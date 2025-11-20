@@ -1,37 +1,18 @@
+-- Add missing vehicle-related columns to uploads table
+ALTER TABLE uploads ADD COLUMN IF NOT EXISTS vehicle_id varchar REFERENCES vehicles(id) ON DELETE CASCADE;
+ALTER TABLE uploads ADD COLUMN IF NOT EXISTS check_out_log_id varchar REFERENCES vehicle_check_out_logs(id) ON DELETE CASCADE;
+ALTER TABLE uploads ADD COLUMN IF NOT EXISTS check_in_log_id varchar REFERENCES vehicle_check_in_logs(id) ON DELETE CASCADE;
 
--- Drop the columns if they exist to ensure clean state
-DO $$ 
-BEGIN
-    -- Drop vehicle_id if it exists
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'uploads' AND column_name = 'vehicle_id'
-    ) THEN
-        ALTER TABLE uploads DROP COLUMN vehicle_id;
-    END IF;
-
-    -- Drop check_out_log_id if it exists
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'uploads' AND column_name = 'check_out_log_id'
-    ) THEN
-        ALTER TABLE uploads DROP COLUMN check_out_log_id;
-    END IF;
-
-    -- Drop check_in_log_id if it exists
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'uploads' AND column_name = 'check_in_log_id'
-    ) THEN
-        ALTER TABLE uploads DROP COLUMN check_in_log_id;
-    END IF;
-END $$;
-
--- Now add the columns fresh
-ALTER TABLE uploads
-ADD COLUMN vehicle_id VARCHAR REFERENCES vehicles(id) ON DELETE CASCADE,
-ADD COLUMN check_out_log_id VARCHAR REFERENCES vehicle_check_out_logs(id) ON DELETE CASCADE,
-ADD COLUMN check_in_log_id VARCHAR REFERENCES vehicle_check_in_logs(id) ON DELETE CASCADE;
+-- Update the constraint to include new columns
+ALTER TABLE uploads DROP CONSTRAINT IF EXISTS uploads_parent_check;
+ALTER TABLE uploads ADD CONSTRAINT uploads_parent_check 
+  CHECK (
+    request_id IS NOT NULL OR 
+    task_id IS NOT NULL OR 
+    vehicle_id IS NOT NULL OR 
+    check_out_log_id IS NOT NULL OR 
+    check_in_log_id IS NOT NULL
+  );
 
 -- Ensure request_id and task_id are nullable
 ALTER TABLE uploads 

@@ -781,19 +781,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUpload(id: string): Promise<Upload | undefined> {
     const results = await this.db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        vehicleId: uploads.vehicleId,
-        checkOutLogId: uploads.checkOutLogId,
-        checkInLogId: uploads.checkInLogId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        createdAt: uploads.createdAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.id, id))
       .execute();
@@ -802,19 +790,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadByObjectPath(objectPath: string): Promise<Upload | undefined> {
     const results = await this.db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        vehicleId: uploads.vehicleId,
-        checkOutLogId: uploads.checkOutLogId,
-        checkInLogId: uploads.checkInLogId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        createdAt: uploads.createdAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.objectPath, objectPath))
       .execute();
@@ -823,19 +799,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
     return await this.db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        vehicleId: uploads.vehicleId,
-        checkOutLogId: uploads.checkOutLogId,
-        checkInLogId: uploads.checkInLogId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        createdAt: uploads.createdAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.requestId, requestId))
       .execute();
@@ -843,19 +807,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadsByTask(taskId: string): Promise<Upload[]> {
     return await this.db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        vehicleId: uploads.vehicleId,
-        checkOutLogId: uploads.checkOutLogId,
-        checkInLogId: uploads.checkInLogId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        createdAt: uploads.createdAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.taskId, taskId))
       .execute();
@@ -1263,21 +1215,24 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.vehicleId, vehicleId));
+      .where(eq(uploads.vehicleId, vehicleId))
+      .execute();
   }
 
   async getUploadsByCheckOutLog(checkOutLogId: string): Promise<Upload[]> {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.checkOutLogId, checkOutLogId));
+      .where(eq(uploads.checkOutLogId, checkOutLogId))
+      .execute();
   }
 
   async getUploadsByCheckInLog(checkInLogId: string): Promise<Upload[]> {
     return await this.db
       .select()
       .from(uploads)
-      .where(eq(uploads.checkInLogId, checkInLogId));
+      .where(eq(uploads.checkInLogId, checkInLogId))
+      .execute();
   }
 }
 
