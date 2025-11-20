@@ -725,10 +725,6 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
-  async getMessagesByRequest(requestId: string): Promise<Message[]>;
-  async getMessagesByTask(taskId: string): Promise<Message[]>;
-  async getMessages(): Promise<Message[]>;
-
   async getMessagesByRequest(requestId: string): Promise<Message[]> {
     return await this.db
       .select()
@@ -795,16 +791,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
     return await this.db
-      .select({
-        id: uploads.id,
-        taskId: uploads.taskId,
-        requestId: uploads.requestId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        createdAt: uploads.createdAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.requestId, requestId));
   }

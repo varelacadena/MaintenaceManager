@@ -1915,7 +1915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
     try {
       const reservation = await storage.getVehicleReservation(req.params.id);
-      if (reservation) {
+      if (reservation && reservation.vehicleId) {
         await storage.updateVehicleStatus(reservation.vehicleId, "available");
       }
       await storage.deleteVehicleReservation(req.params.id);

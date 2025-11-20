@@ -616,28 +616,32 @@ export default function RequestDetail() {
                   </div>
                 )}
 
-                {/* Upload Button */}
-                <div className="mt-3 pt-3 border-t">
-                  <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center">
-                    <ObjectUploader
-                      maxNumberOfFiles={5}
-                      maxFileSize={10485760}
-                      onGetUploadParameters={getUploadParameters}
-                      onComplete={handleFileUpload}
-                      onError={(error) => {
-                        console.error("Upload error:", error);
-                        toast({
-                          title: "Upload failed",
-                          description: error.message,
-                          variant: "destructive"
-                        });
-                      }}
-                      buttonClassName="h-8 text-xs"
-                    >
-                      Browse Files
-                    </ObjectUploader>
+                {/* Upload Button - Only show if user can upload */}
+                {request && (isMaintenanceOrAdmin || request.requesterId === user?.id) && 
+                 request.status !== "converted_to_task" && 
+                 request.status !== "rejected" && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center">
+                      <ObjectUploader
+                        maxNumberOfFiles={5}
+                        maxFileSize={10485760}
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={handleFileUpload}
+                        onError={(error) => {
+                          console.error("Upload error:", error);
+                          toast({
+                            title: "Upload failed",
+                            description: error.message,
+                            variant: "destructive"
+                          });
+                        }}
+                        buttonClassName="h-8 text-xs"
+                      >
+                        Browse Files
+                      </ObjectUploader>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
