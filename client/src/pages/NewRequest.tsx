@@ -93,31 +93,25 @@ export default function NewRequest() {
         ...data,
         requestedDate: new Date(data.requestedDate),
       });
-      return response.json();
-    },
-    onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      const requestData = await response.json();
 
-      // Upload files if any
+      // Upload files immediately if any
       if (pendingUploads.length > 0) {
-        try {
-          for (const upload of pendingUploads) {
-            await apiRequest("PUT", "/api/uploads", {
-              requestId: data.id,
-              fileName: upload.name,
-              fileType: upload.type,
-              objectUrl: upload.url,
-            });
-          }
-          queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
-        } catch (error: any) {
-          toast({
-            title: "Upload Error",
-            description: error.message || "Request created but some files failed to upload",
-            variant: "destructive",
+        for (const upload of pendingUploads) {
+          await apiRequest("PUT", "/api/uploads", {
+            requestId: requestData.id,
+            fileName: upload.name,
+            fileType: upload.type,
+            objectUrl: upload.url,
           });
         }
       }
+
+      return requestData;
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
 
       toast({
         title: "Request Submitted",

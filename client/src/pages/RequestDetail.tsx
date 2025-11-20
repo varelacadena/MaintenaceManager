@@ -50,9 +50,6 @@ export default function RequestDetail() {
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [pendingUploads, setPendingUploads] = useState<
-    { name: string; url: string; type: string }[]
-  >([]);
 
   const { data: request, isLoading } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", id],
@@ -228,18 +225,14 @@ export default function RequestDetail() {
 
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
-      const newUploads = result.successful.map((file: any) => ({
-        name: file.name,
-        url: file.uploadURL,
-        type: file.type || "application/octet-stream",
-      }));
-
-      setPendingUploads((prev) => [...prev, ...newUploads]);
+      for (const file of result.successful) {
+        await addUploadMutation.mutateAsync({
+          fileName: file.name,
+          fileType: file.type || "application/octet-stream",
+          objectUrl: file.uploadURL.split("?")[0],
+        });
+      }
     }
-  };
-
-  const removePendingUpload = (index: number) => {
-    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (isLoading) {
@@ -559,46 +552,7 @@ export default function RequestDetail() {
                   </div>
                 )}
 
-                {pendingUploads.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t">
-                    {pendingUploads.map((upload, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 p-2 rounded border bg-blue-50 dark:bg-blue-950 text-xs"
-                      >
-                        <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="flex-1 truncate">{upload.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 shrink-0"
-                          onClick={() => removePendingUpload(index)}
-                          data-testid={`button-remove-pending-upload-${index}`}
-                        >
-                          <X className="w-3 h-3 text-red-500" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      onClick={async () => {
-                        for (const upload of pendingUploads) {
-                          await addUploadMutation.mutateAsync({
-                            fileName: upload.name,
-                            fileType: upload.type,
-                            objectUrl: upload.url,
-                          });
-                        }
-                        setPendingUploads([]);
-                      }}
-                      disabled={addUploadMutation.isPending}
-                      className="w-full h-8 text-xs"
-                      size="sm"
-                      data-testid="button-save-attachments"
-                    >
-                      {addUploadMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                  </div>
-                )}
+                
 
                 {(isMaintenanceOrAdmin || request.requesterId === user?.id) ? (
                   <div className="border-2 border-dashed rounded-lg p-3 flex items-center justify-center">
