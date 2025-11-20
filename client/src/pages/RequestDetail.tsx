@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useParams, useLocation, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,37 +18,39 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileText,
+  MapPin,
   MessageSquare,
   Paperclip,
-  Send,
-  Trash2,
-  X,
   User,
   Mail,
   Phone,
-  Calendar,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ObjectUploader } from "@/components/ObjectUploader";
 import type {
   ServiceRequest,
   Message,
   Upload,
   Area,
   Subdivision,
+  Property,
   User as UserType,
-  Task,
 } from "@shared/schema";
+import { format } from "date-fns";
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [newMessage, setNewMessage] = useState("");
-  const [rejectionReason, setRejectionReason] = useState("");
+
   const { data: request, isLoading } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", id],
   });
@@ -59,18 +61,25 @@ export default function RequestDetail() {
     refetchInterval: 5000,
   });
 
-  const markAsReadMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["/api/messages"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/messages/request", id],
-      });
-    },
+  const { data: uploads = [] } = useQuery<Upload[]>({
+    queryKey: ["/api/uploads/request", id],
+    enabled: !!id,
+  });
+
+  const { data: areas = [] } = useQuery<Area[]>({
+    queryKey: ["/api/areas"],
+  });
+
+  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
+    queryKey: ["/api/subdivisions"],
+  });
+
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
+  const { data: users = [] } = useQuery<UserType[]>({
+    queryKey: ["/api/users"],
   });
 
   const approveRequestMutation = useMutation({
@@ -112,15 +121,28 @@ export default function RequestDetail() {
     },
   });
 
-  const { data: uploads = [] } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/request", id],
-    enabled: !!id,
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/messages", { requestId: id, content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/request", id] });
+      toast({ title: "Message sent" });
+    },
   });
 
-  const { data: linkedTask } = useQuery({
-    queryKey: ["/api/tasks"],
-    enabled: request?.status === "converted_to_task",
-    select: (tasks: any[]) => tasks.find((t: any) => t.requestId === id),
+  const markAsReadMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/messages/request", id],
+      });
+    },
   });
 
   useEffect(() => {
@@ -134,252 +156,235 @@ export default function RequestDetail() {
     }
   }, [id, messages, user?.id]);
 
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
-
-  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
-    queryKey: ["/api/subdivisions"],
-  });
-
-  const { data: users = [] } = useQuery<UserType[]>({
-    queryKey: ["/api/users"],
-  });
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", "/api/messages", { requestId: id, content });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/request", id] });
-      setNewMessage("");
-      toast({ title: "Message sent" });
-    },
-  });
-
-  const deleteUploadMutation = useMutation({
-    mutationFn: async (uploadId: string) => {
-      return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
-      toast({ title: "Attachment deleted successfully" });
-    },
-    onError: (error: any) => {
-      console.error("Error deleting upload:", error);
-      toast({
-        title: "Delete failed",
-        description: "Failed to delete attachment",
-        variant: "destructive",
-      });
-    },
-  });
-
   if (isLoading) {
-    return <div className="p-8">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-lg font-semibold">Loading request details...</div>
+        </div>
+      </div>
+    );
   }
 
   if (!request) {
-    return <div className="p-8">Request not found</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-lg font-semibold text-destructive">Request not found</div>
+        </div>
+      </div>
+    );
   }
 
-  const requester = users.find(u => u.id === request.requesterId);
-  const area = areas.find(a => a.id === request.areaId);
-  const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
+  const requester = users.find((u) => u.id === request.requesterId);
+  const area = areas.find((a) => a.id === request.areaId);
+  const subdivision = subdivisions.find((s) => s.id === request.subdivisionId);
+  const property = properties.find((p) => p.id === request.propertyId);
 
   const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
-  const canConvertToTask = isMaintenanceOrAdmin &&
+  const canConvertToTask =
+    isMaintenanceOrAdmin &&
     (request.status === "pending" || request.status === "under_review");
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-blue-500";
-      case "under_review":
-        return "bg-yellow-500";
-      case "converted_to_task":
-        return "bg-green-500";
-      case "rejected":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { color: "bg-yellow-500", icon: Clock, label: "Pending" },
+      under_review: { color: "bg-blue-500", icon: AlertCircle, label: "Under Review" },
+      converted_to_task: { color: "bg-green-500", icon: CheckCircle2, label: "Converted to Task" },
+      rejected: { color: "bg-red-500", icon: XCircle, label: "Rejected" },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <Badge className={`${config.color} text-white border-0`} data-testid="badge-status">
+        <Icon className="w-3 h-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "low":
-        return "bg-green-500";
-      case "medium":
-        return "bg-yellow-500";
-      case "high":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
+  const getUrgencyBadge = (urgency: string) => {
+    const urgencyConfig = {
+      low: { color: "bg-green-500", label: "Low" },
+      medium: { color: "bg-yellow-500", label: "Medium" },
+      high: { color: "bg-red-500", label: "High" },
+    };
+
+    const config = urgencyConfig[urgency as keyof typeof urgencyConfig] || urgencyConfig.medium;
+
+    return (
+      <Badge className={`${config.color} text-white border-0`} data-testid="badge-urgency">
+        {config.label}
+      </Badge>
+    );
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Compact Mobile Header */}
-      <div className="sticky top-0 z-10 bg-background border-b">
-        <div className="p-3 sm:p-4">
-          <div className="flex items-start gap-2 mb-2">
+    <div className="container mx-auto p-4 max-w-5xl">
+      {/* Header */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/requests")}
+          className="mb-4"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Requests
+        </Button>
+
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold mb-2" data-testid="text-request-title">
+              {request.title}
+            </h1>
+            <p className="text-sm text-muted-foreground" data-testid="text-request-id">
+              Request ID: #{request.id.substring(0, 8).toUpperCase()}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {getStatusBadge(request.status)}
+            {getUrgencyBadge(request.urgency)}
+          </div>
+        </div>
+
+        {/* Action Buttons for Admin/Maintenance */}
+        {isMaintenanceOrAdmin && request.status === "pending" && (
+          <div className="flex gap-2 mt-4">
             <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/requests")}
-              data-testid="button-back"
-              className="h-8 w-8 shrink-0"
+              onClick={() => approveRequestMutation.mutate(id)}
+              disabled={approveRequestMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+              data-testid="button-approve-request"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Approve Request
             </Button>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-xl font-semibold leading-tight line-clamp-2" data-testid="text-request-title">
-                {request.title}
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-request-id">
-                #{request.id.substring(0, 8)}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge 
-              variant="outline" 
-              className={`${getStatusColor(request.status)} text-xs px-2 py-0.5`} 
-              data-testid="badge-status"
-            >
-              {request.status.replace("_", " ")}
-            </Badge>
-            <Badge 
-              variant="outline" 
-              className={`${getUrgencyColor(request.urgency)} text-xs px-2 py-0.5`} 
-              data-testid="badge-urgency"
-            >
-              {request.urgency}
-            </Badge>
-          </div>
-
-          {isMaintenanceOrAdmin && request.status === "pending" && (
-            <div className="flex gap-2 mt-3">
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="flex-1 bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20 h-8 text-xs"
-                onClick={() => approveRequestMutation.mutate(id)}
-                disabled={approveRequestMutation.isPending}
-                data-testid="button-approve-request"
-              >
-                Approve
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="flex-1 bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20 h-8 text-xs"
-                    data-testid="button-reject-request"
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" data-testid="button-reject-request">
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject Request
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Please provide a reason for rejecting this request.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Enter rejection reason..."
+                  className="min-h-[100px]"
+                  data-testid="textarea-rejection-reason"
+                />
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      const reasonInput = document.getElementById(
+                        "rejection-reason"
+                      ) as HTMLTextAreaElement;
+                      const reason = reasonInput?.value || "";
+                      if (!reason.trim()) {
+                        toast({
+                          title: "Please provide a rejection reason",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      rejectRequestMutation.mutate({ requestId: id, reason });
+                    }}
+                    className="bg-destructive hover:bg-destructive/90"
+                    data-testid="button-confirm-reject"
                   >
                     Reject
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reject Request</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Please provide a reason for rejecting this request.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <Textarea
-                    placeholder="Enter rejection reason..."
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="min-h-[80px]"
-                    data-testid="textarea-rejection-reason"
-                  />
-                  <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                    <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full sm:w-auto">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        if (!rejectionReason.trim()) {
-                          toast({ 
-                            title: "Please provide a rejection reason", 
-                            variant: "destructive" 
-                          });
-                          return;
-                        }
-                        rejectRequestMutation.mutate({ 
-                          requestId: id, 
-                          reason: rejectionReason 
-                        });
-                        setRejectionReason("");
-                      }}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
-                      data-testid="button-confirm-reject"
-                    >
-                      Reject
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
 
-          {isMaintenanceOrAdmin && canConvertToTask && (
-            <Link href={`/tasks/new?requestId=${id}`} className="block mt-2">
-              <Button size="sm" className="w-full h-8 text-xs" data-testid="button-convert-to-task">
-                Convert to Task
-              </Button>
-            </Link>
-          )}
-        </div>
+        {canConvertToTask && (
+          <Button
+            onClick={() => navigate(`/tasks/new?requestId=${id}`)}
+            className="mt-4"
+            data-testid="button-convert-to-task"
+          >
+            Convert to Task
+          </Button>
+        )}
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="p-3 sm:p-4 space-y-3">
-          {/* Compact Details Card */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2 px-3 pt-3">
-              <CardTitle className="text-sm font-semibold">Details</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Request Details Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Request Details
+              </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3 space-y-2">
+            <CardContent className="space-y-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Description</p>
-                <p className="text-sm leading-snug" data-testid="text-description">{request.description}</p>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-1">Category</h3>
+                <p className="text-base" data-testid="text-category">
+                  {request.category}
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
-                {area && (
-                  <div>
-                    <p className="text-muted-foreground mb-0.5">Area</p>
-                    <p className="font-medium" data-testid="text-area">{area.name}</p>
-                  </div>
-                )}
-                {subdivision && (
-                  <div>
-                    <p className="text-muted-foreground mb-0.5">Subdivision</p>
-                    <p className="font-medium" data-testid="text-subdivision">{subdivision.name}</p>
-                  </div>
-                )}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-1">Description</h3>
+                <p className="text-base leading-relaxed" data-testid="text-description">
+                  {request.description}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div>
-                  <p className="text-muted-foreground mb-0.5">Created</p>
-                  <p className="font-medium" data-testid="text-created-at">
-                    {new Date(request.createdAt!).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </p>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">
+                    Requested Completion Date
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-base" data-testid="text-requested-date">
+                      {request.requestedDate
+                        ? format(new Date(request.requestedDate), "PPP")
+                        : "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">
+                    Submitted On
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-base" data-testid="text-created-at">
+                      {request.createdAt ? format(new Date(request.createdAt), "PPP") : "N/A"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {request.status === "rejected" && request.rejectionReason && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-destructive mb-1">Rejection Reason</p>
-                  <p className="text-xs text-muted-foreground leading-snug" data-testid="text-rejection-reason">
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold text-destructive mb-2">
+                    Rejection Reason
+                  </h3>
+                  <p
+                    className="text-base bg-destructive/10 p-3 rounded-md"
+                    data-testid="text-rejection-reason"
+                  >
                     {request.rejectionReason}
                   </p>
                 </div>
@@ -387,147 +392,152 @@ export default function RequestDetail() {
             </CardContent>
           </Card>
 
-          {/* Compact Contact Card */}
+          {/* Location Information Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Location Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {property && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Property</h3>
+                  <p className="text-base" data-testid="text-property">
+                    {property.name}
+                  </p>
+                </div>
+              )}
+
+              {area && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Area</h3>
+                  <p className="text-base" data-testid="text-area">
+                    {area.name}
+                  </p>
+                </div>
+              )}
+
+              {subdivision && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">
+                    Subdivision
+                  </h3>
+                  <p className="text-base" data-testid="text-subdivision">
+                    {subdivision.name}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Attachments Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Paperclip className="w-5 h-5" />
+                Attachments ({uploads.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {uploads.length > 0 ? (
+                <div className="space-y-2">
+                  {uploads.map((upload) => (
+                    <a
+                      key={upload.id}
+                      href={upload.objectPath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-md bg-muted hover-elevate"
+                      data-testid={`link-attachment-${upload.id}`}
+                    >
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <span className="flex-1 truncate">{upload.fileName}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No attachments</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Requester Information Card */}
           {requester && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2 px-3 pt-3">
-                <CardTitle className="text-sm font-semibold">Requester Contact</CardTitle>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Requester Information
+                </CardTitle>
               </CardHeader>
-              <CardContent className="px-3 pb-3">
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-muted-foreground">Name</p>
-                      <p className="font-medium truncate" data-testid="text-requester-name">
-                        {requester.firstName} {requester.lastName}
-                      </p>
+              <CardContent className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Name</h3>
+                  <p className="text-base" data-testid="text-requester-name">
+                    {requester.firstName} {requester.lastName}
+                  </p>
+                </div>
+
+                {requester.email && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Email</h3>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <a
+                        href={`mailto:${requester.email}`}
+                        className="text-base text-primary hover:underline"
+                        data-testid="text-requester-email"
+                      >
+                        {requester.email}
+                      </a>
                     </div>
                   </div>
-                  {requester.email && (
+                )}
+
+                {requester.phoneNumber && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Phone</h3>
                     <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-muted-foreground">Email</p>
-                        <p className="font-medium truncate" data-testid="text-requester-email">
-                          {requester.email}
-                        </p>
-                      </div>
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <a
+                        href={`tel:${requester.phoneNumber}`}
+                        className="text-base text-primary hover:underline"
+                        data-testid="text-requester-phone"
+                      >
+                        {requester.phoneNumber}
+                      </a>
                     </div>
-                  )}
-                  {requester.phoneNumber && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-muted-foreground">Phone</p>
-                        <p className="font-medium" data-testid="text-requester-phone">
-                          {requester.phoneNumber}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
 
-          {/* Compact Attachments Card */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2 px-3 pt-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <Paperclip className="h-3.5 w-3.5" />
-                Attachments {uploads.length > 0 && `(${uploads.length})`}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="space-y-2">
-                {uploads.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {uploads.map((upload) => (
-                      <div
-                        key={upload.id}
-                        className="flex items-center gap-2 p-2 rounded border bg-muted/30 text-xs"
-                      >
-                        <a
-                          href={upload.objectPath}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 flex-1 min-w-0"
-                          data-testid={`link-attachment-${upload.id}`}
-                        >
-                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <span className="truncate">{upload.fileName}</span>
-                        </a>
-                        {(isMaintenanceOrAdmin || request.requesterId === user?.id) && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 shrink-0"
-                                data-testid={`button-delete-attachment-${upload.id}`}
-                              >
-                                <Trash2 className="w-3 h-3 text-red-500" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteUploadMutation.mutate(upload.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground text-center py-4">
-                    No attachments
-                  </p>
-                )}
-
-                
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Compact Messages Card */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2 px-3 pt-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" />
+          {/* Messages Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
                 Messages ({messages.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="space-y-3">
+            <CardContent>
+              <div className="space-y-4">
                 {messages.length > 0 ? (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
                     {messages.map((message) => {
                       const isOwn = message.senderId === user?.id;
-                      const sender = users.find(u => u.id === message.senderId);
-
-                      let senderName = "Unknown User";
-                      if (isOwn) {
-                        senderName = "You";
-                      } else if (sender) {
-                        const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
-                        senderName = fullName || sender.username;
-                      } else {
-                        senderName = user?.role === "staff" ? "Maintenance Team" : "Unknown User";
-                      }
+                      const sender = users.find((u) => u.id === message.senderId);
+                      const senderName = isOwn
+                        ? "You"
+                        : sender
+                        ? `${sender.firstName} ${sender.lastName}`
+                        : "Unknown";
 
                       return (
                         <div
@@ -535,113 +545,66 @@ export default function RequestDetail() {
                           className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <span className="text-[10px] font-medium text-muted-foreground mb-0.5" data-testid={`text-sender-${message.id}`}>
+                          <span className="text-xs font-medium text-muted-foreground mb-1">
                             {senderName}
                           </span>
                           <div
-                            className={`max-w-[85%] rounded-lg px-2.5 py-1.5 ${
-                              isOwn
-                                ? "bg-[#1E90FF] text-white"
-                                : "bg-muted text-foreground"
+                            className={`max-w-[90%] rounded-lg px-3 py-2 ${
+                              isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
                             }`}
                           >
-                            <p className="text-xs leading-snug" data-testid={`text-content-${message.id}`}>{message.content}</p>
+                            <p className="text-sm" data-testid={`text-content-${message.id}`}>
+                              {message.content}
+                            </p>
                           </div>
-                          <span className="text-[10px] text-muted-foreground mt-0.5">
-                            {message.createdAt &&
-                              new Date(message.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                          <span className="text-xs text-muted-foreground mt-1">
+                            {message.createdAt
+                              ? format(new Date(message.createdAt), "PPp")
+                              : ""}
                           </span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground py-6 text-xs">
+                  <div className="text-center text-muted-foreground py-8 text-sm">
                     No messages yet
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-2 border-t">
-                  <Textarea
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 resize-none min-h-[60px] text-xs"
-                    rows={2}
-                    data-testid="textarea-message"
-                  />
-                  <Button
-                    onClick={() => {
-                      if (newMessage.trim()) {
-                        sendMessageMutation.mutate(newMessage);
+                <div className="pt-3 border-t">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      const content = formData.get("message") as string;
+                      if (content.trim()) {
+                        sendMessageMutation.mutate(content);
+                        e.currentTarget.reset();
                       }
                     }}
-                    disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    data-testid="button-send-message"
+                    className="space-y-2"
                   >
-                    <Send className="h-3.5 w-3.5" />
-                  </Button>
+                    <Textarea
+                      name="message"
+                      placeholder="Type a message..."
+                      className="min-h-[80px]"
+                      data-testid="textarea-message"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="w-full"
+                      disabled={sendMessageMutation.isPending}
+                      data-testid="button-send-message"
+                    >
+                      Send Message
+                    </Button>
+                  </form>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Attachments</h3>
-            {request.attachments && request.attachments.length > 0 ? (
-              <div className="space-y-2">
-                {request.attachments.map((attachment) => (
-                  <div key={attachment.id} className="flex items-center justify-between border rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                        <polyline points="14 2 14 8 20 8" />
-                      </svg>
-                      <span className="text-sm font-medium">{attachment.fileName}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({(attachment.fileSize / 1024).toFixed(2)} KB)
-                      </span>
-                    </div>
-                    <a
-                      href={`/api/uploads/${attachment.id}/download`}
-                      download={attachment.fileName}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Download
-                    </a>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No attachments</p>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Notes</h3>
-            {request.notes && request.notes.length > 0 ? (
-              <div className="space-y-3">
-                {request.notes.map((note) => (
-                  <div key={note.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-medium">{note.createdBy}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(note.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No notes yet</p>
-            )}
-          </div>
         </div>
       </div>
     </div>
