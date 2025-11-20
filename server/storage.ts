@@ -780,27 +780,77 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUpload(id: string): Promise<Upload | undefined> {
-    const result = await this.db.select().from(uploads).where(eq(uploads.id, id)).limit(1);
-    return result[0] || null;
+    const results = await this.db
+      .select({
+        id: uploads.id,
+        requestId: uploads.requestId,
+        taskId: uploads.taskId,
+        vehicleId: uploads.vehicleId,
+        uploadedById: uploads.uploadedById,
+        fileName: uploads.fileName,
+        fileType: uploads.fileType,
+        objectPath: uploads.objectPath,
+        uploadedAt: uploads.uploadedAt,
+      })
+      .from(uploads)
+      .where(eq(uploads.id, id))
+      .execute();
+    return results[0];
   }
 
   async getUploadByObjectPath(objectPath: string): Promise<Upload | undefined> {
-    const result = await this.db.select().from(uploads).where(eq(uploads.objectPath, objectPath)).limit(1);
-    return result[0] || null;
+    const results = await this.db
+      .select({
+        id: uploads.id,
+        requestId: uploads.requestId,
+        taskId: uploads.taskId,
+        vehicleId: uploads.vehicleId,
+        uploadedById: uploads.uploadedById,
+        fileName: uploads.fileName,
+        fileType: uploads.fileType,
+        objectPath: uploads.objectPath,
+        uploadedAt: uploads.uploadedAt,
+      })
+      .from(uploads)
+      .where(eq(uploads.objectPath, objectPath))
+      .execute();
+    return results[0];
   }
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
     return await this.db
-      .select()
+      .select({
+        id: uploads.id,
+        requestId: uploads.requestId,
+        taskId: uploads.taskId,
+        vehicleId: uploads.vehicleId,
+        uploadedById: uploads.uploadedById,
+        fileName: uploads.fileName,
+        fileType: uploads.fileType,
+        objectPath: uploads.objectPath,
+        uploadedAt: uploads.uploadedAt,
+      })
       .from(uploads)
-      .where(eq(uploads.requestId, requestId));
+      .where(eq(uploads.requestId, requestId))
+      .execute();
   }
 
   async getUploadsByTask(taskId: string): Promise<Upload[]> {
     return await this.db
-      .select()
+      .select({
+        id: uploads.id,
+        requestId: uploads.requestId,
+        taskId: uploads.taskId,
+        vehicleId: uploads.vehicleId,
+        uploadedById: uploads.uploadedById,
+        fileName: uploads.fileName,
+        fileType: uploads.fileType,
+        objectPath: uploads.objectPath,
+        uploadedAt: uploads.uploadedAt,
+      })
       .from(uploads)
-      .where(eq(uploads.taskId, taskId));
+      .where(eq(uploads.taskId, taskId))
+      .execute();
   }
 
   async deleteUpload(id: string): Promise<void> {
@@ -942,7 +992,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(vehicles.status, filters.status as any));
     }
-    
+
     const query = this.db.select().from(vehicles);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(vehicles.vehicleId);
@@ -1012,7 +1062,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(vehicleReservations.status, filters.status as any));
     }
-    
+
     const query = this.db.select().from(vehicleReservations);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleReservations.startDate));
@@ -1090,7 +1140,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.userId) {
       conditions.push(eq(vehicleCheckOutLogs.userId, filters.userId));
     }
-    
+
     const query = this.db.select().from(vehicleCheckOutLogs);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleCheckOutLogs.checkOutTime));
@@ -1129,7 +1179,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.userId) {
       conditions.push(eq(vehicleCheckInLogs.userId, filters.userId));
     }
-    
+
     const query = this.db.select().from(vehicleCheckInLogs);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleCheckInLogs.checkInTime));
