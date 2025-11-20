@@ -781,17 +781,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUpload(id: string): Promise<Upload | undefined> {
     const results = await this.db
-      .select({
-        id: uploads.id,
-        requestId: uploads.requestId,
-        taskId: uploads.taskId,
-        vehicleId: uploads.vehicleId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        uploadedAt: uploads.uploadedAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.id, id))
       .execute();
@@ -800,17 +790,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadByObjectPath(objectPath: string): Promise<Upload | undefined> {
     const results = await this.db
-      .select({
-        id: uploads.id,
-        requestId: uploads.requestId,
-        taskId: uploads.taskId,
-        vehicleId: uploads.vehicleId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        uploadedAt: uploads.uploadedAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.objectPath, objectPath))
       .execute();
@@ -819,17 +799,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadsByRequest(requestId: string): Promise<Upload[]> {
     return await this.db
-      .select({
-        id: uploads.id,
-        requestId: uploads.requestId,
-        taskId: uploads.taskId,
-        vehicleId: uploads.vehicleId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        uploadedAt: uploads.uploadedAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.requestId, requestId))
       .execute();
@@ -837,17 +807,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUploadsByTask(taskId: string): Promise<Upload[]> {
     return await this.db
-      .select({
-        id: uploads.id,
-        requestId: uploads.requestId,
-        taskId: uploads.taskId,
-        vehicleId: uploads.vehicleId,
-        uploadedById: uploads.uploadedById,
-        fileName: uploads.fileName,
-        fileType: uploads.fileType,
-        objectPath: uploads.objectPath,
-        uploadedAt: uploads.uploadedAt,
-      })
+      .select()
       .from(uploads)
       .where(eq(uploads.taskId, taskId))
       .execute();

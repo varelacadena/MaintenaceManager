@@ -229,9 +229,6 @@ export const uploads = pgTable("uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
-  vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
-  checkOutLogId: varchar("check_out_log_id").references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
-  checkInLogId: varchar("check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
