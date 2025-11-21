@@ -55,8 +55,14 @@ export function ObjectUploader({
         if (isMock) {
           // For mock uploads, just return the mock URL without actually uploading
           successful.push({
-            file,
-            url,
+            file: file, // Include the original file object
+            name: file.name,
+            fileName: file.name,
+            type: file.type || "application/octet-stream",
+            size: file.size || 0,
+            url: url,
+            objectUrl: url,
+            uploadURL: url,
             isMock: true,
           });
           continue;
@@ -76,12 +82,14 @@ export function ObjectUploader({
         }
 
         successful.push({
+          file: file, // Include the original file object
           name: file.name,
           fileName: file.name,
           type: file.type || "application/octet-stream",
           size: file.size || 0,
           uploadURL: url.split("?")[0], // Remove query params
           objectUrl: url.split("?")[0], // Also include objectUrl for consistency
+          url: url.split("?")[0], // Add url field for consistency
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Upload failed";

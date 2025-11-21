@@ -164,12 +164,12 @@ export default function NewRequest() {
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       const newAttachments = result.successful.map((file: any) => ({
-        name: file.name || file.fileName,
-        fileName: file.name || file.fileName,
-        url: file.objectUrl || file.uploadURL,
-        objectUrl: file.objectUrl || file.uploadURL,
-        type: file.type || "application/octet-stream",
-        size: file.size || 0,
+        name: file.file?.name || file.name || file.fileName || "Unknown File",
+        fileName: file.file?.name || file.name || file.fileName || "Unknown File",
+        url: file.url || file.objectUrl || file.uploadURL,
+        objectUrl: file.url || file.objectUrl || file.uploadURL,
+        type: file.file?.type || file.type || "application/octet-stream",
+        size: file.file?.size || file.size || 0,
       }));
 
       setPendingAttachments((prev) => [...prev, ...newAttachments]);
