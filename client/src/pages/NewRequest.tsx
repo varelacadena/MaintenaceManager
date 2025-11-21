@@ -105,10 +105,9 @@ export default function NewRequest() {
           pendingAttachments.map(async (attachment) => {
             await apiRequest("POST", "/api/uploads", {
               requestId: requestData.id,
-              taskId: null,
-              fileName: attachment.name,
+              fileName: attachment.fileName,
               fileType: attachment.type,
-              objectUrl: attachment.url,
+              objectUrl: attachment.objectUrl,
             });
           })
         );
@@ -163,7 +162,9 @@ export default function NewRequest() {
     if (result.successful?.length > 0) {
       const newAttachments = result.successful.map((file: any) => ({
         name: file.name,
+        fileName: file.name, // Add fileName field for backend
         url: file.uploadURL,
+        objectUrl: file.uploadURL, // Add objectUrl field for backend
         type: file.type || "application/octet-stream",
         size: file.size,
       }));

@@ -1234,6 +1234,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
+      
+      // Validate required fields
+      if (!req.body.fileName || !req.body.objectUrl) {
+        return res.status(400).json({ 
+          message: "Invalid upload data", 
+          errors: [
+            { field: "fileName", message: "fileName is required" },
+            { field: "objectUrl", message: "objectUrl is required" }
+          ]
+        });
+      }
+      
+      const uploadData = insertUploadSchema.parse({
+        ...req.body,
+        uploadedById: userId,
+      });
+      const upload = await storage.createUpload(uploadData);
+      res.json(upload);
+    } catch (error: any) {
+      console.error("Error creating upload:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid upload data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create upload" });
+    }
+  });
+
+  // PUT endpoint for uploads (alternative to POST)
+  app.put("/api/uploads", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      
+      // Validate required fields
+      if (!req.body.fileName || !req.body.objectUrl) {
+        return res.status(400).json({ 
+          message: "Invalid upload data", 
+          errors: [
+            { field: "fileName", message: "fileName is required" },
+            { field: "objectUrl", message: "objectUrl is required" }
+          ]
+        });
+      }
+      
       const uploadData = insertUploadSchema.parse({
         ...req.body,
         uploadedById: userId,

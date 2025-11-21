@@ -1402,9 +1402,9 @@ export default function TaskDetail() {
                   onClick={async () => {
                     for (const upload of pendingUploads) {
                       await addUploadMutation.mutateAsync({
-                        fileName: upload.name,
+                        fileName: upload.fileName,
                         fileType: upload.type,
-                        objectUrl: upload.url,
+                        objectUrl: upload.objectUrl,
                       });
                     }
                     setPendingUploads([]);
