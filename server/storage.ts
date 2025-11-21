@@ -164,15 +164,7 @@ export interface IStorage {
   markMessagesAsRead(requestId: string, userId: string): Promise<void>;
   markTaskMessagesAsRead(taskId: string, userId: string): Promise<void>;
 
-  // Upload operations (can be on requests or tasks)
-  createUpload(upload: InsertUpload): Promise<Upload>;
-  getUpload(id: string): Promise<Upload | undefined>;
-  getUploadByObjectPath(objectPath: string): Promise<Upload | undefined>;
-  getUploadsByRequest(requestId: string): Promise<Upload[]>;
-  getUploadsByTask(taskId: string): Promise<Upload[]>;
-  deleteUpload(id: string): Promise<void>;
-
-  // Task note operations (linked to tasks)
+  // Task note operations
   createTaskNote(note: InsertTaskNote): Promise<TaskNote>;
   getTaskNote(id: string): Promise<TaskNote | undefined>;
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
@@ -777,40 +769,6 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(messages).where(eq(messages.id, id));
   }
 
-  // Upload operations
-  async createUpload(uploadData: InsertUpload): Promise<Upload> {
-    const [upload] = await this.db.insert(uploads).values(uploadData).returning();
-    return upload;
-  }
-
-  async getUpload(id: string): Promise<Upload | undefined> {
-    const result = await this.db.select().from(uploads).where(eq(uploads.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async getUploadByObjectPath(objectPath: string): Promise<Upload | undefined> {
-    const result = await this.db.select().from(uploads).where(eq(uploads.objectPath, objectPath)).limit(1);
-    return result[0] || null;
-  }
-
-  async getUploadsByRequest(requestId: string): Promise<Upload[]> {
-    return await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.requestId, requestId));
-  }
-
-  async getUploadsByTask(taskId: string): Promise<Upload[]> {
-    return await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.taskId, taskId));
-  }
-
-  async deleteUpload(id: string): Promise<void> {
-    await this.db.delete(uploads).where(eq(uploads.id, id));
-  }
-
   // Task note operations
   async createTaskNote(noteData: InsertTaskNote): Promise<TaskNote> {
     const [note] = await this.db.insert(taskNotes).values(noteData).returning();
@@ -946,7 +904,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(vehicles.status, filters.status as any));
     }
-    
+
     const query = this.db.select().from(vehicles);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(vehicles.vehicleId);
@@ -1016,7 +974,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(vehicleReservations.status, filters.status as any));
     }
-    
+
     const query = this.db.select().from(vehicleReservations);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleReservations.startDate));
@@ -1094,7 +1052,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.userId) {
       conditions.push(eq(vehicleCheckOutLogs.userId, filters.userId));
     }
-    
+
     const query = this.db.select().from(vehicleCheckOutLogs);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleCheckOutLogs.checkOutTime));
@@ -1133,7 +1091,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.userId) {
       conditions.push(eq(vehicleCheckInLogs.userId, filters.userId));
     }
-    
+
     const query = this.db.select().from(vehicleCheckInLogs);
     if (conditions.length > 0) {
       return await query.where(and(...conditions)).orderBy(desc(vehicleCheckInLogs.checkInTime));

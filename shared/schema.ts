@@ -224,24 +224,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
-// File uploads (can be attached to tasks, requests, vehicles, or check-in/out logs)
-export const uploads = pgTable("uploads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
-  vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
-  checkOutLogId: varchar("check_out_log_id").references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
-  checkInLogId: varchar("check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
-  uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
-  fileName: varchar("file_name", { length: 255 }).notNull(),
-  fileType: varchar("file_type", { length: 50 }).notNull(), // photo, invoice
-  objectPath: varchar("object_path", { length: 500 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
-export const insertUploadSchema = createInsertSchema(uploads).omit({ id: true, createdAt: true });
-export type InsertUpload = z.infer<typeof insertUploadSchema>;
-export type Upload = typeof uploads.$inferSelect;
 
 // Task notes (linked to tasks, not requests)
 export const noteTypeEnum = pgEnum("note_type", ["job_note", "recommendation"]);
@@ -331,7 +314,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   tasksAssigned: many(tasks, { relationName: "task_assignee" }),
   timeEntries: many(timeEntries),
   messages: many(messages),
-  uploads: many(uploads),
   taskNotes: many(taskNotes),
   vehicleReservations: many(vehicleReservations),
   vehicleCheckOutLogs: many(vehicleCheckOutLogs),
@@ -379,7 +361,6 @@ export const serviceRequestsRelations = relations(serviceRequests, ({ one, many 
   }),
   tasks: many(tasks),
   messages: many(messages),
-  uploads: many(uploads),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -424,7 +405,6 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   timeEntries: many(timeEntries),
   partsUsed: many(partsUsed),
   messages: many(messages),
-  uploads: many(uploads),
   taskNotes: many(taskNotes),
 }));
 
@@ -461,33 +441,6 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
   sender: one(users, {
     fields: [messages.senderId],
-    references: [users.id],
-  }),
-}));
-
-export const uploadsRelations = relations(uploads, ({ one }) => ({
-  task: one(tasks, {
-    fields: [uploads.taskId],
-    references: [tasks.id],
-  }),
-  request: one(serviceRequests, {
-    fields: [uploads.requestId],
-    references: [serviceRequests.id],
-  }),
-  vehicle: one(vehicles, {
-    fields: [uploads.vehicleId],
-    references: [vehicles.id],
-  }),
-  checkOutLog: one(vehicleCheckOutLogs, {
-    fields: [uploads.checkOutLogId],
-    references: [vehicleCheckOutLogs.id],
-  }),
-  checkInLog: one(vehicleCheckInLogs, {
-    fields: [uploads.checkInLogId],
-    references: [vehicleCheckInLogs.id],
-  }),
-  uploadedBy: one(users, {
-    fields: [uploads.uploadedById],
     references: [users.id],
   }),
 }));
@@ -670,7 +623,6 @@ export const vehiclesRelations = relations(vehicles, ({ many }) => ({
   checkInLogs: many(vehicleCheckInLogs),
   maintenanceSchedules: many(vehicleMaintenanceSchedules),
   tasks: many(tasks),
-  uploads: many(uploads),
 }));
 
 export const vehicleReservationsRelations = relations(vehicleReservations, ({ one, many }) => ({
@@ -699,7 +651,6 @@ export const vehicleCheckOutLogsRelations = relations(vehicleCheckOutLogs, ({ on
     references: [users.id],
   }),
   checkInLog: one(vehicleCheckInLogs),
-  uploads: many(uploads),
 }));
 
 export const vehicleCheckInLogsRelations = relations(vehicleCheckInLogs, ({ one, many }) => ({
@@ -715,7 +666,6 @@ export const vehicleCheckInLogsRelations = relations(vehicleCheckInLogs, ({ one,
     fields: [vehicleCheckInLogs.userId],
     references: [users.id],
   }),
-  uploads: many(uploads),
 }));
 
 export const vehicleMaintenanceSchedulesRelations = relations(vehicleMaintenanceSchedules, ({ one }) => ({

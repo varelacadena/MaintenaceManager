@@ -20,10 +20,7 @@ import {
 import {
   ArrowLeft,
   MessageSquare,
-  Paperclip,
   Send,
-  Trash2,
-  X,
   User,
   Mail,
   Phone,
@@ -32,11 +29,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ObjectUploader } from "@/components/ObjectUploader";
 import type {
   ServiceRequest,
   Message,
-  Upload,
   Area,
   Subdivision,
   User as UserType,
@@ -114,11 +109,6 @@ export default function RequestDetail() {
     },
   });
 
-  const { data: uploads = [] } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/request", id],
-    enabled: !!id,
-  });
-
   const { data: linkedTask } = useQuery({
     queryKey: ["/api/tasks"],
     enabled: request?.status === "converted_to_task",
@@ -158,82 +148,6 @@ export default function RequestDetail() {
       toast({ title: "Message sent" });
     },
   });
-
-  const addUploadMutation = useMutation({
-    mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
-      const response = await apiRequest("PUT", "/api/uploads", {
-        requestId: id,
-        fileName,
-        fileType,
-        objectUrl,
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
-      toast({ title: "File uploaded successfully" });
-    },
-    onError: (error: any) => {
-      console.error("Error saving upload:", error);
-      toast({
-        title: "Upload failed",
-        description: "File uploaded but couldn't be saved to database",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteUploadMutation = useMutation({
-    mutationFn: async (uploadId: string) => {
-      return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/request", id] });
-      toast({ title: "Attachment deleted successfully" });
-    },
-    onError: (error: any) => {
-      console.error("Error deleting upload:", error);
-      toast({
-        title: "Delete failed",
-        description: "Failed to delete attachment",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const getUploadParameters = async () => {
-    try {
-      const response = await fetch("/api/objects/upload", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get upload URL");
-      }
-
-      const data = await response.json();
-      return {
-        method: "PUT" as const,
-        url: data.uploadURL,
-      };
-    } catch (error) {
-      console.error("Error getting upload URL:", error);
-      throw error;
-    }
-  };
-
-  const handleFileUpload = async (result: any) => {
-    if (result.successful?.length > 0) {
-      for (const file of result.successful) {
-        await addUploadMutation.mutateAsync({
-          fileName: file.name,
-          fileType: file.type || "application/octet-stream",
-          objectUrl: file.uploadURL.split("?")[0],
-        });
-      }
-    }
-  };
 
   if (isLoading) {
     return <div className="p-8">Loading...</div>;
@@ -491,97 +405,7 @@ export default function RequestDetail() {
             </Card>
           )}
 
-          {/* Compact Attachments Card */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2 px-3 pt-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <Paperclip className="h-3.5 w-3.5" />
-                Attachments {uploads.length > 0 && `(${uploads.length})`}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="space-y-2">
-                {uploads.length > 0 && (
-                  <div className="space-y-1.5">
-                    {uploads.map((upload) => (
-                      <div
-                        key={upload.id}
-                        className="flex items-center gap-2 p-2 rounded border bg-muted/30 text-xs"
-                      >
-                        <a
-                          href={upload.objectPath}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 flex-1 min-w-0"
-                          data-testid={`link-attachment-${upload.id}`}
-                        >
-                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <span className="truncate">{upload.fileName}</span>
-                        </a>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 shrink-0"
-                              data-testid={`button-delete-attachment-${upload.id}`}
-                            >
-                              <Trash2 className="w-3 h-3 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                              <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteUploadMutation.mutate(upload.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                
-
-                {(isMaintenanceOrAdmin || request.requesterId === user?.id) ? (
-                  <div className="border-2 border-dashed rounded-lg p-3 flex items-center justify-center">
-                    <ObjectUploader
-                      maxNumberOfFiles={5}
-                      maxFileSize={10485760}
-                      onGetUploadParameters={getUploadParameters}
-                      onComplete={handleFileUpload}
-                      onError={(error) => {
-                        console.error("Upload error:", error);
-                        toast({
-                          title: "Upload failed",
-                          description: error.message,
-                          variant: "destructive"
-                        });
-                      }}
-                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8"
-                    >
-                      Browse
-                    </ObjectUploader>
-                  </div>
-                ) : uploads.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">
-                    No attachments
-                  </p>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+          
 
           {/* Compact Messages Card */}
           <Card className="border-0 shadow-sm">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -34,8 +33,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertServiceRequestSchema } from "@shared/schema";
 import type { Area, Subdivision, Property } from "@shared/schema";
 import { z } from "zod";
-import { ObjectUploader } from "@/components/ObjectUploader";
-import { useAuth } from "@/hooks/useAuth";
 import { Upload, X, Check, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -65,7 +62,6 @@ export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [pendingUploads, setPendingUploads] = useState<Array<{ name: string; url: string; type: string }>>([]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -95,18 +91,6 @@ export default function NewRequest() {
       });
       const requestData = await response.json();
 
-      // Upload files immediately if any
-      if (pendingUploads.length > 0) {
-        for (const upload of pendingUploads) {
-          await apiRequest("PUT", "/api/uploads", {
-            requestId: requestData.id,
-            fileName: upload.name,
-            fileType: upload.type,
-            objectUrl: upload.url,
-          });
-        }
-      }
-
       return requestData;
     },
     onSuccess: async (data) => {
@@ -127,49 +111,6 @@ export default function NewRequest() {
       });
     },
   });
-
-  const handleFileUpload = async (result: any) => {
-    if (result.successful?.length > 0) {
-      const newUploads = result.successful.map((file: any) => ({
-        name: file.name,
-        url: file.uploadURL,
-        type: file.type || "application/octet-stream",
-      }));
-
-      setPendingUploads((prev) => [...prev, ...newUploads]);
-
-      toast({
-        title: "Files Ready",
-        description: `${newUploads.length} file(s) ready to upload with your request.`,
-      });
-    }
-  };
-
-  const removeUpload = (index: number) => {
-    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const getUploadParameters = async () => {
-    try {
-      const response = await fetch("/api/objects/upload", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get upload URL");
-      }
-
-      const data = await response.json();
-      return {
-        method: "PUT" as const,
-        url: data.uploadURL,
-      };
-    } catch (error) {
-      console.error("Error getting upload URL:", error);
-      throw error;
-    }
-  };
 
   const handleSubmit = (data: FormData) => {
     createRequestMutation.mutate(data);
@@ -370,66 +311,6 @@ export default function NewRequest() {
                 </FormItem>
               )}
             />
-
-            <div className="space-y-3">
-              <FormLabel>Attachments (Optional)</FormLabel>
-              <p className="text-sm text-muted-foreground">
-                Upload photos or documents related to this request
-              </p>
-
-              <div className="bg-muted/30 rounded-lg border-2 border-dashed p-4 md:p-8">
-                <div className="flex flex-col md:flex-row gap-4 md:gap-8">
-                  {/* Left side - Upload area */}
-                  <div className="flex-1 flex items-center justify-center">
-                    <ObjectUploader
-                      maxNumberOfFiles={5}
-                      maxFileSize={10485760}
-                      onGetUploadParameters={getUploadParameters}
-                      onComplete={handleFileUpload}
-                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90 px-8 md:px-12 w-full md:w-auto"
-                    >
-                      Browse
-                    </ObjectUploader>
-                  </div>
-
-                  {/* Right side - File list */}
-                  {pendingUploads.length > 0 && (
-                    <div className="flex-1 space-y-2 max-h-64 overflow-y-auto pr-2">
-                      {pendingUploads.map((upload, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-2 bg-background rounded-md border"
-                        >
-                          {/* File type icon with success indicator */}
-                          <div className="w-10 h-10 rounded-full border-2 border-green-500 bg-green-50 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-semibold text-green-600">
-                              ✓
-                            </span>
-                          </div>
-                          
-                          {/* File info */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{upload.name}</p>
-                            <p className="text-xs text-green-600">
-                              Uploaded successfully
-                            </p>
-                          </div>
-
-                          {/* Status/Remove button */}
-                          <button
-                            type="button"
-                            onClick={() => removeUpload(index)}
-                            className="p-1 hover:bg-muted rounded-full transition-colors flex-shrink-0"
-                          >
-                            <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
             <Button
               type="submit"
