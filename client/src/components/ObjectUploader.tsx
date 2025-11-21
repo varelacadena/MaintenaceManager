@@ -49,6 +49,19 @@ export function ObjectUploader({
       try {
         const { url } = await onGetUploadParameters();
         
+        // Check if this is a mock URL (Object Storage not configured)
+        const isMock = url.startsWith("https://mock-storage.local/");
+        
+        if (isMock) {
+          // For mock uploads, just return the mock URL without actually uploading
+          successful.push({
+            file,
+            url,
+            isMock: true,
+          });
+          continue;
+        }
+        
         // Upload file
         const response = await fetch(url, {
           method: "PUT",

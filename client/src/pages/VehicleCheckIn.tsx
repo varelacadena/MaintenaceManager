@@ -108,6 +108,27 @@ export default function VehicleCheckIn() {
     );
   }
 
+  const getUploadParameters = async () => {
+    const response = await fetch("/api/objects/upload", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
+      throw new Error(error.message || "Failed to get upload URL");
+    }
+
+    const { uploadURL, isMock, warning } = await response.json();
+
+    if (warning) {
+      console.warn(warning);
+    }
+
+    return { method: "PUT" as const, url: uploadURL };
+  };
+
+
   return (
     <div className="flex-1 space-y-4 p-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-4">

@@ -1212,10 +1212,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { getSignedUploadUrl } = await import("./objectStorage");
       const uploadURL = await getSignedUploadUrl();
-      res.json({ uploadURL });
+      
+      // Check if this is a mock URL (Object Storage not configured)
+      const isMock = uploadURL.startsWith("https://mock-storage.local/");
+      
+      res.json({ 
+        uploadURL,
+        isMock,
+        warning: isMock ? "Object Storage not configured. Files will not be persisted." : undefined
+      });
     } catch (error) {
       console.error("Error getting upload URL:", error);
-      res.status(500).json({ message: "Failed to get upload URL" });
+      res.status(500).json({ 
+        message: "Failed to get upload URL",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

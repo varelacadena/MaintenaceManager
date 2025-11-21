@@ -50,7 +50,7 @@ export default function VehicleCheckOut() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString();
           return key?.startsWith('/api/vehicle-checkout-logs') ||
@@ -73,6 +73,26 @@ export default function VehicleCheckOut() {
       });
     },
   });
+
+  const getUploadParameters = async () => {
+    const response = await fetch("/api/objects/upload", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
+      throw new Error(error.message || "Failed to get upload URL");
+    }
+
+    const { uploadURL, isMock, warning } = await response.json();
+
+    if (warning) {
+      console.warn(warning);
+    }
+
+    return { method: "PUT" as const, url: uploadURL };
+  };
 
   if (isLoading) {
     return (

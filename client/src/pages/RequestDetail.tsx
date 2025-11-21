@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -201,6 +200,26 @@ export default function RequestDetail() {
     }
   };
 
+  const getUploadParameters = async () => {
+    const response = await fetch("/api/objects/upload", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
+      throw new Error(error.message || "Failed to get upload URL");
+    }
+
+    const { uploadURL, isMock, warning } = await response.json();
+
+    if (warning) {
+      console.warn(warning);
+    }
+
+    return { method: "PUT" as const, url: uploadURL };
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Compact Mobile Header */}
@@ -225,28 +244,28 @@ export default function RequestDetail() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge 
-              variant="outline" 
-              className={`${getStatusColor(request.status)} text-xs px-2 py-0.5`} 
+            <Badge
+              variant="outline"
+              className={`${getStatusColor(request.status)} text-xs px-2 py-0.5`}
               data-testid="badge-status"
             >
               {request.status.replace("_", " ")}
             </Badge>
-            <Badge 
-              variant="outline" 
-              className={`${getUrgencyColor(request.urgency)} text-xs px-2 py-0.5`} 
+            <Badge
+              variant="outline"
+              className={`${getUrgencyColor(request.urgency)} text-xs px-2 py-0.5`}
               data-testid="badge-urgency"
             >
               {request.urgency}
             </Badge>
           </div>
-          
+
           {isMaintenanceOrAdmin && request.status === "pending" && (
             <div className="flex gap-2 mt-3">
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 className="flex-1 bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20 h-8 text-xs"
                 onClick={() => approveRequestMutation.mutate(id)}
@@ -257,8 +276,8 @@ export default function RequestDetail() {
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     className="flex-1 bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20 h-8 text-xs"
                     data-testid="button-reject-request"
@@ -287,15 +306,15 @@ export default function RequestDetail() {
                     <AlertDialogAction
                       onClick={() => {
                         if (!rejectionReason.trim()) {
-                          toast({ 
-                            title: "Please provide a rejection reason", 
-                            variant: "destructive" 
+                          toast({
+                            title: "Please provide a rejection reason",
+                            variant: "destructive"
                           });
                           return;
                         }
-                        rejectRequestMutation.mutate({ 
-                          requestId: id, 
-                          reason: rejectionReason 
+                        rejectRequestMutation.mutate({
+                          requestId: id,
+                          reason: rejectionReason
                         });
                         setRejectionReason("");
                       }}
@@ -309,7 +328,7 @@ export default function RequestDetail() {
               </AlertDialog>
             </div>
           )}
-          
+
           {isMaintenanceOrAdmin && canConvertToTask && (
             <Link href={`/tasks/new?requestId=${id}`} className="block mt-2">
               <Button size="sm" className="w-full h-8 text-xs" data-testid="button-convert-to-task">
@@ -349,8 +368,8 @@ export default function RequestDetail() {
                 <div>
                   <p className="text-muted-foreground mb-0.5">Created</p>
                   <p className="font-medium" data-testid="text-created-at">
-                    {new Date(request.createdAt!).toLocaleDateString('en-US', { 
-                      month: 'short', 
+                    {new Date(request.createdAt!).toLocaleDateString('en-US', {
+                      month: 'short',
                       day: 'numeric',
                       year: 'numeric'
                     })}
@@ -450,7 +469,7 @@ export default function RequestDetail() {
             </Card>
           )}
 
-          
+
 
           {/* Compact Messages Card */}
           <Card className="border-0 shadow-sm">

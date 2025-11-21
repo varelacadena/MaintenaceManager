@@ -492,25 +492,23 @@ export default function TaskDetail() {
 
 
   const getUploadParameters = async () => {
-    try {
-      const response = await fetch("/api/objects/upload", {
-        method: "POST",
-        credentials: "include",
-      });
+    const response = await fetch("/api/objects/upload", {
+      method: "POST",
+      credentials: "include",
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to get upload URL");
-      }
-
-      const data = await response.json();
-      return {
-        method: "PUT" as const,
-        url: data.uploadURL,
-      };
-    } catch (error) {
-      console.error("Error getting upload URL:", error);
-      throw error;
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
+      throw new Error(error.message || "Failed to get upload URL");
     }
+
+    const { uploadURL, isMock, warning } = await response.json();
+
+    if (warning) {
+      console.warn(warning);
+    }
+
+    return { method: "PUT" as const, url: uploadURL };
   };
 
   const handleFileUpload = async (result: any) => {
@@ -1141,7 +1139,7 @@ export default function TaskDetail() {
             </Button>
             <Button
               onClick={() => quickAddInventoryMutation.mutate()}
-              disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickAddInventoryMutation.isPending}
+              disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickInventoryMutation.isPending}
               data-testid="button-submit-quick-inventory"
             >
               {quickAddInventoryMutation.isPending ? "Creating..." : "Create Item"}
