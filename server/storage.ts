@@ -9,7 +9,6 @@ import {
   timeEntries,
   partsUsed,
   messages,
-  uploads,
   taskNotes,
   properties,
   equipment,
@@ -38,8 +37,6 @@ import {
   type InsertPartUsed,
   type Message,
   type InsertMessage,
-  type Upload,
-  type InsertUpload,
   type TaskNote,
   type InsertTaskNote,
   type Property,
@@ -230,11 +227,6 @@ export interface IStorage {
   createVehicleMaintenanceSchedule(schedule: InsertVehicleMaintenanceSchedule): Promise<VehicleMaintenanceSchedule>;
   updateVehicleMaintenanceSchedule(id: string, data: Partial<InsertVehicleMaintenanceSchedule>): Promise<VehicleMaintenanceSchedule | undefined>;
   deleteVehicleMaintenanceSchedule(id: string): Promise<void>;
-
-  // Upload extensions for vehicles
-  getUploadsByVehicle(vehicleId: string): Promise<Upload[]>;
-  getUploadsByCheckOutLog(checkOutLogId: string): Promise<Upload[]>;
-  getUploadsByCheckInLog(checkInLogId: string): Promise<Upload[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1160,28 +1152,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVehicleMaintenanceSchedule(id: string): Promise<void> {
     await this.db.delete(vehicleMaintenanceSchedules).where(eq(vehicleMaintenanceSchedules.id, id));
-  }
-
-  // Upload extensions for vehicles
-  async getUploadsByVehicle(vehicleId: string): Promise<Upload[]> {
-    return await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.vehicleId, vehicleId));
-  }
-
-  async getUploadsByCheckOutLog(checkOutLogId: string): Promise<Upload[]> {
-    return await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.checkOutLogId, checkOutLogId));
-  }
-
-  async getUploadsByCheckInLog(checkInLogId: string): Promise<Upload[]> {
-    return await this.db
-      .select()
-      .from(uploads)
-      .where(eq(uploads.checkInLogId, checkInLogId));
   }
 }
 
