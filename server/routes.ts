@@ -12,6 +12,7 @@ import {
   insertTaskSchema,
   insertPartUsedSchema,
   insertMessageSchema,
+  insertUploadSchema,
   insertTaskNoteSchema,
   insertAreaSchema,
   insertSubdivisionSchema,
@@ -1203,6 +1204,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting message:", error);
       res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
+  // Upload routes
+  app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const uploadData = insertUploadSchema.parse({
+        ...req.body,
+        uploadedById: userId,
+      });
+      const upload = await storage.createUpload(uploadData);
+      res.json(upload);
+    } catch (error: any) {
+      console.error("Error creating upload:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid upload data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create upload" });
+    }
+  });
+
+  app.get("/api/uploads/request/:requestId", isAuthenticated, async (req, res) => {
+    try {
+      const uploads = await storage.getUploadsByRequest(req.params.requestId);
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching request uploads:", error);
+      res.status(500).json({ message: "Failed to fetch uploads" });
+    }
+  });
+
+  app.get("/api/uploads/task/:taskId", isAuthenticated, async (req, res) => {
+    try {
+      const uploads = await storage.getUploadsByTask(req.params.taskId);
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching task uploads:", error);
+      res.status(500).json({ message: "Failed to fetch uploads" });
+    }
+  });
+
+  app.delete("/api/uploads/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteUpload(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting upload:", error);
+      res.status(500).json({ message: "Failed to delete upload" });
     }
   });
 

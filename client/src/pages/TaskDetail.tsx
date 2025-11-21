@@ -154,6 +154,11 @@ export default function TaskDetail() {
     enabled: !!task?.requestId,
   });
 
+  const { data: requestAttachments = [] } = useQuery<Upload[]>({
+    queryKey: ["/api/uploads/request", task?.requestId],
+    enabled: !!task?.requestId,
+  });
+
   const { data: requester } = useQuery<UserType>({
     queryKey: ["/api/users", request?.requesterId],
     enabled: !!request?.requesterId,
@@ -1244,11 +1249,58 @@ export default function TaskDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Service Request Attachments - Read Only */}
+      {task?.requestId && requestAttachments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Service Request Attachments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Original attachments from the service request
+              </p>
+              <div className="grid gap-2">
+                {requestAttachments.map((attachment) => (
+                  <a
+                    key={attachment.id}
+                    href={attachment.objectUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 rounded border hover-elevate active-elevate-2"
+                    data-testid={`link-request-attachment-${attachment.id}`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex items-center justify-center w-10 h-10 rounded bg-primary/10 text-primary shrink-0">
+                        <Paperclip className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {attachment.fileName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {attachment.fileType}
+                        </p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Task Attachments - Editable */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Paperclip className="w-5 h-5" />
-            Attachments
+            Task Attachments
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1265,7 +1317,7 @@ export default function TaskDetail() {
                     className="flex items-center justify-between p-2 rounded border"
                   >
                     <a
-                      href={upload.objectPath}
+                      href={upload.objectUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2"

@@ -224,7 +224,21 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
+// Uploads (can be on requests OR tasks for attachments)
+export const uploads = pgTable("uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileType: varchar("file_type", { length: 100 }).notNull(),
+  objectUrl: varchar("object_url", { length: 1000 }).notNull(),
+  uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
+export const insertUploadSchema = createInsertSchema(uploads).omit({ id: true, createdAt: true, uploadedById: true });
+export type InsertUpload = z.infer<typeof insertUploadSchema>;
+export type Upload = typeof uploads.$inferSelect;
 
 // Task notes (linked to tasks, not requests)
 export const noteTypeEnum = pgEnum("note_type", ["job_note", "recommendation"]);
@@ -315,6 +329,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   timeEntries: many(timeEntries),
   messages: many(messages),
   taskNotes: many(taskNotes),
+  uploads: many(uploads),
   vehicleReservations: many(vehicleReservations),
   vehicleCheckOutLogs: many(vehicleCheckOutLogs),
   vehicleCheckInLogs: many(vehicleCheckInLogs),
@@ -361,6 +376,7 @@ export const serviceRequestsRelations = relations(serviceRequests, ({ one, many 
   }),
   tasks: many(tasks),
   messages: many(messages),
+  uploads: many(uploads),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -406,6 +422,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   partsUsed: many(partsUsed),
   messages: many(messages),
   taskNotes: many(taskNotes),
+  uploads: many(uploads),
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
@@ -441,6 +458,21 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
   sender: one(users, {
     fields: [messages.senderId],
+    references: [users.id],
+  }),
+}));
+
+export const uploadsRelations = relations(uploads, ({ one }) => ({
+  task: one(tasks, {
+    fields: [uploads.taskId],
+    references: [tasks.id],
+  }),
+  request: one(serviceRequests, {
+    fields: [uploads.requestId],
+    references: [serviceRequests.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [uploads.uploadedById],
     references: [users.id],
   }),
 }));

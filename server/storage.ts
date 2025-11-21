@@ -9,6 +9,7 @@ import {
   timeEntries,
   partsUsed,
   messages,
+  uploads,
   taskNotes,
   properties,
   equipment,
@@ -37,6 +38,8 @@ import {
   type InsertPartUsed,
   type Message,
   type InsertMessage,
+  type Upload,
+  type InsertUpload,
   type TaskNote,
   type InsertTaskNote,
   type Property,
@@ -166,6 +169,13 @@ export interface IStorage {
   getTaskNote(id: string): Promise<TaskNote | undefined>;
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
   deleteTaskNote(id: string): Promise<void>;
+
+  // Upload operations (can be on requests or tasks)
+  createUpload(upload: InsertUpload): Promise<Upload>;
+  getUploadsByRequest(requestId: string): Promise<Upload[]>;
+  getUploadsByTask(taskId: string): Promise<Upload[]>;
+  getUpload(id: string): Promise<Upload | undefined>;
+  deleteUpload(id: string): Promise<void>;
 
   // Property operations
   getProperties(): Promise<Property[]>;
@@ -782,6 +792,37 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTaskNote(id: string): Promise<void> {
     await this.db.delete(taskNotes).where(eq(taskNotes.id, id));
+  }
+
+  // Upload operations
+  async createUpload(uploadData: InsertUpload): Promise<Upload> {
+    const [upload] = await this.db.insert(uploads).values(uploadData).returning();
+    return upload;
+  }
+
+  async getUploadsByRequest(requestId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.requestId, requestId))
+      .orderBy(uploads.createdAt);
+  }
+
+  async getUploadsByTask(taskId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.taskId, taskId))
+      .orderBy(uploads.createdAt);
+  }
+
+  async getUpload(id: string): Promise<Upload | undefined> {
+    const [upload] = await this.db.select().from(uploads).where(eq(uploads.id, id));
+    return upload;
+  }
+
+  async deleteUpload(id: string): Promise<void> {
+    await this.db.delete(uploads).where(eq(uploads.id, id));
   }
 
   // Property operations

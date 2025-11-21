@@ -33,10 +33,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertServiceRequestSchema } from "@shared/schema";
 import type { Area, Subdivision, Property } from "@shared/schema";
 import { z } from "zod";
-import { Upload, X, Check, CalendarIcon } from "lucide-react";
+import { Upload, X, Check, CalendarIcon, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 const categories = [
   "Appliances",
@@ -63,6 +64,12 @@ export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [pendingAttachments, setPendingAttachments] = useState<Array<{
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+  }>>([]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -92,6 +99,21 @@ export default function NewRequest() {
       });
       const requestData = await response.json();
 
+      // Upload all pending attachments
+      if (pendingAttachments.length > 0) {
+        await Promise.all(
+          pendingAttachments.map(async (attachment) => {
+            await apiRequest("POST", "/api/uploads", {
+              requestId: requestData.id,
+              taskId: null,
+              fileName: attachment.name,
+              fileType: attachment.type,
+              objectUrl: attachment.url,
+            });
+          })
+        );
+      }
+
       return requestData;
     },
     onSuccess: async (data) => {
@@ -115,6 +137,50 @@ export default function NewRequest() {
 
   const handleSubmit = (data: FormData) => {
     createRequestMutation.mutate(data);
+  };
+
+  const getUploadParameters = async () => {
+    try {
+      const response = await fetch("/api/objects/upload", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+      };
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      throw error;
+    }
+  };
+
+  const handleFileUpload = async (result: any) => {
+    if (result.successful?.length > 0) {
+      const newAttachments = result.successful.map((file: any) => ({
+        name: file.name,
+        url: file.uploadURL,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+      }));
+
+      setPendingAttachments((prev) => [...prev, ...newAttachments]);
+      
+      toast({
+        title: "File uploaded",
+        description: `${result.successful.length} file(s) ready to attach`,
+      });
+    }
+  };
+
+  const removePendingAttachment = (index: number) => {
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getFileExtension = (filename: string) => {
@@ -312,6 +378,79 @@ export default function NewRequest() {
                 </FormItem>
               )}
             />
+
+            {/* Attachment Upload Section */}
+            <div className="space-y-3">
+              <FormLabel>Attachments</FormLabel>
+              <div className="flex flex-col gap-3">
+                <ObjectUploader
+                  maxNumberOfFiles={10}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={getUploadParameters}
+                  onComplete={handleFileUpload}
+                  onError={(error) => {
+                    toast({
+                      title: "Upload failed",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                  }}
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    data-testid="button-upload-attachment"
+                  >
+                    <Paperclip className="w-4 h-4 mr-2" />
+                    Attach Files
+                  </Button>
+                </ObjectUploader>
+
+                {pendingAttachments.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {pendingAttachments.length} file(s) ready to attach
+                    </p>
+                    <div className="space-y-2">
+                      {pendingAttachments.map((attachment, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 rounded-md border bg-card"
+                          data-testid={`attachment-${index}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex items-center justify-center w-10 h-10 rounded bg-primary/10 text-primary shrink-0">
+                              <span className="text-xs font-semibold">
+                                {getFileExtension(attachment.name)}
+                              </span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">
+                                {attachment.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatFileSize(attachment.size)}
+                              </p>
+                            </div>
+                            <Check className="w-4 h-4 text-green-600 shrink-0" />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removePendingAttachment(index)}
+                            data-testid={`button-remove-attachment-${index}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <Button
               type="submit"
