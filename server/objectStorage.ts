@@ -233,18 +233,32 @@ async function signObjectURL({
   const { signed_url: signedURL } = await response.json();
   return signedURL;
 }
-import { storage as objectStorage } from "@replit/object-storage";
+
+// New Replit Object Storage helper functions
+import { Client } from "@replit/object-storage";
+
+const replitObjectStorageClient = new Client();
 
 export async function getSignedUploadUrl(): Promise<string> {
   // Generate a unique key for the upload
   const key = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
   
-  // Get a signed URL for uploading
-  const url = await objectStorage.uploadUrl(key);
+  // Get a signed URL for uploading using Replit Object Storage
+  const result = await replitObjectStorageClient.uploadUrl(key);
   
-  return url;
+  if (!result.ok) {
+    throw new Error(`Failed to get upload URL: ${result.error}`);
+  }
+  
+  return result.value;
 }
 
 export async function getDownloadUrl(key: string): Promise<string> {
-  return await objectStorage.downloadUrl(key);
+  const result = await replitObjectStorageClient.downloadUrl(key);
+  
+  if (!result.ok) {
+    throw new Error(`Failed to get download URL: ${result.error}`);
+  }
+  
+  return result.value;
 }
