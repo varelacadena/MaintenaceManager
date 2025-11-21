@@ -77,9 +77,11 @@ export function ObjectUploader({
 
         successful.push({
           name: file.name,
+          fileName: file.name,
           type: file.type || "application/octet-stream",
-          size: file.size,
+          size: file.size || 0,
           uploadURL: url.split("?")[0], // Remove query params
+          objectUrl: url.split("?")[0], // Also include objectUrl for consistency
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Upload failed";

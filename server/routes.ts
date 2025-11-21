@@ -1235,14 +1235,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.userId;
       
-      // Validate required fields
-      if (!req.body.fileName || !req.body.objectUrl) {
+      // Validate required fields with detailed error messages
+      const errors = [];
+      if (!req.body.fileName) {
+        errors.push({ field: "fileName", message: "fileName is required" });
+      }
+      if (!req.body.objectUrl) {
+        errors.push({ field: "objectUrl", message: "objectUrl is required" });
+      }
+      if (!req.body.fileType) {
+        errors.push({ field: "fileType", message: "fileType is required" });
+      }
+      
+      if (errors.length > 0) {
         return res.status(400).json({ 
           message: "Invalid upload data", 
-          errors: [
-            { field: "fileName", message: "fileName is required" },
-            { field: "objectUrl", message: "objectUrl is required" }
-          ]
+          errors 
         });
       }
       

@@ -99,18 +99,21 @@ export default function NewRequest() {
       });
       const requestData = await response.json();
 
-      // Upload all pending attachments
+      // Upload all pending attachments with proper field mapping
       if (pendingAttachments.length > 0) {
-        await Promise.all(
-          pendingAttachments.map(async (attachment) => {
+        for (const attachment of pendingAttachments) {
+          try {
             await apiRequest("POST", "/api/uploads", {
               requestId: requestData.id,
-              fileName: attachment.fileName,
-              fileType: attachment.type,
-              objectUrl: attachment.objectUrl,
+              fileName: attachment.fileName || attachment.name,
+              fileType: attachment.type || "application/octet-stream",
+              objectUrl: attachment.objectUrl || attachment.url,
             });
-          })
-        );
+          } catch (error) {
+            console.error("Error uploading attachment:", error);
+            // Continue with other attachments even if one fails
+          }
+        }
       }
 
       return requestData;
@@ -162,11 +165,11 @@ export default function NewRequest() {
     if (result.successful?.length > 0) {
       const newAttachments = result.successful.map((file: any) => ({
         name: file.name,
-        fileName: file.name, // Add fileName field for backend
+        fileName: file.name,
         url: file.uploadURL,
-        objectUrl: file.uploadURL, // Add objectUrl field for backend
+        objectUrl: file.uploadURL,
         type: file.type || "application/octet-stream",
-        size: file.size,
+        size: file.size || 0,
       }));
 
       setPendingAttachments((prev) => [...prev, ...newAttachments]);
