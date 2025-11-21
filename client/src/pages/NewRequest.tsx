@@ -400,18 +400,18 @@ export default function NewRequest() {
                           key={index}
                           className="flex items-center gap-3 p-2 bg-background rounded-md border"
                         >
-                          {/* File type icon */}
-                          <div className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-semibold text-primary">
-                              {getFileExtension(upload.name)}
+                          {/* File type icon with success indicator */}
+                          <div className="w-10 h-10 rounded-full border-2 border-green-500 bg-green-50 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-semibold text-green-600">
+                              ✓
                             </span>
                           </div>
                           
                           {/* File info */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{upload.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {upload.type.split('/')[1]?.toUpperCase() || 'FILE'}
+                            <p className="text-xs text-green-600">
+                              Uploaded successfully
                             </p>
                           </div>
 
