@@ -233,3 +233,18 @@ async function signObjectURL({
   const { signed_url: signedURL } = await response.json();
   return signedURL;
 }
+import { storage as objectStorage } from "@replit/object-storage";
+
+export async function getSignedUploadUrl(): Promise<string> {
+  // Generate a unique key for the upload
+  const key = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  
+  // Get a signed URL for uploading
+  const url = await objectStorage.uploadUrl(key);
+  
+  return url;
+}
+
+export async function getDownloadUrl(key: string): Promise<string> {
+  return await objectStorage.downloadUrl(key);
+}

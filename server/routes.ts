@@ -1207,6 +1207,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get upload URL for Object Storage
+  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+    try {
+      const { getSignedUploadUrl } = await import("./objectStorage");
+      const uploadURL = await getSignedUploadUrl();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ message: "Failed to get upload URL" });
+    }
+  });
+
   // Upload routes
   app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
     try {
