@@ -182,16 +182,20 @@ export default function NewRequest() {
   };
 
   const getFileExtension = (filename: string) => {
-    const ext = filename.split('.').pop()?.toUpperCase();
+    if (!filename) return 'FILE';
+    const parts = filename.split('.');
+    if (parts.length <= 1) return 'FILE';
+    const ext = parts[parts.length - 1]?.toUpperCase();
     return ext || 'FILE';
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 KB';
+    if (!bytes || bytes === 0) return '0 KB';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const sizeIndex = Math.min(i, sizes.length - 1);
+    return parseFloat((bytes / Math.pow(k, sizeIndex)).toFixed(2)) + ' ' + sizes[sizeIndex];
   };
 
   return (

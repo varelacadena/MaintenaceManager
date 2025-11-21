@@ -570,6 +570,24 @@ export default function TaskDetail() {
 
   const totalCost = parts.reduce((sum, part) => sum + (part.cost || 0), 0);
 
+  const getFileExtension = (filename: string) => {
+    if (!filename) return 'FILE';
+    const parts = filename.split('.');
+    if (parts.length <= 1) return 'FILE';
+    const ext = parts[parts.length - 1]?.toUpperCase();
+    return ext || 'FILE';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0) return '0 KB';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizeIndex = Math.min(i, sizes.length - 1);
+    return parseFloat((bytes / Math.pow(k, sizeIndex)).toFixed(2)) + ' ' + sizes[sizeIndex];
+  };
+
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4">
