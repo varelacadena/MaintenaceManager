@@ -238,20 +238,28 @@ async function signObjectURL({
 import { Client } from "@replit/object-storage";
 
 // Get bucket ID from environment or .replit config
-function getBucketId(): string {
+function getBucketId(): string | null {
   const bucketId = process.env.REPLIT_DB_BUCKET_ID || process.env.OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) {
-    throw new Error(
+    console.warn(
       "Object Storage bucket not configured. Please create a bucket in the Object Storage tool and ensure OBJECT_STORAGE_BUCKET_ID is set."
     );
+    return null;
   }
   return bucketId;
 }
 
 export async function getSignedUploadUrl(): Promise<string> {
   try {
+    const bucketId = getBucketId();
+    if (!bucketId) {
+      throw new Error(
+        "Object Storage bucket not configured. Please create a bucket in the Object Storage tool."
+      );
+    }
+    
     const client = new Client();
-    await client.init(getBucketId());
+    await client.init(bucketId);
     
     // Generate a unique key for the upload
     const key = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
@@ -272,8 +280,15 @@ export async function getSignedUploadUrl(): Promise<string> {
 
 export async function getDownloadUrl(key: string): Promise<string> {
   try {
+    const bucketId = getBucketId();
+    if (!bucketId) {
+      throw new Error(
+        "Object Storage bucket not configured. Please create a bucket in the Object Storage tool."
+      );
+    }
+    
     const client = new Client();
-    await client.init(getBucketId());
+    await client.init(bucketId);
     
     const result = await client.downloadUrl(key);
     
