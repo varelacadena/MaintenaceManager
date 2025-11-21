@@ -164,10 +164,10 @@ export default function NewRequest() {
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       const newAttachments = result.successful.map((file: any) => ({
-        name: file.name,
-        fileName: file.name,
-        url: file.uploadURL,
-        objectUrl: file.uploadURL,
+        name: file.name || file.fileName,
+        fileName: file.name || file.fileName,
+        url: file.objectUrl || file.uploadURL,
+        objectUrl: file.objectUrl || file.uploadURL,
         type: file.type || "application/octet-stream",
         size: file.size || 0,
       }));

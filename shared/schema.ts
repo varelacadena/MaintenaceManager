@@ -237,8 +237,10 @@ export const uploads = pgTable("uploads", {
 });
 
 export const insertUploadSchema = createInsertSchema(uploads).omit({ id: true, createdAt: true, uploadedById: true });
-export type InsertUpload = z.infer<typeof insertUploadSchema>;
-export type Upload = typeof uploads.$inferSelect;
+export type Upload = typeof uploads.$inferSelect & {
+  objectUrl: string; // Ensure this maps correctly
+};
+export type InsertUpload = typeof uploads.$inferInsert;
 
 // Task notes (linked to tasks, not requests)
 export const noteTypeEnum = pgEnum("note_type", ["job_note", "recommendation"]);
