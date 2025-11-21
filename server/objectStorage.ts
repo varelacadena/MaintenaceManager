@@ -237,28 +237,53 @@ async function signObjectURL({
 // New Replit Object Storage helper functions
 import { Client } from "@replit/object-storage";
 
-const replitObjectStorageClient = new Client();
+// Get bucket ID from environment or .replit config
+function getBucketId(): string {
+  const bucketId = process.env.REPLIT_DB_BUCKET_ID || process.env.OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) {
+    throw new Error(
+      "Object Storage bucket not configured. Please create a bucket in the Object Storage tool and ensure OBJECT_STORAGE_BUCKET_ID is set."
+    );
+  }
+  return bucketId;
+}
 
 export async function getSignedUploadUrl(): Promise<string> {
-  // Generate a unique key for the upload
-  const key = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
-  
-  // Get a signed URL for uploading using Replit Object Storage
-  const result = await replitObjectStorageClient.uploadUrl(key);
-  
-  if (!result.ok) {
-    throw new Error(`Failed to get upload URL: ${result.error}`);
+  try {
+    const client = new Client();
+    await client.init(getBucketId());
+    
+    // Generate a unique key for the upload
+    const key = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
+    // Get a signed URL for uploading using Replit Object Storage
+    const result = await client.uploadUrl(key);
+    
+    if (!result.ok) {
+      throw new Error(`Failed to get upload URL: ${result.error}`);
+    }
+    
+    return result.value;
+  } catch (error) {
+    console.error("Error in getSignedUploadUrl:", error);
+    throw error;
   }
-  
-  return result.value;
 }
 
 export async function getDownloadUrl(key: string): Promise<string> {
-  const result = await replitObjectStorageClient.downloadUrl(key);
-  
-  if (!result.ok) {
-    throw new Error(`Failed to get download URL: ${result.error}`);
+  try {
+    const client = new Client();
+    await client.init(getBucketId());
+    
+    const result = await client.downloadUrl(key);
+    
+    if (!result.ok) {
+      throw new Error(`Failed to get download URL: ${result.error}`);
+    }
+    
+    return result.value;
+  } catch (error) {
+    console.error("Error in getDownloadUrl:", error);
+    throw error;
   }
-  
-  return result.value;
 }
