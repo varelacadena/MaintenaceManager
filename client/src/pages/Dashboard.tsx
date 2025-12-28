@@ -618,29 +618,25 @@ export default function Dashboard() {
                 <span>Messages</span>
               </Button>
 
-              {user?.role === "staff" && (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                  onClick={() => setLocation("/new-request")}
-                  data-testid="quick-action-new-request"
-                >
-                  <ClipboardList className="w-5 h-5" />
-                  <span>New Request</span>
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3"
+                onClick={() => setLocation("/new-request")}
+                data-testid="quick-action-new-request"
+              >
+                <ClipboardList className="w-5 h-5" />
+                <span>New Service Request</span>
+              </Button>
 
-              {user?.role === "staff" && (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                  onClick={() => setCreateDialogOpen(true)}
-                  data-testid="quick-action-new-reservation"
-                >
-                  <Car className="w-5 h-5" />
-                  <span>New Reservation</span>
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3"
+                onClick={() => setCreateDialogOpen(true)}
+                data-testid="quick-action-new-reservation"
+              >
+                <Car className="w-5 h-5" />
+                <span>New Vehicle Reservation</span>
+              </Button>
 
               {(user?.role === "admin" || user?.role === "maintenance") && (
                 <Button
