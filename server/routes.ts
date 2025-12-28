@@ -1877,27 +1877,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Keep PUT endpoint for backward compatibility
-  app.put("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await authenticateUser(req);
-      if (!user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const { id } = req.params;
-      const updates = req.body;
-
-      const reservation = await storage.getVehicleReservation(id);
-      if (!reservation) {
-        return res.status(404).json({ message: "Reservation not found" });
-      }
-
-      // Only admin or the user who created the reservation can update it
-      if (user.role !== "admin" && reservation.userId !== user.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
   // Delete vehicle reservation
   app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
     try {
