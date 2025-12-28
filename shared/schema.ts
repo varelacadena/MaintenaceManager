@@ -130,7 +130,7 @@ export const contactTypeEnum = pgEnum("contact_type", ["requester", "staff", "ot
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: varchar("request_id").references(() => serviceRequests.id),
+  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "set null" }),
   propertyId: varchar("property_id"),
   equipmentId: varchar("equipment_id").references(() => equipment.id),
   vehicleId: varchar("vehicle_id").references(() => vehicles.id), // For vehicle-related tasks
