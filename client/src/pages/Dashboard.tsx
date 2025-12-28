@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Link, navigate } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   ClipboardList,
   Clock,
@@ -47,6 +47,7 @@ import { queryClient } from "@/lib/queryClient";
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -593,7 +594,7 @@ export default function Dashboard() {
         <Button
           variant="outline"
           className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-          onClick={() => navigate("/messages")}
+          onClick={() => setLocation("/messages")}
           data-testid="quick-action-messages"
         >
           <MessageSquare className="w-6 h-6" />
@@ -604,7 +605,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-            onClick={() => navigate("/new-request")}
+            onClick={() => setLocation("/new-request")}
             data-testid="quick-action-new-request"
           >
             <Plus className="w-6 h-6" />
@@ -616,7 +617,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-            onClick={() => navigate("/my-reservations")}
+            onClick={() => setLocation("/my-reservations")}
             data-testid="quick-action-new-reservation"
           >
             <Car className="w-6 h-6" />
@@ -628,7 +629,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-            onClick={() => navigate("/tasks/new")}
+            onClick={() => setLocation("/tasks/new")}
             data-testid="quick-action-new-task"
           >
             <Wrench className="w-6 h-6" />
