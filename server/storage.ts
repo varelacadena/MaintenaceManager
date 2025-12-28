@@ -1025,13 +1025,22 @@ export class DatabaseStorage implements IStorage {
     return reservation;
   }
 
-  async updateVehicleReservation(id: string, data: Partial<InsertVehicleReservation>): Promise<VehicleReservation | undefined> {
-    const [reservation] = await this.db
+  async updateVehicleReservation(
+    id: string,
+    updates: Partial<InsertVehicleReservation>
+  ): Promise<VehicleReservation | undefined> {
+    const [updated] = await this.db
       .update(vehicleReservations)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(vehicleReservations.id, id))
       .returning();
-    return reservation;
+    return updated;
+  }
+
+  async deleteVehicleReservation(id: string): Promise<void> {
+    await this.db
+      .delete(vehicleReservations)
+      .where(eq(vehicleReservations.id, id));
   }
 
   async updateReservationStatus(id: string, status: string): Promise<VehicleReservation | undefined> {
@@ -1041,10 +1050,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(vehicleReservations.id, id))
       .returning();
     return reservation;
-  }
-
-  async deleteVehicleReservation(id: string): Promise<void> {
-    await this.db.delete(vehicleReservations).where(eq(vehicleReservations.id, id));
   }
 
   async checkVehicleAvailability(

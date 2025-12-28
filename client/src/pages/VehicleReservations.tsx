@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Car, User, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -308,6 +308,16 @@ export default function VehicleReservations() {
                   <span className="text-muted-foreground">Created: </span>
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Button
+                    variant="destructive"
+                    onClick={() => deleteMutation.mutate(reservation.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid="button-delete-reservation"
+                  >
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
               </CardContent>
               <CardFooter className="flex gap-2">
                 {reservation.status === "pending" && (
@@ -341,8 +351,8 @@ export default function VehicleReservations() {
                               </SelectTrigger>
                               <SelectContent>
                                 {vehicles
-                                  ?.filter((vehicle) => 
-                                    vehicle.passengerCapacity && 
+                                  ?.filter((vehicle) =>
+                                    vehicle.passengerCapacity &&
                                     vehicle.passengerCapacity >= reservation.passengerCount
                                   )
                                   .map((vehicle) => (

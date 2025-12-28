@@ -21,6 +21,7 @@ import {
   insertPropertySchema,
   insertEquipmentSchema,
   insertVehicleSchema,
+  insertVehicleSchema,
   insertVehicleReservationSchema,
   insertVehicleCheckOutLogSchema,
   insertVehicleCheckInLogSchema,
@@ -41,6 +42,24 @@ async function getAuthUser(req: any) {
     return null;
   }
 }
+
+// Placeholder for authenticateUser function (assuming it exists elsewhere)
+async function authenticateUser(req: any): Promise<any | null> {
+  // This is a placeholder. Replace with your actual authentication logic.
+  // It should verify the user's session and return user information if authenticated.
+  if (req.isAuthenticated()) {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (user) {
+        return { ...user, role: user.role }; // Ensure role is included
+      }
+    } catch (error) {
+      console.error("Error during authenticateUser:", error);
+    }
+  }
+  return null;
+}
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -1212,10 +1231,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { getSignedUploadUrl } = await import("./objectStorage");
       const uploadURL = await getSignedUploadUrl();
-      
+
       // Check if this is a mock URL (Object Storage not configured)
       const isMock = uploadURL.startsWith("https://mock-storage.local/");
-      
+
       res.json({ 
         uploadURL,
         isMock,
@@ -1234,7 +1253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      
+
       // Validate required fields with detailed error messages
       const errors = [];
       if (!req.body.fileName) {
@@ -1246,14 +1265,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.body.fileType) {
         errors.push({ field: "fileType", message: "fileType is required" });
       }
-      
+
       if (errors.length > 0) {
         return res.status(400).json({ 
           message: "Invalid upload data", 
           errors 
         });
       }
-      
+
       const uploadData = insertUploadSchema.parse({
         ...req.body,
         uploadedById: userId,
@@ -1273,7 +1292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/uploads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      
+
       // Validate required fields
       if (!req.body.fileName || !req.body.objectUrl) {
         return res.status(400).json({ 
@@ -1284,7 +1303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ]
         });
       }
-      
+
       const uploadData = insertUploadSchema.parse({
         ...req.body,
         uploadedById: userId,
@@ -1694,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vehicle-reservations", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      
+
       // Convert date strings to Date objects before validation
       const bodyWithDates = {
         ...req.body,
@@ -1710,7 +1729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       const startDate = new Date(reservationData.startDate);
       const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
 
@@ -1763,88 +1782,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
+  // Update vehicle reservation
+  app.put("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const currentReservation = await storage.getVehicleReservation(req.params.id);
-      if (!currentReservation) {
+      const user = await authenticateUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const updates = req.body;
+
+      const reservation = await storage.getVehicleReservation(id);
+      if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      // If assigning a vehicle, check availability
-      if (req.body.vehicleId && req.body.vehicleId !== currentReservation.vehicleId) {
+      // Only admin or the user who created the reservation can update it
+      if (user.role !== "admin" && reservation.userId !== user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // Handle potential vehicle status changes if vehicleId is updated
+      if (updates.vehicleId && updates.vehicleId !== reservation.vehicleId) {
         const isAvailable = await storage.checkVehicleAvailability(
-          req.body.vehicleId,
-          currentReservation.startDate,
-          currentReservation.endDate,
-          req.params.id
+          updates.vehicleId,
+          reservation.startDate,
+          reservation.endDate,
+          id // Exclude current reservation from check
         );
 
         if (!isAvailable) {
           return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
         }
 
-        // Set old vehicle to available if it exists
-        if (currentReservation.vehicleId) {
-          const activeReservations = await storage.getVehicleReservations({
-            vehicleId: currentReservation.vehicleId,
-          });
-
-          const hasOtherActiveReservations = activeReservations.some(
-            r => r.id !== currentReservation.id && 
-            (r.status === "pending" || r.status === "approved")
-          );
-
-          if (!hasOtherActiveReservations) {
-            await storage.updateVehicleStatus(currentReservation.vehicleId, "available");
-          }
-        }
-
-        // Set new vehicle to reserved only if status is pending or approved
-        if (req.body.status === "pending" || req.body.status === "approved" || currentReservation.status === "pending" || currentReservation.status === "approved") {
-          await storage.updateVehicleStatus(req.body.vehicleId, "reserved");
-        }
-      }
-
-      const reservation = await storage.updateVehicleReservation(req.params.id, req.body);
-
-      // Update vehicle status based on reservation status changes
-      if (req.body.status && reservation?.vehicleId) {
-        if (req.body.status === "cancelled" || req.body.status === "completed") {
+        // Set old vehicle to available if no other active reservations
+        if (reservation.vehicleId) {
           const activeReservations = await storage.getVehicleReservations({
             vehicleId: reservation.vehicleId,
           });
-
-          const hasActiveReservations = activeReservations.some(
-            r => r.id !== reservation.id && 
-            (r.status === "pending" || r.status === "approved")
+          const hasOtherActiveReservations = activeReservations.some(
+            r => r.id !== id && (r.status === "pending" || r.status === "approved")
           );
-
-          if (!hasActiveReservations) {
+          if (!hasOtherActiveReservations) {
             await storage.updateVehicleStatus(reservation.vehicleId, "available");
           }
-        } else if (req.body.status === "approved") {
+        }
+
+        // Set new vehicle to reserved if status is pending or approved
+        if (updates.status === "pending" || updates.status === "approved") {
+          await storage.updateVehicleStatus(updates.vehicleId, "reserved");
+        }
+      }
+
+      // Handle status change that might make a vehicle available
+      if (updates.status && updates.status !== reservation.status) {
+        if (updates.status === "cancelled" || updates.status === "completed") {
+          const activeReservations = await storage.getVehicleReservations({
+            vehicleId: reservation.vehicleId,
+          });
+          const hasActiveReservations = activeReservations.some(
+            r => r.id !== id && (r.status === "pending" || r.status === "approved")
+          );
+          if (!hasActiveReservations && reservation.vehicleId) {
+            await storage.updateVehicleStatus(reservation.vehicleId, "available");
+          }
+        } else if (updates.status === "approved" && reservation.vehicleId) {
           await storage.updateVehicleStatus(reservation.vehicleId, "reserved");
         }
       }
 
-      res.json(reservation);
-    } catch (error) {
+      const updatedReservation = await storage.updateVehicleReservation(id, updates);
+      res.json(updatedReservation);
+    } catch (error: any) {
       console.error("Error updating vehicle reservation:", error);
-      res.status(500).json({ message: "Failed to update vehicle reservation" });
+      res.status(500).json({ message: error.message });
     }
   });
 
+  // Delete vehicle reservation
   app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
     try {
-      const reservation = await storage.getVehicleReservation(req.params.id);
-      if (reservation) {
-        await storage.updateVehicleStatus(reservation.vehicleId, "available");
+      const user = await authenticateUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
-      await storage.deleteVehicleReservation(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
+
+      const { id } = req.params;
+
+      const reservation = await storage.getVehicleReservation(id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Only admin or the user who created the reservation can delete it
+      if (user.role !== "admin" && reservation.userId !== user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // If a vehicle is associated, set it back to available if no other reservations exist
+      if (reservation.vehicleId) {
+        const activeReservations = await storage.getVehicleReservations({
+          vehicleId: reservation.vehicleId,
+        });
+        const hasOtherActiveReservations = activeReservations.some(
+          r => r.id !== id && (r.status === "pending" || r.status === "approved")
+        );
+        if (!hasOtherActiveReservations) {
+          await storage.updateVehicleStatus(reservation.vehicleId, "available");
+        }
+      }
+
+      await storage.deleteVehicleReservation(id);
+      res.status(204).send(); // No Content
+    } catch (error: any) {
       console.error("Error deleting vehicle reservation:", error);
-      res.status(500).json({ message: "Failed to delete vehicle reservation" });
+      res.status(500).json({ message: error.message });
     }
   });
 
