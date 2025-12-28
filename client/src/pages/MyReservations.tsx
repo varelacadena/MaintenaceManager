@@ -24,8 +24,8 @@ interface VehicleReservation {
   id: string;
   vehicleId: string;
   vehicleName: string;
-  startTime: string;
-  endTime: string;
+  startDate: string;
+  endDate: string;
   purpose: string;
   status: string;
   passengerCount: number | null;
@@ -226,7 +226,7 @@ export default function MyReservations() {
   const canCheckOut = (reservation: VehicleReservation) => {
     if (reservation.status.toLowerCase() !== "approved") return false;
     const now = new Date();
-    const startTime = new Date(reservation.startTime);
+    const startTime = new Date(reservation.startDate);
     const hoursBefore = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     return hoursBefore <= 2 && hoursBefore >= -1;
   };
@@ -414,7 +414,7 @@ export default function MyReservations() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Start</p>
                       <p className="text-sm font-medium break-words">
-                        {format(new Date(reservation.startTime), "MMM dd, yyyy h:mm a")}
+                        {format(new Date(reservation.startDate), "MMM dd, yyyy h:mm a")}
                       </p>
                     </div>
                   </div>
@@ -423,7 +423,7 @@ export default function MyReservations() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">End</p>
                       <p className="text-sm font-medium break-words">
-                        {format(new Date(reservation.endTime), "MMM dd, yyyy h:mm a")}
+                        {format(new Date(reservation.endDate), "MMM dd, yyyy h:mm a")}
                       </p>
                     </div>
                   </div>
