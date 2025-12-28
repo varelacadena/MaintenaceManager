@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function VehicleCheckOut() {
   const { reservationId } = useParams();
@@ -37,11 +37,18 @@ export default function VehicleCheckOut() {
     resolver: zodResolver(insertVehicleCheckOutLogSchema.omit({ userId: true, vehicleId: true, reservationId: true })),
     defaultValues: {
       checkOutDate: new Date(),
-      startMileage: vehicle?.currentMileage || 0,
+      startMileage: 0,
       startFuelLevel: 100,
       inspectionNotes: "",
     },
   });
+
+  // Update form when vehicle data loads
+  useEffect(() => {
+    if (vehicle?.currentMileage) {
+      form.setValue("startMileage", vehicle.currentMileage);
+    }
+  }, [vehicle, form]);
 
   const checkOutMutation = useMutation({
     mutationFn: async (data: Omit<InsertVehicleCheckOutLog, "userId" | "vehicleId" | "reservationId">) => {
@@ -331,7 +338,11 @@ export default function VehicleCheckOut() {
                     Cancel
                   </Button>
                 </Link>
-                <Button type="submit" disabled={checkOutMutation.isPending} data-testid="button-submit-checkout">
+                <Button 
+                  type="submit" 
+                  disabled={checkOutMutation.isPending || !form.formState.isValid} 
+                  data-testid="button-submit-checkout"
+                >
                   {checkOutMutation.isPending ? "Checking Out..." : "Complete Check-Out"}
                 </Button>
               </div>
