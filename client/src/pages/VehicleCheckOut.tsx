@@ -351,12 +351,6 @@ export default function VehicleCheckOut() {
               </div>
 
               <div className="flex flex-col items-end gap-2 pt-4">
-                {form.watch("checkOutDate") && (
-                  <p className="text-sm text-muted-foreground">
-                    Check-out scheduled for: {new Date(form.watch("checkOutDate")).toLocaleString()}
-                  </p>
-                )}
-                
                 {!isWithinReservationTime(reservation) && !adminOverride && (
                   <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md border border-amber-200 dark:border-amber-800">
                     Check-out will be available at: {reservation && new Date(reservation.startDate).toLocaleString()}
