@@ -133,7 +133,7 @@ function DroppableDay({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[100px] border rounded-md p-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+      className={`min-h-[200px] border rounded-md p-2 cursor-pointer hover:bg-muted/50 transition-colors ${
         isToday ? "border-primary border-2" : ""
       } ${isOver ? "bg-primary/5 border-primary" : ""}`}
       onClick={() => onDayClick(date)}
