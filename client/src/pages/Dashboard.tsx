@@ -38,6 +38,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -589,53 +594,68 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Button
-          variant="outline"
-          className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-          onClick={() => setLocation("/messages")}
-          data-testid="quick-action-messages"
-        >
-          <MessageSquare className="w-6 h-6" />
-          <span className="text-sm font-medium">Messages</span>
-        </Button>
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              size="lg"
+              className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl"
+              data-testid="quick-actions-fab"
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="end">
+            <div className="space-y-1">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3"
+                onClick={() => setLocation("/messages")}
+                data-testid="quick-action-messages"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Messages</span>
+              </Button>
 
-        {user?.role === "staff" && (
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-            onClick={() => setLocation("/new-request")}
-            data-testid="quick-action-new-request"
-          >
-            <Plus className="w-6 h-6" />
-            <span className="text-sm font-medium">New Request</span>
-          </Button>
-        )}
+              {user?.role === "staff" && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3"
+                  onClick={() => setLocation("/new-request")}
+                  data-testid="quick-action-new-request"
+                >
+                  <ClipboardList className="w-5 h-5" />
+                  <span>New Request</span>
+                </Button>
+              )}
 
-        {user?.role === "staff" && (
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-            onClick={() => setLocation("/my-reservations")}
-            data-testid="quick-action-new-reservation"
-          >
-            <Car className="w-6 h-6" />
-            <span className="text-sm font-medium">New Reservation</span>
-          </Button>
-        )}
+              {user?.role === "staff" && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3"
+                  onClick={() => setCreateDialogOpen(true)}
+                  data-testid="quick-action-new-reservation"
+                >
+                  <Car className="w-5 h-5" />
+                  <span>New Reservation</span>
+                </Button>
+              )}
 
-        {(user?.role === "admin" || user?.role === "maintenance") && (
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex flex-col gap-2 hover-elevate"
-            onClick={() => setLocation("/tasks/new")}
-            data-testid="quick-action-new-task"
-          >
-            <Wrench className="w-6 h-6" />
-            <span className="text-sm font-medium">New Task</span>
-          </Button>
-        )}
+              {(user?.role === "admin" || user?.role === "maintenance") && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3"
+                  onClick={() => setLocation("/tasks/new")}
+                  data-testid="quick-action-new-task"
+                >
+                  <Wrench className="w-5 h-5" />
+                  <span>New Task</span>
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
