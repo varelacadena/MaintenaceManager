@@ -1640,6 +1640,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vehicle reservation routes
+  app.get("/api/vehicle-reservations/my", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const reservations = await storage.getVehicleReservations({
+        userId,
+      });
+      res.json(reservations);
+    } catch (error) {
+      console.error("Error fetching user's vehicle reservations:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle reservations" });
+    }
+  });
+
   app.get("/api/vehicle-reservations", isAuthenticated, async (req, res) => {
     try {
       const vehicleId = req.query.vehicleId as string | undefined;
