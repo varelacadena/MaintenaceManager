@@ -603,6 +603,7 @@ export const vehicleCheckOutLogs = pgTable("vehicle_check_out_logs", {
   cleanlinessConfirmed: boolean("cleanliness_confirmed").notNull().default(false),
   damageNotes: text("damage_notes"),
   digitalSignature: text("digital_signature"),
+  adminOverride: boolean("admin_override").default(false),
   checkOutTime: timestamp("check_out_time").notNull().defaultNow(),
 }, (table) => [
   index("idx_checkout_vehicle_time").on(table.vehicleId, table.checkOutTime),

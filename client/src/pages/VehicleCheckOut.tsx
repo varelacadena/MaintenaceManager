@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useState, useEffect } from "react";
+import { Switch } from "@/components/ui/switch";
 
 export default function VehicleCheckOut() {
   const { reservationId } = useParams();
@@ -23,6 +24,19 @@ export default function VehicleCheckOut() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
+  const [adminOverride, setAdminOverride] = useState(false);
+  
+  const isAdmin = user?.role === "admin";
+  
+  // Check if current time is within reservation window
+  const isWithinReservationTime = (reservation: VehicleReservation | undefined): boolean => {
+    if (!reservation) return false;
+    const now = new Date();
+    const startDate = new Date(reservation.startDate);
+    
+    // Allow check-out if current time is at or after the reservation start time
+    return now >= startDate;
+  };
 
   const { data: reservation, isLoading } = useQuery<VehicleReservation>({
     queryKey: [`/api/vehicle-reservations/${reservationId}`],
@@ -34,7 +48,7 @@ export default function VehicleCheckOut() {
   });
 
   const form = useForm<InsertVehicleCheckOutLog>({
-    resolver: zodResolver(insertVehicleCheckOutLogSchema.omit({ userId: true, vehicleId: true, reservationId: true })),
+    resolver: zodResolver(insertVehicleCheckOutLogSchema.omit({ userId: true, vehicleId: true, reservationId: true, adminOverride: true })),
     defaultValues: {
       checkOutDate: new Date(),
       startMileage: 0,
@@ -57,6 +71,7 @@ export default function VehicleCheckOut() {
         userId: user!.id,
         vehicleId: reservation!.vehicleId,
         reservationId: reservationId!,
+        adminOverride: adminOverride,
       });
       return await response.json();
     },
@@ -341,6 +356,26 @@ export default function VehicleCheckOut() {
                     Check-out scheduled for: {new Date(form.watch("checkOutDate")).toLocaleString()}
                   </p>
                 )}
+                
+                {!isWithinReservationTime(reservation) && !adminOverride && (
+                  <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+                    Check-out will be available at: {reservation && new Date(reservation.startDate).toLocaleString()}
+                  </div>
+                )}
+                
+                {isAdmin && !isWithinReservationTime(reservation) && (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <Switch
+                      id="admin-override"
+                      checked={adminOverride}
+                      onCheckedChange={setAdminOverride}
+                    />
+                    <Label htmlFor="admin-override" className="cursor-pointer">
+                      Admin Override - Allow Early Check-Out
+                    </Label>
+                  </div>
+                )}
+                
                 <div className="flex gap-2">
                   <Link href="/my-reservations">
                     <Button type="button" variant="outline" data-testid="button-cancel">
@@ -349,7 +384,11 @@ export default function VehicleCheckOut() {
                   </Link>
                   <Button 
                     type="submit" 
-                    disabled={checkOutMutation.isPending || !form.formState.isValid} 
+                    disabled={
+                      checkOutMutation.isPending || 
+                      !form.formState.isValid || 
+                      (!isWithinReservationTime(reservation) && !adminOverride)
+                    } 
                     data-testid="button-submit-checkout"
                   >
                     {checkOutMutation.isPending ? "Checking Out..." : "Complete Check-Out"}
