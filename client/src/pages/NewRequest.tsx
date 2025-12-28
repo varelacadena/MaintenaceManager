@@ -401,16 +401,10 @@ export default function NewRequest() {
                       variant: "destructive",
                     });
                   }}
+                  buttonClassName="w-full"
                 >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    data-testid="button-upload-attachment"
-                  >
-                    <Paperclip className="w-4 h-4 mr-2" />
-                    Attach Files
-                  </Button>
+                  <Paperclip className="w-4 h-4 mr-2" />
+                  Attach Files
                 </ObjectUploader>
 
                 {pendingAttachments.length > 0 && (
