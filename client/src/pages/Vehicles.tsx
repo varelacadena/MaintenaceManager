@@ -109,6 +109,31 @@ export default function Vehicles() {
     return matchesSearch && matchesStatus;
   });
 
+  const syncStatusesMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/vehicles/sync-statuses");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/vehicles');
+        }
+      });
+      toast({
+        title: "Success",
+        description: data.message || "Vehicle statuses synchronized",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const canManageVehicles = user?.role === "admin" || user?.role === "maintenance";
 
   return (
@@ -120,8 +145,18 @@ export default function Vehicles() {
             Manage your vehicle fleet and reservations
           </p>
         </div>
-        {canManageVehicles && (
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <div className="flex gap-2">
+          {user?.role === "admin" && (
+            <Button 
+              variant="outline" 
+              onClick={() => syncStatusesMutation.mutate()}
+              disabled={syncStatusesMutation.isPending}
+            >
+              {syncStatusesMutation.isPending ? "Syncing..." : "Sync Statuses"}
+            </Button>
+          )}
+          {canManageVehicles && (
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button data-testid="button-add-vehicle">
                 <Plus className="mr-2 h-4 w-4" />
@@ -314,7 +349,8 @@ export default function Vehicles() {
               </Form>
             </DialogContent>
           </Dialog>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="flex gap-4">

@@ -1775,7 +1775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const hasOtherActiveReservations = activeReservations.some(
             r => r.id !== currentReservation.id && 
-            (r.status === "pending" || r.status === "approved" || r.status === "active")
+            (r.status === "pending" || r.status === "approved")
           );
 
           if (!hasOtherActiveReservations) {
@@ -1783,8 +1783,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Set new vehicle to reserved
-        await storage.updateVehicleStatus(req.body.vehicleId, "reserved");
+        // Set new vehicle to reserved only if status is pending or approved
+        if (req.body.status === "pending" || req.body.status === "approved" || currentReservation.status === "pending" || currentReservation.status === "approved") {
+          await storage.updateVehicleStatus(req.body.vehicleId, "reserved");
+        }
       }
 
       const reservation = await storage.updateVehicleReservation(req.params.id, req.body);
@@ -1798,13 +1800,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const hasActiveReservations = activeReservations.some(
             r => r.id !== reservation.id && 
-            (r.status === "pending" || r.status === "approved" || r.status === "active")
+            (r.status === "pending" || r.status === "approved")
           );
 
           if (!hasActiveReservations) {
             await storage.updateVehicleStatus(reservation.vehicleId, "available");
           }
-        } else if (req.body.status === "approved" || req.body.status === "active") {
+        } else if (req.body.status === "approved") {
           await storage.updateVehicleStatus(reservation.vehicleId, "reserved");
         }
       }
@@ -2082,6 +2084,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting vehicle check-in log:", error);
       res.status(500).json({ message: "Failed to delete vehicle check-in log" });
+    }
+  });
+
+  // Sync vehicle statuses (admin only) - fixes vehicles stuck in reserved state
+  app.post("/api/vehicles/sync-statuses", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const vehicles = await storage.getVehicles();
+      let updatedCount = 0;
+
+      for (const vehicle of vehicles) {
+        if (vehicle.status === "reserved") {
+          // Check if there are any active reservations
+          const activeReservations = await storage.getVehicleReservations({
+            vehicleId: vehicle.id,
+          });
+
+          const hasActiveReservations = activeReservations.some(
+            r => r.status === "pending" || r.status === "approved"
+          );
+
+          if (!hasActiveReservations) {
+            await storage.updateVehicleStatus(vehicle.id, "available");
+            updatedCount++;
+          }
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Updated ${updatedCount} vehicle(s) from reserved to available` 
+      });
+    } catch (error) {
+      console.error("Error syncing vehicle statuses:", error);
+      res.status(500).json({ message: "Failed to sync vehicle statuses" });
     }
   });
 
