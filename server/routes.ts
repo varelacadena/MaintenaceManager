@@ -1782,11 +1782,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update vehicle reservation
-  app.put("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
+  // Update vehicle reservation (PATCH endpoint)
+  app.patch("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await authenticateUser(req);
-      if (!user) {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
@@ -1798,9 +1799,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      // Only admin or the user who created the reservation can update it
-      if (user.role !== "admin" && reservation.userId !== user.id) {
+      // Only admin, maintenance, or the user who created the reservation can update it
+      const canUpdate = 
+        currentUser.role === "admin" || 
+        currentUser.role === "maintenance" || 
+        reservation.userId === userId;
+
+      if (!canUpdate) {
         return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // If staff is cancelling, reset lastViewedStatus so admin sees the update
+      if (updates.status === "cancelled" && reservation.userId === userId) {
+        updates.lastViewedStatus = reservation.status;
+      }
+
+      // If admin is editing, reset lastViewedStatus so user sees the update
+      if ((currentUser.role === "admin" || currentUser.role === "maintenance") && 
+          reservation.userId !== userId) {
+        updates.lastViewedStatus = "pending"; // Force notification
       }
 
       // Handle potential vehicle status changes if vehicleId is updated
@@ -1859,6 +1876,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Keep PUT endpoint for backward compatibility
+  app.put("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await authenticateUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const updates = req.body;
+
+      const reservation = await storage.getVehicleReservation(id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Only admin or the user who created the reservation can update it
+      if (user.role !== "admin" && reservation.userId !== user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
 
   // Delete vehicle reservation
   app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {

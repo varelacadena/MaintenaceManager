@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Car, User, Search } from "lucide-react";
+import { Calendar, Car, User, Search, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,11 @@ export default function VehicleReservations() {
   const [selectedReservationForHandoff, setSelectedReservationForHandoff] = useState<string | null>(null);
   const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState<string>("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedReservationForEdit, setSelectedReservationForEdit] = useState<VehicleReservation | null>(null);
+  const [editPurpose, setEditPurpose] = useState<string>("");
+  const [editPassengerCount, setEditPassengerCount] = useState<number>(1);
+  const [editNotes, setEditNotes] = useState<string>("");
   const { toast } = useToast();
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
@@ -162,6 +167,36 @@ export default function VehicleReservations() {
       setKeyPickupMethod("");
       setAdminNotes("");
       setSelectedReservationForHandoff(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editReservationMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedReservationForEdit) return;
+      return await apiRequest("PATCH", `/api/vehicle-reservations/${selectedReservationForEdit.id}`, {
+        purpose: editPurpose,
+        passengerCount: editPassengerCount,
+        notes: editNotes,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      toast({
+        title: "Success",
+        description: "Reservation updated successfully. The user will be notified.",
+      });
+      setEditDialogOpen(false);
+      setSelectedReservationForEdit(null);
+      setEditPurpose("");
+      setEditPassengerCount(1);
+      setEditNotes("");
     },
     onError: (error: Error) => {
       toast({
@@ -308,8 +343,14 @@ export default function VehicleReservations() {
                   <span className="text-muted-foreground">Created: </span>
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
+                {reservation.status === "cancelled" && (
+                  <div className="text-sm mt-2 p-2 bg-destructive/10 rounded-md">
+                    <span className="text-destructive font-semibold">Status Update: </span>
+                    <span className="text-destructive">This reservation was cancelled by the user</span>
+                  </div>
+                )}
                 </CardContent>
-              <CardFooter className="flex gap-2">
+              <CardFooter className="flex gap-2 flex-wrap">
                 {reservation.status === "pending" && (
                   <>
                     <Dialog>
@@ -391,6 +432,23 @@ export default function VehicleReservations() {
                       </AlertDialogContent>
                     </AlertDialog>
                   </>
+                )}
+                {(reservation.status === "pending" || reservation.status === "approved") && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedReservationForEdit(reservation);
+                      setEditPurpose(reservation.purpose);
+                      setEditPassengerCount(reservation.passengerCount);
+                      setEditNotes(reservation.notes || "");
+                      setEditDialogOpen(true);
+                    }}
+                    data-testid={`button-edit-${reservation.id}`}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -489,6 +547,65 @@ export default function VehicleReservations() {
               disabled={saveHandoffDetailsMutation.isPending}
             >
               {saveHandoffDetailsMutation.isPending ? "Saving..." : "Save Details"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Reservation</DialogTitle>
+            <DialogDescription>
+              Make changes to the reservation. The user will be notified of any updates.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-purpose">Purpose</Label>
+              <Input
+                id="edit-purpose"
+                value={editPurpose}
+                onChange={(e) => setEditPurpose(e.target.value)}
+                placeholder="Trip purpose"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-passengers">Number of Passengers</Label>
+              <Input
+                id="edit-passengers"
+                type="number"
+                min={1}
+                value={editPassengerCount}
+                onChange={(e) => setEditPassengerCount(parseInt(e.target.value))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-notes">Notes</Label>
+              <Textarea
+                id="edit-notes"
+                placeholder="Additional notes..."
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setSelectedReservationForEdit(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => editReservationMutation.mutate()}
+              disabled={editReservationMutation.isPending}
+            >
+              {editReservationMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

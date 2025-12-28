@@ -1,5 +1,5 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Car, Calendar, User, MapPin, FileText, Key, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,25 @@ import { format } from "date-fns";
 import { Link } from "wouter";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useMutation } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function VehicleReservationDetails() {
   const { reservationId } = useParams();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: reservation, isLoading: reservationLoading } = useQuery<VehicleReservation>({
     queryKey: [`/api/vehicle-reservations/${reservationId}`],
@@ -44,10 +58,38 @@ export default function VehicleReservationDetails() {
     },
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/vehicle-reservations/${reservationId}/cancel`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
+      toast({
+        title: "Reservation Cancelled",
+        description: "The reservation has been successfully cancelled.",
+        variant: "success",
+      });
+      // Redirect to the reservation list page or a confirmation page
+      setLocation("/my-reservations");
+    },
+    onError: (error) => {
+      toast({
+        title: "Cancellation Failed",
+        description: error.message || "An error occurred while cancelling the reservation.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAcceptAdvisory = () => {
     acceptMutation.mutate();
   };
 
+  const handleCancelReservation = () => {
+    cancelMutation.mutate();
+  };
 
   if (reservationLoading) {
     return (
@@ -140,6 +182,9 @@ export default function VehicleReservationDetails() {
     };
     return labels[method] || method;
   };
+
+  // Determine if the current user is an admin to show edit/cancel buttons
+  const isAdmin = true; // Replace with actual admin check logic
 
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
@@ -261,11 +306,43 @@ export default function VehicleReservationDetails() {
 
       {/* Action Buttons */}
       <div className="flex gap-3">
-        <Link href={`/vehicle-checkout/${reservation.id}`} className="flex-1">
-          <Button className="w-full" size="lg">
-            Proceed to Check Out Vehicle
-          </Button>
-        </Link>
+        {isAdmin && (
+          <>
+            <Link href={`/vehicle-reservations/edit/${reservation.id}`}>
+              <Button variant="outline" size="lg">
+                Edit Reservation
+              </Button>
+            </Link>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="lg">
+                  Cancel Reservation
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will cancel the reservation for {vehicle.make} {vehicle.model} from {format(new Date(reservation.startDate), "MMM d, yyyy 'at' h:mm a")}.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleCancelReservation} disabled={cancelMutation.isPending}>
+                    {cancelMutation.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        )}
+        {reservation.status === "approved" && !isAdmin && (
+          <Link href={`/vehicle-checkout/${reservation.id}`} className="flex-1">
+            <Button className="w-full" size="lg">
+              Proceed to Check Out Vehicle
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   );
