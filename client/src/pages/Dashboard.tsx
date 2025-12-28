@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Link } from "wouter";
+import { Link, navigate } from "wouter";
 import {
   ClipboardList,
   Clock,
@@ -586,6 +586,55 @@ export default function Dashboard() {
             Welcome back, {user?.firstName || "User"}
           </p>
         </div>
+      </div>
+
+      {/* Quick Action Buttons */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Button
+          variant="outline"
+          className="h-auto py-4 flex flex-col gap-2 hover-elevate"
+          onClick={() => navigate("/messages")}
+          data-testid="quick-action-messages"
+        >
+          <MessageSquare className="w-6 h-6" />
+          <span className="text-sm font-medium">Messages</span>
+        </Button>
+
+        {user?.role === "staff" && (
+          <Button
+            variant="outline"
+            className="h-auto py-4 flex flex-col gap-2 hover-elevate"
+            onClick={() => navigate("/new-request")}
+            data-testid="quick-action-new-request"
+          >
+            <Plus className="w-6 h-6" />
+            <span className="text-sm font-medium">New Request</span>
+          </Button>
+        )}
+
+        {user?.role === "staff" && (
+          <Button
+            variant="outline"
+            className="h-auto py-4 flex flex-col gap-2 hover-elevate"
+            onClick={() => navigate("/my-reservations")}
+            data-testid="quick-action-new-reservation"
+          >
+            <Car className="w-6 h-6" />
+            <span className="text-sm font-medium">New Reservation</span>
+          </Button>
+        )}
+
+        {(user?.role === "admin" || user?.role === "maintenance") && (
+          <Button
+            variant="outline"
+            className="h-auto py-4 flex flex-col gap-2 hover-elevate"
+            onClick={() => navigate("/tasks/new")}
+            data-testid="quick-action-new-task"
+          >
+            <Wrench className="w-6 h-6" />
+            <span className="text-sm font-medium">New Task</span>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
