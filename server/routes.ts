@@ -1678,11 +1678,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vehicle-reservations", isAuthenticated, async (req, res) => {
+  app.post("/api/vehicle-reservations", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      
       // Convert date strings to Date objects before validation
       const bodyWithDates = {
         ...req.body,
+        userId, // Add userId from authenticated session
         startDate: new Date(req.body.startDate),
         endDate: new Date(req.body.endDate),
       };
