@@ -120,8 +120,31 @@ export default function VehicleCheckOut() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
-  const handleFileUpload = (files: Array<{ fileName: string; objectUrl: string; fileType: string }>) => {
-    setUploadedFiles(files);
+  const handleFileUpload = (result: any) => {
+    const { successful, failed } = result;
+
+    if (failed && failed.length > 0) {
+      toast({
+        title: "Some uploads failed",
+        description: failed.map((f: any) => f.error).join(", "),
+        variant: "destructive"
+      });
+    }
+
+    if (successful && successful.length > 0) {
+      const newFiles = successful.map((file: any) => ({
+        fileName: file.fileName || file.name,
+        objectUrl: file.objectUrl || file.uploadURL || file.url,
+        fileType: file.type || "image/jpeg"
+      }));
+
+      setUploadedFiles([...uploadedFiles, ...newFiles]);
+
+      toast({
+        title: "Upload successful",
+        description: `${successful.length} file(s) uploaded successfully`
+      });
+    }
   };
 
   const onSubmit = (data: InsertVehicleCheckOutLog) => {
