@@ -308,17 +308,7 @@ export default function VehicleReservations() {
                   <span className="text-muted-foreground">Created: </span>
                   <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
-                <div className="mt-4 pt-4 border-t">
-                  <Button
-                    variant="destructive"
-                    onClick={() => deleteMutation.mutate(reservation.id)}
-                    disabled={deleteMutation.isPending}
-                    data-testid="button-delete-reservation"
-                  >
-                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
-                  </Button>
-                </div>
-              </CardContent>
+                </CardContent>
               <CardFooter className="flex gap-2">
                 {reservation.status === "pending" && (
                   <>
@@ -407,9 +397,10 @@ export default function VehicleReservations() {
                     <Button
                       size="sm"
                       variant="destructive"
+                      disabled={deleteMutation.isPending}
                       data-testid={`button-delete-${reservation.id}`}
                     >
-                      Delete
+                      {deleteMutation.isPending ? "Deleting..." : "Delete"}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
