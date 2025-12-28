@@ -335,19 +335,26 @@ export default function VehicleCheckOut() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Link href="/my-reservations">
-                  <Button type="button" variant="outline" data-testid="button-cancel">
-                    Cancel
+              <div className="flex flex-col items-end gap-2 pt-4">
+                {form.watch("checkOutDate") && (
+                  <p className="text-sm text-muted-foreground">
+                    Check-out scheduled for: {new Date(form.watch("checkOutDate")).toLocaleString()}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Link href="/my-reservations">
+                    <Button type="button" variant="outline" data-testid="button-cancel">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button 
+                    type="submit" 
+                    disabled={checkOutMutation.isPending || !form.formState.isValid} 
+                    data-testid="button-submit-checkout"
+                  >
+                    {checkOutMutation.isPending ? "Checking Out..." : "Complete Check-Out"}
                   </Button>
-                </Link>
-                <Button 
-                  type="submit" 
-                  disabled={checkOutMutation.isPending || !form.formState.isValid} 
-                  data-testid="button-submit-checkout"
-                >
-                  {checkOutMutation.isPending ? "Checking Out..." : "Complete Check-Out"}
-                </Button>
+                </div>
               </div>
             </form>
           </Form>
