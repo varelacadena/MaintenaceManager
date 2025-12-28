@@ -196,10 +196,10 @@ export default function VehicleReservations() {
         purpose: editPurpose,
         passengerCount: editPassengerCount,
         notes: editNotes,
-        vehicleId: editVehicleId || null,
+        vehicleId: editVehicleId && editVehicleId !== "unassigned" ? editVehicleId : null,
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
-        keyPickupMethod: editKeyPickupMethod || null,
+        keyPickupMethod: editKeyPickupMethod && editKeyPickupMethod !== "not_specified" ? editKeyPickupMethod : null,
         adminNotes: editAdminNotes || null,
       });
     },
@@ -604,7 +604,7 @@ export default function VehicleReservations() {
                   <SelectValue placeholder="Select a vehicle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {vehicles
                     ?.filter((vehicle) =>
                       vehicle.passengerCapacity &&
@@ -689,7 +689,7 @@ export default function VehicleReservations() {
                   <SelectValue placeholder="Select pickup method" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Not specified</SelectItem>
+                  <SelectItem value="not_specified">Not specified</SelectItem>
                   <SelectItem value="in_person">In Person</SelectItem>
                   <SelectItem value="mailbox">Mailbox</SelectItem>
                   <SelectItem value="inside_vehicle">Inside the Vehicle</SelectItem>
