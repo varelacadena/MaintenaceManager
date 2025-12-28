@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -319,16 +320,36 @@ export default function VehicleReservations() {
               </CardContent>
               <CardFooter className="flex gap-2">
                 {reservation.status === "approved" && !isWithinReservationTime(reservation) && (
-                  <Link href={`/vehicle-checkout/${reservation.id}?adminOverride=true`}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
-                      data-testid={`button-override-checkout-${reservation.id}`}
-                    >
-                      Override & Check Out
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id={`override-${reservation.id}`}
+                      checked={reservation.adminOverrideEnabled || false}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          await apiRequest("PATCH", `/api/vehicle-reservations/${reservation.id}`, {
+                            adminOverrideEnabled: checked,
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+                          toast({
+                            title: "Success",
+                            description: checked 
+                              ? "Early checkout enabled for staff" 
+                              : "Early checkout disabled",
+                          });
+                        } catch (error: any) {
+                          toast({
+                            title: "Error",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      data-testid={`switch-override-${reservation.id}`}
+                    />
+                    <Label htmlFor={`override-${reservation.id}`} className="cursor-pointer text-sm">
+                      Enable Early Check-Out for Staff
+                    </Label>
+                  </div>
                 )}
                 {reservation.status === "pending" && (
                   <>

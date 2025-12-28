@@ -25,12 +25,17 @@ export default function VehicleCheckOut() {
   const { toast } = useToast();
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
   
-  // Check URL parameters for admin override
-  const urlParams = new URLSearchParams(window.location.search);
-  const overrideFromUrl = urlParams.get('adminOverride') === 'true';
-  const [adminOverride, setAdminOverride] = useState(overrideFromUrl);
-  
   const isAdmin = user?.role === "admin";
+  
+  // Use adminOverrideEnabled from reservation if available
+  const [adminOverride, setAdminOverride] = useState(false);
+  
+  // Update adminOverride when reservation loads
+  useEffect(() => {
+    if (reservation?.adminOverrideEnabled) {
+      setAdminOverride(true);
+    }
+  }, [reservation]);
   
   // Check if current time is within reservation window
   const isWithinReservationTime = (reservation: VehicleReservation | undefined): boolean => {
@@ -361,7 +366,13 @@ export default function VehicleCheckOut() {
                   </div>
                 )}
                 
-                {isAdmin && !isWithinReservationTime(reservation) && (
+                {adminOverride && !isWithinReservationTime(reservation) && (
+                  <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/50 p-3 rounded-md border border-green-200 dark:border-green-800">
+                    ✓ Early check-out enabled by administrator
+                  </div>
+                )}
+                
+                {isAdmin && !isWithinReservationTime(reservation) && !reservation?.adminOverrideEnabled && (
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                     <Switch
                       id="admin-override"
