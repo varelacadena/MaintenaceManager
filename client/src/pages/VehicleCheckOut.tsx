@@ -290,24 +290,26 @@ export default function VehicleCheckOut() {
                   Take photos of any existing damage or issues for documentation
                 </p>
                 <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4">
-                  <ObjectUploader
-                    maxNumberOfFiles={5}
-                    maxFileSize={10485760}
-                    onGetUploadParameters={getUploadParameters}
-                    onComplete={handleFileUpload}
-                    onError={(error) => {
-                      console.error("Upload error:", error);
-                      toast({
-                        title: "Upload failed",
-                        description: error.message,
-                        variant: "destructive"
-                      });
-                    }}
-                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Photos
-                  </ObjectUploader>
+                  <div>
+                    <ObjectUploader
+                      maxNumberOfFiles={5}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={handleFileUpload}
+                      onError={(error) => {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "Upload failed",
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      }}
+                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Photos
+                    </ObjectUploader>
+                  </div>
                 </div>
                 {uploadedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
@@ -317,6 +319,7 @@ export default function VehicleCheckOut() {
                         <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
                           <span className="text-sm truncate flex-1">{file.fileName}</span>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => {
