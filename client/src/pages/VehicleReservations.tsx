@@ -58,6 +58,13 @@ export default function VehicleReservations() {
   const [editPurpose, setEditPurpose] = useState<string>("");
   const [editPassengerCount, setEditPassengerCount] = useState<number>(1);
   const [editNotes, setEditNotes] = useState<string>("");
+  const [editVehicleId, setEditVehicleId] = useState<string>("");
+  const [editStartDate, setEditStartDate] = useState<string>("");
+  const [editStartTime, setEditStartTime] = useState<string>("");
+  const [editEndDate, setEditEndDate] = useState<string>("");
+  const [editEndTime, setEditEndTime] = useState<string>("");
+  const [editKeyPickupMethod, setEditKeyPickupMethod] = useState<string>("");
+  const [editAdminNotes, setEditAdminNotes] = useState<string>("");
   const { toast } = useToast();
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
@@ -180,10 +187,20 @@ export default function VehicleReservations() {
   const editReservationMutation = useMutation({
     mutationFn: async () => {
       if (!selectedReservationForEdit) return;
+      
+      // Combine date and time for start and end
+      const startDateTime = new Date(`${editStartDate}T${editStartTime}`);
+      const endDateTime = new Date(`${editEndDate}T${editEndTime}`);
+
       return await apiRequest("PATCH", `/api/vehicle-reservations/${selectedReservationForEdit.id}`, {
         purpose: editPurpose,
         passengerCount: editPassengerCount,
         notes: editNotes,
+        vehicleId: editVehicleId || null,
+        startDate: startDateTime.toISOString(),
+        endDate: endDateTime.toISOString(),
+        keyPickupMethod: editKeyPickupMethod || null,
+        adminNotes: editAdminNotes || null,
       });
     },
     onSuccess: () => {
@@ -197,6 +214,13 @@ export default function VehicleReservations() {
       setEditPurpose("");
       setEditPassengerCount(1);
       setEditNotes("");
+      setEditVehicleId("");
+      setEditStartDate("");
+      setEditStartTime("");
+      setEditEndDate("");
+      setEditEndTime("");
+      setEditKeyPickupMethod("");
+      setEditAdminNotes("");
     },
     onError: (error: Error) => {
       toast({
@@ -442,6 +466,18 @@ export default function VehicleReservations() {
                       setEditPurpose(reservation.purpose);
                       setEditPassengerCount(reservation.passengerCount);
                       setEditNotes(reservation.notes || "");
+                      setEditVehicleId(reservation.vehicleId || "");
+                      
+                      // Parse dates and times
+                      const startDate = new Date(reservation.startDate);
+                      const endDate = new Date(reservation.endDate);
+                      setEditStartDate(format(startDate, "yyyy-MM-dd"));
+                      setEditStartTime(format(startDate, "HH:mm"));
+                      setEditEndDate(format(endDate, "yyyy-MM-dd"));
+                      setEditEndTime(format(endDate, "HH:mm"));
+                      
+                      setEditKeyPickupMethod(reservation.keyPickupMethod || "");
+                      setEditAdminNotes(reservation.adminNotes || "");
                       setEditDialogOpen(true);
                     }}
                     data-testid={`button-edit-${reservation.id}`}
@@ -553,7 +589,7 @@ export default function VehicleReservations() {
       </Dialog>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Reservation</DialogTitle>
             <DialogDescription>
@@ -561,6 +597,70 @@ export default function VehicleReservations() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-vehicle">Assigned Vehicle</Label>
+              <Select value={editVehicleId} onValueChange={setEditVehicleId}>
+                <SelectTrigger id="edit-vehicle">
+                  <SelectValue placeholder="Select a vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {vehicles
+                    ?.filter((vehicle) =>
+                      vehicle.passengerCapacity &&
+                      vehicle.passengerCapacity >= editPassengerCount
+                    )
+                    .map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        {vehicle.make} {vehicle.model} ({vehicle.vehicleId}) - Capacity: {vehicle.passengerCapacity}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-start-date">Start Date</Label>
+                <Input
+                  id="edit-start-date"
+                  type="date"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-start-time">Start Time</Label>
+                <Input
+                  id="edit-start-time"
+                  type="time"
+                  value={editStartTime}
+                  onChange={(e) => setEditStartTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-end-date">End Date</Label>
+                <Input
+                  id="edit-end-date"
+                  type="date"
+                  value={editEndDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-end-time">End Time</Label>
+                <Input
+                  id="edit-end-time"
+                  type="time"
+                  value={editEndTime}
+                  onChange={(e) => setEditEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="edit-purpose">Purpose</Label>
               <Input
@@ -570,6 +670,7 @@ export default function VehicleReservations() {
                 placeholder="Trip purpose"
               />
             </div>
+            
             <div className="grid gap-2">
               <Label htmlFor="edit-passengers">Number of Passengers</Label>
               <Input
@@ -580,14 +681,41 @@ export default function VehicleReservations() {
                 onChange={(e) => setEditPassengerCount(parseInt(e.target.value))}
               />
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="edit-notes">Notes</Label>
+              <Label htmlFor="edit-key-pickup">Key Pickup Method</Label>
+              <Select value={editKeyPickupMethod} onValueChange={setEditKeyPickupMethod}>
+                <SelectTrigger id="edit-key-pickup">
+                  <SelectValue placeholder="Select pickup method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Not specified</SelectItem>
+                  <SelectItem value="in_person">In Person</SelectItem>
+                  <SelectItem value="mailbox">Mailbox</SelectItem>
+                  <SelectItem value="inside_vehicle">Inside the Vehicle</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-admin-notes">Key Location Details</Label>
+              <Textarea
+                id="edit-admin-notes"
+                placeholder="Provide specific instructions about key location..."
+                value={editAdminNotes}
+                onChange={(e) => setEditAdminNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit-notes">User Notes</Label>
               <Textarea
                 id="edit-notes"
-                placeholder="Additional notes..."
+                placeholder="Additional notes from user..."
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
-                rows={4}
+                rows={3}
               />
             </div>
           </div>
@@ -603,7 +731,7 @@ export default function VehicleReservations() {
             </Button>
             <Button
               onClick={() => editReservationMutation.mutate()}
-              disabled={editReservationMutation.isPending}
+              disabled={editReservationMutation.isPending || !editStartDate || !editStartTime || !editEndDate || !editEndTime}
             >
               {editReservationMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
