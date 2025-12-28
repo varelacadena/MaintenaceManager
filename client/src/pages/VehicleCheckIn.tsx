@@ -1,9 +1,8 @@
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Car } from "lucide-react";
+import { ArrowLeft, Car, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import type { VehicleCheckOutLog, Vehicle, InsertVehicleCheckInLog } from "@shared/schema";
 import { insertVehicleCheckInLogSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -18,15 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useState } from "react";
 
 export default function VehicleCheckIn() {
   const { checkOutLogId } = useParams();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
 
   const { data: checkOutLog, isLoading } = useQuery<VehicleCheckOutLog>({
     queryKey: [`/api/vehicle-checkout-logs/${checkOutLogId}`],
@@ -49,17 +51,90 @@ export default function VehicleCheckIn() {
     },
   });
 
+  const getUploadParameters = async () => {
+    const response = await fetch("/api/objects/upload", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
+      throw new Error(error.message || "Failed to get upload URL");
+    }
+
+    const { uploadURL, isMock, warning } = await response.json();
+
+    if (warning) {
+      console.warn(warning);
+    }
+
+    return { method: "PUT" as const, url: uploadURL };
+  };
+
+  const handleFileUpload = async (result: any) => {
+    const { successful, failed } = result;
+
+    if (failed && failed.length > 0) {
+      toast({
+        title: "Some uploads failed",
+        description: failed.map((f: any) => f.error).join(", "),
+        variant: "destructive"
+      });
+    }
+
+    if (successful && successful.length > 0) {
+      const newFiles = successful.map((file: any) => ({
+        fileName: file.fileName || file.name,
+        objectUrl: file.objectUrl || file.uploadURL || file.url,
+        fileType: file.type || "image/jpeg"
+      }));
+
+      setUploadedFiles([...uploadedFiles, ...newFiles]);
+
+      toast({
+        title: "Upload successful",
+        description: `${successful.length} file(s) uploaded successfully`
+      });
+    }
+  };
+
   const checkInMutation = useMutation({
     mutationFn: async (data: Omit<InsertVehicleCheckInLog, "userId" | "vehicleId" | "checkOutLogId">) => {
-      return await apiRequest("POST", "/api/vehicle-checkin-logs", {
+      const response = await apiRequest("POST", "/api/vehicle-checkin-logs", {
         ...data,
         userId: user!.id,
         vehicleId: checkOutLog!.vehicleId,
         checkOutLogId: checkOutLogId!,
       });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
+
+      const checkInLog = await response.json();
+
+      // Upload the files to the check-in log
+      for (const file of uploadedFiles) {
+        try {
+          await fetch("/api/uploads", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              fileName: file.fileName,
+              fileType: file.fileType,
+              objectUrl: file.objectUrl,
+              vehicleCheckInLogId: checkInLog.id,
+            }),
+          });
+        } catch (uploadError) {
+          console.error("Error saving upload:", uploadError);
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Vehicle checked in successfully",
+      });
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString();
           return key?.startsWith('/api/vehicle-checkin-logs') ||
@@ -68,10 +143,6 @@ export default function VehicleCheckIn() {
                  key?.startsWith('/api/tasks') ||
                  key?.startsWith('/api/requests');
         }
-      });
-      toast({
-        title: "Success",
-        description: "Vehicle checked in successfully",
       });
       setLocation("/my-reservations");
     },
@@ -107,27 +178,6 @@ export default function VehicleCheckIn() {
       </div>
     );
   }
-
-  const getUploadParameters = async () => {
-    const response = await fetch("/api/objects/upload", {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
-      throw new Error(error.message || "Failed to get upload URL");
-    }
-
-    const { uploadURL, isMock, warning } = await response.json();
-
-    if (warning) {
-      console.warn(warning);
-    }
-
-    return { method: "PUT" as const, url: uploadURL };
-  };
-
 
   return (
     <div className="flex-1 space-y-4 p-4 max-w-2xl mx-auto">
@@ -239,19 +289,67 @@ export default function VehicleCheckIn() {
                 name="issues"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Issues or Damage (Optional)</FormLabel>
+                    <FormLabel>Issues or Damages (Optional)</FormLabel>
                     <FormControl>
                       <Textarea
+                        placeholder="Report any new issues or damages..."
+                        className="min-h-[100px]"
                         {...field}
                         value={field.value || ""}
-                        placeholder="Report any damage or mechanical issues..."
-                        data-testid="textarea-issues"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <Label>Upload Damage/Issue Photos (Optional)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Take photos of any new damage or issues discovered during use
+                </p>
+                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4">
+                  <ObjectUploader
+                    maxNumberOfFiles={5}
+                    maxFileSize={10485760}
+                    onGetUploadParameters={getUploadParameters}
+                    onComplete={handleFileUpload}
+                    onError={(error) => {
+                      console.error("Upload error:", error);
+                      toast({
+                        title: "Upload failed",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    }}
+                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Photos
+                  </ObjectUploader>
+                </div>
+                {uploadedFiles.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium">Uploaded Files ({uploadedFiles.length})</p>
+                    <div className="space-y-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                          <span className="text-sm truncate flex-1">{file.fileName}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <FormField
                 control={form.control}
@@ -285,6 +383,14 @@ export default function VehicleCheckIn() {
             </form>
           </Form>
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <Link href="/my-reservations">
+            <Button variant="outline" type="button">Cancel</Button>
+          </Link>
+          <Button onClick={form.handleSubmit((data) => checkInMutation.mutate(data))} disabled={checkInMutation.isPending}>
+            {checkInMutation.isPending ? "Processing..." : "Complete Check-In"}
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

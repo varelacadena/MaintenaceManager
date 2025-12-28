@@ -1,8 +1,8 @@
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Car } from "lucide-react";
+import { ArrowLeft, Car, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import type { VehicleReservation, Vehicle, InsertVehicleCheckOutLog } from "@shared/schema";
 import { insertVehicleCheckOutLogSchema } from "@shared/schema";
@@ -13,13 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Label } from "@/components/ui/label";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useState } from "react";
 
 export default function VehicleCheckOut() {
   const { reservationId } = useParams();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
 
   const { data: reservation, isLoading } = useQuery<VehicleReservation>({
     queryKey: [`/api/vehicle-reservations/${reservationId}`],
@@ -49,7 +52,30 @@ export default function VehicleCheckOut() {
         reservationId: reservationId!,
       });
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const checkOutLog = response.data;
+
+      // Upload the files to the check-out log
+      for (const file of uploadedFiles) {
+        try {
+          fetch("/api/uploads", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              fileName: file.fileName,
+              fileType: file.fileType,
+              objectUrl: file.objectUrl,
+              vehicleCheckOutLogId: checkOutLog.id,
+            }),
+          });
+        } catch (uploadError) {
+          console.error("Error saving upload:", uploadError);
+        }
+      }
+
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString();
@@ -92,6 +118,14 @@ export default function VehicleCheckOut() {
     }
 
     return { method: "PUT" as const, url: uploadURL };
+  };
+
+  const handleFileUpload = (files: Array<{ fileName: string; objectUrl: string; fileType: string }>) => {
+    setUploadedFiles(files);
+  };
+
+  const onSubmit = (data: InsertVehicleCheckOutLog) => {
+    checkOutMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -140,7 +174,7 @@ export default function VehicleCheckOut() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => checkOutMutation.mutate(data))} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="checkOutDate"
@@ -219,6 +253,54 @@ export default function VehicleCheckOut() {
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <Label>Upload Damage/Issue Photos (Optional)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Take photos of any existing damage or issues for documentation
+                </p>
+                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4">
+                  <ObjectUploader
+                    maxNumberOfFiles={5}
+                    maxFileSize={10485760}
+                    onGetUploadParameters={getUploadParameters}
+                    onComplete={handleFileUpload}
+                    onError={(error) => {
+                      console.error("Upload error:", error);
+                      toast({
+                        title: "Upload failed",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    }}
+                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Photos
+                  </ObjectUploader>
+                </div>
+                {uploadedFiles.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium">Uploaded Files ({uploadedFiles.length})</p>
+                    <div className="space-y-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                          <span className="text-sm truncate flex-1">{file.fileName}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end gap-2 pt-4">
                 <Link href="/my-reservations">
