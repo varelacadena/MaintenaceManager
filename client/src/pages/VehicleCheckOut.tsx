@@ -45,20 +45,20 @@ export default function VehicleCheckOut() {
 
   const checkOutMutation = useMutation({
     mutationFn: async (data: Omit<InsertVehicleCheckOutLog, "userId" | "vehicleId" | "reservationId">) => {
-      return await apiRequest("POST", "/api/vehicle-checkout-logs", {
+      const response = await apiRequest("POST", "/api/vehicle-checkout-logs", {
         ...data,
         userId: user!.id,
         vehicleId: reservation!.vehicleId,
         reservationId: reservationId!,
       });
+      return await response.json();
     },
-    onSuccess: (response) => {
-      const checkOutLog = response.data;
+    onSuccess: async (checkOutLog) => {
 
       // Upload the files to the check-out log
       for (const file of uploadedFiles) {
         try {
-          fetch("/api/uploads", {
+          await fetch("/api/uploads", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
