@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Calendar, Car, User, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,13 @@ export default function VehicleReservations() {
   const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState<string>("");
   const { toast } = useToast();
+
+  // Check if current time is within reservation window
+  const isWithinReservationTime = (reservation: VehicleReservation): boolean => {
+    const now = new Date();
+    const startDate = new Date(reservation.startDate);
+    return now >= startDate;
+  };
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations"],
@@ -310,6 +318,18 @@ export default function VehicleReservations() {
                 </div>
               </CardContent>
               <CardFooter className="flex gap-2">
+                {reservation.status === "approved" && !isWithinReservationTime(reservation) && (
+                  <Link href={`/vehicle-checkout/${reservation.id}?adminOverride=true`}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                      data-testid={`button-override-checkout-${reservation.id}`}
+                    >
+                      Override & Check Out
+                    </Button>
+                  </Link>
+                )}
                 {reservation.status === "pending" && (
                   <>
                     <Dialog>

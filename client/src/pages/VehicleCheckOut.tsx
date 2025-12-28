@@ -24,7 +24,11 @@ export default function VehicleCheckOut() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
-  const [adminOverride, setAdminOverride] = useState(false);
+  
+  // Check URL parameters for admin override
+  const urlParams = new URLSearchParams(window.location.search);
+  const overrideFromUrl = urlParams.get('adminOverride') === 'true';
+  const [adminOverride, setAdminOverride] = useState(overrideFromUrl);
   
   const isAdmin = user?.role === "admin";
   
