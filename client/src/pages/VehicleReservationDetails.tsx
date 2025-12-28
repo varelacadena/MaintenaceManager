@@ -1,7 +1,6 @@
-
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Car, Calendar, User, MapPin, FileText, Key } from "lucide-react";
+import { ArrowLeft, Car, Calendar, User, MapPin, FileText, Key, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +8,8 @@ import type { VehicleReservation, Vehicle } from "@shared/schema";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useMutation } from "@tanstack/react-query";
 
 export default function VehicleReservationDetails() {
   const { reservationId } = useParams();
@@ -22,6 +23,28 @@ export default function VehicleReservationDetails() {
     queryKey: [`/api/vehicles/${reservation?.vehicleId}`],
     enabled: !!reservation?.vehicleId,
   });
+
+  // Placeholder for handleAcceptAdvisory and acceptMutation
+  // In a real application, these would be defined and handle the API call to accept the advisory
+  const handleAcceptAdvisory = () => {
+    // Simulate accepting advisory
+    console.log("Advisory accepted");
+    // Typically, you would trigger a mutation here to update the reservation status
+    // and then re-fetch or update the reservation data.
+  };
+
+  const acceptMutation = useMutation({
+    mutationFn: async () => {
+      // Replace with actual API call to accept advisory
+      console.log("API call to accept advisory simulated");
+      return { success: true };
+    },
+    onSuccess: () => {
+      // Invalidate cache or refetch reservation data to reflect accepted advisory
+      console.log("Mutation successful, data needs to be refreshed");
+    },
+  });
+
 
   if (reservationLoading) {
     return (
@@ -47,20 +70,60 @@ export default function VehicleReservationDetails() {
     );
   }
 
-  // If advisory not accepted yet, show message
-  if (!reservation.advisoryAccepted) {
+  // Show advisory dialog if not yet accepted
+  const showAdvisoryDialog = reservation.status === "approved" && !reservation.advisoryAccepted;
+
+  if (showAdvisoryDialog) {
     return (
-      <div className="flex-1 space-y-4 p-4">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Car className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">Please accept the vehicle use advisory first</p>
-            <p className="text-sm text-muted-foreground mt-2">Return to My Reservations and click "View Details" to continue</p>
-            <Link href="/my-reservations" className="mt-4">
-              <Button>Go to My Reservations</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Dialog open={true} onOpenChange={() => setLocation("/my-reservations")}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <Car className="h-8 w-8 text-primary" />
+                <DialogTitle className="text-2xl">Vehicle Use Advisory</DialogTitle>
+              </div>
+            </DialogHeader>
+
+            <Alert className="border-yellow-500/50 bg-yellow-500/10">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              <AlertTitle className="text-yellow-900 dark:text-yellow-100 text-lg">
+                Important Information
+              </AlertTitle>
+              <AlertDescription className="text-yellow-800 dark:text-yellow-200 mt-2">
+                <div className="space-y-3">
+                  <p className="font-semibold">
+                    Please read and acknowledge the following before proceeding:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>Vehicle usage is for official college business only</li>
+                    <li>You are responsible for the vehicle during the reservation period</li>
+                    <li>Report any damages or issues immediately</li>
+                    <li>Follow all traffic laws and college policies</li>
+                    <li>Return the vehicle on time and in the same condition</li>
+                  </ul>
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <DialogFooter className="flex gap-3 sm:gap-3">
+              <Button
+                onClick={handleAcceptAdvisory}
+                disabled={acceptMutation.isPending}
+                className="flex-1"
+              >
+                {acceptMutation.isPending ? "Processing..." : "I Accept"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/my-reservations")}
+                className="flex-1"
+              >
+                Return to My Reservations
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
