@@ -689,18 +689,49 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6 md:pb-3">
-            <CardTitle className="text-base md:text-lg">Calendar</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Select a month to filter dashboard data
-            </p>
+            <CardTitle className="text-base md:text-lg">Last Car Reservations</CardTitle>
           </CardHeader>
-          <CardContent className="flex justify-center px-2 pb-3 md:px-6 md:pb-6">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md border scale-90 md:scale-100"
-            />
+          <CardContent className="pt-0 px-3 pb-3 md:px-6 md:pb-6">
+            {recentReservations.length === 0 ? (
+              <div className="text-center py-6 md:py-8 text-sm md:text-base text-muted-foreground">
+                No reservations yet
+              </div>
+            ) : (
+              <div className="space-y-2 md:space-y-3">
+                {recentReservations.map((reservation) => (
+                  <Link
+                    key={reservation.id}
+                    href={`/my-reservations`}
+                  >
+                    <div className="flex items-start gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-reservation-${reservation.id}`}>
+                      <div
+                        className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 flex-shrink-0 ${getReservationStatusColor(
+                          reservation.status
+                        )}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start md:items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-medium text-sm md:text-base truncate">
+                            {getVehicleName(reservation.vehicleId)}
+                          </span>
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
+                            {reservation.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">
+                          {reservation.purpose}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {reservation.startDate ? new Date(reservation.startDate).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
