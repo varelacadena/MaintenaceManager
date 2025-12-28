@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Calendar, Car, User, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -56,13 +54,6 @@ export default function VehicleReservations() {
   const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState<string>("");
   const { toast } = useToast();
-
-  // Check if current time is within reservation window
-  const isWithinReservationTime = (reservation: VehicleReservation): boolean => {
-    const now = new Date();
-    const startDate = new Date(reservation.startDate);
-    return now >= startDate;
-  };
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations"],
@@ -319,38 +310,6 @@ export default function VehicleReservations() {
                 </div>
               </CardContent>
               <CardFooter className="flex gap-2">
-                {reservation.status === "approved" && !isWithinReservationTime(reservation) && (
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id={`override-${reservation.id}`}
-                      checked={reservation.adminOverrideEnabled || false}
-                      onCheckedChange={async (checked) => {
-                        try {
-                          await apiRequest("PATCH", `/api/vehicle-reservations/${reservation.id}`, {
-                            adminOverrideEnabled: checked,
-                          });
-                          queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
-                          toast({
-                            title: "Success",
-                            description: checked 
-                              ? "Early checkout enabled for staff" 
-                              : "Early checkout disabled",
-                          });
-                        } catch (error: any) {
-                          toast({
-                            title: "Error",
-                            description: error.message,
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                      data-testid={`switch-override-${reservation.id}`}
-                    />
-                    <Label htmlFor={`override-${reservation.id}`} className="cursor-pointer text-sm">
-                      Enable Early Check-Out for Staff
-                    </Label>
-                  </div>
-                )}
                 {reservation.status === "pending" && (
                   <>
                     <Dialog>
