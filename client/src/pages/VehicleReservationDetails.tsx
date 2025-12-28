@@ -24,26 +24,29 @@ export default function VehicleReservationDetails() {
     enabled: !!reservation?.vehicleId,
   });
 
-  // Placeholder for handleAcceptAdvisory and acceptMutation
-  // In a real application, these would be defined and handle the API call to accept the advisory
-  const handleAcceptAdvisory = () => {
-    // Simulate accepting advisory
-    console.log("Advisory accepted");
-    // Typically, you would trigger a mutation here to update the reservation status
-    // and then re-fetch or update the reservation data.
-  };
-
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      // Replace with actual API call to accept advisory
-      console.log("API call to accept advisory simulated");
-      return { success: true };
+      const res = await fetch(`/api/vehicle-reservations/${reservationId}/accept-advisory`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to accept advisory");
+      }
+
+      return res.json();
     },
     onSuccess: () => {
-      // Invalidate cache or refetch reservation data to reflect accepted advisory
-      console.log("Mutation successful, data needs to be refreshed");
+      // Invalidate and refetch the reservation data
+      window.location.reload();
     },
   });
+
+  const handleAcceptAdvisory = () => {
+    acceptMutation.mutate();
+  };
 
 
   if (reservationLoading) {
