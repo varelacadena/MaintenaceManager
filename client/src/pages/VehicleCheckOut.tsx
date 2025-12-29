@@ -300,6 +300,40 @@ export default function VehicleCheckOut() {
               />
 
               <div className="space-y-2">
+                <Label className="text-base font-semibold">Dash Picture (Required) *</Label>
+                <p className="text-sm text-muted-foreground">
+                  Take a clear photo of the dashboard showing the current mileage and fuel level
+                </p>
+                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 bg-amber-50 dark:bg-amber-950/20">
+                  <div>
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={handleFileUpload}
+                      onError={(error) => {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "Upload failed",
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      }}
+                      buttonClassName="bg-amber-600 text-white hover:bg-amber-700"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Dash Photo
+                    </ObjectUploader>
+                  </div>
+                </div>
+                {uploadedFiles.filter(f => f.fileName.toLowerCase().includes('dash')).length > 0 && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">✓ Dash photo uploaded</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label>Upload Damage/Issue Photos (Optional)</Label>
                 <p className="text-sm text-muted-foreground">
                   Take photos of any existing damage or issues for documentation
@@ -351,6 +385,12 @@ export default function VehicleCheckOut() {
               </div>
 
               <div className="flex flex-col items-end gap-2 pt-4">
+                {uploadedFiles.length === 0 && (
+                  <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 p-3 rounded-md border border-red-200 dark:border-red-800">
+                    ⚠️ Dash photo is required to complete check-out
+                  </div>
+                )}
+                
                 {!isWithinReservationTime(reservation) && !adminOverride && (
                   <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md border border-amber-200 dark:border-amber-800">
                     Check-out will be available at: {reservation && new Date(reservation.startDate).toLocaleString()}
@@ -381,6 +421,7 @@ export default function VehicleCheckOut() {
                     disabled={
                       checkOutMutation.isPending || 
                       !form.formState.isValid || 
+                      uploadedFiles.length === 0 ||
                       (!isWithinReservationTime(reservation) && !adminOverride)
                     } 
                     data-testid="button-submit-checkout"
