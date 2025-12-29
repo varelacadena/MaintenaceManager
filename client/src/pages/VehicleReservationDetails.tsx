@@ -22,12 +22,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
 
 export default function VehicleReservationDetails() {
   const { reservationId } = useParams();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [safetyAcknowledged, setSafetyAcknowledged] = useState(false);
+  const [showSafetyDialog, setShowSafetyDialog] = useState(false);
+  const [safetyCheckboxChecked, setSafetyCheckboxChecked] = useState(false);
 
   // Get current user to check role - must be first to avoid hook order issues
   const { data: currentUser } = useQuery({
@@ -58,8 +63,8 @@ export default function VehicleReservationDetails() {
       return res.json();
     },
     onSuccess: () => {
-      // Invalidate and refetch the reservation data
-      window.location.reload();
+      // Show safety acknowledgment dialog after accepting advisory
+      setShowSafetyDialog(true);
     },
   });
 
@@ -90,6 +95,14 @@ export default function VehicleReservationDetails() {
 
   const handleAcceptAdvisory = () => {
     acceptMutation.mutate();
+  };
+
+  const handleSafetyAcknowledgment = () => {
+    if (safetyCheckboxChecked) {
+      setSafetyAcknowledged(true);
+      setShowSafetyDialog(false);
+      window.location.reload();
+    }
   };
 
   const handleCancelReservation = () => {
@@ -163,6 +176,68 @@ export default function VehicleReservationDetails() {
                 className="flex-1"
               >
                 {acceptMutation.isPending ? "Processing..." : "I Accept"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/my-reservations")}
+                className="flex-1"
+              >
+                Return to My Reservations
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Show safety acknowledgment dialog after advisory acceptance
+  if (showSafetyDialog) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Dialog open={true} onOpenChange={() => setShowSafetyDialog(false)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+                <DialogTitle className="text-2xl">Safety Acknowledgment</DialogTitle>
+              </div>
+            </DialogHeader>
+
+            <Alert className="border-red-500/50 bg-red-500/10">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <AlertTitle className="text-red-900 dark:text-red-100 text-lg">
+                Important Safety Notice
+              </AlertTitle>
+              <AlertDescription className="text-red-800 dark:text-red-200 mt-2">
+                <div className="space-y-4">
+                  <p className="font-semibold">
+                    Before viewing key pickup instructions, you must confirm:
+                  </p>
+                  <div className="flex items-start gap-3 p-4 bg-white/50 dark:bg-black/20 rounded-md">
+                    <Checkbox
+                      id="safety-checkbox"
+                      checked={safetyCheckboxChecked}
+                      onCheckedChange={(checked) => setSafetyCheckboxChecked(checked === true)}
+                    />
+                    <label
+                      htmlFor="safety-checkbox"
+                      className="text-sm font-medium leading-relaxed cursor-pointer"
+                    >
+                      I confirm I will not operate the vehicle until checkout is completed
+                    </label>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <DialogFooter className="flex gap-3 sm:gap-3">
+              <Button
+                onClick={handleSafetyAcknowledgment}
+                disabled={!safetyCheckboxChecked}
+                className="flex-1"
+              >
+                Continue
               </Button>
               <Button
                 variant="outline"
@@ -274,25 +349,40 @@ export default function VehicleReservationDetails() {
         </Card>
       </div>
 
-      {/* Key Pickup Information - Only shown after advisory acceptance */}
-      <Alert className="border-blue-500/50 bg-blue-500/10">
-        <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <AlertTitle className="text-blue-900 dark:text-blue-100">Key Pickup Instructions</AlertTitle>
-        <AlertDescription className="text-blue-800 dark:text-blue-200">
-          <div className="space-y-2 mt-2">
-            <div>
-              <p className="font-semibold">Method:</p>
-              <p>{getKeyPickupMethodLabel(reservation.keyPickupMethod)}</p>
-            </div>
-            {reservation.adminNotes && (
-              <div className="mt-3">
-                <p className="font-semibold">Additional Instructions:</p>
-                <p className="whitespace-pre-wrap">{reservation.adminNotes}</p>
+      {/* Key Pickup Information - Blurred until safety acknowledgment */}
+      <div className="relative">
+        <Alert className="border-blue-500/50 bg-blue-500/10">
+          <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-100">Key Pickup Instructions</AlertTitle>
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            <div className={`space-y-2 mt-2 ${!safetyAcknowledged ? 'blur-md select-none' : ''}`}>
+              <div>
+                <p className="font-semibold">Method:</p>
+                <p>{getKeyPickupMethodLabel(reservation.keyPickupMethod)}</p>
               </div>
-            )}
+              {reservation.adminNotes && (
+                <div className="mt-3">
+                  <p className="font-semibold">Additional Instructions:</p>
+                  <p className="whitespace-pre-wrap">{reservation.adminNotes}</p>
+                </div>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+        {!safetyAcknowledged && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-lg">
+            <Button
+              onClick={() => setShowSafetyDialog(true)}
+              variant="default"
+              size="lg"
+              className="shadow-lg"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              View Key Pickup Instructions
+            </Button>
           </div>
-        </AlertDescription>
-      </Alert>
+        )}
+      </div>
 
       {/* Notes Card - if user added notes */}
       {reservation.notes && (
