@@ -609,7 +609,9 @@ export const vehicleCheckOutLogs = pgTable("vehicle_check_out_logs", {
   index("idx_checkout_vehicle_time").on(table.vehicleId, table.checkOutTime),
 ]);
 
-export const insertVehicleCheckOutLogSchema = createInsertSchema(vehicleCheckOutLogs).omit({
+export const insertVehicleCheckOutLogSchema = createInsertSchema(vehicleCheckOutLogs, {
+  fuelLevel: z.string(),
+}).omit({
   id: true,
   checkOutTime: true,
 });
@@ -631,7 +633,9 @@ export const vehicleCheckInLogs = pgTable("vehicle_check_in_logs", {
   index("idx_checkin_vehicle_time").on(table.vehicleId, table.checkInTime),
 ]);
 
-export const insertVehicleCheckInLogSchema = createInsertSchema(vehicleCheckInLogs).omit({
+export const insertVehicleCheckInLogSchema = createInsertSchema(vehicleCheckInLogs, {
+  fuelLevel: z.string(),
+}).omit({
   id: true,
   checkInTime: true,
 });
