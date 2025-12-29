@@ -183,8 +183,13 @@ export default function VehicleReservationDetails() {
     return labels[method] || method;
   };
 
+  // Get current user to check role
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+
   // Determine if the current user is an admin to show edit/cancel buttons
-  const isAdmin = true; // Replace with actual admin check logic
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "maintenance";
 
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
