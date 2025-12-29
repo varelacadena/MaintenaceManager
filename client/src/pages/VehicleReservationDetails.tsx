@@ -63,8 +63,17 @@ export default function VehicleReservationDetails() {
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate and refetch the reservation to update advisoryAccepted status
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
       // Show safety acknowledgment dialog after accepting advisory
       setShowSafetyDialog(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to accept advisory",
+        variant: "destructive",
+      });
     },
   });
 
