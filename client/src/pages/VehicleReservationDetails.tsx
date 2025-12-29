@@ -432,11 +432,22 @@ export default function VehicleReservationDetails() {
           </>
         )}
         {reservation.status === "approved" && !isAdmin && (
-          <Link href={`/vehicle-checkout/${reservation.id}`} className="flex-1">
-            <Button className="w-full" size="lg">
+          safetyAcknowledged ? (
+            <Link href={`/vehicle-checkout/${reservation.id}`} className="flex-1">
+              <Button className="w-full" size="lg">
+                Proceed to Check Out Vehicle
+              </Button>
+            </Link>
+          ) : (
+            <Button 
+              className="w-full" 
+              size="lg" 
+              disabled
+              onClick={() => setShowSafetyDialog(true)}
+            >
               Proceed to Check Out Vehicle
             </Button>
-          </Link>
+          )
         )}
       </div>
     </div>
