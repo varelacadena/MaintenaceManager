@@ -29,6 +29,11 @@ export default function VehicleReservationDetails() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Get current user to check role - must be first to avoid hook order issues
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+
   const { data: reservation, isLoading: reservationLoading } = useQuery<VehicleReservation>({
     queryKey: [`/api/vehicle-reservations/${reservationId}`],
   });
@@ -90,11 +95,6 @@ export default function VehicleReservationDetails() {
   const handleCancelReservation = () => {
     cancelMutation.mutate();
   };
-
-  // Get current user to check role (must be before any conditional returns)
-  const { data: currentUser } = useQuery({
-    queryKey: ["/api/auth/user"],
-  });
 
   if (reservationLoading) {
     return (
