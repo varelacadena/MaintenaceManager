@@ -50,19 +50,19 @@ export default function VehicleCheckOut() {
   const form = useForm<InsertVehicleCheckOutLog>({
     resolver: zodResolver(insertVehicleCheckOutLogSchema.omit({ userId: true, vehicleId: true, reservationId: true, adminOverride: true })),
     defaultValues: {
-      checkOutDate: new Date(),
       startMileage: 0,
-      startFuelLevel: 100,
-      inspectionNotes: "",
+      fuelLevel: "100",
+      cleanlinessConfirmed: false,
+      damageNotes: "",
     },
   });
 
   // Update form when vehicle data loads
   useEffect(() => {
-    if (vehicle?.currentMileage) {
+    if (vehicle?.currentMileage !== undefined && vehicle?.currentMileage !== null) {
       form.setValue("startMileage", vehicle.currentMileage);
     }
-  }, [vehicle, form]);
+  }, [vehicle?.currentMileage]);
 
   const checkOutMutation = useMutation({
     mutationFn: async (data: Omit<InsertVehicleCheckOutLog, "userId" | "vehicleId" | "reservationId">) => {
@@ -222,26 +222,6 @@ export default function VehicleCheckOut() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="checkOutDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Check-Out Date & Time</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="datetime-local"
-                        {...field}
-                        value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                        data-testid="input-checkout-date"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="startMileage"
                 render={({ field }) => (
                   <FormItem>
@@ -250,7 +230,8 @@ export default function VehicleCheckOut() {
                       <Input
                         type="number"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        value={field.value || 0}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                         data-testid="input-start-mileage"
                       />
                     </FormControl>
@@ -261,19 +242,21 @@ export default function VehicleCheckOut() {
 
               <FormField
                 control={form.control}
-                name="startFuelLevel"
+                name="fuelLevel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Starting Fuel Level (%)</FormLabel>
+                    <FormLabel>Fuel Level</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
+                      <select
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        data-testid="input-start-fuel"
-                      />
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="empty">Empty</option>
+                        <option value="1/4">1/4 Tank</option>
+                        <option value="1/2">1/2 Tank</option>
+                        <option value="3/4">3/4 Tank</option>
+                        <option value="full">Full</option>
+                      </select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -282,16 +265,38 @@ export default function VehicleCheckOut() {
 
               <FormField
                 control={form.control}
-                name="inspectionNotes"
+                name="cleanlinessConfirmed"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I confirm the vehicle is clean
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="damageNotes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Inspection Notes</FormLabel>
+                    <FormLabel>Damage Notes (if any)</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
                         value={field.value || ""}
                         placeholder="Document any existing damage or issues..."
-                        data-testid="textarea-inspection-notes"
+                        data-testid="textarea-damage-notes"
                       />
                     </FormControl>
                     <FormMessage />
