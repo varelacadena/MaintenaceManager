@@ -1897,6 +1897,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
+      // Get vehicle info for notification
+      let vehicleInfo = "Unknown Vehicle";
+      if (reservation.vehicleId) {
+        const vehicle = await storage.getVehicle(reservation.vehicleId);
+        if (vehicle) {
+          vehicleInfo = `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`;
+        }
+      }
+
+      // If staff is cancelling, notify all admins
+      if (user.role === "staff" && reservation.userId === user.id) {
+        const allUsers = await storage.getAllUsers();
+        const admins = allUsers.filter(u => u.role === "admin" || u.role === "maintenance");
+
+        for (const admin of admins) {
+          if (admin.email) {
+            await notificationService.sendEmail(
+              admin.email,
+              "Vehicle Reservation Cancelled by Staff",
+              `${user.firstName} ${user.lastName} has cancelled their vehicle reservation.\n\n` +
+              `Vehicle: ${vehicleInfo}\n` +
+              `Purpose: ${reservation.purpose}\n` +
+              `Start Date: ${new Date(reservation.startDate).toLocaleString()}\n` +
+              `End Date: ${new Date(reservation.endDate).toLocaleString()}\n` +
+              `Passenger Count: ${reservation.passengerCount || reservation.passengers}\n\n` +
+              `Please check the Vehicle Reservations page for more details.`
+            );
+          }
+        }
+      }
+
       // If a vehicle is associated, set it back to available if no other reservations exist
       if (reservation.vehicleId) {
         const activeReservations = await storage.getVehicleReservations({
