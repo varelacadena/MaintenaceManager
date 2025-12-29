@@ -91,6 +91,11 @@ export default function VehicleReservationDetails() {
     cancelMutation.mutate();
   };
 
+  // Get current user to check role (must be before any conditional returns)
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+
   if (reservationLoading) {
     return (
       <div className="flex-1 space-y-4 p-4">
@@ -182,11 +187,6 @@ export default function VehicleReservationDetails() {
     };
     return labels[method] || method;
   };
-
-  // Get current user to check role
-  const { data: currentUser } = useQuery({
-    queryKey: ["/api/auth/user"],
-  });
 
   // Determine if the current user is an admin to show edit/cancel buttons
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "maintenance";
