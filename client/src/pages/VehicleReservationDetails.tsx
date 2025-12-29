@@ -101,7 +101,6 @@ export default function VehicleReservationDetails() {
     if (safetyCheckboxChecked) {
       setSafetyAcknowledged(true);
       setShowSafetyDialog(false);
-      window.location.reload();
     }
   };
 
