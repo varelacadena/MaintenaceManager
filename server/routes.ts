@@ -1878,9 +1878,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete vehicle reservation
-  app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await authenticateUser(req);
+      const userId = req.userId;
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -1893,7 +1894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Only admin or the user who created the reservation can delete it
-      if (user.role !== "admin" && reservation.userId !== user.id) {
+      if (user.role !== "admin" && reservation.userId !== userId) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
