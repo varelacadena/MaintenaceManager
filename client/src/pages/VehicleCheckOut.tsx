@@ -51,7 +51,7 @@ export default function VehicleCheckOut() {
     resolver: zodResolver(insertVehicleCheckOutLogSchema.omit({ userId: true, vehicleId: true, reservationId: true, adminOverride: true })),
     defaultValues: {
       startMileage: 0,
-      fuelLevel: "100",
+      fuelLevel: "full",
       cleanlinessConfirmed: false,
       damageNotes: "",
     },
@@ -65,14 +65,26 @@ export default function VehicleCheckOut() {
   }, [vehicle?.currentMileage]);
 
   const checkOutMutation = useMutation({
-    mutationFn: async (data: Omit<InsertVehicleCheckOutLog, "userId" | "vehicleId" | "reservationId">) => {
-      const response = await apiRequest("POST", "/api/vehicle-checkout-logs", {
+    mutationFn: async (data: Omit<InsertVehicleCheckOutLog, "userId" | "vehicleId" | "reservationId" | "adminOverride">) => {
+      const payload: any = {
         ...data,
         userId: user!.id,
         vehicleId: reservation!.vehicleId,
         reservationId: reservationId!,
-        adminOverride: adminOverride,
-      });
+      };
+      
+      // Only include adminOverride if it's true (false is the default in DB)
+      if (adminOverride) {
+        payload.adminOverride = true;
+      }
+      
+      console.log("Submitting checkout with payload:", payload);
+      console.log("Form data:", data);
+      console.log("User ID:", user!.id);
+      console.log("Vehicle ID:", reservation!.vehicleId);
+      console.log("Reservation ID:", reservationId!);
+      
+      const response = await apiRequest("POST", "/api/vehicle-checkout-logs", payload);
       return await response.json();
     },
     onSuccess: async (checkOutLog) => {
@@ -114,9 +126,19 @@ export default function VehicleCheckOut() {
       setLocation("/my-reservations");
     },
     onError: (error: Error) => {
+      console.error("Checkout error:", error);
+      
+      // The error message should already be extracted by apiRequest, but let's ensure we show it
+      let errorMessage = error.message;
+      
+      // Remove status code prefix if present (e.g., "500: message" -> "message")
+      if (errorMessage.match(/^\d{3}:\s*/)) {
+        errorMessage = errorMessage.replace(/^\d{3}:\s*/, "");
+      }
+      
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage || "Failed to create vehicle check-out log",
         variant: "destructive",
       });
     },
@@ -170,7 +192,16 @@ export default function VehicleCheckOut() {
   };
 
   const onSubmit = (data: InsertVehicleCheckOutLog) => {
-    checkOutMutation.mutate(data);
+    // Clean up the data - ensure all required fields are present and valid
+    const cleanedData = {
+      startMileage: Number(data.startMileage) || 0,
+      fuelLevel: data.fuelLevel || "full",
+      cleanlinessConfirmed: Boolean(data.cleanlinessConfirmed),
+      damageNotes: data.damageNotes || "",
+    };
+    
+    console.log("Form submitted with data:", cleanedData);
+    checkOutMutation.mutate(cleanedData);
   };
 
   if (isLoading) {

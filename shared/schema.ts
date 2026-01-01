@@ -614,6 +614,8 @@ export const insertVehicleCheckOutLogSchema = createInsertSchema(vehicleCheckOut
 }).omit({
   id: true,
   checkOutTime: true,
+}).extend({
+  adminOverride: z.boolean().optional(),
 });
 export type InsertVehicleCheckOutLog = z.infer<typeof insertVehicleCheckOutLogSchema>;
 export type VehicleCheckOutLog = typeof vehicleCheckOutLogs.$inferSelect;

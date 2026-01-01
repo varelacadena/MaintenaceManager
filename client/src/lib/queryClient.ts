@@ -3,7 +3,35 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Try to parse as JSON to extract error message
+    try {
+      const errorObj = JSON.parse(text);
+      // Extract error message, handling nested structures
+      let errorMessage = errorObj.message || errorObj.error || text;
+      
+      // If there are validation errors, include them
+      if (errorObj.errors && Array.isArray(errorObj.errors)) {
+        const validationErrors = errorObj.errors.map((e: any) => 
+          e.message || `${e.path?.join('.') || 'field'}: ${e.message || 'invalid'}`
+        ).join(', ');
+        if (validationErrors) {
+          errorMessage = `${errorMessage} (${validationErrors})`;
+        }
+      }
+      
+      // Include hint or detail if available
+      if (errorObj.hint) {
+        errorMessage = `${errorMessage} - ${errorObj.hint}`;
+      }
+      if (errorObj.detail && !errorMessage.includes(errorObj.detail)) {
+        errorMessage = `${errorMessage} - ${errorObj.detail}`;
+      }
+      
+      throw new Error(errorMessage);
+    } catch (parseError) {
+      // If not JSON or parsing fails, use the text as-is
+      throw new Error(text || `${res.status}: ${res.statusText}`);
+    }
   }
 }
 

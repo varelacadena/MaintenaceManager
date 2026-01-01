@@ -2041,8 +2041,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/vehicle-checkout-logs", isAuthenticated, async (req: any, res) => {
+    console.log("=== VEHICLE CHECKOUT REQUEST START ===");
+    console.log("Timestamp:", new Date().toISOString());
+    console.log("User ID:", req.userId);
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    
     try {
-      const logData = insertVehicleCheckOutLogSchema.parse(req.body);
+      
+      // Clean and validate the data
+      const cleanedBody = {
+        ...req.body,
+        startMileage: Number(req.body.startMileage) || 0,
+        fuelLevel: req.body.fuelLevel || "full",
+        cleanlinessConfirmed: Boolean(req.body.cleanlinessConfirmed),
+        damageNotes: req.body.damageNotes || null,
+        adminOverride: req.body.adminOverride === true ? true : undefined, // Only include if true
+      };
+      
+      console.log("Cleaned body:", JSON.stringify(cleanedBody, null, 2));
+      
+      const logData = insertVehicleCheckOutLogSchema.parse(cleanedBody);
+      console.log("Parsed log data:", JSON.stringify(logData, null, 2));
 
       // Verify reservation belongs to current user
       const reservation = await storage.getVehicleReservation(logData.reservationId);
@@ -2056,19 +2075,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Vehicle mismatch: This reservation is for a different vehicle" });
       }
 
-      const log = await storage.createVehicleCheckOutLog(logData);
+      // Check if a checkout log already exists for this reservation
+      const existingLog = await storage.getCheckOutLogByReservation(logData.reservationId);
+      if (existingLog) {
+        return res.status(400).json({ message: "A checkout log already exists for this reservation" });
+      }
+
+      console.log("Creating checkout log...");
+      let log;
+      try {
+        log = await storage.createVehicleCheckOutLog(logData);
+        console.log("Checkout log created:", log.id);
+      } catch (dbError: any) {
+        console.error("Error in createVehicleCheckOutLog:", dbError);
+        // Preserve the original error with all its properties
+        const error = new Error(`Failed to create checkout log: ${dbError.message || dbError.toString()}`);
+        (error as any).code = dbError.code;
+        (error as any).detail = dbError.detail;
+        (error as any).hint = dbError.hint;
+        (error as any).cause = dbError;
+        throw error;
+      }
 
       // Update vehicle status to in_use and mileage
-      await storage.updateVehicleStatus(logData.vehicleId, "in_use");
-      await storage.updateVehicleMileage(logData.vehicleId, logData.startMileage);
+      console.log("Updating vehicle status...");
+      try {
+        await storage.updateVehicleStatus(logData.vehicleId, "in_use");
+        await storage.updateVehicleMileage(logData.vehicleId, logData.startMileage);
+      } catch (updateError: any) {
+        console.error("Error updating vehicle:", updateError);
+        const error = new Error(`Failed to update vehicle: ${updateError.message || updateError.toString()}`);
+        (error as any).code = updateError.code;
+        (error as any).detail = updateError.detail;
+        (error as any).hint = updateError.hint;
+        (error as any).cause = updateError;
+        throw error;
+      }
 
       // Update reservation status to active
-      await storage.updateReservationStatus(logData.reservationId, "active");
+      console.log("Updating reservation status...");
+      try {
+        await storage.updateReservationStatus(logData.reservationId, "active");
+      } catch (resError: any) {
+        console.error("Error updating reservation:", resError);
+        const error = new Error(`Failed to update reservation: ${resError.message || resError.toString()}`);
+        (error as any).code = resError.code;
+        (error as any).detail = resError.detail;
+        (error as any).hint = resError.hint;
+        (error as any).cause = resError;
+        throw error;
+      }
 
+      console.log("=== CHECKOUT SUCCESS ===");
+      console.log("Checkout log ID:", log.id);
       res.json(log);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("=== CHECKOUT ERROR CAUGHT ===");
+      console.error("Error type:", typeof error);
+      console.error("Error is Error instance:", error instanceof Error);
       console.error("Error creating vehicle check-out log:", error);
-      res.status(500).json({ message: "Failed to create vehicle check-out log" });
+      console.error("Error details:", {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack,
+        errors: error?.errors,
+        issues: error?.issues,
+        cause: error?.cause,
+        detail: error?.detail,
+        hint: error?.hint,
+      });
+      
+      // Handle Zod validation errors
+      if (error?.name === "ZodError" || error?.issues) {
+        const validationErrors = error.errors || error.issues || [];
+        const errorMessages = validationErrors.map((e: any) => 
+          `${e.path?.join('.') || 'field'}: ${e.message}`
+        ).join('; ');
+        
+        return res.status(400).json({ 
+          message: `Validation error: ${errorMessages}`,
+          errors: validationErrors,
+          details: error.message
+        });
+      }
+      
+      // Handle database errors (PostgreSQL error codes)
+      if (error?.code) {
+        const errorMessage = error.message || error.detail || "Database error occurred";
+        return res.status(500).json({ 
+          message: `${errorMessage}${error.hint ? ` (${error.hint})` : ''}`,
+          code: error.code,
+          hint: error.hint,
+          detail: error.detail
+        });
+      }
+      
+      // Handle Drizzle ORM errors
+      if (error?.cause) {
+        const causeMessage = error.cause?.message || error.cause?.toString() || '';
+        return res.status(500).json({ 
+          message: causeMessage || error.message || "Failed to create vehicle check-out log",
+          details: error.toString(),
+          cause: error.cause
+        });
+      }
+      
+      // Generic error - include as much info as possible
+      // Try multiple ways to extract the error message
+      let errorMessage = "Failed to create vehicle check-out log";
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.detail) {
+        errorMessage = error.detail;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.toString && error.toString() !== '[object Object]') {
+        errorMessage = error.toString();
+      }
+      
+      // Log the full error for debugging
+      console.error("=== FULL ERROR DEBUG ===");
+      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error("Error constructor:", error?.constructor?.name);
+      console.error("Error keys:", Object.keys(error || {}));
+      console.error("Error message property:", error?.message);
+      console.error("Error detail property:", error?.detail);
+      console.error("Error code property:", error?.code);
+      console.error("Error string representation:", String(error));
+      console.error("========================");
+      
+      // Always return a response - don't let it fall through
+      return res.status(500).json({ 
+        message: errorMessage,
+        error: String(error),
+        type: error?.constructor?.name,
+        originalMessage: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        hint: error?.hint,
+        stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      });
     }
   });
 

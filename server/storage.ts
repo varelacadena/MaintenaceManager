@@ -1112,8 +1112,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createVehicleCheckOutLog(logData: InsertVehicleCheckOutLog): Promise<VehicleCheckOutLog> {
-    const [log] = await this.db.insert(vehicleCheckOutLogs).values(logData).returning();
-    return log;
+    try {
+      // Clean the data - remove undefined values and ensure proper types
+      const cleanData: any = {
+        reservationId: logData.reservationId,
+        vehicleId: logData.vehicleId,
+        userId: logData.userId,
+        startMileage: Number(logData.startMileage),
+        fuelLevel: String(logData.fuelLevel),
+        cleanlinessConfirmed: Boolean(logData.cleanlinessConfirmed),
+      };
+      
+      // Only include optional fields if they have values
+      if (logData.damageNotes !== undefined && logData.damageNotes !== null) {
+        cleanData.damageNotes = String(logData.damageNotes);
+      }
+      if (logData.digitalSignature !== undefined && logData.digitalSignature !== null) {
+        cleanData.digitalSignature = String(logData.digitalSignature);
+      }
+      if (logData.adminOverride !== undefined) {
+        cleanData.adminOverride = Boolean(logData.adminOverride);
+      }
+      
+      console.log("Inserting clean data:", JSON.stringify(cleanData, null, 2));
+      
+      const [log] = await this.db.insert(vehicleCheckOutLogs).values(cleanData).returning();
+      if (!log) {
+        throw new Error("Failed to create checkout log: No record returned from database");
+      }
+      return log;
+    } catch (error: any) {
+      console.error("Database error in createVehicleCheckOutLog:", error);
+      console.error("Error code:", error?.code);
+      console.error("Error detail:", error?.detail);
+      console.error("Error hint:", error?.hint);
+      console.error("Log data attempted:", JSON.stringify(logData, null, 2));
+      throw error;
+    }
   }
 
   async deleteVehicleCheckOutLog(id: string): Promise<void> {
