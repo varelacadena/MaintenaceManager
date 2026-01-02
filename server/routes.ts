@@ -2331,7 +2331,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Vehicle mismatch: This check-out was for a different vehicle" });
       }
 
-      const log = await storage.createVehicleCheckInLog(logData);
+      // Create the log with explicit date and fuel level values
+      const logWithDefaults = {
+        ...logData,
+        checkInDate: new Date(),
+        endFuelLevel: logData.fuelLevel ? parseInt(logData.fuelLevel) || 100 : 100,
+      };
+      const log = await storage.createVehicleCheckInLog(logWithDefaults as any);
 
       // Update vehicle mileage
       await storage.updateVehicleMileage(logData.vehicleId, logData.endMileage);
