@@ -492,48 +492,32 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
-                  <div className="relative">
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
-                          setStartTime("09:00");
-                        }
-                      }}
-                      min={getTodayDateString()}
-                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
-                      required
-                    />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
-                      <span className={startDate ? "text-foreground" : "text-muted-foreground"}>
-                        {startDate || "mm/dd/yyyy"}
-                      </span>
-                      <Calendar className="h-4 w-4 opacity-50" />
-                    </div>
-                  </div>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
+                        setStartTime("09:00");
+                      }
+                    }}
+                    min={getTodayDateString()}
+                    className="cursor-pointer block"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="startTime">Start Time *</Label>
-                  <div className="relative">
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      min={getMinTime()}
-                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
-                      required
-                    />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
-                      <span className={startTime ? "text-foreground" : "text-muted-foreground"}>
-                        {startTime || "--:-- --"}
-                      </span>
-                      <Clock className="h-4 w-4 opacity-50" />
-                    </div>
-                  </div>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    min={getMinTime()}
+                    className="cursor-pointer block"
+                    required
+                  />
                   {isTomorrow(startDate) && (
                     <p className="text-xs text-muted-foreground">
                       Minimum start time for tomorrow: 9:00 AM
@@ -545,42 +529,26 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date *</Label>
-                  <div className="relative">
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      min={startDate || getTodayDateString()}
-                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
-                      required
-                    />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
-                      <span className={endDate ? "text-foreground" : "text-muted-foreground"}>
-                        {endDate || "mm/dd/yyyy"}
-                      </span>
-                      <Calendar className="h-4 w-4 opacity-50" />
-                    </div>
-                  </div>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || getTodayDateString()}
+                    className="cursor-pointer block"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endTime">End Time *</Label>
-                  <div className="relative">
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
-                      required
-                    />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
-                      <span className={endTime ? "text-foreground" : "text-muted-foreground"}>
-                        {endTime || "--:-- --"}
-                      </span>
-                      <Clock className="h-4 w-4 opacity-50" />
-                    </div>
-                  </div>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="cursor-pointer block"
+                    required
+                  />
                 </div>
               </div>
 
