@@ -22,6 +22,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function VehicleCheckIn() {
   const { checkOutLogId } = useParams();
@@ -40,15 +41,20 @@ export default function VehicleCheckIn() {
     enabled: !!checkOutLog?.vehicleId,
   });
 
-  const form = useForm<InsertVehicleCheckInLog>({
+  type CheckInFormData = {
+    endMileage: number;
+    fuelLevel: string;
+    cleanlinessStatus: string;
+    issues: string;
+  };
+
+  const form = useForm<CheckInFormData>({
     resolver: zodResolver(insertVehicleCheckInLogSchema.omit({ userId: true, vehicleId: true, checkOutLogId: true })),
     defaultValues: {
-      checkInDate: new Date(),
       endMileage: 0,
-      endFuelLevel: 100,
+      fuelLevel: "100",
       cleanlinessStatus: "clean",
       issues: "",
-      returnNotes: "",
     },
   });
 
@@ -105,7 +111,7 @@ export default function VehicleCheckIn() {
   };
 
   const checkInMutation = useMutation({
-    mutationFn: async (data: Omit<InsertVehicleCheckInLog, "userId" | "vehicleId" | "checkOutLogId">) => {
+    mutationFn: async (data: CheckInFormData) => {
       const response = await apiRequest("POST", "/api/vehicle-checkin-logs", {
         ...data,
         userId: user!.id,
@@ -148,11 +154,11 @@ export default function VehicleCheckIn() {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString();
-          return key?.startsWith('/api/vehicle-checkin-logs') ||
+          return !!(key?.startsWith('/api/vehicle-checkin-logs') ||
                  key?.startsWith('/api/vehicles') ||
                  key?.startsWith('/api/vehicle-reservations') ||
                  key?.startsWith('/api/tasks') ||
-                 key?.startsWith('/api/requests');
+                 key?.startsWith('/api/requests'));
         }
       });
       setLocation("/my-reservations");
@@ -215,26 +221,6 @@ export default function VehicleCheckIn() {
             <form onSubmit={form.handleSubmit((data) => checkInMutation.mutate(data))} className="space-y-4">
               <FormField
                 control={form.control}
-                name="checkInDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Check-In Date & Time</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="datetime-local"
-                        {...field}
-                        value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                        data-testid="input-checkin-date"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="endMileage"
                 render={({ field }) => (
                   <FormItem>
@@ -254,7 +240,7 @@ export default function VehicleCheckIn() {
 
               <FormField
                 control={form.control}
-                name="endFuelLevel"
+                name="fuelLevel"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ending Fuel Level (%)</FormLabel>
@@ -264,7 +250,7 @@ export default function VehicleCheckIn() {
                         min="0"
                         max="100"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        onChange={(e) => field.onChange(e.target.value)}
                         data-testid="input-end-fuel"
                       />
                     </FormControl>
@@ -394,25 +380,6 @@ export default function VehicleCheckIn() {
                   </div>
                 )}
               </div>
-
-              <FormField
-                control={form.control}
-                name="returnNotes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Return Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Any additional notes about the return..."
-                        data-testid="textarea-return-notes"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <div className="flex justify-end gap-2 pt-4">
                 <Link href="/my-reservations">
