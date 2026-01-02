@@ -284,7 +284,7 @@ export default function VehicleDetail() {
                     <Card key={log.id}>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm sm:text-base">
-                          {format(new Date(log.checkOutDate), "MMM d, yyyy h:mm a")}
+                          {log.checkOutDate ? format(new Date(log.checkOutDate), "MMM d, yyyy h:mm a") : "Date unavailable"}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -324,7 +324,7 @@ export default function VehicleDetail() {
                       <Card key={log.id}>
                         <CardHeader className="pb-3">
                           <CardTitle className="text-sm sm:text-base">
-                            {format(new Date(log.checkInDate), "MMM d, yyyy h:mm a")}
+                            {log.checkInDate ? format(new Date(log.checkInDate), "MMM d, yyyy h:mm a") : "Date unavailable"}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
