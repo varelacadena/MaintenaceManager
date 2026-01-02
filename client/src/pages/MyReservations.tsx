@@ -251,7 +251,6 @@ export default function MyReservations() {
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-6">
-      {/* Header Section - Mobile Optimized */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-semibold truncate">My Reservations</h1>
@@ -298,16 +297,15 @@ export default function MyReservations() {
                       value={startDate}
                       onChange={(e) => {
                         setStartDate(e.target.value);
-                        // Reset time if tomorrow is selected and current time is before 9 AM
                         if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
                           setStartTime("09:00");
                         }
                       }}
                       min={getTodayDateString()}
-                      className="cursor-pointer opacity-100 absolute inset-0 w-full h-full"
+                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
                       required
                     />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between pointer-events-none">
+                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
                       <span className={startDate ? "text-foreground" : "text-muted-foreground"}>
                         {startDate || "mm/dd/yyyy"}
                       </span>
@@ -324,17 +322,16 @@ export default function MyReservations() {
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
                       min={getMinTime()}
-                      className="cursor-pointer opacity-100 absolute inset-0 w-full h-full"
+                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
                       required
                     />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between pointer-events-none">
+                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
                       <span className={startTime ? "text-foreground" : "text-muted-foreground"}>
                         {startTime || "--:-- --"}
                       </span>
                       <Clock className="h-4 w-4 opacity-50" />
                     </div>
                   </div>
-                </div>
                   {isTomorrow(startDate) && (
                     <p className="text-xs text-muted-foreground">
                       Minimum start time for tomorrow: 9:00 AM
@@ -353,10 +350,10 @@ export default function MyReservations() {
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       min={startDate || getTodayDateString()}
-                      className="cursor-pointer opacity-100 absolute inset-0 w-full h-full"
+                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
                       required
                     />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between pointer-events-none">
+                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
                       <span className={endDate ? "text-foreground" : "text-muted-foreground"}>
                         {endDate || "mm/dd/yyyy"}
                       </span>
@@ -372,10 +369,10 @@ export default function MyReservations() {
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="cursor-pointer opacity-100 absolute inset-0 w-full h-full"
+                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
                       required
                     />
-                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between pointer-events-none">
+                    <div className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors items-center justify-between">
                       <span className={endTime ? "text-foreground" : "text-muted-foreground"}>
                         {endTime || "--:-- --"}
                       </span>
@@ -418,7 +415,6 @@ export default function MyReservations() {
         </Dialog>
       </div>
 
-      {/* Reservations List */}
       {reservations.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center px-4">
@@ -448,7 +444,6 @@ export default function MyReservations() {
               </CardHeader>
 
               <CardContent className="space-y-3 sm:space-y-4">
-                {/* Date & Time - Stacked on mobile */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex items-start gap-2">
                     <Calendar className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -470,13 +465,11 @@ export default function MyReservations() {
                   </div>
                 </div>
 
-                {/* Purpose */}
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Purpose:</p>
                   <p className="text-sm break-words">{reservation.purpose}</p>
                 </div>
 
-                {/* Passenger Count */}
                 {reservation.passengerCount && (
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -487,7 +480,6 @@ export default function MyReservations() {
                   </div>
                 )}
 
-                {/* Key Pickup Location */}
                 {reservation.keyPickupLocation && (
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-2">
@@ -498,7 +490,6 @@ export default function MyReservations() {
                   </div>
                 )}
 
-                {/* Handoff Instructions */}
                 {reservation.handoffInstructions && (
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Instructions:</p>
@@ -508,7 +499,6 @@ export default function MyReservations() {
                   </div>
                 )}
 
-                {/* Action Buttons - Full width on mobile, inline on desktop */}
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
                   {canCheckOut(reservation) && (
                     <Button
