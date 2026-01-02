@@ -88,3 +88,6 @@ BEGIN
         END IF;
     END IF;
 END $$;
+
+-- Ensure check_out_time has a default value (needed if column was renamed)
+ALTER TABLE vehicle_check_out_logs ALTER COLUMN check_out_time SET DEFAULT NOW();
