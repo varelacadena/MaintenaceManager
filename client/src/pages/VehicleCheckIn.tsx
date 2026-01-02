@@ -28,7 +28,8 @@ export default function VehicleCheckIn() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
+  const [dashPhoto, setDashPhoto] = useState<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string } | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<Array<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string }>>([]);
 
   const { data: checkOutLog, isLoading } = useQuery<VehicleCheckOutLog>({
     queryKey: [`/api/vehicle-checkout-logs/${checkOutLogId}`],
@@ -71,7 +72,7 @@ export default function VehicleCheckIn() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
-  const handleFileUpload = async (result: any) => {
+  const handleFileUpload = async (result: any, type: 'dash' | 'damage') => {
     const { successful, failed } = result;
 
     if (failed && failed.length > 0) {
@@ -86,10 +87,15 @@ export default function VehicleCheckIn() {
       const newFiles = successful.map((file: any) => ({
         fileName: file.fileName || file.name,
         objectUrl: file.objectUrl || file.uploadURL || file.url,
-        fileType: file.type || "image/jpeg"
+        fileType: file.type || "image/jpeg",
+        objectPath: file.objectPath
       }));
 
-      setUploadedFiles([...uploadedFiles, ...newFiles]);
+      if (type === 'dash') {
+        setDashPhoto(newFiles[0]);
+      } else {
+        setDamagePhotos([...damagePhotos, ...newFiles]);
+      }
 
       toast({
         title: "Upload successful",
@@ -110,7 +116,11 @@ export default function VehicleCheckIn() {
       const checkInLog = await response.json();
 
       // Upload the files to the check-in log
-      for (const file of uploadedFiles) {
+      const allFiles: Array<{ fileName: string; fileType: string; objectUrl: string; objectPath?: string; isDash: boolean }> = [];
+      if (dashPhoto) allFiles.push({ ...dashPhoto, isDash: true });
+      damagePhotos.forEach(f => allFiles.push({ ...f, isDash: false }));
+
+      for (const file of allFiles) {
         try {
           await fetch("/api/uploads", {
             method: "POST",
@@ -119,9 +129,10 @@ export default function VehicleCheckIn() {
             },
             credentials: "include",
             body: JSON.stringify({
-              fileName: file.fileName,
+              fileName: file.isDash ? `DASH_${file.fileName}` : file.fileName,
               fileType: file.fileType,
               objectUrl: file.objectUrl,
+              objectPath: file.objectPath,
               vehicleCheckInLogId: checkInLog.id,
             }),
           });
@@ -304,6 +315,39 @@ export default function VehicleCheckIn() {
               />
 
               <div className="space-y-2">
+                <Label className="text-base font-semibold">Dash Picture (Required) *</Label>
+                <p className="text-sm text-muted-foreground">
+                  Take a clear photo of the dashboard showing the current mileage and fuel level
+                </p>
+                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 bg-amber-50 dark:bg-amber-950/20">
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={10485760}
+                    onGetUploadParameters={getUploadParameters}
+                    onComplete={(res) => handleFileUpload(res, 'dash')}
+                    onError={(error) => {
+                      console.error("Upload error:", error);
+                      toast({
+                        title: "Upload failed",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    }}
+                    buttonClassName="bg-amber-600 text-white hover:bg-amber-700"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Dash Photo
+                  </ObjectUploader>
+                </div>
+                {dashPhoto && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800 flex items-center justify-between">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">✓ Dash photo uploaded: {dashPhoto.fileName}</p>
+                    <Button variant="ghost" size="sm" onClick={() => setDashPhoto(null)}>Remove</Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label>Upload Damage/Issue Photos (Optional)</Label>
                 <p className="text-sm text-muted-foreground">
                   Take photos of any new damage or issues discovered during use
@@ -313,7 +357,7 @@ export default function VehicleCheckIn() {
                     maxNumberOfFiles={5}
                     maxFileSize={10485760}
                     onGetUploadParameters={getUploadParameters}
-                    onComplete={handleFileUpload}
+                    onComplete={(res) => handleFileUpload(res, 'damage')}
                     onError={(error) => {
                       console.error("Upload error:", error);
                       toast({
@@ -328,18 +372,18 @@ export default function VehicleCheckIn() {
                     Upload Photos
                   </ObjectUploader>
                 </div>
-                {uploadedFiles.length > 0 && (
+                {damagePhotos.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Uploaded Files ({uploadedFiles.length})</p>
+                    <p className="text-sm font-medium">Damage Photos ({damagePhotos.length})</p>
                     <div className="space-y-2">
-                      {uploadedFiles.map((file, index) => (
+                      {damagePhotos.map((file, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
                           <span className="text-sm truncate flex-1">{file.fileName}</span>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+                              setDamagePhotos(damagePhotos.filter((_, i) => i !== index));
                             }}
                           >
                             Remove
@@ -376,7 +420,7 @@ export default function VehicleCheckIn() {
                     Cancel
                   </Button>
                 </Link>
-                <Button type="submit" disabled={checkInMutation.isPending} data-testid="button-submit-checkin">
+                <Button type="submit" disabled={checkInMutation.isPending || !dashPhoto} data-testid="button-submit-checkin">
                   {checkInMutation.isPending ? "Checking In..." : "Complete Check-In"}
                 </Button>
               </div>
@@ -387,7 +431,7 @@ export default function VehicleCheckIn() {
           <Link href="/my-reservations">
             <Button variant="outline" type="button">Cancel</Button>
           </Link>
-          <Button onClick={form.handleSubmit((data) => checkInMutation.mutate(data))} disabled={checkInMutation.isPending}>
+          <Button onClick={form.handleSubmit((data) => checkInMutation.mutate(data))} disabled={checkInMutation.isPending || !dashPhoto}>
             {checkInMutation.isPending ? "Processing..." : "Complete Check-In"}
           </Button>
         </CardFooter>

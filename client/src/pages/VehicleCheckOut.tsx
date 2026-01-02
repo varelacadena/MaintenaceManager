@@ -23,7 +23,8 @@ export default function VehicleCheckOut() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; objectUrl: string; fileType: string }>>([]);
+  const [dashPhoto, setDashPhoto] = useState<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string } | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<Array<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string }>>([]);
   const [adminOverride, setAdminOverride] = useState(false);
   
   const isAdmin = user?.role === "admin";
@@ -88,18 +89,20 @@ export default function VehicleCheckOut() {
       return await response.json();
     },
     onSuccess: async (checkOutLog) => {
-
       // Upload the files to the check-out log
       console.log("Saving uploads for check-out log:", checkOutLog.id);
-      console.log("Files to save:", uploadedFiles);
       
-      for (const file of uploadedFiles) {
+      const allFiles: Array<{ fileName: string; fileType: string; objectUrl: string; objectPath?: string; isDash: boolean }> = [];
+      if (dashPhoto) allFiles.push({ ...dashPhoto, isDash: true });
+      damagePhotos.forEach(f => allFiles.push({ ...f, isDash: false }));
+      
+      for (const file of allFiles) {
         try {
           const uploadPayload = {
-            fileName: file.fileName,
+            fileName: file.isDash ? `DASH_${file.fileName}` : file.fileName,
             fileType: file.fileType,
             objectUrl: file.objectUrl,
-            objectPath: (file as any).objectPath,
+            objectPath: file.objectPath,
             vehicleCheckOutLogId: checkOutLog.id,
           };
           console.log("Sending upload payload:", uploadPayload);
@@ -179,7 +182,7 @@ export default function VehicleCheckOut() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
-  const handleFileUpload = (result: any) => {
+  const handleFileUpload = (result: any, type: 'dash' | 'damage') => {
     const { successful, failed } = result;
 
     if (failed && failed.length > 0) {
@@ -198,7 +201,11 @@ export default function VehicleCheckOut() {
         objectPath: file.objectPath
       }));
 
-      setUploadedFiles([...uploadedFiles, ...newFiles]);
+      if (type === 'dash') {
+        setDashPhoto(newFiles[0]);
+      } else {
+        setDamagePhotos([...damagePhotos, ...newFiles]);
+      }
 
       toast({
         title: "Upload successful",
@@ -362,7 +369,7 @@ export default function VehicleCheckOut() {
                       maxNumberOfFiles={1}
                       maxFileSize={10485760}
                       onGetUploadParameters={getUploadParameters}
-                      onComplete={handleFileUpload}
+                      onComplete={(res) => handleFileUpload(res, 'dash')}
                       onError={(error) => {
                         console.error("Upload error:", error);
                         toast({
@@ -378,9 +385,10 @@ export default function VehicleCheckOut() {
                     </ObjectUploader>
                   </div>
                 </div>
-                {uploadedFiles.filter(f => f.fileName.toLowerCase().includes('dash')).length > 0 && (
-                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">✓ Dash photo uploaded</p>
+                {dashPhoto && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800 flex items-center justify-between">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">✓ Dash photo uploaded: {dashPhoto.fileName}</p>
+                    <Button variant="ghost" size="sm" onClick={() => setDashPhoto(null)}>Remove</Button>
                   </div>
                 )}
               </div>
@@ -396,7 +404,7 @@ export default function VehicleCheckOut() {
                       maxNumberOfFiles={5}
                       maxFileSize={10485760}
                       onGetUploadParameters={getUploadParameters}
-                      onComplete={handleFileUpload}
+                      onComplete={(res) => handleFileUpload(res, 'damage')}
                       onError={(error) => {
                         console.error("Upload error:", error);
                         toast({
@@ -412,11 +420,11 @@ export default function VehicleCheckOut() {
                     </ObjectUploader>
                   </div>
                 </div>
-                {uploadedFiles.length > 0 && (
+                {damagePhotos.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Uploaded Files ({uploadedFiles.length})</p>
+                    <p className="text-sm font-medium">Damage Photos ({damagePhotos.length})</p>
                     <div className="space-y-2">
-                      {uploadedFiles.map((file, index) => (
+                      {damagePhotos.map((file, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
                           <span className="text-sm truncate flex-1">{file.fileName}</span>
                           <Button
@@ -424,7 +432,7 @@ export default function VehicleCheckOut() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+                              setDamagePhotos(damagePhotos.filter((_, i) => i !== index));
                             }}
                           >
                             Remove
@@ -437,7 +445,7 @@ export default function VehicleCheckOut() {
               </div>
 
               <div className="flex flex-col items-end gap-2 pt-4">
-                {uploadedFiles.length === 0 && (
+                {!dashPhoto && (
                   <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 p-3 rounded-md border border-red-200 dark:border-red-800">
                     ⚠️ Dash photo is required to complete check-out
                   </div>
@@ -473,7 +481,7 @@ export default function VehicleCheckOut() {
                     disabled={
                       checkOutMutation.isPending || 
                       !form.formState.isValid || 
-                      uploadedFiles.length === 0 ||
+                      !dashPhoto ||
                       (!isWithinReservationTime(reservation) && !adminOverride)
                     } 
                     data-testid="button-submit-checkout"

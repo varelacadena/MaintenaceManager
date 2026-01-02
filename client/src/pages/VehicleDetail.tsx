@@ -144,7 +144,7 @@ function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[
                       </div>
                     </a>
                     <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
-                      {upload.fileName.toLowerCase().includes('dash') ? "Dash & Fuel" : "Damage Documentation"}
+                      {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
                     </span>
                   </div>
                 ))}
@@ -247,7 +247,7 @@ function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] 
                       </div>
                     </a>
                     <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
-                      {upload.fileName.toLowerCase().includes('dash') ? "Dash & Fuel" : "Damage Documentation"}
+                      {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
                     </span>
                   </div>
                 ))}
