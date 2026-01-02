@@ -503,7 +503,7 @@ export default function Dashboard() {
                       }
                     }}
                     min={getTodayDateString()}
-                    className="cursor-pointer block"
+                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
@@ -515,7 +515,7 @@ export default function Dashboard() {
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
                     min={getMinTime()}
-                    className="cursor-pointer block"
+                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                   {isTomorrow(startDate) && (
@@ -535,7 +535,7 @@ export default function Dashboard() {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     min={startDate || getTodayDateString()}
-                    className="cursor-pointer block"
+                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
@@ -546,7 +546,7 @@ export default function Dashboard() {
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="cursor-pointer block"
+                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
