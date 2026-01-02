@@ -114,35 +114,39 @@ function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[
           <>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+              <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Image className="w-4 h-4" />
-                Attached Files ({uploads.length})
+                Documentation Photos
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="flex flex-wrap gap-4">
                 {uploads.map((upload) => (
-                  <a
-                    key={upload.id}
-                    href={upload.objectUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                    data-testid={`link-upload-${upload.id}`}
-                  >
-                    {upload.fileType.startsWith('image/') ? (
-                      <img
-                        src={upload.objectUrl}
-                        alt={upload.fileName}
-                        className="w-full h-20 object-cover rounded-md border hover:opacity-80 transition-opacity"
-                      />
-                    ) : (
-                      <div className="w-full h-20 flex flex-col items-center justify-center rounded-md border bg-muted hover:bg-muted/80 transition-colors">
-                        <FileText className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground mt-1 truncate max-w-full px-1">
-                          {upload.fileName}
-                        </span>
+                  <div key={upload.id} className="flex flex-col gap-1.5 w-[140px]">
+                    <a
+                      href={upload.objectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative aspect-square overflow-hidden rounded-lg border bg-muted hover-elevate group transition-all"
+                      data-testid={`link-upload-${upload.id}`}
+                    >
+                      {upload.fileType.startsWith('image/') ? (
+                        <img
+                          src={upload.objectUrl}
+                          alt={upload.fileName}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
                       </div>
-                    )}
-                  </a>
+                    </a>
+                    <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
+                      {upload.fileName.toLowerCase().includes('dash') ? "Dash & Fuel" : "Damage Documentation"}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -213,35 +217,39 @@ function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] 
           <>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+              <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Image className="w-4 h-4" />
-                Attached Files ({uploads.length})
+                Documentation Photos
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="flex flex-wrap gap-4">
                 {uploads.map((upload) => (
-                  <a
-                    key={upload.id}
-                    href={upload.objectUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                    data-testid={`link-upload-${upload.id}`}
-                  >
-                    {upload.fileType.startsWith('image/') ? (
-                      <img
-                        src={upload.objectUrl}
-                        alt={upload.fileName}
-                        className="w-full h-20 object-cover rounded-md border hover:opacity-80 transition-opacity"
-                      />
-                    ) : (
-                      <div className="w-full h-20 flex flex-col items-center justify-center rounded-md border bg-muted hover:bg-muted/80 transition-colors">
-                        <FileText className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground mt-1 truncate max-w-full px-1">
-                          {upload.fileName}
-                        </span>
+                  <div key={upload.id} className="flex flex-col gap-1.5 w-[140px]">
+                    <a
+                      href={upload.objectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative aspect-square overflow-hidden rounded-lg border bg-muted hover-elevate group transition-all"
+                      data-testid={`link-upload-${upload.id}`}
+                    >
+                      {upload.fileType.startsWith('image/') ? (
+                        <img
+                          src={upload.objectUrl}
+                          alt={upload.fileName}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
                       </div>
-                    )}
-                  </a>
+                    </a>
+                    <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
+                      {upload.fileName.toLowerCase().includes('dash') ? "Dash & Fuel" : "Damage Documentation"}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
