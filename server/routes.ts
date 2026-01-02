@@ -1271,10 +1271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("Upload payload received (POST):", JSON.stringify(req.body, null, 2));
       const uploadData = insertUploadSchema.parse({
         ...req.body,
         uploadedById: userId,
       });
+      console.log("Upload data parsed successfully (POST)");
       const upload = await storage.createUpload(uploadData);
       res.json(upload);
     } catch (error: any) {
@@ -1302,10 +1304,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("Upload payload received (POST):", JSON.stringify(req.body, null, 2));
       const uploadData = insertUploadSchema.parse({
         ...req.body,
         uploadedById: userId,
       });
+      console.log("Upload data parsed successfully (POST)");
       const upload = await storage.createUpload(uploadData);
       res.json(upload);
     } catch (error: any) {

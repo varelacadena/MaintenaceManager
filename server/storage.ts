@@ -794,6 +794,7 @@ export class DatabaseStorage implements IStorage {
 
   // Upload operations
   async createUpload(uploadData: InsertUpload): Promise<Upload> {
+    console.log("DB: Inserting upload data:", JSON.stringify(uploadData, null, 2));
     const [upload] = await this.db.insert(uploads).values(uploadData).returning();
     return upload;
   }
