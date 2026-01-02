@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog } from "@shared/schema";
+import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User } from "@shared/schema";
 import { format } from "date-fns";
+import { Image, FileText, CheckCircle, XCircle, AlertTriangle, User as UserIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,223 @@ const statusColors = {
   needs_cleaning: "secondary",
   out_of_service: "destructive",
 } as const;
+
+function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[] }) {
+  const { data: uploads } = useQuery<Upload[]>({
+    queryKey: [`/api/uploads/vehicle-checkout/${log.id}`],
+  });
+
+  const user = users.find(u => u.id === log.userId);
+
+  return (
+    <Card data-testid={`card-checkout-log-${log.id}`}>
+      <CardHeader className="pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <CardTitle className="text-sm sm:text-base">
+            {log.checkOutTime ? format(new Date(log.checkOutTime), "MMM d, yyyy h:mm a") : "Date unavailable"}
+          </CardTitle>
+          {log.adminOverride && (
+            <Badge variant="secondary" className="text-xs self-start sm:self-auto">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Admin Override
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Checked out by:</span>
+              <span className="text-sm font-medium">
+                {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Unknown'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Mileage:</span>
+              <span className="text-sm font-medium">{log.startMileage?.toLocaleString()} mi</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Fuel Level:</span>
+              <Badge variant="secondary" className="text-xs capitalize">{log.fuelLevel}</Badge>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              {log.cleanlinessConfirmed ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-600">Cleanliness Confirmed</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Cleanliness Not Confirmed</span>
+                </>
+              )}
+            </div>
+            {log.digitalSignature && (
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Digital Signature:</span>
+                <span className="text-sm font-medium">Signed</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {log.damageNotes && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Damage Notes</p>
+              <p className="text-sm">{log.damageNotes}</p>
+            </div>
+          </>
+        )}
+
+        {uploads && uploads.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                <Image className="w-4 h-4" />
+                Attached Files ({uploads.length})
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {uploads.map((upload) => (
+                  <a
+                    key={upload.id}
+                    href={upload.objectUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                    data-testid={`link-upload-${upload.id}`}
+                  >
+                    {upload.fileType.startsWith('image/') ? (
+                      <img
+                        src={upload.objectUrl}
+                        alt={upload.fileName}
+                        className="w-full h-20 object-cover rounded-md border hover:opacity-80 transition-opacity"
+                      />
+                    ) : (
+                      <div className="w-full h-20 flex flex-col items-center justify-center rounded-md border bg-muted hover:bg-muted/80 transition-colors">
+                        <FileText className="w-6 h-6 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground mt-1 truncate max-w-full px-1">
+                          {upload.fileName}
+                        </span>
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] }) {
+  const { data: uploads } = useQuery<Upload[]>({
+    queryKey: [`/api/uploads/vehicle-checkin/${log.id}`],
+  });
+
+  const user = users.find(u => u.id === log.userId);
+
+  return (
+    <Card data-testid={`card-checkin-log-${log.id}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm sm:text-base">
+          {log.checkInTime ? format(new Date(log.checkInTime), "MMM d, yyyy h:mm a") : "Date unavailable"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Checked in by:</span>
+              <span className="text-sm font-medium">
+                {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Unknown'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Mileage:</span>
+              <span className="text-sm font-medium">{log.endMileage?.toLocaleString()} mi</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Fuel Level:</span>
+              <Badge variant="secondary" className="text-xs capitalize">{log.fuelLevel}</Badge>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Cleanliness Status:</span>
+              <Badge variant={log.cleanlinessStatus === 'clean' ? 'default' : 'secondary'} className="text-xs">
+                {log.cleanlinessStatus}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {log.issues && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+                Issues Reported
+              </p>
+              <p className="text-sm text-destructive">{log.issues}</p>
+            </div>
+          </>
+        )}
+
+        {uploads && uploads.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                <Image className="w-4 h-4" />
+                Attached Files ({uploads.length})
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {uploads.map((upload) => (
+                  <a
+                    key={upload.id}
+                    href={upload.objectUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                    data-testid={`link-upload-${upload.id}`}
+                  >
+                    {upload.fileType.startsWith('image/') ? (
+                      <img
+                        src={upload.objectUrl}
+                        alt={upload.fileName}
+                        className="w-full h-20 object-cover rounded-md border hover:opacity-80 transition-opacity"
+                      />
+                    ) : (
+                      <div className="w-full h-20 flex flex-col items-center justify-center rounded-md border bg-muted hover:bg-muted/80 transition-colors">
+                        <FileText className="w-6 h-6 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground mt-1 truncate max-w-full px-1">
+                          {upload.fileName}
+                        </span>
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function VehicleDetail() {
   const { id } = useParams();
@@ -69,6 +287,10 @@ export default function VehicleDetail() {
 
   const { data: checkInLogs } = useQuery<VehicleCheckInLog[]>({
     queryKey: [`/api/vehicle-checkin-logs?vehicleId=${id}`],
+  });
+
+  const { data: users } = useQuery<User[]>({
+    queryKey: ['/api/users'],
   });
 
   const canManageVehicles = user?.role === "admin" || user?.role === "maintenance";
@@ -281,28 +503,7 @@ export default function VehicleDetail() {
               {checkOutLogs && checkOutLogs.length > 0 ? (
                 <div className="space-y-3 sm:space-y-4">
                   {checkOutLogs.map((log) => (
-                    <Card key={log.id}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm sm:text-base">
-                          {log.checkOutDate ? format(new Date(log.checkOutDate), "MMM d, yyyy h:mm a") : "Date unavailable"}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Check-Out</p>
-                            <p className="text-sm font-medium">Mileage: {log.startMileage} mi</p>
-                            <p className="text-sm font-medium">Fuel: {log.startFuelLevel}%</p>
-                          </div>
-                        </div>
-                        {log.inspectionNotes && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">Inspection Notes</p>
-                            <p className="text-sm">{log.inspectionNotes}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <CheckOutLogCard key={log.id} log={log} users={users || []} />
                   ))}
                 </div>
               ) : (
@@ -318,37 +519,9 @@ export default function VehicleDetail() {
               <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Check-In Logs</h3>
               {checkInLogs && checkInLogs.length > 0 ? (
                 <div className="space-y-3 sm:space-y-4">
-                  {checkInLogs.map((log) => {
-                    const checkInLog = checkOutLogs?.find(cil => cil.checkOutLogId === log.id);
-                    return (
-                      <Card key={log.id}>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm sm:text-base">
-                            {log.checkInDate ? format(new Date(log.checkInDate), "MMM d, yyyy h:mm a") : "Date unavailable"}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Check-In</p>
-                              <p className="text-sm font-medium">Mileage: {log.endMileage} mi</p>
-                              <p className="text-sm font-medium">Fuel: {log.endFuelLevel}%</p>
-                            </div>
-                            {checkInLog && (
-                              <div>
-                                {checkInLog.issues && (
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Issues Reported</p>
-                                    <p className="text-sm text-destructive">{checkInLog.issues}</p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                  {checkInLogs.map((log) => (
+                    <CheckInLogCard key={log.id} log={log} users={users || []} />
+                  ))}
                 </div>
               ) : (
                 <Card>

@@ -1337,6 +1337,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/uploads/vehicle-checkout/:checkOutLogId", isAuthenticated, async (req, res) => {
+    try {
+      const uploads = await storage.getUploadsByVehicleCheckOutLog(req.params.checkOutLogId);
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching vehicle check-out uploads:", error);
+      res.status(500).json({ message: "Failed to fetch uploads" });
+    }
+  });
+
+  app.get("/api/uploads/vehicle-checkin/:checkInLogId", isAuthenticated, async (req, res) => {
+    try {
+      const uploads = await storage.getUploadsByVehicleCheckInLog(req.params.checkInLogId);
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching vehicle check-in uploads:", error);
+      res.status(500).json({ message: "Failed to fetch uploads" });
+    }
+  });
+
   app.delete("/api/uploads/:id", isAuthenticated, async (req, res) => {
     try {
       await storage.deleteUpload(req.params.id);

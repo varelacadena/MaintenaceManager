@@ -174,6 +174,8 @@ export interface IStorage {
   createUpload(upload: InsertUpload): Promise<Upload>;
   getUploadsByRequest(requestId: string): Promise<Upload[]>;
   getUploadsByTask(taskId: string): Promise<Upload[]>;
+  getUploadsByVehicleCheckOutLog(checkOutLogId: string): Promise<Upload[]>;
+  getUploadsByVehicleCheckInLog(checkInLogId: string): Promise<Upload[]>;
   getUpload(id: string): Promise<Upload | undefined>;
   deleteUpload(id: string): Promise<void>;
 
@@ -809,6 +811,22 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(uploads)
       .where(eq(uploads.taskId, taskId))
+      .orderBy(uploads.createdAt);
+  }
+
+  async getUploadsByVehicleCheckOutLog(checkOutLogId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.vehicleCheckOutLogId, checkOutLogId))
+      .orderBy(uploads.createdAt);
+  }
+
+  async getUploadsByVehicleCheckInLog(checkInLogId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.vehicleCheckInLogId, checkInLogId))
       .orderBy(uploads.createdAt);
   }
 
