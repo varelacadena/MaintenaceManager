@@ -431,14 +431,6 @@ export default function VehicleCheckIn() {
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Link href="/my-reservations">
-            <Button variant="outline" type="button">Cancel</Button>
-          </Link>
-          <Button onClick={form.handleSubmit((data) => checkInMutation.mutate(data))} disabled={checkInMutation.isPending || !dashPhoto || !interiorPhoto}>
-            {checkInMutation.isPending ? "Processing..." : "Complete Check-In"}
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );
