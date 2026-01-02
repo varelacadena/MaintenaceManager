@@ -1029,9 +1029,19 @@ export class DatabaseStorage implements IStorage {
     id: string,
     updates: Partial<InsertVehicleReservation>
   ): Promise<VehicleReservation | undefined> {
+    // Ensure date strings are converted to Date objects
+    const cleanUpdates: any = { ...updates, updatedAt: new Date() };
+    
+    if (updates.startDate && typeof updates.startDate === 'string') {
+      cleanUpdates.startDate = new Date(updates.startDate);
+    }
+    if (updates.endDate && typeof updates.endDate === 'string') {
+      cleanUpdates.endDate = new Date(updates.endDate);
+    }
+
     const [updated] = await this.db
       .update(vehicleReservations)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(cleanUpdates)
       .where(eq(vehicleReservations.id, id))
       .returning();
     return updated;
