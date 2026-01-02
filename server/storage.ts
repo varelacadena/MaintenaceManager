@@ -231,6 +231,7 @@ export interface IStorage {
   getVehicleCheckInLog(id: string): Promise<VehicleCheckInLog | undefined>;
   getCheckInLogByCheckOut(checkOutLogId: string): Promise<VehicleCheckInLog | undefined>;
   createVehicleCheckInLog(log: InsertVehicleCheckInLog): Promise<VehicleCheckInLog>;
+  updateVehicleCheckInLog(id: string, data: Partial<InsertVehicleCheckInLog>): Promise<VehicleCheckInLog | undefined>;
   deleteVehicleCheckInLog(id: string): Promise<void>;
 
   // Vehicle maintenance schedule operations
@@ -1215,6 +1216,15 @@ export class DatabaseStorage implements IStorage {
 
   async createVehicleCheckInLog(logData: InsertVehicleCheckInLog): Promise<VehicleCheckInLog> {
     const [log] = await this.db.insert(vehicleCheckInLogs).values(logData).returning();
+    return log;
+  }
+
+  async updateVehicleCheckInLog(id: string, data: Partial<InsertVehicleCheckInLog>): Promise<VehicleCheckInLog | undefined> {
+    const [log] = await this.db
+      .update(vehicleCheckInLogs)
+      .set(data)
+      .where(eq(vehicleCheckInLogs.id, id))
+      .returning();
     return log;
   }
 
