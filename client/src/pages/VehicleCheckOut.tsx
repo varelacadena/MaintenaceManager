@@ -113,10 +113,10 @@ export default function VehicleCheckOut() {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString();
-          return key?.startsWith('/api/vehicle-checkout-logs') ||
+          return !!(key?.startsWith('/api/vehicle-checkout-logs') ||
                  key?.startsWith('/api/vehicles') ||
                  key?.startsWith('/api/vehicle-reservations') ||
-                 key?.startsWith('/api/tasks');
+                 key?.startsWith('/api/tasks'));
         }
       });
       toast({

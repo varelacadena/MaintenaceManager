@@ -815,11 +815,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUploadsByVehicleCheckOutLog(checkOutLogId: string): Promise<Upload[]> {
-    return await this.db
+    console.log("Fetching uploads for checkout log:", checkOutLogId);
+    const results = await this.db
       .select()
       .from(uploads)
       .where(eq(uploads.vehicleCheckOutLogId, checkOutLogId))
       .orderBy(uploads.createdAt);
+    console.log("Found uploads:", results.length);
+    return results;
   }
 
   async getUploadsByVehicleCheckInLog(checkInLogId: string): Promise<Upload[]> {
