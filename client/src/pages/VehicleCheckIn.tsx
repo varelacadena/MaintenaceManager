@@ -47,6 +47,7 @@ export default function VehicleCheckIn() {
     fuelLevel: string;
     cleanlinessStatus: string;
     issues: string;
+    returnNotes: string;
   };
 
   const form = useForm<CheckInFormData>({
@@ -56,6 +57,7 @@ export default function VehicleCheckIn() {
       fuelLevel: "100",
       cleanlinessStatus: "clean",
       issues: "",
+      returnNotes: "",
     },
   });
 
@@ -291,12 +293,39 @@ export default function VehicleCheckIn() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Issues or Damages (Optional)</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Report mechanical problems, damage, or safety concerns. This will flag the vehicle for maintenance.
+                    </p>
                     <FormControl>
                       <Textarea
-                        placeholder="Report any new issues or damages..."
+                        placeholder="e.g., Engine warning light on, brake noise, tire damage..."
                         className="min-h-[100px]"
                         {...field}
                         value={field.value || ""}
+                        data-testid="input-issues"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="returnNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      General observations or comments. These won't trigger maintenance.
+                    </p>
+                    <FormControl>
+                      <Textarea
+                        placeholder="e.g., Great trip, returned on time, parked in lot B..."
+                        className="min-h-[80px]"
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-return-notes"
                       />
                     </FormControl>
                     <FormMessage />
