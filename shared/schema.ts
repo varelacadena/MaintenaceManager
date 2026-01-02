@@ -624,22 +624,28 @@ export type VehicleCheckOutLog = typeof vehicleCheckOutLogs.$inferSelect;
 // Vehicle check-in logs table
 export const vehicleCheckInLogs = pgTable("vehicle_check_in_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  checkOutLogId: varchar("check_out_log_id").notNull().references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
   vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "restrict" }),
   userId: varchar("user_id").notNull().references(() => users.id),
+  checkOutLogId: varchar("check_out_log_id").notNull().references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
+  checkInDate: timestamp("check_in_date").notNull().defaultNow(),
   endMileage: integer("end_mileage").notNull(),
-  fuelLevel: varchar("fuel_level", { length: 20 }).notNull(),
+  endFuelLevel: integer("end_fuel_level").notNull().default(100),
   cleanlinessStatus: varchar("cleanliness_status", { length: 50 }).notNull(),
   issues: text("issues"),
-  checkInTime: timestamp("check_in_time").notNull().defaultNow(),
+  returnNotes: text("return_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  fuelLevel: varchar("fuel_level", { length: 20 }),
+  checkInTime: timestamp("check_in_time").defaultNow(),
 }, (table) => [
   index("idx_checkin_vehicle_time").on(table.vehicleId, table.checkInTime),
 ]);
 
 export const insertVehicleCheckInLogSchema = createInsertSchema(vehicleCheckInLogs, {
-  fuelLevel: z.string(),
+  fuelLevel: z.string().optional(),
 }).omit({
   id: true,
+  checkInDate: true,
+  createdAt: true,
   checkInTime: true,
 });
 export type InsertVehicleCheckInLog = z.infer<typeof insertVehicleCheckInLogSchema>;
