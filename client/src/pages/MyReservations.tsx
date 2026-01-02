@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import type { Vehicle } from "@shared/schema";
+import type { Vehicle, VehicleCheckOutLog } from "@shared/schema";
 
 interface VehicleReservation {
   id: string;
@@ -47,40 +47,12 @@ export default function MyReservations() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Get today's date in YYYY-MM-DD format (local timezone)
-  const getTodayDateString = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Check if selected start date is tomorrow
-  const isTomorrow = (dateString: string) => {
-    if (!dateString) return false;
-    const selected = new Date(dateString + 'T00:00:00');
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    selected.setHours(0, 0, 0, 0);
-    return selected.getTime() === tomorrow.getTime();
-  };
-
-  // Get minimum allowed time for selected date
-  const getMinTime = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // If it's tomorrow and after 4 PM today, enforce 9 AM minimum
-    if (isTomorrow(startDate) && currentHour >= 16) {
-      return "09:00"; // 9:00 AM minimum for tomorrow after 4 PM
-    }
-    return "00:00"; // No restriction otherwise
-  };
-
   const { data: reservations = [], isLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations/my"],
+  });
+
+  const { data: checkOutLogs = [] } = useQuery<VehicleCheckOutLog[]>({
+    queryKey: ["/api/vehicle-checkout-logs"],
   });
 
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
@@ -168,8 +140,7 @@ export default function MyReservations() {
       return;
     }
 
-    // Validate no past dates
-    const today = getTodayDateString();
+    const today = new Date().toISOString().split('T')[0];
     if (startDate < today) {
       toast({
         title: "Error",
@@ -179,20 +150,9 @@ export default function MyReservations() {
       return;
     }
 
-    // Validate 9 AM rule for tomorrow
-    if (isTomorrow(startDate) && startTime < "09:00") {
-      toast({
-        title: "Error",
-        description: "Reservations for tomorrow must start at or after 9:00 AM",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
 
-    // Validate end time is after start time
     if (endDateTime <= startDateTime) {
       toast({
         title: "Error",
@@ -218,6 +178,8 @@ export default function MyReservations() {
         return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
       case "pending":
         return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
+      case "active":
+        return "bg-primary/10 text-primary border-primary/20";
       case "rejected":
         return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
       case "completed":
@@ -294,14 +256,7 @@ export default function MyReservations() {
                     id="startDate"
                     type="date"
                     value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
-                        setStartTime("09:00");
-                      }
-                    }}
-                    min={getTodayDateString()}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
+                    onChange={(e) => setStartDate(e.target.value)}
                     required
                   />
                 </div>
@@ -312,15 +267,8 @@ export default function MyReservations() {
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    min={getMinTime()}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
-                  {isTomorrow(startDate) && (
-                    <p className="text-xs text-muted-foreground">
-                      Minimum start time for tomorrow: 9:00 AM
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -332,8 +280,6 @@ export default function MyReservations() {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || getTodayDateString()}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
@@ -344,7 +290,6 @@ export default function MyReservations() {
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
@@ -476,6 +421,20 @@ export default function MyReservations() {
                       Check Out
                     </Button>
                   )}
+                  {reservation.status.toLowerCase() === "active" && (() => {
+                    const checkOutLog = checkOutLogs?.find(log => log.reservationId === reservation.id);
+                    if (checkOutLog) {
+                      return (
+                        <Button
+                          onClick={() => setLocation(`/vehicle-checkin/${checkOutLog.id}`)}
+                          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          End Trip
+                        </Button>
+                      );
+                    }
+                    return null;
+                  })()}
                   <Button
                     variant="outline"
                     onClick={() => setLocation(`/vehicle-reservation-details/${reservation.id}`)}
