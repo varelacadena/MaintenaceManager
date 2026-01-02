@@ -85,10 +85,14 @@ export default function Dashboard() {
 
   // Get minimum allowed time for selected date
   const getMinTime = () => {
-    if (isTomorrow(startDate)) {
-      return "09:00"; // 9:00 AM minimum for tomorrow
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // If it's tomorrow and after 4 PM today, enforce 9 AM minimum
+    if (isTomorrow(startDate) && currentHour >= 16) {
+      return "09:00"; // 9:00 AM minimum for tomorrow after 4 PM
     }
-    return "00:00"; // No restriction for dates after tomorrow
+    return "00:00"; // No restriction otherwise
   };
 
   const { data: requests = [], isLoading: requestsLoading } = useQuery<ServiceRequest[]>({

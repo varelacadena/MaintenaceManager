@@ -1738,17 +1738,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot create reservations for past dates" });
       }
 
-      // Rule 3: If reservation is for tomorrow, start time must be >= 9:00 AM
+      // Rule 3: If reservation is for tomorrow and it's after 4 PM today, start time must be >= 9:00 AM
       if (startDateOnly.getTime() === tomorrow.getTime()) {
-        const startHour = startDate.getHours();
-        const startMinute = startDate.getMinutes();
-        const startTimeInMinutes = startHour * 60 + startMinute;
-        const nineAMInMinutes = 9 * 60; // 9:00 AM = 540 minutes
+        const currentHour = now.getHours();
+        
+        // Only enforce 9 AM restriction if it's after 4 PM today
+        if (currentHour >= 16) {
+          const startHour = startDate.getHours();
+          const startMinute = startDate.getMinutes();
+          const startTimeInMinutes = startHour * 60 + startMinute;
+          const nineAMInMinutes = 9 * 60; // 9:00 AM = 540 minutes
 
-        if (startTimeInMinutes < nineAMInMinutes) {
-          return res.status(400).json({ 
-            message: "Reservations for tomorrow must start at or after 9:00 AM" 
-          });
+          if (startTimeInMinutes < nineAMInMinutes) {
+            return res.status(400).json({ 
+              message: "After 4:00 PM, reservations for tomorrow must start at or after 9:00 AM" 
+            });
+          }
         }
       }
 
