@@ -21,7 +21,6 @@ import {
   insertPropertySchema,
   insertEquipmentSchema,
   insertVehicleSchema,
-  insertVehicleSchema,
   insertVehicleReservationSchema,
   insertVehicleCheckOutLogSchema,
   insertVehicleCheckInLogSchema,
@@ -124,7 +123,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      const bcrypt = await import("bcryptjs");
       const isValid = await bcrypt.compare(password, user.password);
 
       if (!isValid) {

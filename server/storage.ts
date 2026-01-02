@@ -743,6 +743,10 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(messages).orderBy(desc(messages.createdAt));
   }
 
+  async deleteMessage(id: string): Promise<void> {
+    await this.db.delete(messages).where(eq(messages.id, id));
+  }
+
   async markMessagesAsRead(requestId: string, userId: string): Promise<void> {
     await this.db
       .update(messages)
