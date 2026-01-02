@@ -496,6 +496,7 @@ export default function Dashboard() {
                     id="startDate"
                     type="date"
                     value={startDate}
+                    onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
                     onChange={(e) => {
                       setStartDate(e.target.value);
                       // Reset time if tomorrow is selected and current time is before 9 AM
@@ -513,6 +514,7 @@ export default function Dashboard() {
                     id="startTime"
                     type="time"
                     value={startTime}
+                    onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
                     onChange={(e) => setStartTime(e.target.value)}
                     min={getMinTime()}
                     required
@@ -532,6 +534,7 @@ export default function Dashboard() {
                     id="endDate"
                     type="date"
                     value={endDate}
+                    onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
                     onChange={(e) => setEndDate(e.target.value)}
                     min={startDate || getTodayDateString()}
                     required
@@ -543,6 +546,7 @@ export default function Dashboard() {
                     id="endTime"
                     type="time"
                     value={endTime}
+                    onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
                     onChange={(e) => setEndTime(e.target.value)}
                     required
                   />
