@@ -235,11 +235,10 @@ export const uploads = pgTable("uploads", {
   fileType: varchar("file_type", { length: 100 }).notNull(),
   objectUrl: varchar("object_url", { length: 1000 }).notNull(),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
-  fuelLevel: varchar("fuel_level", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUploadSchema = createInsertSchema(uploads).omit({ id: true, createdAt: true, uploadedById: true });
+export const insertUploadSchema = createInsertSchema(uploads).omit({ id: true, createdAt: true });
 export type Upload = typeof uploads.$inferSelect & {
   objectUrl: string; // Ensure this maps correctly
 };

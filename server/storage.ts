@@ -719,10 +719,6 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
-  async getMessagesByRequest(requestId: string): Promise<Message[]>;
-  async getMessagesByTask(taskId: string): Promise<Message[]>;
-  async getMessages(): Promise<Message[]>;
-
   async getMessagesByRequest(requestId: string): Promise<Message[]> {
     return await this.db
       .select()
@@ -769,10 +765,6 @@ export class DatabaseStorage implements IStorage {
           ne(messages.senderId, userId)
         )
       );
-  }
-
-  async deleteMessage(id: string): Promise<void> {
-    await this.db.delete(messages).where(eq(messages.id, id));
   }
 
   // Task note operations

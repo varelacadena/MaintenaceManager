@@ -1859,7 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.status && updates.status !== reservation.status) {
         if (updates.status === "cancelled" || updates.status === "completed") {
           const activeReservations = await storage.getVehicleReservations({
-            vehicleId: reservation.vehicleId,
+            vehicleId: reservation.vehicleId ?? undefined,
           });
           const hasActiveReservations = activeReservations.some(
             r => r.id !== id && (r.status === "pending" || r.status === "approved")
