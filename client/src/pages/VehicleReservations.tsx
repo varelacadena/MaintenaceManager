@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Car, User, Search, Edit } from "lucide-react";
+import { Calendar, Car, User, Search, Edit, ClipboardCheck } from "lucide-react";
+import { Link } from "wouter";
+import type { VehicleCheckInLog } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { format } from "date-fns";
-import type { VehicleReservation, Vehicle, User as UserType } from "@shared/schema";
+import type { VehicleReservation, Vehicle, User as UserType, VehicleCheckOutLog } from "@shared/schema";
 import {
   Select,
   SelectContent,
@@ -39,12 +41,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-const statusColors = {
+const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
+  approved: "secondary",
   active: "default",
   completed: "default",
   cancelled: "destructive",
-} as const;
+};
 
 export default function VehicleReservations() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -235,6 +238,14 @@ export default function VehicleReservations() {
     queryKey: ["/api/vehicles"],
   });
 
+  const { data: checkInLogs } = useQuery<VehicleCheckInLog[]>({
+    queryKey: ["/api/vehicle-checkin-logs"],
+  });
+
+  const { data: checkOutLogs } = useQuery<VehicleCheckOutLog[]>({
+    queryKey: ["/api/vehicle-checkout-logs"],
+  });
+
   const { data: users } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
   });
@@ -363,10 +374,12 @@ export default function VehicleReservations() {
                     <span>{reservation.notes}</span>
                   </div>
                 )}
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Created: </span>
-                  <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
-                </div>
+                {reservation.createdAt && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Created: </span>
+                    <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
+                  </div>
+                )}
                 {reservation.status === "cancelled" && (
                   <div className="text-sm mt-2 p-2 bg-destructive/10 rounded-md">
                     <span className="text-destructive font-semibold">Status Update: </span>
@@ -486,6 +499,27 @@ export default function VehicleReservations() {
                     Edit
                   </Button>
                 )}
+                {reservation.status === "completed" && (() => {
+                  const checkOutLog = checkOutLogs?.find(log => log.reservationId === reservation.id);
+                  if (!checkOutLog) return null;
+                  const checkInLog = checkInLogs?.find(log => log.checkOutLogId === checkOutLog.id);
+                  if (checkInLog) {
+                    return (
+                      <Link href={`/vehicle-checkin-verify/${checkInLog.id}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-green-500/20 text-green-700 dark:text-green-300 hover:bg-green-500/10"
+                          data-testid={`button-verify-checkin-${reservation.id}`}
+                        >
+                          <ClipboardCheck className="h-4 w-4 mr-1" />
+                          Verify Check-In
+                        </Button>
+                      </Link>
+                    );
+                  }
+                  return null;
+                })()}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button

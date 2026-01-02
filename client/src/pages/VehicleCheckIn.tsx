@@ -115,7 +115,7 @@ export default function VehicleCheckIn() {
 
   const checkInMutation = useMutation({
     mutationFn: async (data: CheckInFormData) => {
-      const response = await apiRequest("POST", "/api/vehicle-check-in", {
+      const response = await apiRequest("POST", "/api/vehicle-checkin-logs", {
         ...data,
         userId: user!.id,
         vehicleId: checkOutLog!.vehicleId,
