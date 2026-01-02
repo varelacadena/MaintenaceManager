@@ -45,6 +45,7 @@ export async function applyMigrations() {
     { file: "018_add_last_viewed_status_to_reservations.sql", name: "018_add_last_viewed_status_to_reservations" },
     { file: "021_create_uploads_table.sql", name: "021_create_uploads_table" },
     { file: "031_fix_checkout_columns.sql", name: "031_fix_checkout_columns" },
+    { file: "032_fix_uploads_constraint.sql", name: "032_fix_uploads_constraint" },
   ];
 
   try {

@@ -90,21 +90,35 @@ export default function VehicleCheckOut() {
     onSuccess: async (checkOutLog) => {
 
       // Upload the files to the check-out log
+      console.log("Saving uploads for check-out log:", checkOutLog.id);
+      console.log("Files to save:", uploadedFiles);
+      
       for (const file of uploadedFiles) {
         try {
-          await fetch("/api/uploads", {
+          const uploadPayload = {
+            fileName: file.fileName,
+            fileType: file.fileType,
+            objectUrl: file.objectUrl,
+            vehicleCheckOutLogId: checkOutLog.id,
+          };
+          console.log("Sending upload payload:", uploadPayload);
+          
+          const uploadResponse = await fetch("/api/uploads", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             credentials: "include",
-            body: JSON.stringify({
-              fileName: file.fileName,
-              fileType: file.fileType,
-              objectUrl: file.objectUrl,
-              vehicleCheckOutLogId: checkOutLog.id,
-            }),
+            body: JSON.stringify(uploadPayload),
           });
+          
+          console.log("Upload response status:", uploadResponse.status);
+          const uploadResult = await uploadResponse.json();
+          console.log("Upload response body:", uploadResult);
+          
+          if (!uploadResponse.ok) {
+            console.error("Upload save failed:", uploadResult);
+          }
         } catch (uploadError) {
           console.error("Error saving upload:", uploadError);
         }
