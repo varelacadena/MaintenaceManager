@@ -1,9 +1,9 @@
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Car, Upload } from "lucide-react";
+import { ArrowLeft, Car, Upload, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import type { VehicleCheckOutLog, Vehicle, InsertVehicleCheckInLog } from "@shared/schema";
+import type { VehicleCheckOutLog, Vehicle } from "@shared/schema";
 import { insertVehicleCheckInLogSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,7 @@ export default function VehicleCheckIn() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [dashPhoto, setDashPhoto] = useState<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string } | null>(null);
+  const [interiorPhoto, setInteriorPhoto] = useState<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string } | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<Array<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string }>>([]);
 
   const { data: checkOutLog, isLoading } = useQuery<VehicleCheckOutLog>({
@@ -78,7 +79,7 @@ export default function VehicleCheckIn() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
-  const handleFileUpload = async (result: any, type: 'dash' | 'damage') => {
+  const handleFileUpload = async (result: any, type: 'dash' | 'interior' | 'damage') => {
     const { successful, failed } = result;
 
     if (failed && failed.length > 0) {
@@ -99,6 +100,8 @@ export default function VehicleCheckIn() {
 
       if (type === 'dash') {
         setDashPhoto(newFiles[0]);
+      } else if (type === 'interior') {
+        setInteriorPhoto(newFiles[0]);
       } else {
         setDamagePhotos([...damagePhotos, ...newFiles]);
       }
@@ -122,9 +125,10 @@ export default function VehicleCheckIn() {
       const checkInLog = await response.json();
 
       // Upload the files to the check-in log
-      const allFiles: Array<{ fileName: string; fileType: string; objectUrl: string; objectPath?: string; isDash: boolean }> = [];
-      if (dashPhoto) allFiles.push({ ...dashPhoto, isDash: true });
-      damagePhotos.forEach(f => allFiles.push({ ...f, isDash: false }));
+      const allFiles: Array<{ fileName: string; fileType: string; objectUrl: string; objectPath?: string; prefix: string }> = [];
+      if (dashPhoto) allFiles.push({ ...dashPhoto, prefix: "DASH_" });
+      if (interiorPhoto) allFiles.push({ ...interiorPhoto, prefix: "INTERIOR_" });
+      damagePhotos.forEach(f => allFiles.push({ ...f, prefix: "" }));
 
       for (const file of allFiles) {
         try {
@@ -135,7 +139,7 @@ export default function VehicleCheckIn() {
             },
             credentials: "include",
             body: JSON.stringify({
-              fileName: file.isDash ? `DASH_${file.fileName}` : file.fileName,
+              fileName: `${file.prefix}${file.fileName}`,
               fileType: file.fileType,
               objectUrl: file.objectUrl,
               objectPath: file.objectPath,
@@ -334,6 +338,39 @@ export default function VehicleCheckIn() {
               </div>
 
               <div className="space-y-2">
+                <Label className="text-base font-semibold">Interior Picture (Required) *</Label>
+                <p className="text-sm text-muted-foreground">
+                  Take a clear photo of the vehicle interior to verify cleanliness
+                </p>
+                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 bg-blue-50 dark:bg-blue-950/20">
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={10485760}
+                    onGetUploadParameters={getUploadParameters}
+                    onComplete={(res) => handleFileUpload(res, 'interior')}
+                    onError={(error) => {
+                      console.error("Upload error:", error);
+                      toast({
+                        title: "Upload failed",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    }}
+                    buttonClassName="bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Upload Interior Photo
+                  </ObjectUploader>
+                </div>
+                {interiorPhoto && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800 flex items-center justify-between">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Interior photo uploaded: {interiorPhoto.fileName}</p>
+                    <Button variant="ghost" size="sm" onClick={() => setInteriorPhoto(null)}>Remove</Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label>Upload Damage/Issue Photos (Optional)</Label>
                 <p className="text-sm text-muted-foreground">
                   Take photos of any new damage or issues discovered during use
@@ -387,7 +424,7 @@ export default function VehicleCheckIn() {
                     Cancel
                   </Button>
                 </Link>
-                <Button type="submit" disabled={checkInMutation.isPending || !dashPhoto} data-testid="button-submit-checkin">
+                <Button type="submit" disabled={checkInMutation.isPending || !dashPhoto || !interiorPhoto} data-testid="button-submit-checkin">
                   {checkInMutation.isPending ? "Checking In..." : "Complete Check-In"}
                 </Button>
               </div>
@@ -398,7 +435,7 @@ export default function VehicleCheckIn() {
           <Link href="/my-reservations">
             <Button variant="outline" type="button">Cancel</Button>
           </Link>
-          <Button onClick={form.handleSubmit((data) => checkInMutation.mutate(data))} disabled={checkInMutation.isPending || !dashPhoto}>
+          <Button onClick={form.handleSubmit((data) => checkInMutation.mutate(data))} disabled={checkInMutation.isPending || !dashPhoto || !interiorPhoto}>
             {checkInMutation.isPending ? "Processing..." : "Complete Check-In"}
           </Button>
         </CardFooter>

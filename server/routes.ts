@@ -2394,6 +2394,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/vehicle-checkin-logs/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const logData = insertVehicleCheckInLogSchema.partial().parse(req.body);
+      const log = await storage.updateVehicleCheckInLog(req.params.id, logData);
+      if (!log) {
+        return res.status(404).json({ message: "Check-in log not found" });
+      }
+
+      // If mileage was updated, update vehicle mileage too
+      if (logData.endMileage) {
+        await storage.updateVehicleMileage(log.vehicleId, logData.endMileage);
+      }
+
+      res.json(log);
+    } catch (error) {
+      console.error("Error updating vehicle check-in log:", error);
+      res.status(500).json({ message: "Failed to update vehicle check-in log" });
+    }
+  });
+
   app.delete("/api/vehicle-checkin-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
       await storage.deleteVehicleCheckInLog(req.params.id);
