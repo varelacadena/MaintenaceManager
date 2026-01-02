@@ -99,6 +99,7 @@ export default function VehicleCheckOut() {
             fileName: file.fileName,
             fileType: file.fileType,
             objectUrl: file.objectUrl,
+            objectPath: (file as any).objectPath,
             vehicleCheckOutLogId: checkOutLog.id,
           };
           console.log("Sending upload payload:", uploadPayload);
@@ -193,7 +194,8 @@ export default function VehicleCheckOut() {
       const newFiles = successful.map((file: any) => ({
         fileName: file.fileName || file.name,
         objectUrl: file.objectUrl || file.uploadURL || file.url,
-        fileType: file.type || "image/jpeg"
+        fileType: file.type || "image/jpeg",
+        objectPath: file.objectPath
       }));
 
       setUploadedFiles([...uploadedFiles, ...newFiles]);

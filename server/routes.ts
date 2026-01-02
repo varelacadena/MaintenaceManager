@@ -1272,8 +1272,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("Upload payload received (POST):", JSON.stringify(req.body, null, 2));
+      
+      let objectUrl = req.body.objectUrl;
+      // If it's a mock URL or we have a bucket, try to get a real signed URL
+      if (req.body.objectPath && (!objectUrl.startsWith('http') || objectUrl.includes('mock-storage.local'))) {
+        try {
+          const { getDownloadUrl, getBucketId } = await import("./objectStorage");
+          if (getBucketId()) {
+            objectUrl = await getDownloadUrl(req.body.objectPath);
+          }
+        } catch (e) {
+          console.warn("Could not get signed download URL, using original:", e);
+        }
+      }
+
       const uploadData = insertUploadSchema.parse({
         ...req.body,
+        objectUrl,
         uploadedById: userId,
       });
       console.log("Upload data parsed successfully (POST)");
@@ -1304,12 +1319,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log("Upload payload received (POST):", JSON.stringify(req.body, null, 2));
+      console.log("Upload payload received (PUT):", JSON.stringify(req.body, null, 2));
+      
+      let objectUrl = req.body.objectUrl;
+      // If it's a mock URL or we have a bucket, try to get a real signed URL
+      if (req.body.objectPath && (!objectUrl.startsWith('http') || objectUrl.includes('mock-storage.local'))) {
+        try {
+          const { getDownloadUrl, getBucketId } = await import("./objectStorage");
+          if (getBucketId()) {
+            objectUrl = await getDownloadUrl(req.body.objectPath);
+          }
+        } catch (e) {
+          console.warn("Could not get signed download URL, using original:", e);
+        }
+      }
+
       const uploadData = insertUploadSchema.parse({
         ...req.body,
+        objectUrl,
         uploadedById: userId,
       });
-      console.log("Upload data parsed successfully (POST)");
+      console.log("Upload data parsed successfully (PUT)");
       const upload = await storage.createUpload(uploadData);
       res.json(upload);
     } catch (error: any) {

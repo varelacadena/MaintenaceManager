@@ -237,8 +237,7 @@ async function signObjectURL({
 // New Replit Object Storage helper functions
 import { Client } from "@replit/object-storage";
 
-// Get bucket ID from environment or .replit config
-function getBucketId(): string | null {
+export function getBucketId(): string | null {
   const bucketId = process.env.REPLIT_DB_BUCKET_ID || process.env.OBJECT_STORAGE_BUCKET_ID;
   return bucketId || null;
 }
