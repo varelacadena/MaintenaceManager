@@ -131,7 +131,7 @@ export const contactTypeEnum = pgEnum("contact_type", ["requester", "staff", "ot
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "set null" }),
-  propertyId: varchar("property_id"),
+  propertyId: varchar("property_id").references(() => properties.id),
   equipmentId: varchar("equipment_id").references(() => equipment.id),
   vehicleId: varchar("vehicle_id").references(() => vehicles.id), // For vehicle-related tasks
   name: varchar("name", { length: 200 }).notNull(),
@@ -145,7 +145,7 @@ export const tasks = pgTable("tasks", {
   assignedToId: varchar("assigned_to_id").references(() => users.id),
   assignedVendorId: varchar("assigned_vendor_id").references(() => vendors.id),
   taskType: taskTypeEnum("task_type").notNull().default("one_time"),
-  status: taskStatusEnum("status").notNull().default("not_started"),
+  status: taskStatusEnum("task_status").notNull().default("not_started"),
   onHoldReason: text("on_hold_reason"),
   recurringFrequency: text("recurring_frequency"), // daily, weekly, monthly, yearly
   recurringInterval: integer("recurring_interval"), // every X days/weeks/months
@@ -347,18 +347,18 @@ export const insertVehicleMaintenanceLogSchema = createInsertSchema(vehicleMaint
 export type InsertVehicleMaintenanceLog = z.infer<typeof insertVehicleMaintenanceLogSchema>;
 export type VehicleMaintenanceLog = typeof vehicleMaintenanceLogs.$inferSelect;
 
-// Vehicle relations
-export const vehiclesRelations = relations(vehicles, ({ many }) => ({
-  reservations: many(vehicleReservations),
-  checkOutLogs: many(vehicleCheckOutLogs),
-  checkInLogs: many(vehicleCheckInLogs),
-  maintenanceSchedules: many(vehicleMaintenanceSchedules),
-  maintenanceLogs: many(vehicleMaintenanceLogs),
-  tasks: many(tasks),
-}));
-
-export const vendorsRelations = relations(vendors, ({ many }) => ({
-  tasks: many(tasks),
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  requestsCreated: many(serviceRequests, { relationName: "requester" }),
+  tasksCreated: many(tasks, { relationName: "task_creator" }),
+  tasksAssigned: many(tasks, { relationName: "task_assignee" }),
+  timeEntries: many(timeEntries),
+  messages: many(messages),
+  taskNotes: many(taskNotes),
+  uploads: many(uploads),
+  vehicleReservations: many(vehicleReservations),
+  vehicleCheckOutLogs: many(vehicleCheckOutLogs),
+  vehicleCheckInLogs: many(vehicleCheckInLogs),
 }));
 
 export const areasRelations = relations(areas, ({ many }) => ({
@@ -595,12 +595,9 @@ export const vehicleReservations = pgTable("vehicle_reservations", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   status: reservationStatusEnum("status").notNull().default("pending"),
-  lastViewedStatus: varchar("last_viewed_status", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_reservation_vehicle_dates").on(table.vehicleId, table.startDate, table.endDate),
-]);
+});
 
 export const insertVehicleReservationSchema = createInsertSchema(vehicleReservations).omit({
   id: true,
@@ -751,4 +748,15 @@ export const vehicleMaintenanceSchedulesRelations = relations(vehicleMaintenance
     fields: [vehicleMaintenanceSchedules.vehicleId],
     references: [vehicles.id],
   }),
+}));
+
+export const vehicleMaintenanceLogsRelations = relations(vehicleMaintenanceLogs, ({ one }) => ({
+  vehicle: one(vehicles, {
+    fields: [vehicleMaintenanceLogs.vehicleId],
+    references: [vehicles.id],
+  }),
+}));
+
+export const vendorsRelations = relations(vendors, ({ many }) => ({
+  tasks: many(tasks),
 }));
