@@ -18,6 +18,7 @@ import {
   vehicleCheckOutLogs,
   vehicleCheckInLogs,
   vehicleMaintenanceSchedules,
+  vehicleMaintenanceLogs,
   type User,
   type UpsertUser,
   type Vendor,
@@ -56,6 +57,8 @@ import {
   type InsertVehicleCheckInLog,
   type VehicleMaintenanceSchedule,
   type InsertVehicleMaintenanceSchedule,
+  type VehicleMaintenanceLog,
+  type InsertVehicleMaintenanceLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne } from "drizzle-orm";
@@ -240,6 +243,11 @@ export interface IStorage {
   createVehicleMaintenanceSchedule(schedule: InsertVehicleMaintenanceSchedule): Promise<VehicleMaintenanceSchedule>;
   updateVehicleMaintenanceSchedule(id: string, data: Partial<InsertVehicleMaintenanceSchedule>): Promise<VehicleMaintenanceSchedule | undefined>;
   deleteVehicleMaintenanceSchedule(id: string): Promise<void>;
+
+  // Vehicle maintenance log operations
+  getVehicleMaintenanceLogs(vehicleId: string): Promise<VehicleMaintenanceLog[]>;
+  createVehicleMaintenanceLog(log: InsertVehicleMaintenanceLog): Promise<VehicleMaintenanceLog>;
+  deleteVehicleMaintenanceLog(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1271,6 +1279,27 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVehicleMaintenanceSchedule(id: string): Promise<void> {
     await this.db.delete(vehicleMaintenanceSchedules).where(eq(vehicleMaintenanceSchedules.id, id));
+  }
+
+  // Vehicle maintenance log operations
+  async getVehicleMaintenanceLogs(vehicleId: string): Promise<VehicleMaintenanceLog[]> {
+    return await this.db
+      .select()
+      .from(vehicleMaintenanceLogs)
+      .where(eq(vehicleMaintenanceLogs.vehicleId, vehicleId))
+      .orderBy(desc(vehicleMaintenanceLogs.maintenanceDate));
+  }
+
+  async createVehicleMaintenanceLog(logData: InsertVehicleMaintenanceLog): Promise<VehicleMaintenanceLog> {
+    const [log] = await this.db
+      .insert(vehicleMaintenanceLogs)
+      .values(logData)
+      .returning();
+    return log;
+  }
+
+  async deleteVehicleMaintenanceLog(id: string): Promise<void> {
+    await this.db.delete(vehicleMaintenanceLogs).where(eq(vehicleMaintenanceLogs.id, id));
   }
 }
 

@@ -326,6 +326,27 @@ export const insertEquipmentSchema = createInsertSchema(equipment).omit({
 export type InsertEquipment = z.infer<typeof insertEquipmentSchema>;
 export type Equipment = typeof equipment.$inferSelect;
 
+// Vehicle maintenance logs table
+export const vehicleMaintenanceLogs = pgTable("vehicle_maintenance_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  maintenanceDate: timestamp("maintenance_date").notNull().defaultNow(),
+  type: varchar("type", { length: 100 }).notNull(), // e.g., "Oil Change", "Repair", "Inspection"
+  description: text("description").notNull(),
+  cost: doublePrecision("cost").default(0),
+  mileageAtMaintenance: integer("mileage_at_maintenance"),
+  performedBy: varchar("performed_by", { length: 200 }), // Vendor or staff name
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertVehicleMaintenanceLogSchema = createInsertSchema(vehicleMaintenanceLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertVehicleMaintenanceLog = z.infer<typeof insertVehicleMaintenanceLogSchema>;
+export type VehicleMaintenanceLog = typeof vehicleMaintenanceLogs.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   requestsCreated: many(serviceRequests, { relationName: "requester" }),
@@ -338,6 +359,21 @@ export const usersRelations = relations(users, ({ many }) => ({
   vehicleReservations: many(vehicleReservations),
   vehicleCheckOutLogs: many(vehicleCheckOutLogs),
   vehicleCheckInLogs: many(vehicleCheckInLogs),
+}));
+
+export const vehiclesRelations = relations(vehicles, ({ many }) => ({
+  reservations: many(vehicleReservations),
+  checkOutLogs: many(vehicleCheckOutLogs),
+  checkInLogs: many(vehicleCheckInLogs),
+  maintenanceSchedules: many(vehicleMaintenanceSchedules),
+  maintenanceLogs: many(vehicleMaintenanceLogs),
+}));
+
+export const vehicleMaintenanceLogsRelations = relations(vehicleMaintenanceLogs, ({ one }) => ({
+  vehicle: one(vehicles, {
+    fields: [vehicleMaintenanceLogs.vehicleId],
+    references: [vehicles.id],
+  }),
 }));
 
 export const vendorsRelations = relations(vendors, ({ many }) => ({

@@ -25,6 +25,7 @@ import {
   insertVehicleCheckOutLogSchema,
   insertVehicleCheckInLogSchema,
   insertVehicleMaintenanceScheduleSchema,
+  insertVehicleMaintenanceLogSchema,
 } from "@shared/schema";
 
 // Helper function to get authenticated user
