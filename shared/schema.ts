@@ -347,33 +347,14 @@ export const insertVehicleMaintenanceLogSchema = createInsertSchema(vehicleMaint
 export type InsertVehicleMaintenanceLog = z.infer<typeof insertVehicleMaintenanceLogSchema>;
 export type VehicleMaintenanceLog = typeof vehicleMaintenanceLogs.$inferSelect;
 
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  requestsCreated: many(serviceRequests, { relationName: "requester" }),
-  tasksCreated: many(tasks, { relationName: "task_creator" }),
-  tasksAssigned: many(tasks, { relationName: "task_assignee" }),
-  timeEntries: many(timeEntries),
-  messages: many(messages),
-  taskNotes: many(taskNotes),
-  uploads: many(uploads),
-  vehicleReservations: many(vehicleReservations),
-  vehicleCheckOutLogs: many(vehicleCheckOutLogs),
-  vehicleCheckInLogs: many(vehicleCheckInLogs),
-}));
-
+// Vehicle relations
 export const vehiclesRelations = relations(vehicles, ({ many }) => ({
   reservations: many(vehicleReservations),
   checkOutLogs: many(vehicleCheckOutLogs),
   checkInLogs: many(vehicleCheckInLogs),
   maintenanceSchedules: many(vehicleMaintenanceSchedules),
   maintenanceLogs: many(vehicleMaintenanceLogs),
-}));
-
-export const vehicleMaintenanceLogsRelations = relations(vehicleMaintenanceLogs, ({ one }) => ({
-  vehicle: one(vehicles, {
-    fields: [vehicleMaintenanceLogs.vehicleId],
-    references: [vehicles.id],
-  }),
+  tasks: many(tasks),
 }));
 
 export const vendorsRelations = relations(vendors, ({ many }) => ({
@@ -716,6 +697,7 @@ export const vehiclesRelations = relations(vehicles, ({ many }) => ({
   checkOutLogs: many(vehicleCheckOutLogs),
   checkInLogs: many(vehicleCheckInLogs),
   maintenanceSchedules: many(vehicleMaintenanceSchedules),
+  maintenanceLogs: many(vehicleMaintenanceLogs),
   tasks: many(tasks),
 }));
 

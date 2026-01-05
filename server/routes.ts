@@ -2465,7 +2465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Vehicle maintenance schedule routes
+  // Vehicle maintenance schedules
   app.get("/api/vehicle-maintenance-schedules", isAuthenticated, async (req, res) => {
     try {
       const vehicleId = req.query.vehicleId as string | undefined;
@@ -2474,6 +2474,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching vehicle maintenance schedules:", error);
       res.status(500).json({ message: "Failed to fetch vehicle maintenance schedules" });
+    }
+  });
+
+  // Vehicle maintenance logs
+  app.get("/api/vehicles/:id/maintenance-logs", isAuthenticated, async (req, res) => {
+    try {
+      const logs = await storage.getVehicleMaintenanceLogs(req.params.id);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching vehicle maintenance logs:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle maintenance logs" });
+    }
+  });
+
+  app.post("/api/vehicles/:id/maintenance-logs", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const logData = insertVehicleMaintenanceLogSchema.parse({
+        ...req.body,
+        vehicleId: req.params.id,
+      });
+      const log = await storage.createVehicleMaintenanceLog(logData);
+
+      // If a mileage is provided, update the vehicle's current mileage
+      if (log.mileageAtMaintenance) {
+        await storage.updateVehicleMileage(req.params.id, log.mileageAtMaintenance);
+      }
+
+      res.json(log);
+    } catch (error) {
+      console.error("Error creating vehicle maintenance log:", error);
+      res.status(500).json({ message: "Failed to create vehicle maintenance log" });
+    }
+  });
+
+  app.delete("/api/vehicle-maintenance-logs/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteVehicleMaintenanceLog(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle maintenance log:", error);
+      res.status(500).json({ message: "Failed to delete vehicle maintenance log" });
     }
   });
 

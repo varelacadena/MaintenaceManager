@@ -1,19 +1,19 @@
 import { useParams, Link as RouterLink } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Car, Calendar, ClipboardList, QrCode, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User } from "@shared/schema";
+import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User, VehicleMaintenanceLog } from "@shared/schema";
 import { format } from "date-fns";
 import { Image, FileText, CheckCircle, XCircle, AlertTriangle, User as UserIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -297,11 +297,42 @@ export default function VehicleDetail() {
     queryKey: [`/api/vehicle-checkin-logs?vehicleId=${id}`],
   });
 
+  const { data: maintenanceLogs } = useQuery<VehicleMaintenanceLog[]>({
+    queryKey: [`/api/vehicles/${id}/maintenance-logs`],
+  });
+
   const { data: users } = useQuery<User[]>({
     queryKey: ['/api/users'],
   });
 
   const canManageVehicles = user?.role === "admin" || user?.role === "maintenance";
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      return await apiRequest("PATCH", `/api/vehicles/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}`] });
+      toast({ title: "Vehicle status updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const addMaintenanceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", `/api/vehicles/${id}/maintenance-logs`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}/maintenance-logs`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}`] });
+      toast({ title: "Maintenance log added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add maintenance log", variant: "destructive" });
+    },
+  });
 
   if (isLoading) {
     return (
@@ -385,10 +416,11 @@ export default function VehicleDetail() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
           <TabsTrigger value="reservations" className="text-xs sm:text-sm">Reservations</TabsTrigger>
           <TabsTrigger value="logbook" className="text-xs sm:text-sm">Logbook</TabsTrigger>
+          <TabsTrigger value="maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
           <TabsTrigger value="qr-code" className="text-xs sm:text-sm">QR Code</TabsTrigger>
         </TabsList>
 
@@ -401,9 +433,25 @@ export default function VehicleDetail() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge variant={statusColors[vehicle.status]} className="text-xs">
-                    {vehicle.status.replace(/_/g, " ")}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={statusColors[vehicle.status]} className="text-xs">
+                      {vehicle.status.replace(/_/g, " ")}
+                    </Badge>
+                    {canManageVehicles && (
+                      <select
+                        className="text-xs border rounded p-1"
+                        value={vehicle.status}
+                        onChange={(e) => updateStatusMutation.mutate(e.target.value)}
+                      >
+                        <option value="available">Available</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="in_use">In Use</option>
+                        <option value="needs_cleaning">Needs Cleaning</option>
+                        <option value="needs_maintenance">Needs Maintenance</option>
+                        <option value="out_of_service">Out of Service</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-start gap-2">
@@ -539,6 +587,104 @@ export default function VehicleDetail() {
                 </Card>
               )}
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="maintenance" className="space-y-4">
+          {canManageVehicles && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base sm:text-lg">Add Maintenance Record</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const data = {
+                      type: formData.get("type"),
+                      description: formData.get("description"),
+                      mileageAtMaintenance: parseInt(formData.get("mileage") as string) || null,
+                      performedBy: formData.get("performedBy"),
+                      cost: parseFloat(formData.get("cost") as string) || 0,
+                      notes: formData.get("notes"),
+                    };
+                    addMaintenanceMutation.mutate(data);
+                    (e.target as HTMLFormElement).reset();
+                  }}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Type</label>
+                      <input name="type" required className="w-full border rounded p-2 text-sm" placeholder="Oil Change, Repair, etc." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Performed By</label>
+                      <input name="performedBy" className="w-full border rounded p-2 text-sm" placeholder="Vendor or Staff" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Mileage</label>
+                      <input name="mileage" type="number" className="w-full border rounded p-2 text-sm" placeholder="Current mileage" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cost</label>
+                      <input name="cost" type="number" step="0.01" className="w-full border rounded p-2 text-sm" placeholder="0.00" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <textarea name="description" required className="w-full border rounded p-2 text-sm min-h-[80px]" placeholder="Work performed..." />
+                  </div>
+                  <Button type="submit" disabled={addMaintenanceMutation.isPending} className="w-full sm:w-auto">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Record Maintenance
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="space-y-4">
+            <h3 className="text-base sm:text-lg font-semibold">Maintenance History</h3>
+            {maintenanceLogs && maintenanceLogs.length > 0 ? (
+              maintenanceLogs.map((log) => (
+                <Card key={log.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-base">{log.type}</CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(log.maintenanceDate), "PPP")}
+                        </p>
+                      </div>
+                      {log.cost && log.cost > 0 ? (
+                        <Badge variant="secondary">${log.cost.toFixed(2)}</Badge>
+                      ) : null}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <p className="whitespace-pre-wrap">{log.description}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {log.performedBy && <span>By: {log.performedBy}</span>}
+                      {log.mileageAtMaintenance && <span>Mileage: {log.mileageAtMaintenance.toLocaleString()} mi</span>}
+                    </div>
+                    {log.notes && (
+                      <div className="mt-2 p-2 bg-muted rounded text-xs italic">
+                        {log.notes}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <Wrench className="h-10 w-10 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No maintenance records found</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
