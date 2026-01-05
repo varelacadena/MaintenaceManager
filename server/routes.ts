@@ -1701,6 +1701,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/vehicles/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      const vehicle = await storage.updateVehicleStatus(req.params.id, status);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Error updating vehicle status:", error);
+      res.status(500).json({ message: "Failed to update vehicle status" });
+    }
+  });
+
   app.delete("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       await storage.deleteVehicle(req.params.id);
