@@ -124,7 +124,7 @@ export const serviceRequests = pgTable("service_requests", {
 });
 
 // Tasks (created from reviewed requests, managed by admin/maintenance)
-export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "reminder"]);
+export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "reminder", "project"]);
 export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
 export const contactTypeEnum = pgEnum("contact_type", ["requester", "staff", "other"]);
 
