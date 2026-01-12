@@ -21,20 +21,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertTaskSchema } from "@shared/schema";
+import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const equipmentFormSchema = insertEquipmentSchema.omit({ propertyId: true }).extend({
+  name: z.string().min(1, "Name is required"),
+  category: z.string().min(1, "Category is required"),
+});
+
+type EquipmentFormData = z.infer<typeof equipmentFormSchema>;
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
@@ -105,6 +120,58 @@ export default function NewTask() {
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
+  const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
+
+  const equipmentForm = useForm<EquipmentFormData>({
+    resolver: zodResolver(equipmentFormSchema),
+    defaultValues: {
+      name: "",
+      category: "other",
+      description: "",
+      serialNumber: "",
+      condition: "",
+      notes: "",
+      imageUrl: "",
+    },
+  });
+
+  const createEquipmentMutation = useMutation({
+    mutationFn: async (data: EquipmentFormData) => {
+      const res = await fetch("/api/equipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, propertyId: selectedPropertyId }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (newEquipment: Equipment) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment", selectedPropertyId] });
+      form.setValue("equipmentId", newEquipment.id);
+      setIsEquipmentDialogOpen(false);
+      equipmentForm.reset({
+        name: "",
+        category: "other",
+        description: "",
+        serialNumber: "",
+        condition: "",
+        notes: "",
+        imageUrl: "",
+      });
+      toast({
+        title: "Equipment Created",
+        description: "The new equipment has been added and selected.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create equipment",
+        variant: "destructive",
+      });
+    },
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -485,24 +552,50 @@ export default function NewTask() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Equipment *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                    disabled={!selectedPropertyId}
-                  >
-                    <FormControl>
-                      <SelectTrigger data-testid="select-equipment">
-                        <SelectValue placeholder="Select equipment" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {equipment.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                      disabled={!selectedPropertyId}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-equipment" className="flex-1">
+                          <SelectValue placeholder="Select equipment" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {equipment.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={!selectedPropertyId}
+                      onClick={() => {
+                        equipmentForm.reset({
+                          name: "",
+                          category: "other",
+                          description: "",
+                          serialNumber: "",
+                          condition: "",
+                          notes: "",
+                          imageUrl: "",
+                        });
+                        setIsEquipmentDialogOpen(true);
+                      }}
+                      data-testid="button-add-equipment"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {!selectedPropertyId && (
+                    <FormDescription>Select a property first to add equipment</FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -863,6 +956,167 @@ export default function NewTask() {
           </form>
         </Form>
       </Card>
+
+      <Dialog open={isEquipmentDialogOpen} onOpenChange={setIsEquipmentDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Equipment</DialogTitle>
+            <DialogDescription>
+              Add new equipment to the selected property
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...equipmentForm}>
+            <form
+              onSubmit={equipmentForm.handleSubmit((data) => createEquipmentMutation.mutate(data))}
+              className="space-y-4"
+            >
+              <FormField
+                control={equipmentForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="HVAC Unit #1" data-testid="input-new-equipment-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={equipmentForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-new-equipment-category">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="appliances">Appliances</SelectItem>
+                        <SelectItem value="hvac">HVAC</SelectItem>
+                        <SelectItem value="structure">Structure</SelectItem>
+                        <SelectItem value="plumbing">Plumbing</SelectItem>
+                        <SelectItem value="electric">Electric</SelectItem>
+                        <SelectItem value="landscaping">Landscaping</SelectItem>
+                        <SelectItem value="diagrams">Diagrams</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={equipmentForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value || ""}
+                        placeholder="Equipment description"
+                        data-testid="textarea-new-equipment-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={equipmentForm.control}
+                  name="serialNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Serial Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          placeholder="SN-12345"
+                          data-testid="input-new-equipment-serial"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={equipmentForm.control}
+                  name="condition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Condition</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-new-equipment-condition">
+                            <SelectValue placeholder="Select condition" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="new">New</SelectItem>
+                          <SelectItem value="good">Good</SelectItem>
+                          <SelectItem value="fair">Fair</SelectItem>
+                          <SelectItem value="poor">Poor</SelectItem>
+                          <SelectItem value="needs_repair">Needs Repair</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={equipmentForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value || ""}
+                        placeholder="Additional notes about this equipment"
+                        data-testid="textarea-new-equipment-notes"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEquipmentDialogOpen(false)}
+                  data-testid="button-cancel-equipment"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createEquipmentMutation.isPending}
+                  data-testid="button-submit-equipment"
+                >
+                  {createEquipmentMutation.isPending ? "Adding..." : "Add Equipment"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
