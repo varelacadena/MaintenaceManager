@@ -261,6 +261,20 @@ export const insertTaskNoteSchema = createInsertSchema(taskNotes).omit({ id: tru
 export type InsertTaskNote = z.infer<typeof insertTaskNoteSchema>;
 export type TaskNote = typeof taskNotes.$inferSelect;
 
+// Task checklists (linked to tasks)
+export const taskChecklists = pgTable("task_checklists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  text: varchar("text", { length: 500 }).notNull(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskChecklistSchema = createInsertSchema(taskChecklists).omit({ id: true, createdAt: true });
+export type InsertTaskChecklist = z.infer<typeof insertTaskChecklistSchema>;
+export type TaskChecklist = typeof taskChecklists.$inferSelect;
+
 // Properties (map-based property system)
 export const propertyTypeEnum = pgEnum("property_type", [
   "building",
@@ -445,6 +459,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   messages: many(messages),
   taskNotes: many(taskNotes),
   uploads: many(uploads),
+  checklists: many(taskChecklists),
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
@@ -515,6 +530,13 @@ export const taskNotesRelations = relations(taskNotes, ({ one }) => ({
   user: one(users, {
     fields: [taskNotes.userId],
     references: [users.id],
+  }),
+}));
+
+export const taskChecklistsRelations = relations(taskChecklists, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskChecklists.taskId],
+    references: [tasks.id],
   }),
 }));
 

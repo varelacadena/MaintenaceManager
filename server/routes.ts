@@ -1515,6 +1515,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Task checklist routes
+  app.get("/api/tasks/:taskId/checklists", isAuthenticated, async (req: any, res) => {
+    try {
+      const checklists = await storage.getChecklistsByTask(req.params.taskId);
+      res.json(checklists);
+    } catch (error) {
+      console.error("Error fetching task checklists:", error);
+      res.status(500).json({ message: "Failed to fetch task checklists" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/checklists", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const checklistData = {
+        taskId: req.params.taskId,
+        text: req.body.text,
+        isCompleted: req.body.isCompleted || false,
+        sortOrder: req.body.sortOrder || 0,
+      };
+      const checklist = await storage.createTaskChecklist(checklistData);
+      res.json(checklist);
+    } catch (error) {
+      console.error("Error creating task checklist:", error);
+      res.status(500).json({ message: "Failed to create task checklist" });
+    }
+  });
+
+  app.patch("/api/task-checklists/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const checklist = await storage.updateTaskChecklist(req.params.id, req.body);
+      if (!checklist) {
+        return res.status(404).json({ message: "Checklist item not found" });
+      }
+      res.json(checklist);
+    } catch (error) {
+      console.error("Error updating task checklist:", error);
+      res.status(500).json({ message: "Failed to update task checklist" });
+    }
+  });
+
+  app.delete("/api/task-checklists/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteTaskChecklist(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task checklist:", error);
+      res.status(500).json({ message: "Failed to delete task checklist" });
+    }
+  });
+
   // Property routes
   app.get("/api/properties", isAuthenticated, async (req, res) => {
     try {

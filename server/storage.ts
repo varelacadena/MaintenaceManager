@@ -11,6 +11,7 @@ import {
   messages,
   uploads,
   taskNotes,
+  taskChecklists,
   properties,
   equipment,
   vehicles,
@@ -43,6 +44,8 @@ import {
   type InsertUpload,
   type TaskNote,
   type InsertTaskNote,
+  type TaskChecklist,
+  type InsertTaskChecklist,
   type Property,
   type InsertProperty,
   type Equipment,
@@ -172,6 +175,13 @@ export interface IStorage {
   getTaskNote(id: string): Promise<TaskNote | undefined>;
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
   deleteTaskNote(id: string): Promise<void>;
+
+  // Task checklist operations
+  getChecklistsByTask(taskId: string): Promise<TaskChecklist[]>;
+  createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist>;
+  updateTaskChecklist(id: string, data: Partial<InsertTaskChecklist>): Promise<TaskChecklist | undefined>;
+  deleteTaskChecklist(id: string): Promise<void>;
+  createTaskChecklists(checklists: InsertTaskChecklist[]): Promise<TaskChecklist[]>;
 
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
@@ -799,6 +809,38 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTaskNote(id: string): Promise<void> {
     await this.db.delete(taskNotes).where(eq(taskNotes.id, id));
+  }
+
+  // Task checklist operations
+  async getChecklistsByTask(taskId: string): Promise<TaskChecklist[]> {
+    return await this.db
+      .select()
+      .from(taskChecklists)
+      .where(eq(taskChecklists.taskId, taskId))
+      .orderBy(taskChecklists.sortOrder);
+  }
+
+  async createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist> {
+    const [result] = await this.db.insert(taskChecklists).values(checklist).returning();
+    return result;
+  }
+
+  async updateTaskChecklist(id: string, data: Partial<InsertTaskChecklist>): Promise<TaskChecklist | undefined> {
+    const [result] = await this.db
+      .update(taskChecklists)
+      .set(data)
+      .where(eq(taskChecklists.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteTaskChecklist(id: string): Promise<void> {
+    await this.db.delete(taskChecklists).where(eq(taskChecklists.id, id));
+  }
+
+  async createTaskChecklists(checklists: InsertTaskChecklist[]): Promise<TaskChecklist[]> {
+    if (checklists.length === 0) return [];
+    return await this.db.insert(taskChecklists).values(checklists).returning();
   }
 
   // Upload operations
