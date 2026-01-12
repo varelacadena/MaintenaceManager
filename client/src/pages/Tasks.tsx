@@ -13,10 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Calendar, User, MapPin } from "lucide-react";
+import { Plus, Calendar, User as UserIcon, MapPin, Repeat } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import type { Task } from "@shared/schema";
+import type { Task, Area, User, Property } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -114,8 +114,9 @@ export default function Tasks() {
     queryKey: ["/api/tasks"],
   });
 
-  const { data: areas } = useQuery({ queryKey: ["/api/areas"] });
-  const { data: users } = useQuery({ queryKey: ["/api/users"] });
+  const { data: areas } = useQuery<Area[]>({ queryKey: ["/api/areas"] });
+  const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
+  const { data: properties } = useQuery<Property[]>({ queryKey: ["/api/properties"] });
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({ 
@@ -184,6 +185,12 @@ export default function Tasks() {
     const user = users?.find((u: any) => u.id === userId);
     if (!user) return "?";
     return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`;
+  };
+
+  const getPropertyName = (propertyId: string | null) => {
+    if (!propertyId) return null;
+    const property = properties?.find((p: any) => p.id === propertyId);
+    return property?.name || null;
   };
 
   const groupedTasks = tasks?.reduce((acc, task) => {
@@ -355,13 +362,19 @@ export default function Tasks() {
                               )}
                               {task.assignedToId && (
                                 <div className="flex items-center gap-1">
-                                  <User className="w-3 h-3 shrink-0" />
+                                  <UserIcon className="w-3 h-3 shrink-0" />
                                   <span className="truncate">{getAssigneeName(task.assignedToId)}</span>
                                 </div>
                               )}
+                              {getPropertyName(task.propertyId) && (
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{getPropertyName(task.propertyId)}</span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{task.taskType}</span>
+                                <Repeat className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{task.taskType.replace('_', ' ')}</span>
                               </div>
                             </div>
                           </CardContent>
