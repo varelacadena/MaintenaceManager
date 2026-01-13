@@ -46,6 +46,7 @@ export async function applyMigrations() {
     { file: "021_create_uploads_table.sql", name: "021_create_uploads_table" },
     { file: "031_fix_checkout_columns.sql", name: "031_fix_checkout_columns" },
     { file: "032_fix_uploads_constraint.sql", name: "032_fix_uploads_constraint" },
+    { file: "033_add_checklist_groups.sql", name: "033_add_checklist_groups" },
   ];
 
   try {

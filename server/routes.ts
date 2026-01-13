@@ -896,7 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const { checklists, ...taskPayload } = req.body;
+      const { checklists, checklistGroups, ...taskPayload } = req.body;
       
       // Validate task data
       const taskData = insertTaskSchema.parse({
@@ -906,19 +906,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimatedCompletionDate: taskPayload.estimatedCompletionDate ? new Date(taskPayload.estimatedCompletionDate) : undefined,
       });
 
-      // Validate checklists if provided
-      const checklistSchema = z.array(z.object({
+      // Schema for grouped checklists (new model)
+      const checklistGroupSchema = z.array(z.object({
+        name: z.string().min(1, "Checklist name is required"),
+        sortOrder: z.number().optional(),
+        items: z.array(z.object({
+          text: z.string().min(1, "Checklist item text is required"),
+          isCompleted: z.boolean().optional().default(false),
+          sortOrder: z.number().optional(),
+        })),
+      })).optional();
+
+      // Legacy flat checklist schema (backward compatibility)
+      const flatChecklistSchema = z.array(z.object({
         text: z.string().min(1, "Checklist item text is required"),
         isCompleted: z.boolean().optional().default(false),
         sortOrder: z.number().optional(),
       })).optional();
       
-      const validatedChecklists = checklistSchema.parse(checklists);
+      const validatedGroups = checklistGroupSchema.parse(checklistGroups);
+      const validatedFlatChecklists = flatChecklistSchema.parse(checklists);
 
       let task;
-      // Use transactional method if checklists are provided
-      if (validatedChecklists && validatedChecklists.length > 0) {
-        const result = await storage.createTaskWithChecklists(taskData, validatedChecklists);
+      
+      // Prioritize grouped checklists over flat checklists
+      if (validatedGroups && validatedGroups.length > 0) {
+        const result = await storage.createTaskWithChecklistGroups(taskData, validatedGroups);
+        task = result.task;
+      } else if (validatedFlatChecklists && validatedFlatChecklists.length > 0) {
+        // Legacy: use flat checklists
+        const result = await storage.createTaskWithChecklists(taskData, validatedFlatChecklists);
         task = result.task;
       } else {
         task = await storage.createTask(taskData);
@@ -1587,6 +1604,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting task checklist:", error);
       res.status(500).json({ message: "Failed to delete task checklist" });
+    }
+  });
+
+  // Checklist group routes (named/grouped checklists)
+  app.get("/api/tasks/:taskId/checklist-groups", isAuthenticated, async (req: any, res) => {
+    try {
+      const groups = await storage.getChecklistGroupsByTask(req.params.taskId);
+      res.json(groups);
+    } catch (error) {
+      console.error("Error fetching checklist groups:", error);
+      res.status(500).json({ message: "Failed to fetch checklist groups" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/checklist-groups", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const groupData = {
+        taskId: req.params.taskId,
+        name: req.body.name,
+        sortOrder: req.body.sortOrder || 0,
+      };
+      const group = await storage.createChecklistGroup(groupData);
+      res.json(group);
+    } catch (error) {
+      console.error("Error creating checklist group:", error);
+      res.status(500).json({ message: "Failed to create checklist group" });
+    }
+  });
+
+  app.patch("/api/checklist-groups/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const group = await storage.updateChecklistGroup(req.params.id, req.body);
+      if (!group) {
+        return res.status(404).json({ message: "Checklist group not found" });
+      }
+      res.json(group);
+    } catch (error) {
+      console.error("Error updating checklist group:", error);
+      res.status(500).json({ message: "Failed to update checklist group" });
+    }
+  });
+
+  app.delete("/api/checklist-groups/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteChecklistGroup(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting checklist group:", error);
+      res.status(500).json({ message: "Failed to delete checklist group" });
+    }
+  });
+
+  // Checklist item routes (items within groups)
+  app.post("/api/checklist-groups/:groupId/items", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const itemData = {
+        groupId: req.params.groupId,
+        text: req.body.text,
+        isCompleted: req.body.isCompleted || false,
+        sortOrder: req.body.sortOrder || 0,
+      };
+      const item = await storage.createChecklistItem(itemData);
+      res.json(item);
+    } catch (error) {
+      console.error("Error creating checklist item:", error);
+      res.status(500).json({ message: "Failed to create checklist item" });
+    }
+  });
+
+  app.patch("/api/checklist-items/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      const item = await storage.updateChecklistItem(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ message: "Checklist item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating checklist item:", error);
+      res.status(500).json({ message: "Failed to update checklist item" });
+    }
+  });
+
+  app.delete("/api/checklist-items/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteChecklistItem(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting checklist item:", error);
+      res.status(500).json({ message: "Failed to delete checklist item" });
     }
   });
 

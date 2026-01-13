@@ -12,6 +12,8 @@ import {
   uploads,
   taskNotes,
   taskChecklists,
+  taskChecklistGroups,
+  taskChecklistItems,
   properties,
   equipment,
   vehicles,
@@ -46,6 +48,10 @@ import {
   type InsertTaskNote,
   type TaskChecklist,
   type InsertTaskChecklist,
+  type TaskChecklistGroup,
+  type InsertTaskChecklistGroup,
+  type TaskChecklistItem,
+  type InsertTaskChecklistItem,
   type Property,
   type InsertProperty,
   type Equipment,
@@ -177,12 +183,25 @@ export interface IStorage {
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
   deleteTaskNote(id: string): Promise<void>;
 
-  // Task checklist operations
+  // Task checklist operations (legacy flat model)
   getChecklistsByTask(taskId: string): Promise<TaskChecklist[]>;
   createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist>;
   updateTaskChecklist(id: string, data: Partial<InsertTaskChecklist>): Promise<TaskChecklist | undefined>;
   deleteTaskChecklist(id: string): Promise<void>;
   createTaskChecklists(checklists: InsertTaskChecklist[]): Promise<TaskChecklist[]>;
+
+  // Task checklist group/item operations (named checklists)
+  getChecklistGroupsByTask(taskId: string): Promise<(TaskChecklistGroup & { items: TaskChecklistItem[] })[]>;
+  createChecklistGroup(group: InsertTaskChecklistGroup): Promise<TaskChecklistGroup>;
+  updateChecklistGroup(id: string, data: Partial<InsertTaskChecklistGroup>): Promise<TaskChecklistGroup | undefined>;
+  deleteChecklistGroup(id: string): Promise<void>;
+  createChecklistItem(item: InsertTaskChecklistItem): Promise<TaskChecklistItem>;
+  updateChecklistItem(id: string, data: Partial<InsertTaskChecklistItem>): Promise<TaskChecklistItem | undefined>;
+  deleteChecklistItem(id: string): Promise<void>;
+  createTaskWithChecklistGroups(
+    taskData: InsertTask,
+    groups: { name: string; sortOrder?: number; items: { text: string; isCompleted?: boolean; sortOrder?: number }[] }[]
+  ): Promise<{ task: Task; groups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] }>;
 
   // Upload operations (can be on requests or tasks)
   createUpload(upload: InsertUpload): Promise<Upload>;
@@ -873,6 +892,105 @@ export class DatabaseStorage implements IStorage {
   async createTaskChecklists(checklists: InsertTaskChecklist[]): Promise<TaskChecklist[]> {
     if (checklists.length === 0) return [];
     return await this.db.insert(taskChecklists).values(checklists).returning();
+  }
+
+  // Task checklist group/item operations (named checklists)
+  async getChecklistGroupsByTask(taskId: string): Promise<(TaskChecklistGroup & { items: TaskChecklistItem[] })[]> {
+    const groups = await this.db
+      .select()
+      .from(taskChecklistGroups)
+      .where(eq(taskChecklistGroups.taskId, taskId))
+      .orderBy(taskChecklistGroups.sortOrder);
+    
+    const result = await Promise.all(
+      groups.map(async (group) => {
+        const items = await this.db
+          .select()
+          .from(taskChecklistItems)
+          .where(eq(taskChecklistItems.groupId, group.id))
+          .orderBy(taskChecklistItems.sortOrder);
+        return { ...group, items };
+      })
+    );
+    
+    return result;
+  }
+
+  async createChecklistGroup(group: InsertTaskChecklistGroup): Promise<TaskChecklistGroup> {
+    const [result] = await this.db.insert(taskChecklistGroups).values(group).returning();
+    return result;
+  }
+
+  async updateChecklistGroup(id: string, data: Partial<InsertTaskChecklistGroup>): Promise<TaskChecklistGroup | undefined> {
+    const [result] = await this.db
+      .update(taskChecklistGroups)
+      .set(data)
+      .where(eq(taskChecklistGroups.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteChecklistGroup(id: string): Promise<void> {
+    await this.db.delete(taskChecklistGroups).where(eq(taskChecklistGroups.id, id));
+  }
+
+  async createChecklistItem(item: InsertTaskChecklistItem): Promise<TaskChecklistItem> {
+    const [result] = await this.db.insert(taskChecklistItems).values(item).returning();
+    return result;
+  }
+
+  async updateChecklistItem(id: string, data: Partial<InsertTaskChecklistItem>): Promise<TaskChecklistItem | undefined> {
+    const [result] = await this.db
+      .update(taskChecklistItems)
+      .set(data)
+      .where(eq(taskChecklistItems.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteChecklistItem(id: string): Promise<void> {
+    await this.db.delete(taskChecklistItems).where(eq(taskChecklistItems.id, id));
+  }
+
+  async createTaskWithChecklistGroups(
+    taskData: InsertTask,
+    groups: { name: string; sortOrder?: number; items: { text: string; isCompleted?: boolean; sortOrder?: number }[] }[]
+  ): Promise<{ task: Task; groups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] }> {
+    return await this.db.transaction(async (tx) => {
+      // Create task first
+      const [task] = await tx.insert(tasks).values(taskData).returning();
+
+      // Create groups and items
+      const createdGroups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] = [];
+      
+      for (let i = 0; i < groups.length; i++) {
+        const groupData = groups[i];
+        const [group] = await tx
+          .insert(taskChecklistGroups)
+          .values({
+            taskId: task.id,
+            name: groupData.name,
+            sortOrder: groupData.sortOrder ?? i,
+          })
+          .returning();
+
+        const createdItems: TaskChecklistItem[] = [];
+        if (groupData.items.length > 0) {
+          const itemsData = groupData.items.map((item, idx) => ({
+            groupId: group.id,
+            text: item.text,
+            isCompleted: item.isCompleted || false,
+            sortOrder: item.sortOrder ?? idx,
+          }));
+          const items = await tx.insert(taskChecklistItems).values(itemsData).returning();
+          createdItems.push(...items);
+        }
+
+        createdGroups.push({ ...group, items: createdItems });
+      }
+
+      return { task, groups: createdGroups };
+    });
   }
 
   // Upload operations

@@ -261,7 +261,7 @@ export const insertTaskNoteSchema = createInsertSchema(taskNotes).omit({ id: tru
 export type InsertTaskNote = z.infer<typeof insertTaskNoteSchema>;
 export type TaskNote = typeof taskNotes.$inferSelect;
 
-// Task checklists (linked to tasks)
+// Task checklists - legacy flat model (kept for backward compatibility)
 export const taskChecklists = pgTable("task_checklists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
@@ -274,6 +274,32 @@ export const taskChecklists = pgTable("task_checklists", {
 export const insertTaskChecklistSchema = createInsertSchema(taskChecklists).omit({ id: true, createdAt: true });
 export type InsertTaskChecklist = z.infer<typeof insertTaskChecklistSchema>;
 export type TaskChecklist = typeof taskChecklists.$inferSelect;
+
+// Named/grouped checklists - two-tier model for classified checklists
+export const taskChecklistGroups = pgTable("task_checklist_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const taskChecklistItems = pgTable("task_checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => taskChecklistGroups.id, { onDelete: "cascade" }),
+  text: varchar("text", { length: 500 }).notNull(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskChecklistGroupSchema = createInsertSchema(taskChecklistGroups).omit({ id: true, createdAt: true });
+export type InsertTaskChecklistGroup = z.infer<typeof insertTaskChecklistGroupSchema>;
+export type TaskChecklistGroup = typeof taskChecklistGroups.$inferSelect;
+
+export const insertTaskChecklistItemSchema = createInsertSchema(taskChecklistItems).omit({ id: true, createdAt: true });
+export type InsertTaskChecklistItem = z.infer<typeof insertTaskChecklistItemSchema>;
+export type TaskChecklistItem = typeof taskChecklistItems.$inferSelect;
 
 // Properties (map-based property system)
 export const propertyTypeEnum = pgEnum("property_type", [
@@ -460,6 +486,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   taskNotes: many(taskNotes),
   uploads: many(uploads),
   checklists: many(taskChecklists),
+  checklistGroups: many(taskChecklistGroups),
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
@@ -537,6 +564,21 @@ export const taskChecklistsRelations = relations(taskChecklists, ({ one }) => ({
   task: one(tasks, {
     fields: [taskChecklists.taskId],
     references: [tasks.id],
+  }),
+}));
+
+export const taskChecklistGroupsRelations = relations(taskChecklistGroups, ({ one, many }) => ({
+  task: one(tasks, {
+    fields: [taskChecklistGroups.taskId],
+    references: [tasks.id],
+  }),
+  items: many(taskChecklistItems),
+}));
+
+export const taskChecklistItemsRelations = relations(taskChecklistItems, ({ one }) => ({
+  group: one(taskChecklistGroups, {
+    fields: [taskChecklistItems.groupId],
+    references: [taskChecklistGroups.id],
   }),
 }));
 
