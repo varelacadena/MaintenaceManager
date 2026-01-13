@@ -88,7 +88,40 @@ export default function NewTask() {
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
-  
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const requestId = searchParams.get('requestId');
+
+  const { data: request } = useQuery<ServiceRequest>({
+    queryKey: ["/api/service-requests", requestId],
+    enabled: !!requestId,
+  });
+
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    enabled: user?.role === "admin" || user?.role === "maintenance",
+  });
+
+  // Filter to only show maintenance and admin users (backend already filters for maintenance users)
+  const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
+
+  const { data: vendors = [] } = useQuery<Vendor[]>({
+    queryKey: ["/api/vendors"],
+  });
+
+  const { data: equipment = [] } = useQuery<Equipment[]>({
+    queryKey: ["/api/equipment", selectedPropertyId],
+    enabled: !!selectedPropertyId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/equipment?propertyId=${selectedPropertyId}`);
+      return response.json();
+    },
+  });
+
   // Grouped checklists state
   type ChecklistGroup = {
     name: string;
