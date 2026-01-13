@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface FacilityData {
   propertyId: string;
@@ -73,7 +74,7 @@ export default function FacilityInsights() {
       road: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
     };
     return (
-      <Badge variant="secondary" className={colors[type] || ""}>
+      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${colors[type] || ""}`}>
         {type.charAt(0).toUpperCase() + type.slice(1)}
       </Badge>
     );
@@ -81,11 +82,11 @@ export default function FacilityInsights() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Campus Facilities Insights</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Campus Facilities</h1>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -93,22 +94,22 @@ export default function FacilityInsights() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link href="/analytics">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Campus Facilities Insights</h1>
-            <p className="text-muted-foreground">Property and building maintenance analytics</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Campus Facilities</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Property and building analytics</p>
           </div>
         </div>
         <Link href="/properties">
-          <Button variant="outline">
-            <MapPin className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             View Map
           </Button>
         </Link>
@@ -121,32 +122,32 @@ export default function FacilityInsights() {
         exportOptions={["csv"]}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         <KpiCard
-          title="Total Facilities"
+          title="Facilities"
           value={totalFacilities}
           icon={Building2}
         />
         <KpiCard
-          title="Total Work Orders"
+          title="Work Orders"
           value={totalWorkOrders}
           icon={CheckCircle2}
         />
         <KpiCard
-          title="Facilities with Open WO"
+          title="Open WO"
           value={facilitiesWithOpenWO}
           icon={AlertTriangle}
           variant={facilitiesWithOpenWO > 0 ? "warning" : "default"}
         />
         <KpiCard
-          title="High Emergency Facilities"
+          title="High Emergency"
           value={highEmergencyFacilities}
-          subtitle="3+ emergency WOs"
+          subtitle="3+ emergency"
           icon={AlertTriangle}
           variant={highEmergencyFacilities > 0 ? "danger" : "default"}
         />
         <KpiCard
-          title="Total Maintenance Cost"
+          title="Total Cost"
           value={`$${totalMaintenanceCost.toLocaleString()}`}
           icon={DollarSign}
         />
@@ -158,71 +159,72 @@ export default function FacilityInsights() {
       />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Facility Details</CardTitle>
+        <CardHeader className="p-3 sm:p-4 pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Facility Details</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Facility</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Total WOs</TableHead>
-                <TableHead className="text-right">Completed</TableHead>
-                <TableHead className="text-right">Open</TableHead>
-                <TableHead className="text-right">Emergency</TableHead>
-                <TableHead className="text-right">Preventive</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="w-32">Completion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map(facility => {
-                const completionRate = facility.totalWorkOrders > 0 
-                  ? Math.round((facility.completedWorkOrders / facility.totalWorkOrders) * 100) 
-                  : 100;
-                return (
-                  <TableRow key={facility.propertyId}>
-                    <TableCell>
-                      <Link href={`/properties/${facility.propertyId}`}>
-                        <span className="text-primary hover:underline cursor-pointer font-medium">
-                          {facility.propertyName}
-                        </span>
-                      </Link>
-                    </TableCell>
-                    <TableCell>{getTypeBadge(facility.propertyType)}</TableCell>
-                    <TableCell className="text-right">{facility.totalWorkOrders}</TableCell>
-                    <TableCell className="text-right">{facility.completedWorkOrders}</TableCell>
-                    <TableCell className="text-right">
-                      {facility.openWorkOrders > 0 ? (
-                        <span className="text-orange-600 font-medium">{facility.openWorkOrders}</span>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {facility.emergencyWorkOrders >= 3 ? (
-                        <span className="text-red-600 font-medium flex items-center justify-end gap-1">
-                          <AlertTriangle className="w-3 h-3" />
-                          {facility.emergencyWorkOrders}
-                        </span>
-                      ) : (
-                        facility.emergencyWorkOrders
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">{facility.preventiveWorkOrders}</TableCell>
-                    <TableCell className="text-right">${facility.totalMaintenanceCost.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={completionRate} className="h-2 flex-1" />
-                        <span className="text-xs text-muted-foreground w-8">{completionRate}%</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        <CardContent className="p-3 sm:p-4 pt-0">
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Facility</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Type</TableHead>
+                  <TableHead className="text-xs text-right">Total</TableHead>
+                  <TableHead className="text-xs text-right hidden sm:table-cell">Done</TableHead>
+                  <TableHead className="text-xs text-right">Open</TableHead>
+                  <TableHead className="text-xs text-right hidden md:table-cell">Emerg.</TableHead>
+                  <TableHead className="text-xs text-right hidden md:table-cell">Cost</TableHead>
+                  <TableHead className="text-xs w-20 sm:w-28">Rate</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map(facility => {
+                  const completionRate = facility.totalWorkOrders > 0 
+                    ? Math.round((facility.completedWorkOrders / facility.totalWorkOrders) * 100) 
+                    : 100;
+                  return (
+                    <TableRow key={facility.propertyId}>
+                      <TableCell className="py-2">
+                        <Link href={`/properties/${facility.propertyId}`}>
+                          <span className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium line-clamp-1">
+                            {facility.propertyName}
+                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="py-2 hidden sm:table-cell">{getTypeBadge(facility.propertyType)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2">{facility.totalWorkOrders}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">{facility.completedWorkOrders}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2">
+                        {facility.openWorkOrders > 0 ? (
+                          <span className="text-orange-600 font-medium">{facility.openWorkOrders}</span>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2 hidden md:table-cell">
+                        {facility.emergencyWorkOrders >= 3 ? (
+                          <span className="text-red-600 font-medium flex items-center justify-end gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {facility.emergencyWorkOrders}
+                          </span>
+                        ) : (
+                          facility.emergencyWorkOrders
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2 hidden md:table-cell">${facility.totalMaintenanceCost.toLocaleString()}</TableCell>
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-1">
+                          <Progress value={completionRate} className="h-1.5 sm:h-2 flex-1" />
+                          <span className="text-[10px] sm:text-xs text-muted-foreground w-7">{completionRate}%</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

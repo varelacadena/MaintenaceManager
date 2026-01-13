@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface WorkOrderOverview {
   totalWorkOrders: number;
@@ -68,11 +69,11 @@ export default function MaintenanceOverview() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Maintenance Overview</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Maintenance Overview</h1>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -80,20 +81,28 @@ export default function MaintenanceOverview() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-3">
         <div>
-          <h1 className="text-2xl font-bold">Maintenance Overview</h1>
-          <p className="text-muted-foreground">Work order analytics and insights</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Maintenance Overview</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Work order analytics and insights</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/analytics/technicians">
-            <Badge variant="outline" className="cursor-pointer hover-elevate">Technician Performance</Badge>
-          </Link>
-          <Link href="/analytics/assets">
-            <Badge variant="outline" className="cursor-pointer hover-elevate">Asset Health</Badge>
-          </Link>
-        </div>
+        <ScrollArea className="w-full">
+          <div className="flex gap-2 pb-2">
+            <Link href="/analytics/technicians">
+              <Badge variant="outline" className="cursor-pointer hover-elevate whitespace-nowrap text-xs">Technicians</Badge>
+            </Link>
+            <Link href="/analytics/assets">
+              <Badge variant="outline" className="cursor-pointer hover-elevate whitespace-nowrap text-xs">Assets</Badge>
+            </Link>
+            <Link href="/analytics/facilities">
+              <Badge variant="outline" className="cursor-pointer hover-elevate whitespace-nowrap text-xs">Facilities</Badge>
+            </Link>
+            <Link href="/analytics/alerts">
+              <Badge variant="outline" className="cursor-pointer hover-elevate whitespace-nowrap text-xs">Alerts</Badge>
+            </Link>
+          </div>
+        </ScrollArea>
       </div>
 
       <AnalyticsFilters
@@ -106,7 +115,7 @@ export default function MaintenanceOverview() {
         exportOptions={["csv"]}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
           title="Total Work Orders"
           value={data?.totalWorkOrders || 0}
@@ -115,7 +124,7 @@ export default function MaintenanceOverview() {
         <KpiCard
           title="Completed"
           value={data?.completedWorkOrders || 0}
-          subtitle={`${data?.completionRate || 0}% completion rate`}
+          subtitle={`${data?.completionRate || 0}% rate`}
           icon={CheckCircle2}
           variant="success"
         />
@@ -132,7 +141,7 @@ export default function MaintenanceOverview() {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
           title="Not Started"
           value={data?.notStartedWorkOrders || 0}
@@ -145,27 +154,27 @@ export default function MaintenanceOverview() {
           variant={data?.onHoldWorkOrders && data.onHoldWorkOrders > 0 ? "warning" : "default"}
         />
         <KpiCard
-          title="Avg Resolution Time"
+          title="Avg Resolution"
           value={`${data?.avgResolutionTimeHours || 0}h`}
-          subtitle="Average time to complete"
+          subtitle="Time to complete"
           icon={TrendingUp}
         />
         <KpiCard
-          title="Avg Response Time"
+          title="Avg Response"
           value={`${data?.avgResponseTimeHours || 0}h`}
-          subtitle="Average time to start"
+          subtitle="Time to start"
           icon={Clock}
         />
       </div>
 
-      <Tabs defaultValue="charts" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="charts" data-testid="tab-charts">Charts</TabsTrigger>
-          <TabsTrigger value="breakdown" data-testid="tab-breakdown">Breakdown</TabsTrigger>
+      <Tabs defaultValue="charts" className="space-y-3 sm:space-y-4">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="charts" data-testid="tab-charts" className="flex-1 sm:flex-none text-xs sm:text-sm">Charts</TabsTrigger>
+          <TabsTrigger value="breakdown" data-testid="tab-breakdown" className="flex-1 sm:flex-none text-xs sm:text-sm">Breakdown</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="charts" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TabsContent value="charts" className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <StatusPieChart data={data?.byStatus || []} />
             <UrgencyBarChart data={data?.byUrgency || []} />
           </div>
@@ -175,59 +184,63 @@ export default function MaintenanceOverview() {
           <PropertyBarChart data={data?.byProperty || []} title="Work Orders by Building" />
         </TabsContent>
 
-        <TabsContent value="breakdown" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TabsContent value="breakdown" className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">By Property/Building</CardTitle>
+              <CardHeader className="p-3 sm:p-4 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">By Property/Building</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Property</TableHead>
-                      <TableHead className="text-right">Work Orders</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data?.byProperty.slice(0, 10).map(item => (
-                      <TableRow key={item.propertyId}>
-                        <TableCell>
-                          <Link href={`/properties/${item.propertyId}`}>
-                            <span className="text-primary hover:underline cursor-pointer">
-                              {item.propertyName}
-                            </span>
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-right">{item.count}</TableCell>
+              <CardContent className="p-3 sm:p-4 pt-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Property</TableHead>
+                        <TableHead className="text-xs text-right">Count</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {data?.byProperty.slice(0, 8).map(item => (
+                        <TableRow key={item.propertyId}>
+                          <TableCell className="text-xs sm:text-sm py-2">
+                            <Link href={`/properties/${item.propertyId}`}>
+                              <span className="text-primary hover:underline cursor-pointer line-clamp-1">
+                                {item.propertyName}
+                              </span>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm text-right py-2">{item.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">By Department/Area</CardTitle>
+              <CardHeader className="p-3 sm:p-4 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">By Department/Area</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Department</TableHead>
-                      <TableHead className="text-right">Work Orders</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data?.byArea.slice(0, 10).map(item => (
-                      <TableRow key={item.areaId}>
-                        <TableCell>{item.areaName}</TableCell>
-                        <TableCell className="text-right">{item.count}</TableCell>
+              <CardContent className="p-3 sm:p-4 pt-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Department</TableHead>
+                        <TableHead className="text-xs text-right">Count</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {data?.byArea.slice(0, 8).map(item => (
+                        <TableRow key={item.areaId}>
+                          <TableCell className="text-xs sm:text-sm py-2 line-clamp-1">{item.areaName}</TableCell>
+                          <TableCell className="text-xs sm:text-sm text-right py-2">{item.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </div>

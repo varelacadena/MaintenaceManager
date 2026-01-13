@@ -37,19 +37,19 @@ export default function KpiCard({
 
   return (
     <Card className={variantStyles[variant]} data-testid={`kpi-${title.toLowerCase().replace(/\s+/g, '-')}`}>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+        <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
           {title}
         </CardTitle>
-        {Icon && <Icon className={`w-4 h-4 ${iconStyles[variant]}`} />}
+        {Icon && <Icon className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 ${iconStyles[variant]}`} />}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="p-3 sm:p-4 pt-0">
+        <div className="text-xl sm:text-2xl font-bold">{value}</div>
         {subtitle && (
-          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">{subtitle}</p>
         )}
         {trend && (
-          <p className={`text-xs mt-1 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
+          <p className={`text-[10px] sm:text-xs mt-0.5 sm:mt-1 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
             {trend.isPositive ? "+" : ""}{trend.value}% from last period
           </p>
         )}

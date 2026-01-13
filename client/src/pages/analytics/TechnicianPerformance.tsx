@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface TechnicianData {
   technicianId: string;
@@ -64,11 +65,11 @@ export default function TechnicianPerformance() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Technician Performance</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Technician Performance</h1>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -76,18 +77,16 @@ export default function TechnicianPerformance() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/analytics">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Technician Performance</h1>
-            <p className="text-muted-foreground">Individual and team performance metrics</p>
-          </div>
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <Link href="/analytics">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold">Technician Performance</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Individual and team performance metrics</p>
         </div>
       </div>
 
@@ -98,25 +97,25 @@ export default function TechnicianPerformance() {
         exportOptions={["csv"]}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
-          title="Total Technicians"
+          title="Technicians"
           value={data.length}
           icon={Users}
         />
         <KpiCard
-          title="Tasks Completed"
+          title="Tasks Done"
           value={totalTasksCompleted}
           icon={CheckCircle2}
           variant="success"
         />
         <KpiCard
-          title="Total Hours Logged"
+          title="Hours Logged"
           value={`${totalHoursLogged}h`}
           icon={Clock}
         />
         <KpiCard
-          title="Avg Completion Rate"
+          title="Avg Rate"
           value={`${avgCompletionRate}%`}
           icon={TrendingUp}
           variant={avgCompletionRate >= 80 ? "success" : avgCompletionRate >= 50 ? "warning" : "danger"}
@@ -125,14 +124,14 @@ export default function TechnicianPerformance() {
 
       {topPerformer && (
         <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <Award className="w-10 h-10 text-yellow-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Top Performer</p>
-                <p className="text-xl font-bold">{topPerformer.technicianName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {topPerformer.tasksCompleted} tasks completed | {topPerformer.totalHoursLogged}h logged | {topPerformer.completionRate}% completion rate
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Top Performer</p>
+                <p className="text-base sm:text-xl font-bold truncate">{topPerformer.technicianName}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {topPerformer.tasksCompleted} tasks | {topPerformer.totalHoursLogged}h | {topPerformer.completionRate}%
                 </p>
               </div>
             </div>
@@ -143,49 +142,52 @@ export default function TechnicianPerformance() {
       <TechnicianPerformanceChart data={data} />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Technician Leaderboard</CardTitle>
+        <CardHeader className="p-3 sm:p-4 pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Technician Leaderboard</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Technician</TableHead>
-                <TableHead className="text-right">Completed</TableHead>
-                <TableHead className="text-right">Assigned</TableHead>
-                <TableHead className="text-right">Hours</TableHead>
-                <TableHead className="text-right">Avg Time</TableHead>
-                <TableHead className="w-40">Completion Rate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((tech, index) => (
-                <TableRow key={tech.technicianId}>
-                  <TableCell>
-                    {index < 3 ? (
-                      <Badge variant={index === 0 ? "default" : "secondary"}>
-                        {index + 1}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">{index + 1}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">{tech.technicianName}</TableCell>
-                  <TableCell className="text-right">{tech.tasksCompleted}</TableCell>
-                  <TableCell className="text-right">{tech.tasksAssigned}</TableCell>
-                  <TableCell className="text-right">{tech.totalHoursLogged}h</TableCell>
-                  <TableCell className="text-right">{tech.avgCompletionTimeHours}h</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Progress value={tech.completionRate} className="h-2 flex-1" />
-                      <span className="text-sm text-muted-foreground w-10">{tech.completionRate}%</span>
-                    </div>
-                  </TableCell>
+        <CardContent className="p-3 sm:p-4 pt-0">
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs w-8">#</TableHead>
+                  <TableHead className="text-xs">Technician</TableHead>
+                  <TableHead className="text-xs text-right">Done</TableHead>
+                  <TableHead className="text-xs text-right hidden sm:table-cell">Assigned</TableHead>
+                  <TableHead className="text-xs text-right">Hours</TableHead>
+                  <TableHead className="text-xs text-right hidden sm:table-cell">Avg</TableHead>
+                  <TableHead className="text-xs w-24 sm:w-32">Rate</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((tech, index) => (
+                  <TableRow key={tech.technicianId}>
+                    <TableCell className="text-xs py-2">
+                      {index < 3 ? (
+                        <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs px-1.5 py-0.5">
+                          {index + 1}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{index + 1}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm font-medium py-2 max-w-[100px] sm:max-w-none truncate">{tech.technicianName}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-right py-2">{tech.tasksCompleted}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">{tech.tasksAssigned}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-right py-2">{tech.totalHoursLogged}h</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">{tech.avgCompletionTimeHours}h</TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex items-center gap-1">
+                        <Progress value={tech.completionRate} className="h-1.5 sm:h-2 flex-1" />
+                        <span className="text-xs text-muted-foreground w-8">{tech.completionRate}%</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

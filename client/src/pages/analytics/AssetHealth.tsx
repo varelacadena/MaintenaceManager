@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface AssetData {
   equipmentId: string;
@@ -64,13 +65,13 @@ export default function AssetHealth() {
   ).length;
 
   const getConditionBadge = (condition: string | null) => {
-    if (!condition) return <Badge variant="secondary">Unknown</Badge>;
+    if (!condition) return <Badge variant="secondary" className="text-[10px] sm:text-xs">Unknown</Badge>;
     const lower = condition.toLowerCase();
-    if (lower === "good") return <Badge variant="default" className="bg-green-600">Good</Badge>;
-    if (lower === "fair") return <Badge variant="default" className="bg-yellow-600">Fair</Badge>;
-    if (lower === "poor") return <Badge variant="default" className="bg-red-600">Poor</Badge>;
-    if (lower === "needs replacement") return <Badge variant="destructive">Needs Replacement</Badge>;
-    return <Badge variant="secondary">{condition}</Badge>;
+    if (lower === "good") return <Badge variant="default" className="bg-green-600 text-[10px] sm:text-xs">Good</Badge>;
+    if (lower === "fair") return <Badge variant="default" className="bg-yellow-600 text-[10px] sm:text-xs">Fair</Badge>;
+    if (lower === "poor") return <Badge variant="default" className="bg-red-600 text-[10px] sm:text-xs">Poor</Badge>;
+    if (lower === "needs replacement") return <Badge variant="destructive" className="text-[10px] sm:text-xs">Replace</Badge>;
+    return <Badge variant="secondary" className="text-[10px] sm:text-xs">{condition}</Badge>;
   };
 
   const getCategoryBadge = (category: string) => {
@@ -83,7 +84,7 @@ export default function AssetHealth() {
       landscaping: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     };
     return (
-      <Badge variant="secondary" className={colors[category] || ""}>
+      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${colors[category] || ""}`}>
         {category.charAt(0).toUpperCase() + category.slice(1)}
       </Badge>
     );
@@ -91,11 +92,11 @@ export default function AssetHealth() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Asset Health</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Asset Health</h1>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -103,18 +104,16 @@ export default function AssetHealth() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/analytics">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Asset Health</h1>
-            <p className="text-muted-foreground">Equipment maintenance and reliability metrics</p>
-          </div>
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <Link href="/analytics">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold">Asset Health</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Equipment maintenance and reliability</p>
         </div>
       </div>
 
@@ -125,19 +124,19 @@ export default function AssetHealth() {
         exportOptions={["csv"]}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         <KpiCard
           title="Total Assets"
           value={totalAssets}
           icon={Settings}
         />
         <KpiCard
-          title="Assets with Work Orders"
+          title="With Issues"
           value={assetsWithIssues}
           icon={Wrench}
         />
         <KpiCard
-          title="High Failure Rate"
+          title="High Failure"
           value={highFailureAssets}
           subtitle="5+ work orders"
           icon={AlertTriangle}
@@ -150,99 +149,105 @@ export default function AssetHealth() {
           variant={poorConditionAssets > 0 ? "warning" : "default"}
         />
         <KpiCard
-          title="Total Maintenance Cost"
+          title="Total Cost"
           value={`$${totalMaintenanceCost.toLocaleString()}`}
           icon={DollarSign}
         />
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Asset Inventory</CardTitle>
+        <CardHeader className="p-3 sm:p-4 pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Asset Inventory</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Equipment</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Condition</TableHead>
-                <TableHead className="text-right">Work Orders</TableHead>
-                <TableHead className="text-right">Maintenance Cost</TableHead>
-                <TableHead>Last Maintenance</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.slice(0, 20).map(asset => (
-                <TableRow key={asset.equipmentId}>
-                  <TableCell>
-                    <Link href={`/equipment/${asset.equipmentId}/work-history`}>
-                      <span className="text-primary hover:underline cursor-pointer font-medium">
-                        {asset.equipmentName}
-                      </span>
-                    </Link>
-                    {asset.failureFrequency >= 5 && (
-                      <AlertTriangle className="w-4 h-4 text-red-500 inline ml-2" />
-                    )}
-                  </TableCell>
-                  <TableCell>{asset.propertyName}</TableCell>
-                  <TableCell>{getCategoryBadge(asset.category)}</TableCell>
-                  <TableCell>{getConditionBadge(asset.condition)}</TableCell>
-                  <TableCell className="text-right">{asset.workOrderCount}</TableCell>
-                  <TableCell className="text-right">${asset.totalMaintenanceCost.toLocaleString()}</TableCell>
-                  <TableCell>
-                    {asset.lastMaintenanceDate ? (
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(asset.lastMaintenanceDate).toLocaleDateString()}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Never</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {highFailureAssets > 0 && (
-        <Card className="border-red-200 dark:border-red-800">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              High Failure Assets (Consider Replacement)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CardContent className="p-3 sm:p-4 pt-0">
+          <ScrollArea className="w-full">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Equipment</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead className="text-right">Work Orders</TableHead>
-                  <TableHead className="text-right">Total Cost</TableHead>
-                  <TableHead>Recommendation</TableHead>
+                  <TableHead className="text-xs">Equipment</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Property</TableHead>
+                  <TableHead className="text-xs hidden md:table-cell">Category</TableHead>
+                  <TableHead className="text-xs">Condition</TableHead>
+                  <TableHead className="text-xs text-right">WOs</TableHead>
+                  <TableHead className="text-xs text-right hidden sm:table-cell">Cost</TableHead>
+                  <TableHead className="text-xs hidden md:table-cell">Last Maint.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.filter(a => a.failureFrequency >= 5).map(asset => (
+                {data.slice(0, 15).map(asset => (
                   <TableRow key={asset.equipmentId}>
-                    <TableCell className="font-medium">{asset.equipmentName}</TableCell>
-                    <TableCell>{asset.propertyName}</TableCell>
-                    <TableCell className="text-right">{asset.workOrderCount}</TableCell>
-                    <TableCell className="text-right">${asset.totalMaintenanceCost.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant="destructive">
-                        {asset.workOrderCount >= 10 ? "Replace Immediately" : "Evaluate for Replacement"}
-                      </Badge>
+                    <TableCell className="py-2">
+                      <Link href={`/equipment/${asset.equipmentId}/work-history`}>
+                        <span className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium line-clamp-1">
+                          {asset.equipmentName}
+                        </span>
+                      </Link>
+                      {asset.failureFrequency >= 5 && (
+                        <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell max-w-[100px] truncate">{asset.propertyName}</TableCell>
+                    <TableCell className="py-2 hidden md:table-cell">{getCategoryBadge(asset.category)}</TableCell>
+                    <TableCell className="py-2">{getConditionBadge(asset.condition)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-right py-2">{asset.workOrderCount}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">${asset.totalMaintenanceCost.toLocaleString()}</TableCell>
+                    <TableCell className="py-2 hidden md:table-cell">
+                      {asset.lastMaintenanceDate ? (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(asset.lastMaintenanceDate).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Never</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {highFailureAssets > 0 && (
+        <Card className="border-red-200 dark:border-red-800">
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
+              High Failure Assets
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <ScrollArea className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Equipment</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Property</TableHead>
+                    <TableHead className="text-xs text-right">WOs</TableHead>
+                    <TableHead className="text-xs text-right hidden sm:table-cell">Cost</TableHead>
+                    <TableHead className="text-xs">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.filter(a => a.failureFrequency >= 5).map(asset => (
+                    <TableRow key={asset.equipmentId}>
+                      <TableCell className="text-xs sm:text-sm font-medium py-2 max-w-[120px] truncate">{asset.equipmentName}</TableCell>
+                      <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell max-w-[100px] truncate">{asset.propertyName}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2">{asset.workOrderCount}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">${asset.totalMaintenanceCost.toLocaleString()}</TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                          {asset.workOrderCount >= 10 ? "Replace" : "Evaluate"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </CardContent>
         </Card>
       )}
