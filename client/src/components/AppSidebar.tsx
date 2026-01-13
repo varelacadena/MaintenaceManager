@@ -26,6 +26,7 @@ import {
   Package,
   Map,
   Car,
+  BarChart3,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -43,6 +44,7 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
     { title: "Vehicle Reservations", url: "/vehicle-reservations", icon: Calendar },
     { title: "Properties", url: "/properties", icon: Map },
@@ -58,6 +60,7 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "My Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
     { title: "Vehicle Reservations", url: "/vehicle-reservations", icon: Calendar },
     { title: "Properties", url: "/properties", icon: Map },

@@ -2763,6 +2763,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics Routes
+  const { analyticsService } = await import("./analyticsService");
+
+  app.get("/api/analytics/work-orders", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+        areaId: req.query.areaId as string | undefined,
+        technicianId: req.query.technicianId as string | undefined,
+        status: req.query.status as string | undefined,
+        urgency: req.query.urgency as string | undefined,
+      };
+      const data = await analyticsService.getWorkOrderOverview(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching work order analytics:", error);
+      res.status(500).json({ message: "Failed to fetch work order analytics" });
+    }
+  });
+
+  app.get("/api/analytics/technicians", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+        areaId: req.query.areaId as string | undefined,
+      };
+      const data = await analyticsService.getTechnicianPerformance(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching technician analytics:", error);
+      res.status(500).json({ message: "Failed to fetch technician analytics" });
+    }
+  });
+
+  app.get("/api/analytics/assets", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+        equipmentId: req.query.equipmentId as string | undefined,
+      };
+      const data = await analyticsService.getAssetHealth(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching asset analytics:", error);
+      res.status(500).json({ message: "Failed to fetch asset analytics" });
+    }
+  });
+
+  app.get("/api/analytics/facilities", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+      };
+      const data = await analyticsService.getFacilityInsights(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching facility analytics:", error);
+      res.status(500).json({ message: "Failed to fetch facility analytics" });
+    }
+  });
+
+  app.get("/api/analytics/alerts", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+      };
+      const data = await analyticsService.getAlerts(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  app.get("/api/analytics/trends", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+      };
+      const data = await analyticsService.getWorkOrderTrends(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching trends:", error);
+      res.status(500).json({ message: "Failed to fetch trends" });
+    }
+  });
+
+  app.get("/api/analytics/export", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const dataType = req.query.type as string;
+      if (!dataType) {
+        return res.status(400).json({ message: "Data type is required" });
+      }
+
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+        areaId: req.query.areaId as string | undefined,
+        technicianId: req.query.technicianId as string | undefined,
+      };
+
+      const csv = await analyticsService.exportData(dataType, filters);
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="${dataType}-report.csv"`);
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
