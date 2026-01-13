@@ -40,6 +40,7 @@ const formSchema = insertTaskSchema.extend({
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
   propertyId: z.string().min(1, "Please select a property"),
   equipmentId: z.string().min(1, "Please select equipment"),
+  taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
   contactName: z.string().optional(),
@@ -55,7 +56,7 @@ export default function EditTask() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
-  const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
+  const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
@@ -388,6 +389,7 @@ export default function EditTask() {
                         <SelectItem value="one_time">One Time</SelectItem>
                         <SelectItem value="recurring">Recurring</SelectItem>
                         <SelectItem value="reminder">Reminder</SelectItem>
+                        <SelectItem value="project">Project</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>

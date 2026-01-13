@@ -57,7 +57,7 @@ const formSchema = insertTaskSchema.extend({
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
   propertyId: z.string().min(1, "Please select a property"),
   equipmentId: z.string().min(1, "Please select equipment"),
-  taskType: z.enum(["one_time", "recurring", "reminder"]),
+  taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
   contactName: z.string().optional(),
@@ -83,41 +83,7 @@ export default function NewTask() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
-
-  const searchParams = new URLSearchParams(window.location.search);
-  const requestId = searchParams.get('requestId');
-
-  const { data: request } = useQuery<ServiceRequest>({
-    queryKey: ["/api/service-requests", requestId],
-    enabled: !!requestId,
-  });
-
-  const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ["/api/properties"],
-  });
-
-  const { data: users = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-    enabled: user?.role === "admin" || user?.role === "maintenance",
-  });
-
-  // Filter to only show maintenance and admin users (backend already filters for maintenance users)
-  const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
-
-  const { data: vendors = [] } = useQuery<Vendor[]>({
-    queryKey: ["/api/vendors"],
-  });
-
-  const { data: equipment = [] } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment", selectedPropertyId],
-    enabled: !!selectedPropertyId,
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/equipment?propertyId=${selectedPropertyId}`);
-      return response.json();
-    },
-  });
-
-  const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder">("one_time");
+  const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
@@ -542,6 +508,7 @@ export default function NewTask() {
                         <SelectItem value="one_time">One Time</SelectItem>
                         <SelectItem value="recurring">Recurring</SelectItem>
                         <SelectItem value="reminder">Reminder</SelectItem>
+                        <SelectItem value="project">Project</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
