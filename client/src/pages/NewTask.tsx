@@ -435,7 +435,7 @@ export default function NewTask() {
                             onClick={() => {
                               setEditingChecklistIndex(groupIndex);
                               setDialogChecklistName(group.name);
-                              setDialogChecklistItems([...group.items]);
+                              setDialogChecklistItems(group.items.map(item => ({ ...item })));
                               setNewDialogChecklistItem("");
                               setIsChecklistDialogOpen(true);
                             }}
@@ -464,9 +464,18 @@ export default function NewTask() {
                               <Checkbox
                                 checked={item.isCompleted}
                                 onCheckedChange={(checked) => {
-                                  const updated = [...checklistGroups];
-                                  updated[groupIndex].items[itemIndex].isCompleted = checked === true;
-                                  setChecklistGroups(updated);
+                                  setChecklistGroups(prev => prev.map((g, gIdx) =>
+                                    gIdx === groupIndex
+                                      ? {
+                                          ...g,
+                                          items: g.items.map((it, iIdx) =>
+                                            iIdx === itemIndex
+                                              ? { ...it, isCompleted: checked === true }
+                                              : it
+                                          )
+                                        }
+                                      : g
+                                  ));
                                 }}
                                 className="h-3 w-3"
                                 data-testid={`checkbox-checklist-${groupIndex}-item-${itemIndex}`}
@@ -1261,9 +1270,11 @@ export default function NewTask() {
                       <Checkbox
                         checked={item.isCompleted}
                         onCheckedChange={(checked) => {
-                          const updated = [...dialogChecklistItems];
-                          updated[index].isCompleted = checked === true;
-                          setDialogChecklistItems(updated);
+                          setDialogChecklistItems(prev =>
+                            prev.map((it, i) =>
+                              i === index ? { ...it, isCompleted: checked === true } : it
+                            )
+                          );
                         }}
                         data-testid={`checkbox-dialog-item-${index}`}
                       />
