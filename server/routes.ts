@@ -14,6 +14,7 @@ import {
   insertMessageSchema,
   insertUploadSchema,
   insertTaskNoteSchema,
+  insertTaskChecklistSchema,
   insertAreaSchema,
   insertSubdivisionSchema,
   insertVendorSchema,
@@ -27,6 +28,7 @@ import {
   insertVehicleMaintenanceScheduleSchema,
   insertVehicleMaintenanceLogSchema,
 } from "@shared/schema";
+import { z } from "zod";
 
 // Helper function to get authenticated user
 async function getAuthUser(req: any) {
@@ -894,13 +896,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
+      const { checklists, ...taskPayload } = req.body;
+      
+      // Validate task data
       const taskData = insertTaskSchema.parse({
-        ...req.body,
+        ...taskPayload,
         createdById: userId,
-        initialDate: req.body.initialDate ? new Date(req.body.initialDate) : new Date(),
-        estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : undefined,
+        initialDate: taskPayload.initialDate ? new Date(taskPayload.initialDate) : new Date(),
+        estimatedCompletionDate: taskPayload.estimatedCompletionDate ? new Date(taskPayload.estimatedCompletionDate) : undefined,
       });
-      const task = await storage.createTask(taskData);
+
+      // Validate checklists if provided
+      const checklistSchema = z.array(z.object({
+        text: z.string().min(1, "Checklist item text is required"),
+        isCompleted: z.boolean().optional().default(false),
+        sortOrder: z.number().optional(),
+      })).optional();
+      
+      const validatedChecklists = checklistSchema.parse(checklists);
+
+      let task;
+      // Use transactional method if checklists are provided
+      if (validatedChecklists && validatedChecklists.length > 0) {
+        const result = await storage.createTaskWithChecklists(taskData, validatedChecklists);
+        task = result.task;
+      } else {
+        task = await storage.createTask(taskData);
+      }
 
       // If request was linked, update its status to converted_to_task
       if (task.requestId) {
@@ -914,6 +936,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
       res.status(500).json({ message: "Failed to create task" });
     }
   });

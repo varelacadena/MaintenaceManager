@@ -37,7 +37,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, X, ListChecks } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -121,6 +122,8 @@ export default function NewTask() {
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<{ text: string; isCompleted: boolean }[]>([]);
+  const [newChecklistItem, setNewChecklistItem] = useState("");
 
   const equipmentForm = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentFormSchema),
@@ -275,6 +278,8 @@ export default function NewTask() {
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
+        // Include checklists in the task creation payload for atomic creation
+        checklists: checklistItems.length > 0 ? checklistItems : undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
@@ -378,6 +383,82 @@ export default function NewTask() {
                 </FormItem>
               )}
             />
+
+            {/* Task Checklist Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Task Checklist</span>
+                <span className="text-xs text-muted-foreground">(Optional)</span>
+              </div>
+              
+              {checklistItems.length > 0 && (
+                <div className="space-y-2 border rounded-md p-3">
+                  {checklistItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 group">
+                      <Checkbox
+                        checked={item.isCompleted}
+                        onCheckedChange={(checked) => {
+                          const updated = [...checklistItems];
+                          updated[index].isCompleted = checked === true;
+                          setChecklistItems(updated);
+                        }}
+                        data-testid={`checkbox-checklist-item-${index}`}
+                      />
+                      <span className={cn(
+                        "flex-1 text-sm",
+                        item.isCompleted && "line-through text-muted-foreground"
+                      )}>
+                        {item.text}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          setChecklistItems(checklistItems.filter((_, i) => i !== index));
+                        }}
+                        data-testid={`button-remove-checklist-item-${index}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a checklist item..."
+                  value={newChecklistItem}
+                  onChange={(e) => setNewChecklistItem(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newChecklistItem.trim()) {
+                      e.preventDefault();
+                      setChecklistItems([...checklistItems, { text: newChecklistItem.trim(), isCompleted: false }]);
+                      setNewChecklistItem("");
+                    }
+                  }}
+                  data-testid="input-new-checklist-item"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (newChecklistItem.trim()) {
+                      setChecklistItems([...checklistItems, { text: newChecklistItem.trim(), isCompleted: false }]);
+                      setNewChecklistItem("");
+                    }
+                  }}
+                  disabled={!newChecklistItem.trim()}
+                  data-testid="button-add-checklist-item"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

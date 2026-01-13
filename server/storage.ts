@@ -142,6 +142,7 @@ export interface IStorage {
   }): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
+  createTaskWithChecklists(task: InsertTask, checklists: Omit<InsertTaskChecklist, 'taskId'>[]): Promise<{ task: Task; checklists: TaskChecklist[] }>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<void>;
   updateTaskStatus(id: string, status: string, onHoldReason?: string, actualCompletionDate?: Date): Promise<Task | undefined>;
@@ -639,6 +640,37 @@ export class DatabaseStorage implements IStorage {
       .values(taskData)
       .returning();
     return task;
+  }
+
+  async createTaskWithChecklists(
+    taskData: InsertTask,
+    checklistData: Omit<InsertTaskChecklist, 'taskId'>[]
+  ): Promise<{ task: Task; checklists: TaskChecklist[] }> {
+    // Use transaction to ensure atomicity
+    return await this.db.transaction(async (tx) => {
+      // Create task first
+      const [task] = await tx
+        .insert(tasks)
+        .values(taskData)
+        .returning();
+
+      // Create checklists if any
+      let createdChecklists: TaskChecklist[] = [];
+      if (checklistData.length > 0) {
+        const checklistItems = checklistData.map((item, index) => ({
+          taskId: task.id,
+          text: item.text,
+          isCompleted: item.isCompleted || false,
+          sortOrder: item.sortOrder ?? index,
+        }));
+        createdChecklists = await tx
+          .insert(taskChecklists)
+          .values(checklistItems)
+          .returning();
+      }
+
+      return { task, checklists: createdChecklists };
+    });
   }
 
   async updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined> {
