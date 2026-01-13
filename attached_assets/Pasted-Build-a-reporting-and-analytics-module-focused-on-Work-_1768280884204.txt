@@ -1,0 +1,214 @@
+Build a reporting and analytics module focused on:
+
+Work Order Reports
+
+Technician & Team Performance
+
+Asset & Equipment Reports
+
+Facilities & Campus Insights
+
+Advanced / Smart Reporting (trends & alerts)
+
+This module must be scalable, filterable, and dashboard-ready.
+
+🔧 Functional Requirements
+1️⃣ Work Order Reports
+
+Implement reports that show:
+
+Total work orders by:
+
+Status (Open, In Progress, Completed, On Hold)
+
+Priority (Emergency, High, Normal, Low)
+
+Type (Electrical, Plumbing, HVAC, IT, Custodial, Grounds)
+
+Work orders by:
+
+Building
+
+Department
+
+Request source (Student, Faculty, Admin, System)
+
+Metrics:
+
+Work order count
+
+Average response time
+
+Average resolution time
+
+SLA compliance percentage
+
+Filters:
+
+Date range
+
+Building
+
+Department
+
+Priority
+
+Status
+
+2️⃣ Technician & Team Performance Reports
+
+Implement:
+
+Work orders completed per technician
+
+Labor hours logged per technician
+
+Average completion time per task
+
+Reassigned or reopened work orders
+
+Overtime hours
+
+Outputs:
+
+Technician leaderboard
+
+Performance trends over time
+
+3️⃣ Asset & Equipment Reports
+
+Implement:
+
+Maintenance history per asset
+
+Total maintenance cost per asset
+
+Work order frequency per asset
+
+Asset downtime
+
+Derived insights:
+
+High-failure assets
+
+Repair vs replace indicators
+
+5️⃣ Facilities & Campus Insights
+
+Implement:
+
+Work orders per building
+
+Cost per building
+
+Work order density by campus zone
+
+Aging infrastructure indicators
+
+Metrics:
+
+Cost per square foot (if area data exists)
+
+Emergency vs preventive ratio per building
+
+7️⃣ Advanced / Smart Reporting
+
+Implement:
+
+Trend analysis:
+
+Monthly and seasonal work order trends
+
+Emergency work order spikes
+
+Predictive indicators:
+
+Assets with increasing failure rates
+
+Buildings with recurring issues
+
+Alerts:
+
+Overdue work orders
+
+SLA breaches
+
+Repeated failures on same asset
+
+High-cost assets exceeding thresholds
+
+📊 Dashboards
+
+Create dashboards for:
+
+Maintenance Overview
+
+Technician Performance
+
+Asset Health
+
+Campus Facilities Insights
+
+Alerts & Exceptions
+
+Each dashboard should support:
+
+KPI cards
+
+Charts (bar, line, pie)
+
+Drill-down navigation
+
+⚙️ Technical Requirements
+
+Modular architecture (services/controllers)
+
+Report queries optimized for large datasets
+
+Role-based access (Admin, Facilities Manager, Technician)
+
+Export functionality:
+
+CSV
+
+Excel
+
+PDF
+
+Support scheduled reports
+
+🗃️ Data Model Assumptions
+
+Assume tables/entities for:
+
+WorkOrders
+
+Technicians
+
+Assets
+
+Buildings
+
+Departments
+
+LaborLogs
+
+SLAs
+
+📈 Output Expectations
+
+Clean UI-ready API endpoints
+
+Aggregated and raw datasets
+
+Extensible logic for future reporting features
+
+🧠 Design Principles
+
+Focus on clarity over complexity
+
+Optimize for decision-making
+
+Ensure college-scale performance
+
+Avoid unnecessary features not listed above
