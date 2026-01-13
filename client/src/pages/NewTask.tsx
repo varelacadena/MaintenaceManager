@@ -122,8 +122,18 @@ export default function NewTask() {
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
-  const [checklistItems, setChecklistItems] = useState<{ text: string; isCompleted: boolean }[]>([]);
-  const [newChecklistItem, setNewChecklistItem] = useState("");
+  
+  // Grouped checklists state
+  type ChecklistGroup = {
+    name: string;
+    items: { text: string; isCompleted: boolean }[];
+  };
+  const [checklistGroups, setChecklistGroups] = useState<ChecklistGroup[]>([]);
+  const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
+  const [editingChecklistIndex, setEditingChecklistIndex] = useState<number | null>(null);
+  const [dialogChecklistName, setDialogChecklistName] = useState("");
+  const [dialogChecklistItems, setDialogChecklistItems] = useState<{ text: string; isCompleted: boolean }[]>([]);
+  const [newDialogChecklistItem, setNewDialogChecklistItem] = useState("");
 
   const equipmentForm = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentFormSchema),
@@ -278,8 +288,8 @@ export default function NewTask() {
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
-        // Include checklists in the task creation payload for atomic creation
-        checklists: checklistItems.length > 0 ? checklistItems : undefined,
+        // Include grouped checklists in the task creation payload for atomic creation
+        checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
@@ -384,80 +394,97 @@ export default function NewTask() {
               )}
             />
 
-            {/* Task Checklist Section */}
+            {/* Task Checklists Section - Grouped/Named */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <ListChecks className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Task Checklist</span>
-                <span className="text-xs text-muted-foreground">(Optional)</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Task Checklists</span>
+                  <span className="text-xs text-muted-foreground">(Optional)</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingChecklistIndex(null);
+                    setDialogChecklistName("");
+                    setDialogChecklistItems([]);
+                    setNewDialogChecklistItem("");
+                    setIsChecklistDialogOpen(true);
+                  }}
+                  data-testid="button-add-checklist"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Checklist
+                </Button>
               </div>
               
-              {checklistItems.length > 0 && (
-                <div className="space-y-2 border rounded-md p-3">
-                  {checklistItems.map((item, index) => (
-                    <div key={index} className="flex items-center gap-3 group">
-                      <Checkbox
-                        checked={item.isCompleted}
-                        onCheckedChange={(checked) => {
-                          const updated = [...checklistItems];
-                          updated[index].isCompleted = checked === true;
-                          setChecklistItems(updated);
-                        }}
-                        data-testid={`checkbox-checklist-item-${index}`}
-                      />
-                      <span className={cn(
-                        "flex-1 text-sm",
-                        item.isCompleted && "line-through text-muted-foreground"
-                      )}>
-                        {item.text}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => {
-                          setChecklistItems(checklistItems.filter((_, i) => i !== index));
-                        }}
-                        data-testid={`button-remove-checklist-item-${index}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+              {checklistGroups.length > 0 && (
+                <div className="space-y-3">
+                  {checklistGroups.map((group, groupIndex) => (
+                    <div key={groupIndex} className="border rounded-md p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{group.name}</span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              setEditingChecklistIndex(groupIndex);
+                              setDialogChecklistName(group.name);
+                              setDialogChecklistItems([...group.items]);
+                              setNewDialogChecklistItem("");
+                              setIsChecklistDialogOpen(true);
+                            }}
+                            data-testid={`button-edit-checklist-${groupIndex}`}
+                          >
+                            <span className="text-xs">Edit</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              setChecklistGroups(checklistGroups.filter((_, i) => i !== groupIndex));
+                            }}
+                            data-testid={`button-remove-checklist-${groupIndex}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {group.items.length > 0 && (
+                        <div className="space-y-1 pl-2">
+                          {group.items.map((item, itemIndex) => (
+                            <div key={itemIndex} className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Checkbox
+                                checked={item.isCompleted}
+                                onCheckedChange={(checked) => {
+                                  const updated = [...checklistGroups];
+                                  updated[groupIndex].items[itemIndex].isCompleted = checked === true;
+                                  setChecklistGroups(updated);
+                                }}
+                                className="h-3 w-3"
+                                data-testid={`checkbox-checklist-${groupIndex}-item-${itemIndex}`}
+                              />
+                              <span className={item.isCompleted ? "line-through" : ""}>
+                                {item.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {group.items.length === 0 && (
+                        <span className="text-xs text-muted-foreground italic">No items in this checklist</span>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
-              
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add a checklist item..."
-                  value={newChecklistItem}
-                  onChange={(e) => setNewChecklistItem(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newChecklistItem.trim()) {
-                      e.preventDefault();
-                      setChecklistItems([...checklistItems, { text: newChecklistItem.trim(), isCompleted: false }]);
-                      setNewChecklistItem("");
-                    }
-                  }}
-                  data-testid="input-new-checklist-item"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    if (newChecklistItem.trim()) {
-                      setChecklistItems([...checklistItems, { text: newChecklistItem.trim(), isCompleted: false }]);
-                      setNewChecklistItem("");
-                    }
-                  }}
-                  disabled={!newChecklistItem.trim()}
-                  data-testid="button-add-checklist-item"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1196,6 +1223,151 @@ export default function NewTask() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checklist Dialog */}
+      <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingChecklistIndex !== null ? "Edit Checklist" : "Add New Checklist"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingChecklistIndex !== null
+                ? "Update the checklist name and items"
+                : "Create a named checklist with items to track"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Checklist Name *</label>
+              <Input
+                value={dialogChecklistName}
+                onChange={(e) => setDialogChecklistName(e.target.value)}
+                placeholder="e.g., Safety Inspection, Equipment Check"
+                data-testid="input-checklist-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Checklist Items</label>
+              
+              {dialogChecklistItems.length > 0 && (
+                <div className="space-y-2 border rounded-md p-3 max-h-48 overflow-y-auto">
+                  {dialogChecklistItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 group">
+                      <Checkbox
+                        checked={item.isCompleted}
+                        onCheckedChange={(checked) => {
+                          const updated = [...dialogChecklistItems];
+                          updated[index].isCompleted = checked === true;
+                          setDialogChecklistItems(updated);
+                        }}
+                        data-testid={`checkbox-dialog-item-${index}`}
+                      />
+                      <span className={cn(
+                        "flex-1 text-sm",
+                        item.isCompleted && "line-through text-muted-foreground"
+                      )}>
+                        {item.text}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          setDialogChecklistItems(dialogChecklistItems.filter((_, i) => i !== index));
+                        }}
+                        data-testid={`button-remove-dialog-item-${index}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add an item..."
+                  value={newDialogChecklistItem}
+                  onChange={(e) => setNewDialogChecklistItem(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newDialogChecklistItem.trim()) {
+                      e.preventDefault();
+                      setDialogChecklistItems([...dialogChecklistItems, { text: newDialogChecklistItem.trim(), isCompleted: false }]);
+                      setNewDialogChecklistItem("");
+                    }
+                  }}
+                  data-testid="input-dialog-new-item"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (newDialogChecklistItem.trim()) {
+                      setDialogChecklistItems([...dialogChecklistItems, { text: newDialogChecklistItem.trim(), isCompleted: false }]);
+                      setNewDialogChecklistItem("");
+                    }
+                  }}
+                  disabled={!newDialogChecklistItem.trim()}
+                  data-testid="button-add-dialog-item"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsChecklistDialogOpen(false)}
+              data-testid="button-cancel-checklist"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!dialogChecklistName.trim()) {
+                  toast({
+                    title: "Error",
+                    description: "Please enter a checklist name",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                const newGroup: ChecklistGroup = {
+                  name: dialogChecklistName.trim(),
+                  items: dialogChecklistItems,
+                };
+                
+                if (editingChecklistIndex !== null) {
+                  const updated = [...checklistGroups];
+                  updated[editingChecklistIndex] = newGroup;
+                  setChecklistGroups(updated);
+                } else {
+                  setChecklistGroups([...checklistGroups, newGroup]);
+                }
+                
+                setIsChecklistDialogOpen(false);
+                setDialogChecklistName("");
+                setDialogChecklistItems([]);
+                setNewDialogChecklistItem("");
+                setEditingChecklistIndex(null);
+              }}
+              disabled={!dialogChecklistName.trim()}
+              data-testid="button-save-checklist"
+            >
+              {editingChecklistIndex !== null ? "Update Checklist" : "Add Checklist"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
