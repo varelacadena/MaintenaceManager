@@ -69,7 +69,11 @@ import type {
   Message,
   Property,
   Equipment,
+  TaskChecklistGroup,
+  TaskChecklistItem,
 } from "@shared/schema";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ListChecks, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { Label } from "@radix-ui/react-label";
 
@@ -172,6 +176,13 @@ export default function TaskDetail() {
   const { data: equipment } = useQuery<Equipment>({
     queryKey: ["/api/equipment", task?.equipmentId],
     enabled: !!task?.equipmentId,
+  });
+
+  type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
+  
+  const { data: checklistGroups = [] } = useQuery<ChecklistGroupWithItems[]>({
+    queryKey: ["/api/tasks", id, "checklist-groups"],
+    enabled: !!id,
   });
 
   const { data: contactStaff } = useQuery<UserType>({
@@ -510,6 +521,21 @@ export default function TaskDetail() {
     },
   });
 
+  const toggleChecklistItemMutation = useMutation({
+    mutationFn: async ({ itemId, isCompleted }: { itemId: string; isCompleted: boolean }) => {
+      return await apiRequest("PATCH", `/api/checklist-items/${itemId}`, { isCompleted });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "checklist-groups"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update checklist item",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getUploadParameters = async () => {
     const response = await fetch("/api/objects/upload", {
@@ -609,36 +635,48 @@ export default function TaskDetail() {
 
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/tasks")}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold" data-testid="text-task-name">{task.name}</h1>
-          {task.requestId && (
-            <Link href={`/requests/${task.requestId}`}>
-              <span className="text-sm text-primary hover:underline cursor-pointer flex items-center gap-1" data-testid="link-original-request">
-                <ExternalLink className="w-3 h-3" />
-                View Original Request
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      {/* Header Section */}
+      <div className="space-y-4">
+        <div className="flex items-start gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/tasks")}
+            className="mt-1 shrink-0"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge variant="outline" className={statusColors[task.status]} data-testid="badge-status">
+                {task.status.replace("_", " ")}
+              </Badge>
+              <Badge variant="outline" className={urgencyColors[task.urgency]} data-testid="badge-urgency">
+                {task.urgency} priority
+              </Badge>
+              <span className="text-sm text-muted-foreground capitalize">
+                {task.taskType.replace("_", " ")}
               </span>
-            </Link>
-          )}
-        </div>
-        <div className="flex gap-2 items-center">
-          <Badge variant="outline" className={urgencyColors[task.urgency]} data-testid="badge-urgency">
-            {task.urgency}
-          </Badge>
-          <Badge variant="outline" className={statusColors[task.status]} data-testid="badge-status">
-            {task.status.replace("_", " ")}
-          </Badge>
+            </div>
+            <h1 className="text-2xl font-semibold leading-tight mb-2" data-testid="text-task-name">{task.name}</h1>
+            {task.description && (
+              <p className="text-muted-foreground leading-relaxed" data-testid="text-description">
+                {task.description}
+              </p>
+            )}
+            {task.requestId && (
+              <Link href={`/requests/${task.requestId}`}>
+                <span className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer mt-2" data-testid="link-original-request">
+                  <ExternalLink className="w-3 h-3" />
+                  View Original Request
+                </span>
+              </Link>
+            )}
+          </div>
           {isMaintenanceOrAdmin && (
-            <>
+            <div className="flex gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -651,12 +689,11 @@ export default function TaskDetail() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
                     data-testid="button-delete-task"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -677,145 +714,79 @@ export default function TaskDetail() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {requester && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Requestor Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Name</h3>
-                <p className="text-base" data-testid="text-requester-name">
-                  {requester.firstName} {requester.lastName}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Email</h3>
-                <p className="text-base" data-testid="text-requester-email">
-                  {requester.email || "Not provided"}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Phone Number</h3>
-                <p className="text-base" data-testid="text-requester-phone">
-                  {requester.phoneNumber || "Not provided"}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium mb-1 text-sm text-muted-foreground">Username</h3>
-                <p className="text-base" data-testid="text-requester-username">
-                  {requester.username}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Info Bar */}
+      <div className="flex flex-wrap items-center gap-4 py-3 px-4 bg-muted/50 rounded-lg text-sm">
+        <div className="flex items-center gap-2">
+          <User className="w-4 h-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Assigned:</span>
+          <span className="font-medium">
+            {assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : "Unassigned"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Started:</span>
+          <span className="font-medium">{new Date(task.initialDate).toLocaleDateString()}</span>
+        </div>
+        {task.estimatedCompletionDate && (
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Due:</span>
+            <span className="font-medium">{new Date(task.estimatedCompletionDate).toLocaleDateString()}</span>
+          </div>
+        )}
+        {property && (
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <span
+              className="cursor-pointer hover:underline text-primary font-medium"
+              onClick={() => navigate(`/properties/${property.id}`)}
+              data-testid="text-property-name"
+            >
+              {property.name}
+            </span>
+          </div>
+        )}
+        {equipment && (
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-muted-foreground" />
+            <span className="font-medium" data-testid="text-equipment-name">{equipment.name}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Status Update for Maintenance/Admin */}
+      {isMaintenanceOrAdmin && (
+        <div className="flex items-center gap-3">
+          <Label className="text-sm text-muted-foreground">Update Status:</Label>
+          <Select
+            value={task.status}
+            onValueChange={(value) => updateStatusMutation.mutate(value)}
+            disabled={updateStatusMutation.isPending}
+          >
+            <SelectTrigger className="w-48" data-testid="select-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="not_started">Not Started</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="on_hold">On Hold</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Task Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Description</p>
-              <p className="mt-1" data-testid="text-description">{task.description}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Task Type</p>
-                <p className="mt-1 capitalize" data-testid="text-task-type">{task.taskType.replace("_", " ")}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Assigned To</p>
-                <p className="mt-1" data-testid="text-assigned-to">
-                  {assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : "Unassigned"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Start Date</p>
-                <p className="mt-1" data-testid="text-start-date">
-                  {new Date(task.initialDate).toLocaleDateString()}
-                </p>
-              </div>
-              {task.estimatedCompletionDate && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Est. Completion</p>
-                  <p className="mt-1" data-testid="text-est-completion">
-                    {new Date(task.estimatedCompletionDate).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {task.propertyId && (
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">Property</p>
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  {property ? (
-                    <span
-                      className="cursor-pointer hover:underline text-primary"
-                      onClick={() => navigate(`/properties/${property.id}`)}
-                      data-testid="text-property-name"
-                    >
-                      {property.name}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Loading...</span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {task.equipmentId && (
-              <div className={task.propertyId ? "pt-4" : "pt-4 border-t"}>
-                <p className="text-sm text-muted-foreground mb-2">Equipment</p>
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  {equipment ? (
-                    <span data-testid="text-equipment-name">{equipment.name}</span>
-                  ) : (
-                    <span className="text-muted-foreground">Loading...</span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {isMaintenanceOrAdmin && (
-              <div>
-                <Label>Update Status</Label>
-                <Select
-                  value={task.status}
-                  onValueChange={(value) => updateStatusMutation.mutate(value)}
-                  disabled={updateStatusMutation.isPending}
-                >
-                  <SelectTrigger data-testid="select-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_started">Not Started</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="on_hold">On Hold</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
+      {/* Contact Information Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Contact Information</CardTitle>
+        </CardHeader>
           <CardContent>
             {task.contactType === "requester" && requester ? (
               <div className="grid grid-cols-1 gap-4">
@@ -887,7 +858,71 @@ export default function TaskDetail() {
             )}
           </CardContent>
         </Card>
-      </div>
+
+      {checklistGroups.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <ListChecks className="w-5 h-5 text-primary" />
+              Checklists
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {checklistGroups.map((group) => {
+                const completedCount = group.items.filter(item => item.isCompleted).length;
+                const totalCount = group.items.length;
+                const isAllCompleted = completedCount === totalCount && totalCount > 0;
+                
+                return (
+                  <div key={group.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-sm flex items-center gap-2">
+                        {group.name}
+                        {isAllCompleted && (
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        )}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {completedCount}/{totalCount} completed
+                      </span>
+                    </div>
+                    <div className="space-y-2 pl-1">
+                      {group.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                        >
+                          <Checkbox
+                            id={`checklist-item-${item.id}`}
+                            checked={item.isCompleted}
+                            onCheckedChange={(checked) => {
+                              toggleChecklistItemMutation.mutate({
+                                itemId: item.id,
+                                isCompleted: checked as boolean,
+                              });
+                            }}
+                            disabled={toggleChecklistItemMutation.isPending}
+                            data-testid={`checkbox-checklist-${item.id}`}
+                          />
+                          <label
+                            htmlFor={`checklist-item-${item.id}`}
+                            className={`text-sm leading-relaxed cursor-pointer ${
+                              item.isCompleted ? "text-muted-foreground line-through" : ""
+                            }`}
+                          >
+                            {item.text}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isMaintenanceOrAdmin && (
         <Card>
@@ -1177,7 +1212,7 @@ export default function TaskDetail() {
             </Button>
             <Button
               onClick={() => quickAddInventoryMutation.mutate()}
-              disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickInventoryMutation.isPending}
+              disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickAddInventoryMutation.isPending}
               data-testid="button-submit-quick-inventory"
             >
               {quickAddInventoryMutation.isPending ? "Creating..." : "Create Item"}
@@ -1422,9 +1457,9 @@ export default function TaskDetail() {
                   onClick={async () => {
                     for (const upload of pendingUploads) {
                       await addUploadMutation.mutateAsync({
-                        fileName: upload.fileName,
+                        fileName: upload.name,
                         fileType: upload.type,
-                        objectUrl: upload.objectUrl,
+                        objectUrl: upload.url,
                       });
                     }
                     setPendingUploads([]);
