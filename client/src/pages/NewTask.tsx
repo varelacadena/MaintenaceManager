@@ -669,31 +669,9 @@ export default function NewTask() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Equipment *</FormLabel>
-                  <div className="flex gap-2">
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                      disabled={!selectedPropertyId}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-equipment" className="flex-1">
-                          <SelectValue placeholder="Select equipment" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {equipment.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={!selectedPropertyId}
-                      onClick={() => {
+                  <Select
+                    onValueChange={(value) => {
+                      if (value === "create_new") {
                         equipmentForm.reset({
                           name: "",
                           category: "other",
@@ -704,12 +682,29 @@ export default function NewTask() {
                           imageUrl: "",
                         });
                         setIsEquipmentDialogOpen(true);
-                      }}
-                      data-testid="button-add-equipment"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      } else {
+                        field.onChange(value);
+                      }
+                    }}
+                    value={field.value || ""}
+                    disabled={!selectedPropertyId}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-equipment">
+                        <SelectValue placeholder="Select equipment" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="create_new" className="font-medium text-primary">
+                        + Create New Equipment
+                      </SelectItem>
+                      {equipment.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {!selectedPropertyId && (
                     <FormDescription>Select a property first to add equipment</FormDescription>
                   )}
