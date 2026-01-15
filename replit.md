@@ -4,18 +4,26 @@
 
 This web-based platform streamlines maintenance operations for college facilities. It supports three user roles—administrators, maintenance staff, and college staff—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
 
-## Recent Updates (January 13, 2026)
+## Recent Updates (January 15, 2026)
 
-**REPORTING & ANALYTICS MODULE ADDED:**
+**ANALYTICS MODULE REDESIGN - ACCOUNTING-STYLE REPORTS:**
 
-A comprehensive reporting and analytics module has been implemented with the following features:
+The analytics/reporting module has been completely redesigned to function like an accounting reporting tool with a cleaner, more user-friendly interface.
+
+**New Features:**
+- **Reports Hub Design**: Main analytics page now shows organized report categories in a visual grid
+- **Clickable KPI Cards**: All KPI cards open dialogs with detailed breakdowns when clicked
+- **Fleet Analytics**: New dedicated page for vehicle utilization, reservations, and maintenance
+- **Service Request Analytics**: New dedicated page for request metrics and conversion tracking
 
 **Dashboard Pages:**
-- `/analytics` - Maintenance Overview: Work order metrics by status, urgency, property, and area
+- `/analytics` - Reports Hub: Organized report categories with clickable predetermined reports
 - `/analytics/technicians` - Technician Performance: Leaderboard, hours logged, completion rates
 - `/analytics/assets` - Asset Health: Equipment maintenance history, failure rates, costs
 - `/analytics/facilities` - Campus Facilities: Building-level work order analytics
 - `/analytics/alerts` - Alerts & Exceptions: Overdue work orders, SLA breaches, trends
+- `/analytics/fleet` - Fleet Management: Vehicle status, reservations, utilization rates
+- `/analytics/requests` - Service Requests: Request metrics, conversion rates, top requesters
 
 **API Endpoints:**
 - `GET /api/analytics/work-orders` - Work order overview with filters
@@ -24,20 +32,27 @@ A comprehensive reporting and analytics module has been implemented with the fol
 - `GET /api/analytics/facilities` - Facility insights
 - `GET /api/analytics/alerts` - System alerts
 - `GET /api/analytics/trends` - Weekly trend data
-- `GET /api/analytics/export?type=...` - CSV export functionality
+- `GET /api/analytics/fleet` - Fleet vehicle analytics
+- `GET /api/analytics/service-requests` - Service request analytics
+- `GET /api/analytics/export?type=...` - Export functionality (PDF/XLSX)
 
 **Features:**
 - Role-based access (Admin and Maintenance only)
 - Filterable by date range, property, area, technician, status, urgency
-- KPI cards, charts (pie, bar, line), data tables
-- CSV export for all reports
-- Drill-down navigation to related tasks/equipment/properties
+- Clickable KPI cards with detailed dialog breakdowns
+- Interactive charts (pie, bar, line) with tooltips
+- Data tables with sorting and property/area links
+- PDF and XLSX export for all reports
+- Tabs for switching between chart and detailed table views
 
-**Components Added:**
-- `client/src/components/analytics/KpiCard.tsx` - Reusable KPI display
-- `client/src/components/analytics/AnalyticsFilters.tsx` - Filter controls
+**Components Added/Updated:**
+- `client/src/pages/analytics/FleetAnalytics.tsx` - Fleet management analytics
+- `client/src/pages/analytics/ServiceRequestAnalytics.tsx` - Service request analytics
+- `client/src/pages/analytics/MaintenanceOverview.tsx` - Redesigned as Reports hub
+- `client/src/components/analytics/KpiCard.tsx` - Reusable clickable KPI display
+- `client/src/components/analytics/AnalyticsFilters.tsx` - Filter controls with export
 - `client/src/components/analytics/AnalyticsCharts.tsx` - Chart components
-- `server/analyticsService.ts` - Analytics query builders
+- `server/analyticsService.ts` - Analytics query builders with fleet and service request methods
 
 ---
 

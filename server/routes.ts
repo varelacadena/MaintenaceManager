@@ -2862,6 +2862,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/analytics/fleet", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+      };
+      const data = await analyticsService.getFleetOverview(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching fleet analytics:", error);
+      res.status(500).json({ message: "Failed to fetch fleet analytics" });
+    }
+  });
+
+  app.get("/api/analytics/service-requests", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        propertyId: req.query.propertyId as string | undefined,
+        areaId: req.query.areaId as string | undefined,
+        urgency: req.query.urgency as string | undefined,
+      };
+      const data = await analyticsService.getServiceRequestOverview(filters);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching service request analytics:", error);
+      res.status(500).json({ message: "Failed to fetch service request analytics" });
+    }
+  });
+
   app.get("/api/analytics/export", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
       const { type, format, ...filters } = req.query;

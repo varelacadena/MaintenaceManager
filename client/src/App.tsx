@@ -20,7 +20,6 @@ import EditTask from "@/pages/EditTask";
 import Messages from "@/pages/Messages";
 import Calendar from "@/pages/Calendar";
 import Users from "@/pages/Users";
-import Areas from "@/pages/Areas";
 import Credentials from "@/pages/Credentials";
 import Vendors from "@/pages/Vendors";
 import Inventory from "@/pages/Inventory";
@@ -43,6 +42,8 @@ import TechnicianPerformance from "./pages/analytics/TechnicianPerformance";
 import AssetHealth from "./pages/analytics/AssetHealth";
 import FacilityInsights from "./pages/analytics/FacilityInsights";
 import AlertsExceptions from "./pages/analytics/AlertsExceptions";
+import FleetAnalytics from "./pages/analytics/FleetAnalytics";
+import ServiceRequestAnalytics from "./pages/analytics/ServiceRequestAnalytics";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -155,6 +156,8 @@ function AuthenticatedApp() {
                 <Route path="/analytics/assets" component={AssetHealth} />
                 <Route path="/analytics/facilities" component={FacilityInsights} />
                 <Route path="/analytics/alerts" component={AlertsExceptions} />
+                <Route path="/analytics/fleet" component={FleetAnalytics} />
+                <Route path="/analytics/requests" component={ServiceRequestAnalytics} />
                 <Route component={NotFound} />
               </Switch>
             </main>

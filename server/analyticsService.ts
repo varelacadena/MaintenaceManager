@@ -8,6 +8,9 @@ import {
   timeEntries,
   partsUsed,
   serviceRequests,
+  vehicles,
+  vehicleReservations,
+  vehicleMaintenanceLogs,
 } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, avg, desc, asc } from "drizzle-orm";
 
@@ -82,6 +85,39 @@ export interface Alert {
   relatedId: string;
   relatedType: "task" | "equipment" | "property";
   createdAt: Date;
+}
+
+export interface FleetOverview {
+  totalVehicles: number;
+  availableVehicles: number;
+  inUseVehicles: number;
+  outOfServiceVehicles: number;
+  totalReservations: number;
+  activeReservations: number;
+  completedReservations: number;
+  cancelledReservations: number;
+  totalMaintenanceCost: number;
+  avgUtilizationRate: number;
+  byCategory: { category: string; count: number }[];
+  byStatus: { status: string; count: number }[];
+  reservationsByMonth: { month: string; count: number }[];
+  maintenanceByVehicle: { vehicleId: string; vehicleName: string; cost: number; count: number }[];
+}
+
+export interface ServiceRequestOverview {
+  totalRequests: number;
+  pendingRequests: number;
+  underReviewRequests: number;
+  convertedRequests: number;
+  rejectedRequests: number;
+  conversionRate: number;
+  avgResponseTimeHours: number;
+  byUrgency: { urgency: string; count: number }[];
+  byStatus: { status: string; count: number }[];
+  byProperty: { propertyId: string; propertyName: string; count: number }[];
+  byArea: { areaId: string; areaName: string; count: number }[];
+  monthlyTrend: { month: string; submitted: number; converted: number }[];
+  topRequesters: { requesterId: string; requesterName: string; count: number }[];
 }
 
 export class AnalyticsService {
@@ -547,6 +583,264 @@ export class AnalyticsService {
     });
 
     return csvRows.join("\n");
+  }
+
+  async getFleetOverview(filters: AnalyticsFilters): Promise<FleetOverview> {
+    const allVehicles = await db.select().from(vehicles);
+    const allReservations = await db.select().from(vehicleReservations);
+    
+    // Try to get maintenance logs, but handle if table doesn't exist
+    let allMaintenanceLogs: any[] = [];
+    try {
+      allMaintenanceLogs = await db.select().from(vehicleMaintenanceLogs);
+    } catch (error) {
+      console.warn("Vehicle maintenance logs table not available, skipping maintenance data");
+    }
+
+    const now = new Date();
+
+    // Apply date filters to reservations
+    let filteredReservations = allReservations;
+    if (filters.startDate) {
+      const startDate = new Date(filters.startDate);
+      filteredReservations = filteredReservations.filter(r => new Date(r.startDate) >= startDate);
+    }
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      filteredReservations = filteredReservations.filter(r => new Date(r.endDate) <= endDate);
+    }
+
+    const totalVehicles = allVehicles.length;
+    const availableVehicles = allVehicles.filter(v => v.status === "available").length;
+    const inUseVehicles = allVehicles.filter(v => v.status === "in_use").length;
+    const outOfServiceVehicles = allVehicles.filter(v => v.status === "needs_maintenance" || v.status === "needs_cleaning").length;
+
+    const totalReservations = filteredReservations.length;
+    const activeReservations = filteredReservations.filter(r => r.status === "active" || r.status === "pending").length;
+    const completedReservations = filteredReservations.filter(r => r.status === "completed").length;
+    const cancelledReservations = filteredReservations.filter(r => r.status === "cancelled").length;
+
+    // Calculate maintenance cost from logs
+    const totalMaintenanceCost = allMaintenanceLogs.reduce((sum, log) => sum + (Number(log.cost) || 0), 0);
+
+    // Calculate utilization rate (active days vs total possible days)
+    const avgUtilizationRate = totalVehicles > 0 
+      ? Math.round((inUseVehicles / totalVehicles) * 100) 
+      : 0;
+
+    // Group by category
+    const categoryGroups: Record<string, number> = {};
+    allVehicles.forEach(v => {
+      categoryGroups[v.category] = (categoryGroups[v.category] || 0) + 1;
+    });
+    const byCategory = Object.entries(categoryGroups)
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Group by status
+    const statusGroups: Record<string, number> = {};
+    allVehicles.forEach(v => {
+      statusGroups[v.status] = (statusGroups[v.status] || 0) + 1;
+    });
+    const byStatus = Object.entries(statusGroups)
+      .map(([status, count]) => ({ status, count }));
+
+    // Reservations by month
+    const monthlyGroups: Record<string, number> = {};
+    filteredReservations.forEach(r => {
+      const date = new Date(r.createdAt!);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      monthlyGroups[monthKey] = (monthlyGroups[monthKey] || 0) + 1;
+    });
+    const reservationsByMonth = Object.entries(monthlyGroups)
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-12);
+
+    // Maintenance by vehicle
+    const vehicleMaintenanceMap: Record<string, { cost: number; count: number }> = {};
+    allMaintenanceLogs.forEach(log => {
+      if (!vehicleMaintenanceMap[log.vehicleId]) {
+        vehicleMaintenanceMap[log.vehicleId] = { cost: 0, count: 0 };
+      }
+      vehicleMaintenanceMap[log.vehicleId].cost += Number(log.cost) || 0;
+      vehicleMaintenanceMap[log.vehicleId].count++;
+    });
+    const maintenanceByVehicle = Object.entries(vehicleMaintenanceMap)
+      .map(([vehicleId, data]) => {
+        const vehicle = allVehicles.find(v => v.id === vehicleId);
+        return {
+          vehicleId,
+          vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Unknown",
+          cost: Math.round(data.cost),
+          count: data.count,
+        };
+      })
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 10);
+
+    return {
+      totalVehicles,
+      availableVehicles,
+      inUseVehicles,
+      outOfServiceVehicles,
+      totalReservations,
+      activeReservations,
+      completedReservations,
+      cancelledReservations,
+      totalMaintenanceCost: Math.round(totalMaintenanceCost),
+      avgUtilizationRate,
+      byCategory,
+      byStatus,
+      reservationsByMonth,
+      maintenanceByVehicle,
+    };
+  }
+
+  async getServiceRequestOverview(filters: AnalyticsFilters): Promise<ServiceRequestOverview> {
+    const allRequests = await db.select().from(serviceRequests);
+    const propertiesList = await db.select().from(properties);
+    const areasList = await db.select().from(areas);
+    const usersList = await db.select().from(users);
+
+    const propertyMap = new Map(propertiesList.map(p => [p.id, p.name]));
+    const areaMap = new Map(areasList.map(a => [a.id, a.name]));
+    const userMap = new Map(usersList.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
+
+    // Apply date filters
+    let filteredRequests = allRequests;
+    if (filters.startDate) {
+      const startDate = new Date(filters.startDate);
+      filteredRequests = filteredRequests.filter(r => r.createdAt && new Date(r.createdAt) >= startDate);
+    }
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      filteredRequests = filteredRequests.filter(r => r.createdAt && new Date(r.createdAt) <= endDate);
+    }
+    if (filters.propertyId) {
+      filteredRequests = filteredRequests.filter(r => r.propertyId === filters.propertyId);
+    }
+    if (filters.areaId) {
+      filteredRequests = filteredRequests.filter(r => r.areaId === filters.areaId);
+    }
+    if (filters.urgency) {
+      filteredRequests = filteredRequests.filter(r => r.urgency === filters.urgency);
+    }
+
+    const totalRequests = filteredRequests.length;
+    const pendingRequests = filteredRequests.filter(r => r.status === "pending").length;
+    const underReviewRequests = filteredRequests.filter(r => r.status === "under_review").length;
+    const convertedRequests = filteredRequests.filter(r => r.status === "converted_to_task").length;
+    const rejectedRequests = filteredRequests.filter(r => r.status === "rejected").length;
+
+    const conversionRate = totalRequests > 0 ? Math.round((convertedRequests / totalRequests) * 100) : 0;
+
+    // Calculate average response time (time from creation to status change)
+    const processedRequests = filteredRequests.filter(r => 
+      r.status !== "pending" && r.updatedAt && r.createdAt
+    );
+    let avgResponseTimeHours = 0;
+    if (processedRequests.length > 0) {
+      const totalMs = processedRequests.reduce((sum, r) => {
+        const created = new Date(r.createdAt!).getTime();
+        const updated = new Date(r.updatedAt!).getTime();
+        return sum + (updated - created);
+      }, 0);
+      avgResponseTimeHours = Math.round((totalMs / processedRequests.length) / (1000 * 60 * 60));
+    }
+
+    // Group by urgency
+    const byUrgency = ["high", "medium", "low"].map(urgency => ({
+      urgency,
+      count: filteredRequests.filter(r => r.urgency === urgency).length,
+    }));
+
+    // Group by status
+    const byStatus = ["pending", "under_review", "converted_to_task", "rejected"].map(status => ({
+      status,
+      count: filteredRequests.filter(r => r.status === status).length,
+    }));
+
+    // Group by property
+    const propertyGroups: Record<string, number> = {};
+    filteredRequests.forEach(r => {
+      if (r.propertyId) {
+        propertyGroups[r.propertyId] = (propertyGroups[r.propertyId] || 0) + 1;
+      }
+    });
+    const byProperty = Object.entries(propertyGroups)
+      .map(([propertyId, count]) => ({
+        propertyId,
+        propertyName: propertyMap.get(propertyId) || "Unknown",
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Group by area
+    const areaGroups: Record<string, number> = {};
+    filteredRequests.forEach(r => {
+      if (r.areaId) {
+        areaGroups[r.areaId] = (areaGroups[r.areaId] || 0) + 1;
+      }
+    });
+    const byArea = Object.entries(areaGroups)
+      .map(([areaId, count]) => ({
+        areaId,
+        areaName: areaMap.get(areaId) || "Unknown",
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // Monthly trend
+    const monthlyGroups: Record<string, { submitted: number; converted: number }> = {};
+    filteredRequests.forEach(r => {
+      if (r.createdAt) {
+        const date = new Date(r.createdAt);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        if (!monthlyGroups[monthKey]) {
+          monthlyGroups[monthKey] = { submitted: 0, converted: 0 };
+        }
+        monthlyGroups[monthKey].submitted++;
+        if (r.status === "converted_to_task") {
+          monthlyGroups[monthKey].converted++;
+        }
+      }
+    });
+    const monthlyTrend = Object.entries(monthlyGroups)
+      .map(([month, data]) => ({ month, ...data }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-12);
+
+    // Top requesters
+    const requesterGroups: Record<string, number> = {};
+    filteredRequests.forEach(r => {
+      requesterGroups[r.requesterId] = (requesterGroups[r.requesterId] || 0) + 1;
+    });
+    const topRequesters = Object.entries(requesterGroups)
+      .map(([requesterId, count]) => ({
+        requesterId,
+        requesterName: userMap.get(requesterId) || "Unknown",
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      totalRequests,
+      pendingRequests,
+      underReviewRequests,
+      convertedRequests,
+      rejectedRequests,
+      conversionRate,
+      avgResponseTimeHours,
+      byUrgency,
+      byStatus,
+      byProperty,
+      byArea,
+      monthlyTrend,
+      topRequesters,
+    };
   }
 
   private buildTaskConditions(filters: AnalyticsFilters) {
