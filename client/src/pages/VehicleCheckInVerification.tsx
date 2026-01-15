@@ -1,4 +1,4 @@
-import { useParams, useLocation, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Car, Check, Edit, Image, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -139,11 +139,14 @@ export default function VehicleCheckInVerification() {
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/vehicle-reservations">
-            <Button variant="ghost" size="icon" data-testid="button-back">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            data-testid="button-back"
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div>
             <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Check-In Verification</h2>
             <p className="text-muted-foreground">
