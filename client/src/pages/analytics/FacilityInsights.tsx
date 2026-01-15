@@ -119,7 +119,7 @@ export default function FacilityInsights() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
-        exportOptions={["csv"]}
+        exportOptions={["pdf", "xlsx"]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">

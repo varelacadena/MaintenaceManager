@@ -466,8 +466,8 @@ export class AnalyticsService {
       .slice(-12);
   }
 
-  async exportData(dataType: string, filters: AnalyticsFilters): Promise<string> {
-    let data: any[] = [];
+  async getExportData(dataType: string, filters: AnalyticsFilters): Promise<{ headers: string[], data: any[][] }> {
+    let data: any[][] = [];
     let headers: string[] = [];
 
     switch (dataType) {
@@ -536,6 +536,11 @@ export class AnalyticsService {
         throw new Error("Invalid data type for export");
     }
 
+    return { headers, data };
+  }
+
+  async exportData(dataType: string, filters: AnalyticsFilters): Promise<string> {
+    const { headers, data } = await this.getExportData(dataType, filters);
     const csvRows = [headers.join(",")];
     data.forEach(row => {
       csvRows.push(row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(","));

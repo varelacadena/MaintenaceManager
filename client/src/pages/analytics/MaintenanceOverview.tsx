@@ -112,7 +112,7 @@ export default function MaintenanceOverview() {
         showStatusFilter
         showUrgencyFilter
         showTechnicianFilter
-        exportOptions={["csv"]}
+        exportOptions={["pdf", "xlsx"]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
