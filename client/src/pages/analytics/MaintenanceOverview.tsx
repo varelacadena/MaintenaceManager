@@ -62,9 +62,9 @@ export default function MaintenanceOverview() {
     },
   });
 
-  const handleExport = (type: string) => {
+  const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=work-orders&${queryString}`, "_blank");
+    window.open(`/api/analytics/export?type=work-orders&format=${format}&${queryString}`, "_blank");
   };
 
   if (isLoading) {

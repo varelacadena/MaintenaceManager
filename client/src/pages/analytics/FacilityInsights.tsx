@@ -53,9 +53,9 @@ export default function FacilityInsights() {
     },
   });
 
-  const handleExport = () => {
+  const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=facilities&${queryString}`, "_blank");
+    window.open(`/api/analytics/export?type=facilities&format=${format}&${queryString}`, "_blank");
   };
 
   const totalFacilities = data.length;

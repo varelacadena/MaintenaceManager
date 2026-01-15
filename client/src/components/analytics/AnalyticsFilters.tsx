@@ -42,7 +42,7 @@ export interface FilterState {
 interface AnalyticsFiltersProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
-  onExport?: (type: string) => void;
+  onExport?: (format: string) => void;
   showTechnicianFilter?: boolean;
   showStatusFilter?: boolean;
   showUrgencyFilter?: boolean;
@@ -115,7 +115,7 @@ export default function AnalyticsFilters({
                 className="h-7 px-2 sm:px-3 text-xs"
               >
                 <Download className="w-3 h-3 sm:mr-1" />
-                <span className="hidden sm:inline">Export {option.toUpperCase()}</span>
+                <span className="hidden sm:inline">{option.toUpperCase()}</span>
               </Button>
             ))}
           </div>

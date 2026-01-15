@@ -51,9 +51,9 @@ export default function AssetHealth() {
     },
   });
 
-  const handleExport = () => {
+  const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=assets&${queryString}`, "_blank");
+    window.open(`/api/analytics/export?type=assets&format=${format}&${queryString}`, "_blank");
   };
 
   const totalAssets = data.length;

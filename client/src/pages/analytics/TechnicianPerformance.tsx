@@ -51,9 +51,9 @@ export default function TechnicianPerformance() {
     },
   });
 
-  const handleExport = () => {
+  const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=technicians&${queryString}`, "_blank");
+    window.open(`/api/analytics/export?type=technicians&format=${format}&${queryString}`, "_blank");
   };
 
   const totalTasksCompleted = data.reduce((sum, t) => sum + t.tasksCompleted, 0);

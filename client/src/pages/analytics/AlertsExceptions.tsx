@@ -68,9 +68,9 @@ export default function AlertsExceptions() {
     },
   });
 
-  const handleExport = () => {
+  const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=alerts&${queryString}`, "_blank");
+    window.open(`/api/analytics/export?type=alerts&format=${format}&${queryString}`, "_blank");
   };
 
   const highSeverityAlerts = alerts.filter(a => a.severity === "high");
