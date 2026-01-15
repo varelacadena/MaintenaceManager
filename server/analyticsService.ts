@@ -52,6 +52,20 @@ export interface TechnicianPerformance {
   completionRate: number;
 }
 
+export interface ServiceRecord {
+  taskId: string;
+  taskName: string;
+  taskDescription: string;
+  serviceDate: string | null; // ISO date string after JSON serialization
+  technicianId: string | null;
+  technicianName: string;
+  status: string;
+  urgency: string;
+  hoursLogged: number;
+  partsCost: number;
+  laborCost: number;
+}
+
 export interface AssetHealth {
   equipmentId: string;
   equipmentName: string;
@@ -60,8 +74,10 @@ export interface AssetHealth {
   condition: string | null;
   workOrderCount: number;
   totalMaintenanceCost: number;
-  lastMaintenanceDate: Date | null;
+  lastMaintenanceDate: string | null; // ISO date string after JSON serialization
+  lastServicedBy: string | null;
   failureFrequency: number;
+  serviceHistory: ServiceRecord[];
 }
 
 export interface FacilityInsights {
@@ -293,6 +309,10 @@ export class AnalyticsService {
     const propertiesList = await db.select().from(properties);
     const propertyMap = new Map(propertiesList.map(p => [p.id, p.name]));
 
+    // Fetch all users (technicians) for mapping
+    const allUsers = await db.select().from(users);
+    const userMap = new Map(allUsers.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
+
     const conditions = this.buildTaskConditions(filters);
     const allTasks = await db
       .select()
@@ -321,6 +341,38 @@ export class AnalyticsService {
         .filter(t => t.status === "completed" && t.actualCompletionDate)
         .sort((a, b) => new Date(b.actualCompletionDate!).getTime() - new Date(a.actualCompletionDate!).getTime())[0];
 
+      // Build service history for each task
+      const serviceHistory: ServiceRecord[] = equipmentTasks.map(task => {
+        const taskParts = allParts.filter(p => p.taskId === task.id);
+        const taskTime = allTimeEntries.filter(te => te.taskId === task.id);
+        
+        const taskPartsCost = taskParts.reduce((sum, p) => sum + (p.cost || 0), 0);
+        const taskLaborMinutes = taskTime.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
+        const taskLaborHours = taskLaborMinutes / 60;
+        const taskLaborCost = taskLaborHours * 50;
+
+        const rawServiceDate = task.actualCompletionDate || task.initialDate;
+
+        return {
+          taskId: task.id,
+          taskName: task.name,
+          taskDescription: task.description,
+          serviceDate: rawServiceDate ? new Date(rawServiceDate).toISOString() : null,
+          technicianId: task.assignedToId,
+          technicianName: task.assignedToId ? userMap.get(task.assignedToId) || "Unknown" : "Unassigned",
+          status: task.status,
+          urgency: task.urgency,
+          hoursLogged: Math.round(taskLaborHours * 10) / 10,
+          partsCost: Math.round(taskPartsCost),
+          laborCost: Math.round(taskLaborCost),
+        };
+      }).sort((a, b) => {
+        if (!a.serviceDate || !b.serviceDate) return 0;
+        return new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime();
+      });
+
+      const lastMaintenanceDateRaw = lastTask?.actualCompletionDate;
+
       results.push({
         equipmentId: eq.id,
         equipmentName: eq.name,
@@ -329,8 +381,10 @@ export class AnalyticsService {
         condition: eq.condition,
         workOrderCount: equipmentTasks.length,
         totalMaintenanceCost: Math.round(partsCost + laborCost),
-        lastMaintenanceDate: lastTask?.actualCompletionDate || null,
+        lastMaintenanceDate: lastMaintenanceDateRaw ? new Date(lastMaintenanceDateRaw).toISOString() : null,
+        lastServicedBy: lastTask?.assignedToId ? userMap.get(lastTask.assignedToId) || null : null,
         failureFrequency: equipmentTasks.length,
+        serviceHistory,
       });
     }
 
@@ -537,7 +591,7 @@ export class AnalyticsService {
 
       case "assets":
         const assetData = await this.getAssetHealth(filters);
-        headers = ["Equipment", "Property", "Category", "Condition", "Work Orders", "Maintenance Cost"];
+        headers = ["Equipment", "Property", "Category", "Condition", "Work Orders", "Maintenance Cost", "Last Service Date", "Serviced By"];
         data = assetData.map(a => [
           a.equipmentName,
           a.propertyName,
@@ -545,7 +599,32 @@ export class AnalyticsService {
           a.condition || "Unknown",
           a.workOrderCount,
           `$${a.totalMaintenanceCost}`,
+          a.lastMaintenanceDate ? new Date(a.lastMaintenanceDate).toLocaleDateString() : "Never",
+          a.lastServicedBy || "N/A",
         ]);
+        break;
+
+      case "assets-detailed":
+        const assetDetailData = await this.getAssetHealth(filters);
+        headers = ["Equipment", "Property", "Task Name", "Task Description", "Service Date", "Technician", "Status", "Urgency", "Hours Logged", "Parts Cost", "Labor Cost", "Total Cost"];
+        for (const asset of assetDetailData) {
+          for (const record of asset.serviceHistory) {
+            data.push([
+              asset.equipmentName,
+              asset.propertyName,
+              record.taskName,
+              record.taskDescription,
+              record.serviceDate ? new Date(record.serviceDate).toLocaleDateString() : "Not scheduled",
+              record.technicianName,
+              record.status.replace(/_/g, " "),
+              record.urgency,
+              record.hoursLogged,
+              `$${record.partsCost}`,
+              `$${record.laborCost}`,
+              `$${record.partsCost + record.laborCost}`,
+            ]);
+          }
+        }
         break;
 
       case "facilities":
