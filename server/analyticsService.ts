@@ -764,6 +764,26 @@ export class AnalyticsService {
         ];
         break;
 
+      case "work-orders-detailed":
+        const woDetailData = await this.getWorkOrderOverview(filters);
+        headers = ["Name", "Description", "Status", "Urgency", "Assigned To", "Property", "Area", "Equipment", "Task Type", "Start Date", "Due Date", "Completed Date", "Created At"];
+        data = woDetailData.detailedRecords.map(wo => [
+          wo.name,
+          wo.description,
+          wo.status.replace(/_/g, " "),
+          wo.urgency,
+          wo.assignedToName,
+          wo.propertyName,
+          wo.areaName,
+          wo.equipmentName,
+          wo.taskType,
+          wo.initialDate ? new Date(wo.initialDate).toLocaleDateString() : "N/A",
+          wo.estimatedCompletionDate ? new Date(wo.estimatedCompletionDate).toLocaleDateString() : "N/A",
+          wo.actualCompletionDate ? new Date(wo.actualCompletionDate).toLocaleDateString() : "N/A",
+          wo.createdAt ? new Date(wo.createdAt).toLocaleDateString() : "N/A",
+        ]);
+        break;
+
       case "technicians":
         const techData = await this.getTechnicianPerformance(filters);
         headers = ["Technician", "Tasks Completed", "Tasks Assigned", "Hours Logged", "Avg Completion Time (hrs)", "Completion Rate"];
@@ -775,6 +795,27 @@ export class AnalyticsService {
           t.avgCompletionTimeHours,
           `${t.completionRate}%`,
         ]);
+        break;
+
+      case "technicians-detailed":
+        const techDetailData = await this.getTechnicianPerformance(filters);
+        headers = ["Technician", "Task Name", "Description", "Status", "Urgency", "Property", "Area", "Hours Logged", "Start Date", "Completion Date"];
+        for (const tech of techDetailData) {
+          for (const task of tech.taskDetails) {
+            data.push([
+              tech.technicianName,
+              task.taskName,
+              task.description,
+              task.status.replace(/_/g, " "),
+              task.urgency,
+              task.propertyName,
+              task.areaName,
+              task.hoursLogged,
+              task.initialDate ? new Date(task.initialDate).toLocaleDateString() : "N/A",
+              task.completionDate ? new Date(task.completionDate).toLocaleDateString() : "N/A",
+            ]);
+          }
+        }
         break;
 
       case "assets":
@@ -829,10 +870,112 @@ export class AnalyticsService {
         ]);
         break;
 
+      case "facilities-detailed":
+        const facilityDetailData = await this.getFacilityInsights(filters);
+        headers = ["Facility", "Task Name", "Description", "Status", "Urgency", "Assigned To", "Area", "Equipment", "Task Type", "Start Date", "Completion Date"];
+        for (const facility of facilityDetailData) {
+          for (const wo of facility.workOrderDetails) {
+            data.push([
+              facility.propertyName,
+              wo.taskName,
+              wo.description,
+              wo.status.replace(/_/g, " "),
+              wo.urgency,
+              wo.assignedToName,
+              wo.areaName,
+              wo.equipmentName,
+              wo.taskType,
+              wo.initialDate ? new Date(wo.initialDate).toLocaleDateString() : "N/A",
+              wo.completionDate ? new Date(wo.completionDate).toLocaleDateString() : "N/A",
+            ]);
+          }
+        }
+        break;
+
       case "alerts":
         const alertData = await this.getAlerts(filters);
         headers = ["Type", "Severity", "Title", "Description"];
         data = alertData.map(a => [a.type, a.severity, a.title, a.description]);
+        break;
+
+      case "fleet":
+        const fleetData = await this.getFleetOverview(filters);
+        headers = ["Metric", "Value"];
+        data = [
+          ["Total Vehicles", fleetData.totalVehicles],
+          ["Available Vehicles", fleetData.availableVehicles],
+          ["In Use Vehicles", fleetData.inUseVehicles],
+          ["Out of Service Vehicles", fleetData.outOfServiceVehicles],
+          ["Total Reservations", fleetData.totalReservations],
+          ["Active Reservations", fleetData.activeReservations],
+          ["Completed Reservations", fleetData.completedReservations],
+          ["Cancelled Reservations", fleetData.cancelledReservations],
+          ["Total Maintenance Cost", `$${fleetData.totalMaintenanceCost}`],
+          ["Avg Utilization Rate", `${fleetData.avgUtilizationRate}%`],
+        ];
+        break;
+
+      case "fleet-reservations":
+        const fleetResData = await this.getFleetOverview(filters);
+        headers = ["Vehicle", "User", "Purpose", "Status", "Passengers", "Start Date", "End Date", "Notes", "Created At"];
+        data = fleetResData.detailedReservations.map(r => [
+          r.vehicleName,
+          r.userName,
+          r.purpose,
+          r.status,
+          r.passengerCount,
+          r.startDate ? new Date(r.startDate).toLocaleDateString() : "N/A",
+          r.endDate ? new Date(r.endDate).toLocaleDateString() : "N/A",
+          r.notes || "N/A",
+          r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "N/A",
+        ]);
+        break;
+
+      case "fleet-vehicles":
+        const fleetVehData = await this.getFleetOverview(filters);
+        headers = ["Vehicle ID", "Make", "Model", "Year", "Category", "Status", "Current Mileage", "Fuel Type", "License Plate"];
+        data = fleetVehData.detailedVehicles.map(v => [
+          v.vehicleId,
+          v.make,
+          v.model,
+          v.year,
+          v.category,
+          v.status.replace(/_/g, " "),
+          v.currentMileage || "N/A",
+          v.fuelType,
+          v.licensePlate || "N/A",
+        ]);
+        break;
+
+      case "service-requests":
+        const srData = await this.getServiceRequestOverview(filters);
+        headers = ["Metric", "Value"];
+        data = [
+          ["Total Requests", srData.totalRequests],
+          ["Pending Requests", srData.pendingRequests],
+          ["Under Review", srData.underReviewRequests],
+          ["Converted to Task", srData.convertedRequests],
+          ["Rejected Requests", srData.rejectedRequests],
+          ["Conversion Rate", `${srData.conversionRate}%`],
+          ["Avg Response Time (hrs)", srData.avgResponseTimeHours],
+        ];
+        break;
+
+      case "service-requests-detailed":
+        const srDetailData = await this.getServiceRequestOverview(filters);
+        headers = ["Title", "Description", "Status", "Urgency", "Requester", "Property", "Area", "Created At", "Updated At", "Rejection Reason"];
+        data = srDetailData.detailedRequests.map(r => [
+          r.title,
+          r.description,
+          r.status.replace(/_/g, " "),
+          r.urgency,
+          r.requesterName,
+          r.propertyName,
+          r.areaName,
+          r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "N/A",
+          r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "N/A",
+          r.rejectionReason || "N/A",
+        ]);
         break;
 
       default:

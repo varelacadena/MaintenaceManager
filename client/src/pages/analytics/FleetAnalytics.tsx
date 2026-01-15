@@ -114,7 +114,15 @@ export default function FleetAnalytics() {
 
   const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=fleet&format=${format}&${queryString}`, "_blank");
+    if (format === "pdf-reservations" || format === "xlsx-reservations") {
+      const actualFormat = format.replace("-reservations", "");
+      window.open(`/api/analytics/export?type=fleet-reservations&format=${actualFormat}&${queryString}`, "_blank");
+    } else if (format === "pdf-vehicles" || format === "xlsx-vehicles") {
+      const actualFormat = format.replace("-vehicles", "");
+      window.open(`/api/analytics/export?type=fleet-vehicles&format=${actualFormat}&${queryString}`, "_blank");
+    } else {
+      window.open(`/api/analytics/export?type=fleet&format=${format}&${queryString}`, "_blank");
+    }
   };
 
   const openDetailDialog = (type: string, title: string) => {
@@ -168,7 +176,7 @@ export default function FleetAnalytics() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
-        exportOptions={["pdf", "xlsx"]}
+        exportOptions={["pdf", "xlsx", "pdf-reservations", "xlsx-reservations", "pdf-vehicles", "xlsx-vehicles"]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

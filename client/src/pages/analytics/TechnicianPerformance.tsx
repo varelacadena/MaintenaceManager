@@ -67,7 +67,12 @@ export default function TechnicianPerformance() {
 
   const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=technicians&format=${format}&${queryString}`, "_blank");
+    if (format === "pdf-detailed" || format === "xlsx-detailed") {
+      const actualFormat = format.replace("-detailed", "");
+      window.open(`/api/analytics/export?type=technicians-detailed&format=${actualFormat}&${queryString}`, "_blank");
+    } else {
+      window.open(`/api/analytics/export?type=technicians&format=${format}&${queryString}`, "_blank");
+    }
   };
 
   const totalTasksCompleted = data.reduce((sum, t) => sum + t.tasksCompleted, 0);
@@ -108,7 +113,7 @@ export default function TechnicianPerformance() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
-        exportOptions={["pdf", "xlsx"]}
+        exportOptions={["pdf", "xlsx", "pdf-detailed", "xlsx-detailed"]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
