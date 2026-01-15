@@ -88,8 +88,9 @@ function AuthenticatedApp() {
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
                 <button
                   onClick={() => window.history.back()}
-                  className="md:hidden p-2 hover:bg-accent rounded-lg transition-colors"
+                  className="p-2 hover:bg-accent rounded-lg transition-colors"
                   aria-label="Go back"
+                  data-testid="button-back-global"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
