@@ -2862,29 +2862,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/export", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/export", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
     try {
-      const dataType = req.query.type as string;
+      const { type, format, ...filters } = req.query;
+      const dataType = type as string;
+
       if (!dataType) {
         return res.status(400).json({ message: "Data type is required" });
       }
 
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-        areaId: req.query.areaId as string | undefined,
-        technicianId: req.query.technicianId as string | undefined,
-      };
+      const data = await analyticsService.getExportData(dataType, filters);
 
+      if (format === "xlsx") {
+        const XLSX = await import("xlsx");
+        const worksheet = XLSX.utils.aoa_to_sheet([data.headers, ...data.data]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+        const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+        
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=report-${dataType}-${Date.now()}.xlsx`);
+        return res.send(buffer);
+      } else if (format === "pdf") {
+        const { jsPDF } = await import("jspdf");
+        const { default: autoTable } = await import("jspdf-autotable");
+        
+        const doc = new jsPDF();
+        doc.text(`Analytics Report: ${dataType}`, 14, 15);
+        autoTable(doc, {
+          head: [data.headers],
+          body: data.data,
+          startY: 20,
+        });
+        
+        const buffer = Buffer.from(doc.output("arraybuffer"));
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename=report-${dataType}-${Date.now()}.pdf`);
+        return res.send(buffer);
+      }
+
+      // Default back to CSV if no format or invalid format
       const csv = await analyticsService.exportData(dataType, filters);
-
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", `attachment; filename="${dataType}-report.csv"`);
+      res.setHeader("Content-Disposition", `attachment; filename=report-${dataType}-${Date.now()}.csv`);
       res.send(csv);
     } catch (error) {
-      console.error("Error exporting data:", error);
-      res.status(500).json({ message: "Failed to export data" });
+      console.error("Export error:", error);
+      res.status(500).json({ message: "Export failed" });
     }
   });
 
