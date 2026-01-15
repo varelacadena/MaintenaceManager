@@ -26,6 +26,34 @@ import {
   Line,
 } from "recharts";
 
+interface DetailedReservation {
+  id: string;
+  vehicleId: string | null;
+  vehicleName: string;
+  userId: string;
+  userName: string;
+  purpose: string;
+  passengerCount: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+  notes: string | null;
+  createdAt: string | null;
+}
+
+interface DetailedVehicle {
+  id: string;
+  vehicleId: string;
+  make: string;
+  model: string;
+  year: number;
+  category: string;
+  status: string;
+  currentMileage: number | null;
+  fuelType: string;
+  licensePlate: string | null;
+}
+
 interface FleetOverview {
   totalVehicles: number;
   availableVehicles: number;
@@ -41,6 +69,8 @@ interface FleetOverview {
   byStatus: { status: string; count: number }[];
   reservationsByMonth: { month: string; count: number }[];
   maintenanceByVehicle: { vehicleId: string; vehicleName: string; cost: number; count: number }[];
+  detailedReservations: DetailedReservation[];
+  detailedVehicles: DetailedVehicle[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -333,6 +363,129 @@ export default function FleetAnalytics() {
           </CardContent>
         </Card>
       )}
+
+      <Card data-testid="table-all-reservations">
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            All Reservations ({data?.detailedReservations?.length || 0} records)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ScrollArea className="w-full h-[400px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Vehicle</TableHead>
+                  <TableHead className="text-xs">User</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Purpose</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Start</TableHead>
+                  <TableHead className="text-xs hidden md:table-cell">End</TableHead>
+                  <TableHead className="text-xs text-right hidden lg:table-cell">Passengers</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data?.detailedReservations?.map(reservation => (
+                  <TableRow key={reservation.id} data-testid={`row-reservation-${reservation.id}`}>
+                    <TableCell className="text-sm py-2 font-medium">{reservation.vehicleName}</TableCell>
+                    <TableCell className="text-sm py-2">{reservation.userName}</TableCell>
+                    <TableCell className="text-sm py-2 hidden sm:table-cell max-w-[150px] truncate">{reservation.purpose}</TableCell>
+                    <TableCell className="py-2">
+                      <Badge
+                        variant={
+                          reservation.status === "completed" ? "default" 
+                          : reservation.status === "active" ? "secondary"
+                          : reservation.status === "cancelled" ? "destructive"
+                          : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {reservation.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs py-2">{new Date(reservation.startDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs py-2 hidden md:table-cell">{new Date(reservation.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-sm py-2 text-right hidden lg:table-cell">{reservation.passengerCount}</TableCell>
+                  </TableRow>
+                ))}
+                {(!data?.detailedReservations || data.detailedReservations.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No reservations found in the selected date range
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="table-all-vehicles">
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Car className="w-4 h-4" />
+            All Vehicles ({data?.detailedVehicles?.length || 0} records)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ScrollArea className="w-full h-[300px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Vehicle ID</TableHead>
+                  <TableHead className="text-xs">Make/Model</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Year</TableHead>
+                  <TableHead className="text-xs">Category</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs text-right hidden md:table-cell">Mileage</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Fuel Type</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data?.detailedVehicles?.map(vehicle => (
+                  <TableRow key={vehicle.id} data-testid={`row-vehicle-${vehicle.id}`}>
+                    <TableCell className="text-sm py-2 font-medium">{vehicle.vehicleId}</TableCell>
+                    <TableCell className="text-sm py-2">{vehicle.make} {vehicle.model}</TableCell>
+                    <TableCell className="text-sm py-2 hidden sm:table-cell">{vehicle.year}</TableCell>
+                    <TableCell className="py-2">
+                      <Badge variant="outline" className="text-xs">
+                        {vehicle.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Badge
+                        variant={
+                          vehicle.status === "available" ? "default"
+                          : vehicle.status === "in_use" ? "secondary"
+                          : "destructive"
+                        }
+                        className="text-xs"
+                      >
+                        {vehicle.status.replace(/_/g, " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm py-2 text-right hidden md:table-cell">
+                      {vehicle.currentMileage?.toLocaleString() || "N/A"}
+                    </TableCell>
+                    <TableCell className="text-sm py-2 hidden lg:table-cell">{vehicle.fuelType}</TableCell>
+                  </TableRow>
+                ))}
+                {(!data?.detailedVehicles || data.detailedVehicles.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No vehicles found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
       <Dialog open={detailDialog.open} onOpenChange={(open) => setDetailDialog({ ...detailDialog, open })}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

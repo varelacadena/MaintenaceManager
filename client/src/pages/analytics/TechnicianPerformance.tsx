@@ -13,6 +13,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
+interface TechnicianTaskDetail {
+  taskId: string;
+  taskName: string;
+  description: string;
+  status: string;
+  urgency: string;
+  initialDate: string | null;
+  completionDate: string | null;
+  propertyName: string;
+  areaName: string;
+  hoursLogged: number;
+}
+
 interface TechnicianData {
   technicianId: string;
   technicianName: string;
@@ -21,6 +34,7 @@ interface TechnicianData {
   totalHoursLogged: number;
   avgCompletionTimeHours: number;
   completionRate: number;
+  taskDetails: TechnicianTaskDetail[];
 }
 
 export default function TechnicianPerformance() {
@@ -190,6 +204,80 @@ export default function TechnicianPerformance() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {data.length > 0 && (
+        <Card>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
+              All Task Details by Technician
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <ScrollArea className="w-full h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Technician</TableHead>
+                    <TableHead className="text-xs">Task</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Urgency</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Property</TableHead>
+                    <TableHead className="text-xs hidden md:table-cell">Area</TableHead>
+                    <TableHead className="text-xs text-right">Hours</TableHead>
+                    <TableHead className="text-xs hidden lg:table-cell">Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.flatMap(tech => 
+                    tech.taskDetails?.map(task => (
+                      <TableRow key={task.taskId} data-testid={`row-task-${task.taskId}`}>
+                        <TableCell className="text-xs sm:text-sm py-2">{tech.technicianName}</TableCell>
+                        <TableCell className="py-2">
+                          <Link href={`/tasks/${task.taskId}`}>
+                            <span className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium">
+                              {task.taskName}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant={task.status === "completed" ? "default" : task.status === "in_progress" ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {task.status.replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant={task.urgency === "high" ? "destructive" : task.urgency === "medium" ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {task.urgency}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell">{task.propertyName}</TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden md:table-cell">{task.areaName}</TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 text-right">{task.hoursLogged}h</TableCell>
+                        <TableCell className="text-xs py-2 hidden lg:table-cell">
+                          {task.completionDate ? new Date(task.completionDate).toLocaleDateString() : "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    )) || []
+                  )}
+                  {data.every(tech => !tech.taskDetails || tech.taskDetails.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        No tasks found in the selected date range
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

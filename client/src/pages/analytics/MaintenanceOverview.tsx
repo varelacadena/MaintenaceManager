@@ -35,6 +35,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface DetailedWorkOrder {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  urgency: string;
+  initialDate: string | null;
+  estimatedCompletionDate: string | null;
+  actualCompletionDate: string | null;
+  assignedToId: string | null;
+  assignedToName: string;
+  propertyId: string | null;
+  propertyName: string;
+  areaId: string | null;
+  areaName: string;
+  equipmentId: string | null;
+  equipmentName: string;
+  taskType: string;
+  createdAt: string | null;
+}
+
 interface WorkOrderOverview {
   totalWorkOrders: number;
   completedWorkOrders: number;
@@ -50,6 +71,7 @@ interface WorkOrderOverview {
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; count: number; completed: number }[];
   overdueWorkOrders: number;
+  detailedRecords: DetailedWorkOrder[];
 }
 
 const reportCategories = [
@@ -351,7 +373,7 @@ export default function MaintenanceOverview() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <ScrollArea className="h-[280px]">
+                <ScrollArea className="h-[200px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -386,7 +408,7 @@ export default function MaintenanceOverview() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <ScrollArea className="h-[280px]">
+                <ScrollArea className="h-[200px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -407,6 +429,102 @@ export default function MaintenanceOverview() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                All Work Orders ({data?.detailedRecords?.length || 0} records)
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Complete list of work orders within the selected date range
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Name</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Urgency</TableHead>
+                      <TableHead className="text-xs">Assigned To</TableHead>
+                      <TableHead className="text-xs">Property</TableHead>
+                      <TableHead className="text-xs">Area</TableHead>
+                      <TableHead className="text-xs">Start Date</TableHead>
+                      <TableHead className="text-xs">Due Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data?.detailedRecords?.map(record => (
+                      <TableRow key={record.id} data-testid={`row-workorder-${record.id}`}>
+                        <TableCell className="py-2">
+                          <Link href={`/tasks/${record.id}`}>
+                            <span className="text-sm text-primary hover:underline cursor-pointer font-medium">
+                              {record.name}
+                            </span>
+                          </Link>
+                          {record.description && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                              {record.description}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant={
+                              record.status === "completed"
+                                ? "default"
+                                : record.status === "in_progress"
+                                ? "secondary"
+                                : "outline"
+                            }
+                            className="text-xs"
+                          >
+                            {record.status.replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant={
+                              record.urgency === "high"
+                                ? "destructive"
+                                : record.urgency === "medium"
+                                ? "secondary"
+                                : "outline"
+                            }
+                            className="text-xs"
+                          >
+                            {record.urgency}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm py-2">{record.assignedToName}</TableCell>
+                        <TableCell className="text-sm py-2">{record.propertyName}</TableCell>
+                        <TableCell className="text-sm py-2">{record.areaName}</TableCell>
+                        <TableCell className="text-sm py-2">
+                          {record.initialDate
+                            ? new Date(record.initialDate).toLocaleDateString()
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm py-2">
+                          {record.estimatedCompletionDate
+                            ? new Date(record.estimatedCompletionDate).toLocaleDateString()
+                            : "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!data?.detailedRecords || data.detailedRecords.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          No work orders found in the selected date range
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

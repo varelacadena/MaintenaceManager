@@ -28,6 +28,23 @@ import {
   Legend,
 } from "recharts";
 
+interface DetailedServiceRequest {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  urgency: string;
+  requesterId: string;
+  requesterName: string;
+  propertyId: string | null;
+  propertyName: string;
+  areaId: string | null;
+  areaName: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  rejectionReason: string | null;
+}
+
 interface ServiceRequestOverview {
   totalRequests: number;
   pendingRequests: number;
@@ -42,6 +59,7 @@ interface ServiceRequestOverview {
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; submitted: number; converted: number }[];
   topRequesters: { requesterId: string; requesterName: string; count: number }[];
+  detailedRequests: DetailedServiceRequest[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -415,6 +433,89 @@ export default function ServiceRequestAnalytics() {
           </CardContent>
         </Card>
       </div>
+
+      <Card data-testid="table-all-requests">
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            All Service Requests ({data?.detailedRequests?.length || 0} records)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ScrollArea className="w-full h-[400px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Title</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Urgency</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Requester</TableHead>
+                  <TableHead className="text-xs hidden md:table-cell">Property</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Area</TableHead>
+                  <TableHead className="text-xs">Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data?.detailedRequests?.map(request => (
+                  <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
+                    <TableCell className="py-2">
+                      <Link href={`/requests/${request.id}`}>
+                        <span className="text-sm text-primary hover:underline cursor-pointer font-medium">
+                          {request.title}
+                        </span>
+                      </Link>
+                      {request.description && (
+                        <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                          {request.description}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Badge
+                        variant={
+                          request.status === "converted_to_task" ? "default"
+                          : request.status === "under_review" ? "secondary"
+                          : request.status === "rejected" ? "destructive"
+                          : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {request.status.replace(/_/g, " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Badge
+                        variant={
+                          request.urgency === "high" ? "destructive"
+                          : request.urgency === "medium" ? "secondary"
+                          : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {request.urgency}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm py-2 hidden sm:table-cell">{request.requesterName}</TableCell>
+                    <TableCell className="text-sm py-2 hidden md:table-cell">{request.propertyName}</TableCell>
+                    <TableCell className="text-sm py-2 hidden lg:table-cell">{request.areaName}</TableCell>
+                    <TableCell className="text-xs py-2">
+                      {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : "N/A"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!data?.detailedRequests || data.detailedRequests.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No service requests found in the selected date range
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
       <Dialog open={detailDialog.open} onOpenChange={(open) => setDetailDialog({ ...detailDialog, open })}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

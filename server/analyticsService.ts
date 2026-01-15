@@ -25,6 +25,27 @@ export interface AnalyticsFilters {
   urgency?: string;
 }
 
+export interface DetailedWorkOrder {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  urgency: string;
+  initialDate: string | null;
+  estimatedCompletionDate: string | null;
+  actualCompletionDate: string | null;
+  assignedToId: string | null;
+  assignedToName: string;
+  propertyId: string | null;
+  propertyName: string;
+  areaId: string | null;
+  areaName: string;
+  equipmentId: string | null;
+  equipmentName: string;
+  taskType: string;
+  createdAt: string | null;
+}
+
 export interface WorkOrderOverview {
   totalWorkOrders: number;
   completedWorkOrders: number;
@@ -40,6 +61,20 @@ export interface WorkOrderOverview {
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; count: number; completed: number }[];
   overdueWorkOrders: number;
+  detailedRecords: DetailedWorkOrder[];
+}
+
+export interface TechnicianTaskDetail {
+  taskId: string;
+  taskName: string;
+  description: string;
+  status: string;
+  urgency: string;
+  initialDate: string | null;
+  completionDate: string | null;
+  propertyName: string;
+  areaName: string;
+  hoursLogged: number;
 }
 
 export interface TechnicianPerformance {
@@ -50,6 +85,7 @@ export interface TechnicianPerformance {
   totalHoursLogged: number;
   avgCompletionTimeHours: number;
   completionRate: number;
+  taskDetails: TechnicianTaskDetail[];
 }
 
 export interface ServiceRecord {
@@ -80,6 +116,20 @@ export interface AssetHealth {
   serviceHistory: ServiceRecord[];
 }
 
+export interface FacilityWorkOrder {
+  taskId: string;
+  taskName: string;
+  description: string;
+  status: string;
+  urgency: string;
+  initialDate: string | null;
+  completionDate: string | null;
+  assignedToName: string;
+  areaName: string;
+  equipmentName: string;
+  taskType: string;
+}
+
 export interface FacilityInsights {
   propertyId: string;
   propertyName: string;
@@ -90,6 +140,7 @@ export interface FacilityInsights {
   totalMaintenanceCost: number;
   emergencyWorkOrders: number;
   preventiveWorkOrders: number;
+  workOrderDetails: FacilityWorkOrder[];
 }
 
 export interface Alert {
@@ -101,6 +152,34 @@ export interface Alert {
   relatedId: string;
   relatedType: "task" | "equipment" | "property";
   createdAt: Date;
+}
+
+export interface DetailedReservation {
+  id: string;
+  vehicleId: string | null;
+  vehicleName: string;
+  userId: string;
+  userName: string;
+  purpose: string;
+  passengerCount: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+  notes: string | null;
+  createdAt: string | null;
+}
+
+export interface DetailedVehicle {
+  id: string;
+  vehicleId: string;
+  make: string;
+  model: string;
+  year: number;
+  category: string;
+  status: string;
+  currentMileage: number | null;
+  fuelType: string;
+  licensePlate: string | null;
 }
 
 export interface FleetOverview {
@@ -118,6 +197,25 @@ export interface FleetOverview {
   byStatus: { status: string; count: number }[];
   reservationsByMonth: { month: string; count: number }[];
   maintenanceByVehicle: { vehicleId: string; vehicleName: string; cost: number; count: number }[];
+  detailedReservations: DetailedReservation[];
+  detailedVehicles: DetailedVehicle[];
+}
+
+export interface DetailedServiceRequest {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  urgency: string;
+  requesterId: string;
+  requesterName: string;
+  propertyId: string | null;
+  propertyName: string;
+  areaId: string | null;
+  areaName: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  rejectionReason: string | null;
 }
 
 export interface ServiceRequestOverview {
@@ -134,6 +232,7 @@ export interface ServiceRequestOverview {
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; submitted: number; converted: number }[];
   topRequesters: { requesterId: string; requesterName: string; count: number }[];
+  detailedRequests: DetailedServiceRequest[];
 }
 
 export class AnalyticsService {
@@ -147,9 +246,13 @@ export class AnalyticsService {
 
     const propertiesList = await db.select().from(properties);
     const areasList = await db.select().from(areas);
+    const usersList = await db.select().from(users);
+    const equipmentList = await db.select().from(equipment);
 
     const propertyMap = new Map(propertiesList.map(p => [p.id, p.name]));
     const areaMap = new Map(areasList.map(a => [a.id, a.name]));
+    const userMap = new Map(usersList.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
+    const equipmentMap = new Map(equipmentList.map(e => [e.id, e.name]));
 
     const now = new Date();
     const totalWorkOrders = allTasks.length;
@@ -238,6 +341,33 @@ export class AnalyticsService {
       .sort((a, b) => a.month.localeCompare(b.month))
       .slice(-12);
 
+    const detailedRecords: DetailedWorkOrder[] = allTasks
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .map(t => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        status: t.status,
+        urgency: t.urgency,
+        initialDate: t.initialDate ? new Date(t.initialDate).toISOString() : null,
+        estimatedCompletionDate: t.estimatedCompletionDate ? new Date(t.estimatedCompletionDate).toISOString() : null,
+        actualCompletionDate: t.actualCompletionDate ? new Date(t.actualCompletionDate).toISOString() : null,
+        assignedToId: t.assignedToId,
+        assignedToName: t.assignedToId ? userMap.get(t.assignedToId) || "Unknown" : "Unassigned",
+        propertyId: t.propertyId,
+        propertyName: t.propertyId ? propertyMap.get(t.propertyId) || "Unknown" : "N/A",
+        areaId: t.areaId,
+        areaName: t.areaId ? areaMap.get(t.areaId) || "Unknown" : "N/A",
+        equipmentId: t.equipmentId,
+        equipmentName: t.equipmentId ? equipmentMap.get(t.equipmentId) || "Unknown" : "N/A",
+        taskType: t.taskType,
+        createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : null,
+      }));
+
     return {
       totalWorkOrders,
       completedWorkOrders,
@@ -253,6 +383,7 @@ export class AnalyticsService {
       byArea,
       monthlyTrend,
       overdueWorkOrders,
+      detailedRecords,
     };
   }
 
@@ -269,6 +400,11 @@ export class AnalyticsService {
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     const allTimeEntries = await db.select().from(timeEntries);
+    const propertiesList = await db.select().from(properties);
+    const areasList = await db.select().from(areas);
+    
+    const propertyMap = new Map(propertiesList.map(p => [p.id, p.name]));
+    const areaMap = new Map(areasList.map(a => [a.id, a.name]));
 
     const results: TechnicianPerformance[] = [];
 
@@ -290,6 +426,29 @@ export class AnalyticsService {
         avgCompletionTimeHours = Math.round((totalMs / completedTasksWithDates.length) / (1000 * 60 * 60));
       }
 
+      const taskDetails: TechnicianTaskDetail[] = techTasks
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .map(task => {
+          const taskTimeEntries = allTimeEntries.filter(te => te.taskId === task.id && te.userId === tech.id);
+          const taskMinutes = taskTimeEntries.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
+          return {
+            taskId: task.id,
+            taskName: task.name,
+            description: task.description,
+            status: task.status,
+            urgency: task.urgency,
+            initialDate: task.initialDate ? new Date(task.initialDate).toISOString() : null,
+            completionDate: task.actualCompletionDate ? new Date(task.actualCompletionDate).toISOString() : null,
+            propertyName: task.propertyId ? propertyMap.get(task.propertyId) || "Unknown" : "N/A",
+            areaName: task.areaId ? areaMap.get(task.areaId) || "Unknown" : "N/A",
+            hoursLogged: Math.round(taskMinutes / 60 * 10) / 10,
+          };
+        });
+
       results.push({
         technicianId: tech.id,
         technicianName: `${tech.firstName || ""} ${tech.lastName || ""}`.trim() || tech.username,
@@ -298,6 +457,7 @@ export class AnalyticsService {
         totalHoursLogged: Math.round(totalMinutes / 60),
         avgCompletionTimeHours,
         completionRate: techTasks.length > 0 ? Math.round((completedTasks.length / techTasks.length) * 100) : 0,
+        taskDetails,
       });
     }
 
@@ -393,6 +553,13 @@ export class AnalyticsService {
 
   async getFacilityInsights(filters: AnalyticsFilters): Promise<FacilityInsights[]> {
     const propertiesList = await db.select().from(properties);
+    const usersList = await db.select().from(users);
+    const areasList = await db.select().from(areas);
+    const equipmentList = await db.select().from(equipment);
+
+    const userMap = new Map(usersList.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
+    const areaMap = new Map(areasList.map(a => [a.id, a.name]));
+    const equipmentMap = new Map(equipmentList.map(e => [e.id, e.name]));
 
     const conditions = this.buildTaskConditions(filters);
     const allTasks = await db
@@ -423,6 +590,26 @@ export class AnalyticsService {
       const laborHours = propertyTime.reduce((sum, te) => sum + (te.durationMinutes || 0), 0) / 60;
       const laborCost = laborHours * 50;
 
+      const workOrderDetails: FacilityWorkOrder[] = propertyTasks
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .map(task => ({
+          taskId: task.id,
+          taskName: task.name,
+          description: task.description,
+          status: task.status,
+          urgency: task.urgency,
+          initialDate: task.initialDate ? new Date(task.initialDate).toISOString() : null,
+          completionDate: task.actualCompletionDate ? new Date(task.actualCompletionDate).toISOString() : null,
+          assignedToName: task.assignedToId ? userMap.get(task.assignedToId) || "Unknown" : "Unassigned",
+          areaName: task.areaId ? areaMap.get(task.areaId) || "Unknown" : "N/A",
+          equipmentName: task.equipmentId ? equipmentMap.get(task.equipmentId) || "Unknown" : "N/A",
+          taskType: task.taskType,
+        }));
+
       results.push({
         propertyId: prop.id,
         propertyName: prop.name,
@@ -433,6 +620,7 @@ export class AnalyticsService {
         totalMaintenanceCost: Math.round(partsCost + laborCost),
         emergencyWorkOrders: emergencyTasks.length,
         preventiveWorkOrders: recurringTasks.length,
+        workOrderDetails,
       });
     }
 
@@ -758,6 +946,43 @@ export class AnalyticsService {
       .sort((a, b) => b.cost - a.cost)
       .slice(0, 10);
 
+    // Build detailed reservations list
+    const usersList = await db.select().from(users);
+    const userMap = new Map(usersList.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
+    const vehicleMap = new Map(allVehicles.map(v => [v.id, `${v.year} ${v.make} ${v.model}`]));
+
+    const detailedReservations: DetailedReservation[] = filteredReservations
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+      .map(r => ({
+        id: r.id,
+        vehicleId: r.vehicleId,
+        vehicleName: r.vehicleId ? vehicleMap.get(r.vehicleId) || "Unknown" : "Not assigned",
+        userId: r.userId,
+        userName: userMap.get(r.userId) || "Unknown",
+        purpose: r.purpose,
+        passengerCount: r.passengerCount,
+        startDate: new Date(r.startDate).toISOString(),
+        endDate: new Date(r.endDate).toISOString(),
+        status: r.status,
+        notes: r.notes,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
+      }));
+
+    const detailedVehicles: DetailedVehicle[] = allVehicles
+      .sort((a, b) => a.vehicleId.localeCompare(b.vehicleId))
+      .map(v => ({
+        id: v.id,
+        vehicleId: v.vehicleId,
+        make: v.make,
+        model: v.model,
+        year: v.year,
+        category: v.category,
+        status: v.status,
+        currentMileage: v.currentMileage,
+        fuelType: v.fuelType,
+        licensePlate: v.licensePlate,
+      }));
+
     return {
       totalVehicles,
       availableVehicles,
@@ -773,6 +998,8 @@ export class AnalyticsService {
       byStatus,
       reservationsByMonth,
       maintenanceByVehicle,
+      detailedReservations,
+      detailedVehicles,
     };
   }
 
@@ -905,6 +1132,30 @@ export class AnalyticsService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
+    // Build detailed requests list
+    const detailedRequests: DetailedServiceRequest[] = filteredRequests
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .map(r => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        status: r.status,
+        urgency: r.urgency,
+        requesterId: r.requesterId,
+        requesterName: userMap.get(r.requesterId) || "Unknown",
+        propertyId: r.propertyId,
+        propertyName: r.propertyId ? propertyMap.get(r.propertyId) || "Unknown" : "N/A",
+        areaId: r.areaId,
+        areaName: r.areaId ? areaMap.get(r.areaId) || "Unknown" : "N/A",
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
+        updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : null,
+        rejectionReason: r.rejectionReason,
+      }));
+
     return {
       totalRequests,
       pendingRequests,
@@ -919,6 +1170,7 @@ export class AnalyticsService {
       byArea,
       monthlyTrend,
       topRequesters,
+      detailedRequests,
     };
   }
 

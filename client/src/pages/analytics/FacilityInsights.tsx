@@ -13,6 +13,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
+interface FacilityWorkOrder {
+  taskId: string;
+  taskName: string;
+  description: string;
+  status: string;
+  urgency: string;
+  initialDate: string | null;
+  completionDate: string | null;
+  assignedToName: string;
+  areaName: string;
+  equipmentName: string;
+  taskType: string;
+}
+
 interface FacilityData {
   propertyId: string;
   propertyName: string;
@@ -23,6 +37,7 @@ interface FacilityData {
   totalMaintenanceCost: number;
   emergencyWorkOrders: number;
   preventiveWorkOrders: number;
+  workOrderDetails: FacilityWorkOrder[];
 }
 
 export default function FacilityInsights() {
@@ -227,6 +242,86 @@ export default function FacilityInsights() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {data.length > 0 && (
+        <Card>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
+              All Work Orders by Facility
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <ScrollArea className="w-full h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Facility</TableHead>
+                    <TableHead className="text-xs">Task</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Urgency</TableHead>
+                    <TableHead className="text-xs hidden md:table-cell">Assigned To</TableHead>
+                    <TableHead className="text-xs hidden lg:table-cell">Area</TableHead>
+                    <TableHead className="text-xs hidden xl:table-cell">Equipment</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.flatMap(facility => 
+                    facility.workOrderDetails?.map(wo => (
+                      <TableRow key={wo.taskId} data-testid={`row-wo-${wo.taskId}`}>
+                        <TableCell className="text-xs sm:text-sm py-2">
+                          <Link href={`/properties/${facility.propertyId}`}>
+                            <span className="text-primary hover:underline cursor-pointer">
+                              {facility.propertyName}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Link href={`/tasks/${wo.taskId}`}>
+                            <span className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium">
+                              {wo.taskName}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant={wo.status === "completed" ? "default" : wo.status === "in_progress" ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {wo.status.replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2 hidden sm:table-cell">
+                          <Badge
+                            variant={wo.urgency === "high" ? "destructive" : wo.urgency === "medium" ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {wo.urgency}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden md:table-cell">{wo.assignedToName}</TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden lg:table-cell">{wo.areaName}</TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden xl:table-cell">{wo.equipmentName}</TableCell>
+                        <TableCell className="text-xs py-2">
+                          {wo.initialDate ? new Date(wo.initialDate).toLocaleDateString() : "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    )) || []
+                  )}
+                  {data.every(f => !f.workOrderDetails || f.workOrderDetails.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        No work orders found in the selected date range
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
