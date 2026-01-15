@@ -90,7 +90,7 @@ export default function VehicleCheckInVerification() {
     if (checkInLog) {
       setEditedData({
         endMileage: checkInLog.endMileage,
-        fuelLevel: checkInLog.fuelLevel,
+        fuelLevel: checkInLog.fuelLevel || "",
         cleanlinessStatus: checkInLog.cleanlinessStatus,
         issues: checkInLog.issues || "",
       });
@@ -190,7 +190,7 @@ export default function VehicleCheckInVerification() {
               <div>
                 <Label className="text-muted-foreground">Check-in Time</Label>
                 <p className="font-medium" data-testid="text-checkin-time">
-                  {new Date(checkInLog.checkInTime).toLocaleString()}
+                  {checkInLog.checkInTime ? new Date(checkInLog.checkInTime).toLocaleString() : "N/A"}
                 </p>
               </div>
               {checkOutLog && (

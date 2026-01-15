@@ -1,10 +1,10 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Car, Calendar, User, MapPin, FileText, Key, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Car, Calendar, User as UserIcon, MapPin, FileText, Key, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { VehicleReservation, Vehicle } from "@shared/schema";
+import type { VehicleReservation, Vehicle, User } from "@shared/schema";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -35,7 +35,7 @@ export default function VehicleReservationDetails() {
   const [safetyCheckboxChecked, setSafetyCheckboxChecked] = useState(false);
 
   // Get current user to check role - must be first to avoid hook order issues
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/auth/user"],
   });
 
@@ -79,16 +79,13 @@ export default function VehicleReservationDetails() {
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/vehicle-reservations/${reservationId}/cancel`, {
-        method: "POST",
-      });
+      return apiRequest("POST", `/api/vehicle-reservations/${reservationId}/cancel`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
       toast({
         title: "Reservation Cancelled",
         description: "The reservation has been successfully cancelled.",
-        variant: "success",
       });
       // Redirect to the reservation list page or a confirmation page
       setLocation("/my-reservations");
@@ -351,7 +348,7 @@ export default function VehicleReservationDetails() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Passengers</p>
-              <p className="font-medium">{reservation.passengers || reservation.passengerCount}</p>
+              <p className="font-medium">{reservation.passengerCount || "Not specified"}</p>
             </div>
           </CardContent>
         </Card>
