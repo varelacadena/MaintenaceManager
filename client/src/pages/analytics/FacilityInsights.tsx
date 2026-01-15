@@ -70,12 +70,7 @@ export default function FacilityInsights() {
 
   const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    if (format === "pdf-detailed" || format === "xlsx-detailed") {
-      const actualFormat = format.replace("-detailed", "");
-      window.open(`/api/analytics/export?type=facilities-detailed&format=${actualFormat}&${queryString}`, "_blank");
-    } else {
-      window.open(`/api/analytics/export?type=facilities&format=${format}&${queryString}`, "_blank");
-    }
+    window.open(`/api/analytics/export?type=facilities-detailed&format=${format}&${queryString}`, "_blank");
   };
 
   const totalFacilities = data.length;
@@ -139,7 +134,7 @@ export default function FacilityInsights() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
-        exportOptions={["pdf", "xlsx", "pdf-detailed", "xlsx-detailed"]}
+        exportOptions={["pdf", "xlsx"]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">

@@ -947,6 +947,53 @@ export class AnalyticsService {
         ]);
         break;
 
+      case "fleet-detailed":
+        const fleetFullData = await this.getFleetOverview(filters);
+        headers = ["Type", "Vehicle", "Make/Model", "Year", "Status", "User/Purpose", "Start Date", "End Date", "Mileage/Passengers", "Notes"];
+        // First add summary metrics
+        data = [
+          ["SUMMARY", "Total Vehicles", String(fleetFullData.totalVehicles), "", "", "", "", "", "", ""],
+          ["SUMMARY", "Available", String(fleetFullData.availableVehicles), "", "", "", "", "", "", ""],
+          ["SUMMARY", "In Use", String(fleetFullData.inUseVehicles), "", "", "", "", "", "", ""],
+          ["SUMMARY", "Out of Service", String(fleetFullData.outOfServiceVehicles), "", "", "", "", "", "", ""],
+          ["SUMMARY", "Total Reservations", String(fleetFullData.totalReservations), "", "", "", "", "", "", ""],
+          ["SUMMARY", "Utilization Rate", `${fleetFullData.avgUtilizationRate}%`, "", "", "", "", "", "", ""],
+          ["", "", "", "", "", "", "", "", "", ""],
+        ];
+        // Add all vehicles
+        fleetFullData.detailedVehicles.forEach(v => {
+          data.push([
+            "VEHICLE",
+            v.vehicleId,
+            `${v.make} ${v.model}`,
+            String(v.year),
+            v.status.replace(/_/g, " "),
+            v.category,
+            "",
+            "",
+            String(v.currentMileage || "N/A"),
+            v.licensePlate || "",
+          ]);
+        });
+        // Add separator
+        data.push(["", "", "", "", "", "", "", "", "", ""]);
+        // Add all reservations
+        fleetFullData.detailedReservations.forEach(r => {
+          data.push([
+            "RESERVATION",
+            r.vehicleName,
+            "",
+            "",
+            r.status,
+            `${r.userName} - ${r.purpose}`,
+            r.startDate ? new Date(r.startDate).toLocaleDateString() : "N/A",
+            r.endDate ? new Date(r.endDate).toLocaleDateString() : "N/A",
+            String(r.passengerCount || "N/A"),
+            r.notes || "",
+          ]);
+        });
+        break;
+
       case "service-requests":
         const srData = await this.getServiceRequestOverview(filters);
         headers = ["Metric", "Value"];

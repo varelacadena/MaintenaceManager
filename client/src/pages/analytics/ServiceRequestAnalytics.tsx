@@ -110,12 +110,7 @@ export default function ServiceRequestAnalytics() {
 
   const handleExport = (format: string) => {
     const queryString = buildQueryString();
-    if (format === "pdf-detailed" || format === "xlsx-detailed") {
-      const actualFormat = format.replace("-detailed", "");
-      window.open(`/api/analytics/export?type=service-requests-detailed&format=${actualFormat}&${queryString}`, "_blank");
-    } else {
-      window.open(`/api/analytics/export?type=service-requests&format=${format}&${queryString}`, "_blank");
-    }
+    window.open(`/api/analytics/export?type=service-requests-detailed&format=${format}&${queryString}`, "_blank");
   };
 
   const openDetailDialog = (type: string, title: string) => {
@@ -172,7 +167,7 @@ export default function ServiceRequestAnalytics() {
         onFilterChange={setFilters}
         onExport={handleExport}
         showUrgencyFilter
-        exportOptions={["pdf", "xlsx", "pdf-detailed", "xlsx-detailed"]}
+        exportOptions={["pdf", "xlsx"]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
