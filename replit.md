@@ -4,26 +4,27 @@
 
 This web-based platform streamlines maintenance operations for college facilities. It supports three user roles—administrators, maintenance staff, and college staff—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
 
-## Recent Updates (January 15, 2026)
+## Recent Updates (January 16, 2026)
 
-**ANALYTICS MODULE REDESIGN - ACCOUNTING-STYLE REPORTS:**
+**ANALYTICS MODULE CONSOLIDATION - SINGLE PAGE DASHBOARD:**
 
-The analytics/reporting module has been completely redesigned to function like an accounting reporting tool with a cleaner, more user-friendly interface.
+All 7 analytics report pages have been consolidated into a single dynamic page at `/analytics`. Report switching happens via tabs without changing routes, providing a smoother user experience.
 
-**New Features:**
-- **Reports Hub Design**: Main analytics page now shows organized report categories in a visual grid
-- **Clickable KPI Cards**: All KPI cards open dialogs with detailed breakdowns when clicked
-- **Fleet Analytics**: New dedicated page for vehicle utilization, reservations, and maintenance
-- **Service Request Analytics**: New dedicated page for request metrics and conversion tracking
+**New Architecture:**
+- **Single Route**: All analytics now accessible at `/analytics` instead of 7 separate routes
+- **Tab-Based Navigation**: Switch between report types (Work Orders, Technicians, Assets, Facilities, Fleet, Requests, Alerts) with tabs
+- **Lazy Loading**: Each report component is lazy-loaded for optimal performance
+- **Unified Filters**: Consistent filtering interface across all report types
+- **Export Functionality**: PDF and XLSX export available on every report
 
-**Dashboard Pages:**
-- `/analytics` - Reports Hub: Organized report categories with clickable predetermined reports
-- `/analytics/technicians` - Technician Performance: Leaderboard, hours logged, completion rates
-- `/analytics/assets` - Asset Health: Equipment maintenance history, failure rates, costs
-- `/analytics/facilities` - Campus Facilities: Building-level work order analytics
-- `/analytics/alerts` - Alerts & Exceptions: Overdue work orders, SLA breaches, trends
-- `/analytics/fleet` - Fleet Management: Vehicle status, reservations, utilization rates
-- `/analytics/requests` - Service Requests: Request metrics, conversion rates, top requesters
+**Report Components (client/src/pages/analytics/reports/):**
+- `WorkOrdersReport.tsx` - Task status, trends, status/urgency breakdowns
+- `TechniciansReport.tsx` - Team performance, hours logged, completion rates
+- `AssetsReport.tsx` - Equipment health, failure rates, maintenance costs
+- `FacilitiesReport.tsx` - Building-level work order analytics
+- `FleetReport.tsx` - Vehicle status, reservations, utilization rates
+- `ServiceRequestsReport.tsx` - Request metrics, conversion rates, top requesters
+- `AlertsReport.tsx` - Overdue work orders, SLA breaches, exceptions
 
 **API Endpoints:**
 - `GET /api/analytics/work-orders` - Work order overview with filters

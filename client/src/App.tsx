@@ -37,13 +37,7 @@ import VehicleCheckInVerification from "./pages/VehicleCheckInVerification";
 import VehicleReservations from "./pages/VehicleReservations";
 import VehicleReservationDetails from "./pages/VehicleReservationDetails";
 import { ScrollToTop } from "./components/ScrollToTop";
-import MaintenanceOverview from "./pages/analytics/MaintenanceOverview";
-import TechnicianPerformance from "./pages/analytics/TechnicianPerformance";
-import AssetHealth from "./pages/analytics/AssetHealth";
-import FacilityInsights from "./pages/analytics/FacilityInsights";
-import AlertsExceptions from "./pages/analytics/AlertsExceptions";
-import FleetAnalytics from "./pages/analytics/FleetAnalytics";
-import ServiceRequestAnalytics from "./pages/analytics/ServiceRequestAnalytics";
+import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -152,13 +146,7 @@ function AuthenticatedApp() {
                 <Route path="/vehicle-checkout/:reservationId" component={VehicleCheckOut} />
                 <Route path="/vehicle-checkin/:checkOutLogId" component={VehicleCheckIn} />
                 <Route path="/vehicle-checkin-verify/:checkInLogId" component={VehicleCheckInVerification} />
-                <Route path="/analytics" component={MaintenanceOverview} />
-                <Route path="/analytics/technicians" component={TechnicianPerformance} />
-                <Route path="/analytics/assets" component={AssetHealth} />
-                <Route path="/analytics/facilities" component={FacilityInsights} />
-                <Route path="/analytics/alerts" component={AlertsExceptions} />
-                <Route path="/analytics/fleet" component={FleetAnalytics} />
-                <Route path="/analytics/requests" component={ServiceRequestAnalytics} />
+                <Route path="/analytics" component={AnalyticsDashboard} />
                 <Route component={NotFound} />
               </Switch>
             </main>
