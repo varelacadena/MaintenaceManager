@@ -183,6 +183,19 @@ export default function FleetReport() {
         onFilterChange={setFilters}
         onExport={handleExport}
         exportOptions={["pdf", "xlsx"]}
+        reportTitle="Fleet Report"
+        chartContainerId="fleet-charts"
+        tableData={{
+          headers: ["Vehicle", "Make/Model", "Category", "Status", "Mileage", "Fuel Type"],
+          rows: data?.detailedVehicles?.map(v => [
+            v.vehicleId,
+            `${v.make} ${v.model} (${v.year})`,
+            v.category,
+            v.status.replace(/_/g, " "),
+            v.currentMileage?.toLocaleString() || "N/A",
+            v.fuelType,
+          ]) || [],
+        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -219,7 +232,7 @@ export default function FleetReport() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div id="fleet-charts" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-medium">Vehicle Status</CardTitle>

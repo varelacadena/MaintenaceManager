@@ -207,6 +207,19 @@ export default function AssetsReport() {
         onFilterChange={setFilters}
         onExport={handleExport}
         exportOptions={["pdf", "xlsx"]}
+        reportTitle="Assets Report"
+        tableData={{
+          headers: ["Equipment", "Property", "Category", "Condition", "Work Orders", "Cost", "Last Serviced"],
+          rows: data.map(a => [
+            a.equipmentName,
+            a.propertyName,
+            a.category,
+            a.condition || "Unknown",
+            a.workOrderCount,
+            `$${a.totalMaintenanceCost.toLocaleString()}`,
+            a.lastMaintenanceDate ? new Date(a.lastMaintenanceDate).toLocaleDateString() : "N/A",
+          ]),
+        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">

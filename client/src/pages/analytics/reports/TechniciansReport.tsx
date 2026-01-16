@@ -95,6 +95,19 @@ export default function TechniciansReport() {
         onFilterChange={setFilters}
         onExport={handleExport}
         exportOptions={["pdf", "xlsx"]}
+        reportTitle="Technicians Report"
+        chartContainerId="technicians-charts"
+        tableData={{
+          headers: ["Technician", "Tasks Done", "Assigned", "Hours Logged", "Avg Time (hrs)", "Completion Rate"],
+          rows: data.map(t => [
+            t.technicianName,
+            t.tasksCompleted,
+            t.tasksAssigned,
+            t.totalHoursLogged,
+            t.avgCompletionTimeHours,
+            `${t.completionRate}%`,
+          ]),
+        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
@@ -139,7 +152,9 @@ export default function TechniciansReport() {
         </Card>
       )}
 
-      <TechnicianPerformanceChart data={data} />
+      <div id="technicians-charts">
+        <TechnicianPerformanceChart data={data} />
+      </div>
 
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">

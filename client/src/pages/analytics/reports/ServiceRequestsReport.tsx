@@ -184,6 +184,20 @@ export default function ServiceRequestsReport() {
         showStatusFilter
         showUrgencyFilter
         exportOptions={["pdf", "xlsx"]}
+        reportTitle="Service Requests Report"
+        chartContainerId="service-requests-charts"
+        tableData={{
+          headers: ["Title", "Status", "Urgency", "Requester", "Property", "Area", "Created"],
+          rows: data?.detailedRequests?.map(r => [
+            r.title,
+            r.status.replace(/_/g, " "),
+            r.urgency,
+            r.requesterName,
+            r.propertyName || "-",
+            r.areaName || "-",
+            r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-",
+          ]) || [],
+        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -230,7 +244,7 @@ export default function ServiceRequestsReport() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div id="service-requests-charts" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-medium">By Status</CardTitle>

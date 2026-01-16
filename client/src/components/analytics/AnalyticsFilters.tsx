@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Download, Filter, X, Calendar, ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, Filter, X, Calendar, ChevronDown, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { exportToPdfWithCharts } from "@/lib/pdfExport";
 
 interface Property {
   id: string;
@@ -53,6 +55,12 @@ interface AnalyticsFiltersProps {
   showStatusFilter?: boolean;
   showUrgencyFilter?: boolean;
   exportOptions?: string[];
+  reportTitle?: string;
+  chartContainerId?: string;
+  tableData?: {
+    headers: string[];
+    rows: (string | number)[][];
+  };
 }
 
 const datePresets = [
@@ -100,7 +108,12 @@ export default function AnalyticsFilters({
   showStatusFilter = false,
   showUrgencyFilter = false,
   exportOptions = [],
+  reportTitle = "Analytics Report",
+  chartContainerId,
+  tableData,
 }: AnalyticsFiltersProps) {
+  const [isExporting, setIsExporting] = useState(false);
+
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
@@ -117,6 +130,31 @@ export default function AnalyticsFilters({
 
   const updateFilter = (key: keyof FilterState, value: string) => {
     onFilterChange({ ...filters, [key]: value });
+  };
+
+  const handlePdfExportWithCharts = async () => {
+    if (!chartContainerId) {
+      onExport?.("pdf");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await exportToPdfWithCharts({
+        title: reportTitle,
+        chartContainerId,
+        tableData,
+        filters: {
+          "Date Range": filters.startDate && filters.endDate 
+            ? `${filters.startDate} to ${filters.endDate}` 
+            : filters.startDate || filters.endDate || "All Time",
+        },
+      });
+    } catch (error) {
+      console.error("PDF export error:", error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const applyDatePreset = (preset: typeof datePresets[0]) => {
@@ -386,11 +424,16 @@ export default function AnalyticsFilters({
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start gap-2"
-                  onClick={() => onExport("pdf")}
+                  onClick={handlePdfExportWithCharts}
+                  disabled={isExporting}
                   data-testid="button-export-pdf"
                 >
-                  <FileText className="w-4 h-4 text-red-600" />
-                  PDF Document (.pdf)
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-red-600" />
+                  )}
+                  {isExporting ? "Generating PDF..." : "PDF with Charts (.pdf)"}
                 </Button>
               )}
             </div>
