@@ -9,7 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, X } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Download, Filter, X, Calendar, ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Property {
   id: string;
@@ -49,6 +55,43 @@ interface AnalyticsFiltersProps {
   exportOptions?: string[];
 }
 
+const datePresets = [
+  { label: "Today", getValue: () => {
+    const today = new Date().toISOString().split('T')[0];
+    return { startDate: today, endDate: today };
+  }},
+  { label: "Last 7 Days", getValue: () => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+  }},
+  { label: "Last 30 Days", getValue: () => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+  }},
+  { label: "This Month", getValue: () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+  }},
+  { label: "Last Month", getValue: () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+  }},
+  { label: "This Year", getValue: () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    return { startDate: start.toISOString().split('T')[0], endDate: now.toISOString().split('T')[0] };
+  }},
+  { label: "All Time", getValue: () => ({ startDate: "", endDate: "" }) },
+];
+
 export default function AnalyticsFilters({
   filters,
   onFilterChange,
@@ -76,6 +119,11 @@ export default function AnalyticsFilters({
     onFilterChange({ ...filters, [key]: value });
   };
 
+  const applyDatePreset = (preset: typeof datePresets[0]) => {
+    const { startDate, endDate } = preset.getValue();
+    onFilterChange({ ...filters, startDate, endDate });
+  };
+
   const clearFilters = () => {
     onFilterChange({
       startDate: "",
@@ -88,153 +136,267 @@ export default function AnalyticsFilters({
     });
   };
 
-  const hasActiveFilters = Object.values(filters).some(v => v !== "");
+  const activeFiltersCount = Object.entries(filters).filter(([key, value]) => {
+    if (key === 'startDate' || key === 'endDate') return false;
+    return value !== "";
+  }).length;
+
+  const hasDateFilter = filters.startDate || filters.endDate;
+  const hasActiveFilters = activeFiltersCount > 0 || hasDateFilter;
+
+  const getDateLabel = () => {
+    if (!filters.startDate && !filters.endDate) return "All Time";
+    if (filters.startDate && filters.endDate) {
+      if (filters.startDate === filters.endDate) {
+        return new Date(filters.startDate).toLocaleDateString();
+      }
+      return `${new Date(filters.startDate).toLocaleDateString()} - ${new Date(filters.endDate).toLocaleDateString()}`;
+    }
+    if (filters.startDate) return `From ${new Date(filters.startDate).toLocaleDateString()}`;
+    return `Until ${new Date(filters.endDate).toLocaleDateString()}`;
+  };
 
   return (
-    <div className="bg-card border rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm font-medium text-muted-foreground">Filters</span>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="button-clear-filters" className="h-7 px-2 text-xs">
-              <X className="w-3 h-3 mr-1" />
-              Clear
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-9 gap-2"
+            data-testid="button-date-filter"
+          >
+            <Calendar className="w-4 h-4" />
+            <span className="hidden sm:inline">{getDateLabel()}</span>
+            <span className="sm:hidden">Date</span>
+            <ChevronDown className="w-3 h-3 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-3" align="start">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {datePresets.map((preset) => (
+                <Button
+                  key={preset.label}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs justify-start"
+                  onClick={() => applyDatePreset(preset)}
+                  data-testid={`button-preset-${preset.label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+            <div className="border-t pt-3 space-y-2">
+              <Label className="text-xs text-muted-foreground">Custom Range</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="startDate" className="text-xs">From</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={filters.startDate}
+                    onChange={e => updateFilter("startDate", e.target.value)}
+                    data-testid="input-start-date"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate" className="text-xs">To</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={filters.endDate}
+                    onChange={e => updateFilter("endDate", e.target.value)}
+                    data-testid="input-end-date"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button 
+            variant={activeFiltersCount > 0 ? "default" : "outline"}
+            size="sm" 
+            className="h-9 gap-2"
+            data-testid="button-filters"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {activeFiltersCount}
+              </Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3" align="start">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Filters</span>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-xs">
+                  <X className="w-3 h-3 mr-1" />
+                  Clear all
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="property" className="text-xs">Property / Building</Label>
+                <Select value={filters.propertyId || "all"} onValueChange={v => updateFilter("propertyId", v === "all" ? "" : v)}>
+                  <SelectTrigger id="property" data-testid="select-property" className="h-8 text-xs">
+                    <SelectValue placeholder="All Properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Properties</SelectItem>
+                    {properties.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="area" className="text-xs">Area / Department</Label>
+                <Select value={filters.areaId || "all"} onValueChange={v => updateFilter("areaId", v === "all" ? "" : v)}>
+                  <SelectTrigger id="area" data-testid="select-area" className="h-8 text-xs">
+                    <SelectValue placeholder="All Areas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Areas</SelectItem>
+                    {areas.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {showTechnicianFilter && (
+                <div className="space-y-1">
+                  <Label htmlFor="technician" className="text-xs">Technician</Label>
+                  <Select value={filters.technicianId || "all"} onValueChange={v => updateFilter("technicianId", v === "all" ? "" : v)}>
+                    <SelectTrigger id="technician" data-testid="select-technician" className="h-8 text-xs">
+                      <SelectValue placeholder="All Technicians" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Technicians</SelectItem>
+                      {technicians.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {showStatusFilter && (
+                <div className="space-y-1">
+                  <Label htmlFor="status" className="text-xs">Status</Label>
+                  <Select value={filters.status || "all"} onValueChange={v => updateFilter("status", v === "all" ? "" : v)}>
+                    <SelectTrigger id="status" data-testid="select-status" className="h-8 text-xs">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="not_started">Not Started</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="on_hold">On Hold</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {showUrgencyFilter && (
+                <div className="space-y-1">
+                  <Label htmlFor="urgency" className="text-xs">Priority</Label>
+                  <Select value={filters.urgency || "all"} onValueChange={v => updateFilter("urgency", v === "all" ? "" : v)}>
+                    <SelectTrigger id="urgency" data-testid="select-urgency" className="h-8 text-xs">
+                      <SelectValue placeholder="All Priorities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {hasActiveFilters && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={clearFilters} 
+          className="h-9 px-2 text-muted-foreground"
+          data-testid="button-clear-filters"
+        >
+          <X className="w-4 h-4" />
+          <span className="sr-only">Clear filters</span>
+        </Button>
+      )}
+
+      <div className="flex-1" />
+
+      {exportOptions.length > 0 && onExport && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-2" data-testid="button-export">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download Report</span>
+              <span className="sm:hidden">Export</span>
+              <ChevronDown className="w-3 h-3 opacity-50" />
             </Button>
-          )}
-        </div>
-
-        {exportOptions.length > 0 && onExport && (
-          <div className="flex gap-2">
-            {exportOptions.map(option => (
-              <Button
-                key={option}
-                variant="outline"
-                size="sm"
-                onClick={() => onExport(option)}
-                data-testid={`button-export-${option}`}
-                className="h-7 px-2 sm:px-3 text-xs"
-              >
-                <Download className="w-3 h-3 sm:mr-1" />
-                <span className="hidden sm:inline">{option.toUpperCase()}</span>
-              </Button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="startDate" className="text-xs">Start Date</Label>
-          <Input
-            id="startDate"
-            type="date"
-            value={filters.startDate}
-            onChange={e => updateFilter("startDate", e.target.value)}
-            data-testid="input-start-date"
-            className="h-8 sm:h-9 text-xs sm:text-sm"
-          />
-        </div>
-
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="endDate" className="text-xs">End Date</Label>
-          <Input
-            id="endDate"
-            type="date"
-            value={filters.endDate}
-            onChange={e => updateFilter("endDate", e.target.value)}
-            data-testid="input-end-date"
-            className="h-8 sm:h-9 text-xs sm:text-sm"
-          />
-        </div>
-
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="property" className="text-xs">Property</Label>
-          <Select value={filters.propertyId} onValueChange={v => updateFilter("propertyId", v === "all" ? "" : v)}>
-            <SelectTrigger id="property" data-testid="select-property" className="h-8 sm:h-9 text-xs sm:text-sm">
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Properties</SelectItem>
-              {properties.map(p => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="area" className="text-xs">Area</Label>
-          <Select value={filters.areaId} onValueChange={v => updateFilter("areaId", v === "all" ? "" : v)}>
-            <SelectTrigger id="area" data-testid="select-area" className="h-8 sm:h-9 text-xs sm:text-sm">
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Areas</SelectItem>
-              {areas.map(a => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {showTechnicianFilter && (
-          <div className="space-y-1 sm:space-y-2">
-            <Label htmlFor="technician" className="text-xs">Technician</Label>
-            <Select value={filters.technicianId} onValueChange={v => updateFilter("technicianId", v === "all" ? "" : v)}>
-              <SelectTrigger id="technician" data-testid="select-technician" className="h-8 sm:h-9 text-xs sm:text-sm">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Technicians</SelectItem>
-                {technicians.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.username}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {showStatusFilter && (
-          <div className="space-y-1 sm:space-y-2">
-            <Label htmlFor="status" className="text-xs">Status</Label>
-            <Select value={filters.status} onValueChange={v => updateFilter("status", v === "all" ? "" : v)}>
-              <SelectTrigger id="status" data-testid="select-status" className="h-8 sm:h-9 text-xs sm:text-sm">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="not_started">Not Started</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="on_hold">On Hold</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {showUrgencyFilter && (
-          <div className="space-y-1 sm:space-y-2">
-            <Label htmlFor="urgency" className="text-xs">Urgency</Label>
-            <Select value={filters.urgency} onValueChange={v => updateFilter("urgency", v === "all" ? "" : v)}>
-              <SelectTrigger id="urgency" data-testid="select-urgency" className="h-8 sm:h-9 text-xs sm:text-sm">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Urgencies</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="end">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground px-2 py-1">Download complete report</p>
+              {exportOptions.includes("xlsx") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={() => onExport("xlsx")}
+                  data-testid="button-export-xlsx"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  Excel Spreadsheet (.xlsx)
+                </Button>
+              )}
+              {exportOptions.includes("pdf") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={() => onExport("pdf")}
+                  data-testid="button-export-pdf"
+                >
+                  <FileText className="w-4 h-4 text-red-600" />
+                  PDF Document (.pdf)
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }

@@ -784,6 +784,90 @@ export class AnalyticsService {
         ]);
         break;
 
+      case "work-orders-complete":
+        const completeData = await this.getWorkOrderOverview(filters);
+        
+        const reportDate = new Date().toLocaleDateString();
+        const dateRange = filters.startDate && filters.endDate 
+          ? `${new Date(filters.startDate).toLocaleDateString()} - ${new Date(filters.endDate).toLocaleDateString()}`
+          : filters.startDate 
+            ? `From ${new Date(filters.startDate).toLocaleDateString()}`
+            : filters.endDate
+              ? `Until ${new Date(filters.endDate).toLocaleDateString()}`
+              : "All Time";
+        
+        headers = ["Work Order Name", "Description", "Status", "Priority", "Assigned To", "Building", "Area", "Equipment", "Task Type", "Start Date", "Due Date", "Completed Date"];
+        
+        data.push(["=== WORK ORDERS REPORT ===", "", "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Report Generated:", reportDate, "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Date Range:", dateRange, "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== SUMMARY ===", "", "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Total Work Orders:", String(completeData.totalWorkOrders), "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Completed:", String(completeData.completedWorkOrders), `(${completeData.completionRate}%)`, "", "", "", "", "", "", "", "", ""]);
+        data.push(["In Progress:", String(completeData.inProgressWorkOrders), "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["On Hold:", String(completeData.onHoldWorkOrders), "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Not Started:", String(completeData.notStartedWorkOrders), "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Overdue:", String(completeData.overdueWorkOrders), "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Avg Resolution Time:", `${completeData.avgResolutionTimeHours} hours`, "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Avg Response Time:", `${completeData.avgResponseTimeHours} hours`, "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== STATUS BREAKDOWN ===", "Count", "Percentage", "", "", "", "", "", "", "", "", ""]);
+        for (const status of completeData.byStatus) {
+          const pct = completeData.totalWorkOrders > 0 ? Math.round((status.count / completeData.totalWorkOrders) * 100) : 0;
+          data.push([status.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()), String(status.count), `${pct}%`, "", "", "", "", "", "", "", "", ""]);
+        }
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== PRIORITY BREAKDOWN ===", "Count", "Percentage", "", "", "", "", "", "", "", "", ""]);
+        for (const urgency of completeData.byUrgency) {
+          const pct = completeData.totalWorkOrders > 0 ? Math.round((urgency.count / completeData.totalWorkOrders) * 100) : 0;
+          data.push([urgency.urgency.charAt(0).toUpperCase() + urgency.urgency.slice(1), String(urgency.count), `${pct}%`, "", "", "", "", "", "", "", "", ""]);
+        }
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== BY BUILDING ===", "Count", "Percentage", "", "", "", "", "", "", "", "", ""]);
+        for (const prop of completeData.byProperty) {
+          const pct = completeData.totalWorkOrders > 0 ? Math.round((prop.count / completeData.totalWorkOrders) * 100) : 0;
+          data.push([prop.propertyName, String(prop.count), `${pct}%`, "", "", "", "", "", "", "", "", ""]);
+        }
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== BY AREA ===", "Count", "Percentage", "", "", "", "", "", "", "", "", ""]);
+        for (const area of completeData.byArea) {
+          const pct = completeData.totalWorkOrders > 0 ? Math.round((area.count / completeData.totalWorkOrders) * 100) : 0;
+          data.push([area.areaName, String(area.count), `${pct}%`, "", "", "", "", "", "", "", "", ""]);
+        }
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== MONTHLY TREND ===", "Created", "Completed", "", "", "", "", "", "", "", "", ""]);
+        for (const month of completeData.monthlyTrend) {
+          data.push([month.month, String(month.count), String(month.completed), "", "", "", "", "", "", "", "", ""]);
+        }
+        data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
+        
+        data.push(["=== WORK ORDER DETAILS ===", "", "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Work Order Name", "Description", "Status", "Priority", "Assigned To", "Building", "Area", "Equipment", "Task Type", "Start Date", "Due Date", "Completed Date"]);
+        for (const wo of completeData.detailedRecords) {
+          data.push([
+            wo.name,
+            wo.description,
+            wo.status.replace(/_/g, " "),
+            wo.urgency,
+            wo.assignedToName,
+            wo.propertyName,
+            wo.areaName,
+            wo.equipmentName,
+            wo.taskType,
+            wo.initialDate ? new Date(wo.initialDate).toLocaleDateString() : "N/A",
+            wo.estimatedCompletionDate ? new Date(wo.estimatedCompletionDate).toLocaleDateString() : "N/A",
+            wo.actualCompletionDate ? new Date(wo.actualCompletionDate).toLocaleDateString() : "N/A",
+          ]);
+        }
+        break;
+
       case "technicians":
         const techData = await this.getTechnicianPerformance(filters);
         headers = ["Technician", "Tasks Completed", "Tasks Assigned", "Hours Logged", "Avg Completion Time (hrs)", "Completion Rate"];
