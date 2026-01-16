@@ -43,15 +43,22 @@ All 7 analytics report pages have been consolidated into a single dynamic page a
 - Clickable KPI cards with detailed dialog breakdowns
 - Interactive charts (pie, bar, line) with tooltips
 - Data tables with sorting and property/area links
-- PDF and XLSX export for all reports
+- PDF and XLSX export for all reports with embedded charts
 - Tabs for switching between chart and detailed table views
 
+**PDF Export with Charts:**
+- Client-side PDF generation using html2canvas + jsPDF
+- Captures rendered charts from DOM using unique container IDs
+- Each report wraps chart section with ID (e.g., "work-orders-charts", "fleet-charts")
+- Exports include report title, timestamp, filter summary, embedded chart images, and data tables
+- Multi-page support with proper pagination for large reports
+
 **Components Added/Updated:**
-- `client/src/pages/analytics/FleetAnalytics.tsx` - Fleet management analytics
-- `client/src/pages/analytics/ServiceRequestAnalytics.tsx` - Service request analytics
-- `client/src/pages/analytics/MaintenanceOverview.tsx` - Redesigned as Reports hub
+- `client/src/lib/pdfExport.ts` - PDF generation utility with chart capture
+- `client/src/pages/analytics/AnalyticsDashboard.tsx` - Unified analytics dashboard with tabs
+- `client/src/pages/analytics/reports/*.tsx` - All 7 report components with PDF export props
 - `client/src/components/analytics/KpiCard.tsx` - Reusable clickable KPI display
-- `client/src/components/analytics/AnalyticsFilters.tsx` - Filter controls with export
+- `client/src/components/analytics/AnalyticsFilters.tsx` - Filter controls with PDF/XLSX export
 - `client/src/components/analytics/AnalyticsCharts.tsx` - Chart components
 - `server/analyticsService.ts` - Analytics query builders with fleet and service request methods
 
