@@ -150,20 +150,6 @@ export default function FacilitiesReport() {
         onFilterChange={setFilters}
         onExport={handleExport}
         exportOptions={["pdf", "xlsx"]}
-        reportTitle="Facilities Report"
-        chartContainerId="facilities-charts"
-        tableData={{
-          headers: ["Facility", "Type", "Total WOs", "Open", "Completed", "Cost", "Completion %"],
-          rows: data.map(f => [
-            f.propertyName,
-            f.propertyType,
-            f.totalWorkOrders,
-            f.openWorkOrders,
-            f.completedWorkOrders,
-            `$${f.totalMaintenanceCost.toLocaleString()}`,
-            f.totalWorkOrders > 0 ? `${Math.round((f.completedWorkOrders / f.totalWorkOrders) * 100)}%` : "0%",
-          ]),
-        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
@@ -190,9 +176,7 @@ export default function FacilitiesReport() {
         />
       </div>
 
-      <div id="facilities-charts">
-        <PropertyBarChart data={data.map(f => ({ propertyName: f.propertyName, count: f.totalWorkOrders }))} />
-      </div>
+      <PropertyBarChart data={data.map(f => ({ propertyName: f.propertyName, count: f.totalWorkOrders }))} />
 
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">

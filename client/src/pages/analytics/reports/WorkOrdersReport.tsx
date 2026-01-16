@@ -160,20 +160,6 @@ export default function WorkOrdersReport() {
         showUrgencyFilter
         showTechnicianFilter
         exportOptions={["pdf", "xlsx"]}
-        reportTitle="Work Orders Report"
-        chartContainerId="work-orders-charts"
-        tableData={{
-          headers: ["Task", "Status", "Urgency", "Assigned To", "Property", "Area", "Hours"],
-          rows: data?.workOrderDetails?.map(wo => [
-            wo.taskName,
-            wo.status.replace(/_/g, " "),
-            wo.urgency,
-            wo.assignedToName,
-            wo.propertyName,
-            wo.areaName || "-",
-            wo.hoursLogged,
-          ]) || [],
-        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -247,7 +233,7 @@ export default function WorkOrdersReport() {
         </Card>
       </div>
 
-      <div id="work-orders-charts" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-medium">Work Order Status</CardTitle>

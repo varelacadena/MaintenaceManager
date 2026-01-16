@@ -150,19 +150,6 @@ export default function AlertsReport() {
         onFilterChange={setFilters}
         onExport={handleExport}
         exportOptions={["pdf", "xlsx"]}
-        reportTitle="Alerts Report"
-        chartContainerId="alerts-charts"
-        tableData={{
-          headers: ["Type", "Severity", "Title", "Description", "Related To", "Created"],
-          rows: alerts.map(a => [
-            a.type.replace(/_/g, " "),
-            a.severity,
-            a.title,
-            a.description,
-            a.relatedType,
-            new Date(a.createdAt).toLocaleDateString(),
-          ]),
-        }}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
@@ -278,9 +265,7 @@ export default function AlertsReport() {
         )}
       </div>
 
-      <div id="alerts-charts">
-        <WeeklyTrendChart data={trends} title="12-Week Work Order Trends" />
-      </div>
+      <WeeklyTrendChart data={trends} title="12-Week Work Order Trends" />
 
       <Card data-testid="card-all-alerts">
         <CardHeader className="p-3 sm:p-4 pb-2">
