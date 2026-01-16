@@ -3,33 +3,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation } from "wouter";
 import {
-  ClipboardList,
+  CalendarDays,
   Clock,
   CheckCircle2,
-  AlertCircle,
-  Users,
-  Wrench,
+  AlertTriangle,
+  User,
   Plus,
-  MapPin,
-  MessageSquare,
-  PlayCircle,
   Car,
+  ClipboardList,
+  List,
+  Calendar as CalendarIcon,
+  Eye,
+  EyeOff,
 } from "lucide-react";
-import { useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import type { ServiceRequest, Message, Task, VehicleReservation, Vehicle } from "@shared/schema";
+import { useState, useMemo } from "react";
+import type { ServiceRequest, Task, VehicleReservation, Vehicle, User as UserType, Property } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -38,22 +29,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import FilterCard from "@/components/dashboard/FilterCard";
+import TaskCard from "@/components/dashboard/TaskCard";
+import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
+import EmptyState from "@/components/dashboard/EmptyState";
+import { isToday, isPast, parseISO, startOfDay, format } from "date-fns";
+
+type FilterType = "due_today" | "overdue" | "high_priority" | "unassigned" | "completed_today" | "all";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  const [activeFilter, setActiveFilter] = useState<FilterType>("due_today");
+  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -63,19 +62,17 @@ export default function Dashboard() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Get today's date in YYYY-MM-DD format (local timezone)
   const getTodayDateString = () => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
-  // Check if selected start date is tomorrow
   const isTomorrow = (dateString: string) => {
     if (!dateString) return false;
-    const selected = new Date(dateString + 'T00:00:00');
+    const selected = new Date(dateString + "T00:00:00");
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
@@ -83,19 +80,16 @@ export default function Dashboard() {
     return selected.getTime() === tomorrow.getTime();
   };
 
-  // Get minimum allowed time for selected date
   const getMinTime = () => {
     const now = new Date();
     const currentHour = now.getHours();
-    
-    // If it's tomorrow and after 4 PM today, enforce 9 AM minimum
     if (isTomorrow(startDate) && currentHour >= 16) {
-      return "09:00"; // 9:00 AM minimum for tomorrow after 4 PM
+      return "09:00";
     }
-    return "00:00"; // No restriction otherwise
+    return "00:00";
   };
 
-  const { data: requests = [], isLoading: requestsLoading } = useQuery<ServiceRequest[]>({
+  const { data: requests = [] } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
   });
 
@@ -103,8 +97,12 @@ export default function Dashboard() {
     queryKey: ["/api/tasks"],
   });
 
-  const { data: allMessages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages"],
+  const { data: users = [] } = useQuery<UserType[]>({
+    queryKey: ["/api/users"],
+  });
+
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
   });
 
   const { data: vehicleReservations = [], isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
@@ -114,6 +112,26 @@ export default function Dashboard() {
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
     enabled: createDialogOpen,
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: Task["status"] }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task updated",
+        description: "Task status has been changed",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update task status",
+        variant: "destructive",
+      });
+    },
   });
 
   const createMutation = useMutation({
@@ -166,7 +184,6 @@ export default function Dashboard() {
       return;
     }
 
-    // Validate no past dates
     const today = getTodayDateString();
     if (startDate < today) {
       toast({
@@ -177,7 +194,6 @@ export default function Dashboard() {
       return;
     }
 
-    // Validate 9 AM rule for tomorrow
     if (isTomorrow(startDate) && startTime < "09:00") {
       toast({
         title: "Error",
@@ -190,7 +206,6 @@ export default function Dashboard() {
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
 
-    // Validate end time is after start time
     if (endDateTime <= startDateTime) {
       toast({
         title: "Error",
@@ -210,7 +225,116 @@ export default function Dashboard() {
     });
   };
 
-  const isLoading = requestsLoading || tasksLoading || reservationsLoading;
+  const getUserById = (id: string | null) => users.find((u) => u.id === id) || null;
+  const getPropertyById = (id: string | null) => properties.find((p) => p.id === id) || null;
+
+  const taskCounts = useMemo(() => {
+    const today = startOfDay(new Date());
+    
+    const dueToday = tasks.filter((t) => {
+      if (t.status === "completed") return false;
+      if (!t.initialDate) return false;
+      const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
+      return taskDate.getTime() === today.getTime();
+    }).length;
+
+    const overdue = tasks.filter((t) => {
+      if (t.status === "completed") return false;
+      if (!t.estimatedCompletionDate) return false;
+      return isPast(parseISO(t.estimatedCompletionDate as unknown as string));
+    }).length;
+
+    const highPriority = tasks.filter(
+      (t) => t.urgency === "high" && t.status !== "completed"
+    ).length;
+
+    const unassigned = tasks.filter(
+      (t) => !t.assignedToId && t.status !== "completed"
+    ).length;
+
+    const completedToday = tasks.filter((t) => {
+      if (t.status !== "completed") return false;
+      if (!t.actualCompletionDate) return false;
+      return isToday(parseISO(t.actualCompletionDate as unknown as string));
+    }).length;
+
+    return { dueToday, overdue, highPriority, unassigned, completedToday };
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    const today = startOfDay(new Date());
+    
+    let filtered = [...tasks];
+
+    if (!showCompleted) {
+      filtered = filtered.filter((t) => t.status !== "completed");
+    }
+
+    switch (activeFilter) {
+      case "due_today":
+        filtered = filtered.filter((t) => {
+          if (!t.initialDate) return false;
+          const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
+          return taskDate.getTime() === today.getTime();
+        });
+        break;
+      case "overdue":
+        filtered = filtered.filter((t) => {
+          if (t.status === "completed") return false;
+          if (!t.estimatedCompletionDate) return false;
+          return isPast(parseISO(t.estimatedCompletionDate as unknown as string));
+        });
+        break;
+      case "high_priority":
+        filtered = filtered.filter((t) => t.urgency === "high" && t.status !== "completed");
+        break;
+      case "unassigned":
+        filtered = filtered.filter((t) => !t.assignedToId && t.status !== "completed");
+        break;
+      case "completed_today":
+        filtered = [...tasks].filter((t) => {
+          if (t.status !== "completed") return false;
+          if (!t.actualCompletionDate) return false;
+          return isToday(parseISO(t.actualCompletionDate as unknown as string));
+        });
+        break;
+      case "all":
+        break;
+    }
+
+    return filtered.sort((a, b) => {
+      const urgencyOrder = { high: 0, medium: 1, low: 2 };
+      if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
+        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+      }
+      if (!a.estimatedCompletionDate) return 1;
+      if (!b.estimatedCompletionDate) return -1;
+      return new Date(a.estimatedCompletionDate as unknown as string).getTime() -
+             new Date(b.estimatedCompletionDate as unknown as string).getTime();
+    });
+  }, [tasks, activeFilter, showCompleted]);
+
+  const handleStatusChange = (taskId: string, status: Task["status"]) => {
+    statusMutation.mutate({ taskId, status });
+  };
+
+  const handleViewDetails = (task: Task) => {
+    setSelectedTask(task);
+    setDrawerOpen(true);
+  };
+
+  const getFilterTitle = () => {
+    switch (activeFilter) {
+      case "due_today": return "Today's Tasks";
+      case "overdue": return "Overdue Tasks";
+      case "high_priority": return "High Priority Tasks";
+      case "unassigned": return "Unassigned Tasks";
+      case "completed_today": return "Completed Today";
+      case "all": return "All Tasks";
+    }
+  };
+
+  const isLoading = tasksLoading || reservationsLoading;
 
   if (isLoading) {
     return (
@@ -223,249 +347,129 @@ export default function Dashboard() {
     );
   }
 
-  // Filter data based on selected date (month and year)
-  const filterByMonth = (items: any[]) => {
-    return items.filter((item) => {
-      if (!item.createdAt) return false;
-      const itemDate = new Date(item.createdAt);
-      return (
-        itemDate.getMonth() === selectedDate.getMonth() &&
-        itemDate.getFullYear() === selectedDate.getFullYear()
-      );
-    });
-  };
-
-  const monthlyTasks = filterByMonth(tasks);
-  const monthlyRequests = filterByMonth(requests);
-
-  const notStartedCount = monthlyTasks.filter((t) => t.status === "not_started").length;
-  const inProgressCount = monthlyTasks.filter((t) => t.status === "in_progress").length;
-  const completedCount = monthlyTasks.filter((t) => t.status === "completed").length;
-
   const recentRequests = requests
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     })
-    .slice(0, 5);
-
-  const recentReservations = vehicleReservations
-    .sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    })
-    .slice(0, 5);
-
-  const getVehicleName = (vehicleId: string) => {
-    const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle ? `${vehicle.make} ${vehicle.model}` : 'Unknown Vehicle';
-  };
-
-  const getReservationStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-500";
-      case "approved":
-        return "bg-blue-500";
-      case "active":
-        return "bg-green-500";
-      case "completed":
-        return "bg-gray-500";
-      case "cancelled":
-        return "bg-red-500";
-      default:
-        return "bg-muted";
-    }
-  };
-
-  // Weekly work chart data
-  const getWeeklyData = () => {
-    const now = new Date();
-    const currentWeekStart = new Date(now);
-    currentWeekStart.setDate(now.getDate() - now.getDay());
-    currentWeekStart.setHours(0, 0, 0, 0);
-
-    const previousWeekStart = new Date(currentWeekStart);
-    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
-
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-    return days.map((day, index) => {
-      const currentDay = new Date(currentWeekStart);
-      currentDay.setDate(currentWeekStart.getDate() + index);
-
-      const previousDay = new Date(previousWeekStart);
-      previousDay.setDate(previousWeekStart.getDate() + index);
-
-      const currentCount = tasks.filter((task) => {
-        if (!task.initialDate) return false;
-        const taskDate = new Date(task.initialDate);
-        return taskDate.toDateString() === currentDay.toDateString();
-      }).length;
-
-      const previousCount = tasks.filter((task) => {
-        if (!task.initialDate) return false;
-        const taskDate = new Date(task.initialDate);
-        return taskDate.toDateString() === previousDay.toDateString();
-      }).length;
-
-      return {
-        day,
-        "This Week": currentCount,
-        "Last Week": previousCount,
-      };
-    });
-  };
-
-  const weeklyData = getWeeklyData();
+    .slice(0, 3);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "submitted":
-        return "bg-yellow-500";
-      case "under_review":
-        return "bg-blue-500";
-      case "converted_to_task":
-        return "bg-green-500";
-      case "rejected":
-        return "bg-red-500";
-      default:
-        return "bg-muted";
+      case "pending": return "bg-yellow-500";
+      case "under_review": return "bg-blue-500";
+      case "converted_to_task": return "bg-green-500";
+      case "rejected": return "bg-red-500";
+      default: return "bg-muted";
     }
   };
 
-  // Staff view - simplified dashboard
   if (user?.role === "staff") {
     return (
-      <div className="space-y-4 md:space-y-8 pb-8">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight" data-testid="text-dashboard-title">
-              Dashboard
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Welcome back, {user?.firstName || "User"}
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/new-request">
-              <Button size="lg" className="w-full sm:w-auto" data-testid="button-new-request">
-                <Plus className="w-4 h-4 mr-2" />
-                New Request
-              </Button>
-            </Link>
-            <Button 
-              size="lg" 
-              className="w-full sm:w-auto" 
-              variant="outline" 
-              data-testid="button-new-car-reservation"
-              onClick={() => setCreateDialogOpen(true)}
-            >
-              <Car className="w-4 h-4 mr-2" />
-              New Car Reservation
-            </Button>
-          </div>
+      <div className="space-y-6 pb-8">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+            Welcome back, {user?.firstName || "User"}
+          </h1>
+          <p className="text-muted-foreground">
+            {format(new Date(), "EEEE, MMMM d, yyyy")}
+          </p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6">
-            <CardTitle className="text-base md:text-lg">Last Service Requests</CardTitle>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link href="/new-request">
+            <Button size="lg" className="w-full sm:w-auto" data-testid="button-new-request">
+              <Plus className="w-4 h-4 mr-2" />
+              New Request
+            </Button>
+          </Link>
+          <Button 
+            size="lg" 
+            className="w-full sm:w-auto" 
+            variant="outline" 
+            data-testid="button-new-car-reservation"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            <Car className="w-4 h-4 mr-2" />
+            New Car Reservation
+          </Button>
+        </div>
+
+        <Card className="hover-elevate cursor-pointer" onClick={() => setLocation("/requests")} data-testid="card-my-requests">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardList className="w-5 h-5" />
+              My Service Requests
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 px-3 pb-3 md:px-6 md:pb-6">
+          <CardContent>
             {recentRequests.length === 0 ? (
-              <div className="text-center py-6 md:py-8 text-sm md:text-base text-muted-foreground">
-                No requests yet
-              </div>
+              <EmptyState
+                icon={ClipboardList}
+                title="No requests yet"
+                description="Submit a service request to get started"
+                actionLabel="New Request"
+                actionHref="/new-request"
+                testId="empty-requests"
+              />
             ) : (
-              <div className="space-y-2 md:space-y-3">
+              <div className="space-y-2">
                 {recentRequests.map((request) => (
-                  <Link
-                    key={request.id}
-                    href={`/requests/${request.id}`}
-                  >
-                    <div className="flex items-start gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-request-${request.id}`}>
-                      <div
-                        className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 flex-shrink-0 ${getStatusColor(
-                          request.status
-                        )}`}
-                      />
+                  <Link key={request.id} href={`/requests/${request.id}`}>
+                    <div 
+                      className="flex items-start gap-3 p-3 rounded-lg border hover-elevate" 
+                      data-testid={`card-request-${request.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${getStatusColor(request.status)}`} />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start md:items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-medium text-sm md:text-base truncate">
-                            {request.title}
-                          </span>
-                          <Badge variant="outline" className="text-xs flex-shrink-0">
-                            {request.category}
-                          </Badge>
-                        </div>
-                        <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 md:truncate">
-                          {request.description}
+                        <p className="font-medium text-sm truncate">{request.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {request.createdAt ? format(new Date(request.createdAt), "MMM d, yyyy") : "N/A"}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
                       </div>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {request.status?.replace("_", " ")}
+                      </Badge>
                     </div>
                   </Link>
                 ))}
+                <Button variant="ghost" className="w-full mt-2" onClick={() => setLocation("/requests")}>
+                  View All Requests
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6">
-            <CardTitle className="text-base md:text-lg">Last Car Reservations</CardTitle>
+        <Card className="hover-elevate cursor-pointer" onClick={() => setLocation("/my-reservations")} data-testid="card-my-reservations">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Car className="w-5 h-5" />
+              My Vehicle Reservations
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 px-3 pb-3 md:px-6 md:pb-6">
-            {recentReservations.length === 0 ? (
-              <div className="text-center py-6 md:py-8 text-sm md:text-base text-muted-foreground">
-                No reservations yet
-              </div>
+          <CardContent>
+            {vehicleReservations.length === 0 ? (
+              <EmptyState
+                icon={Car}
+                title="No reservations"
+                description="Reserve a vehicle for your upcoming trip"
+                actionLabel="New Reservation"
+                onAction={() => setCreateDialogOpen(true)}
+                testId="empty-reservations"
+              />
             ) : (
-              <div className="space-y-2 md:space-y-3">
-                {recentReservations.map((reservation) => (
-                  <Link
-                    key={reservation.id}
-                    href={`/my-reservations`}
-                  >
-                    <div className="flex items-start gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-reservation-${reservation.id}`}>
-                      <div
-                        className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 flex-shrink-0 ${getReservationStatusColor(
-                          reservation.status
-                        )}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start md:items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-medium text-sm md:text-base truncate">
-                            {getVehicleName(reservation.vehicleId)}
-                          </span>
-                          <Badge variant="outline" className="text-xs flex-shrink-0">
-                            {reservation.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs md:text-sm text-muted-foreground truncate">
-                          {reservation.purpose}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {reservation.startDate ? new Date(reservation.startDate).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+              <div className="text-center py-4">
+                <div className="text-3xl font-bold">{vehicleReservations.length}</div>
+                <p className="text-sm text-muted-foreground">Active Reservations</p>
+                <Button variant="ghost" className="mt-2">View All</Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Reservation Creation Dialog */}
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -488,7 +492,6 @@ export default function Dashboard() {
                   />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
@@ -503,7 +506,6 @@ export default function Dashboard() {
                       }
                     }}
                     min={getTodayDateString()}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
@@ -515,7 +517,6 @@ export default function Dashboard() {
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
                     min={getMinTime()}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                   {isTomorrow(startDate) && (
@@ -525,7 +526,6 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date *</Label>
@@ -535,7 +535,6 @@ export default function Dashboard() {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     min={startDate || getTodayDateString()}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
@@ -546,12 +545,10 @@ export default function Dashboard() {
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
                     required
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="purpose">Purpose *</Label>
                 <Input
@@ -562,7 +559,6 @@ export default function Dashboard() {
                   required
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
                 <Textarea
@@ -574,263 +570,385 @@ export default function Dashboard() {
               </div>
             </div>
             <DialogFooter>
-              <Button
-                onClick={handleCreateReservation}
-                disabled={createMutation.isPending}
-              >
+              <Button onClick={handleCreateReservation} disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Creating..." : "Create Reservation"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        </div>
+      </div>
     );
   }
 
-  // Admin/Maintenance view - full dashboard
   return (
-    <div className="space-y-6 md:space-y-8 pb-8">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-6 pb-8">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight" data-testid="text-dashboard-title">
-            Dashboard
-          </h1>
-          <p className="text-base text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
             Welcome back, {user?.firstName || "User"}
+          </h1>
+          <p className="text-muted-foreground">
+            {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/tasks/new">
+            <Button data-testid="button-new-task">
+              <Plus className="w-4 h-4 mr-2" />
+              New Task
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              size="lg"
-              className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl"
-              data-testid="quick-actions-fab"
-            >
-              <Plus className="w-6 h-6" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" align="end">
-            <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3"
-                onClick={() => setLocation("/messages")}
-                data-testid="quick-action-messages"
-              >
-                <MessageSquare className="w-5 h-5" />
-                <span>Messages</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3"
-                onClick={() => setLocation("/new-request")}
-                data-testid="quick-action-new-request"
-              >
-                <ClipboardList className="w-5 h-5" />
-                <span>New Service Request</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3"
-                onClick={() => setCreateDialogOpen(true)}
-                data-testid="quick-action-new-reservation"
-              >
-                <Car className="w-5 h-5" />
-                <span>New Vehicle Reservation</span>
-              </Button>
-
-              {(user?.role === "admin" || user?.role === "maintenance") && (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                  onClick={() => setLocation("/tasks/new")}
-                  data-testid="quick-action-new-task"
-                >
-                  <Wrench className="w-5 h-5" />
-                  <span>New Task</span>
-                </Button>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 pt-3 px-3 md:pb-3 md:pt-4 md:px-4">
-            <div className="flex items-center gap-2 md:gap-3 w-full">
-              <div className="p-1.5 md:p-2 rounded-lg bg-yellow-500/20 flex-shrink-0">
-                <Clock className="w-4 h-4 md:w-5 md:h-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground truncate">Tasks Not Started</p>
-                <div className="text-xl md:text-2xl font-bold" data-testid="stat-not-started">
-                  {notStartedCount}
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 pt-3 px-3 md:pb-3 md:pt-4 md:px-4">
-            <div className="flex items-center gap-2 md:gap-3 w-full">
-              <div className="p-1.5 md:p-2 rounded-lg bg-blue-500/20 flex-shrink-0">
-                <PlayCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground truncate">In Progress</p>
-                <div className="text-xl md:text-2xl font-bold" data-testid="stat-in-progress">
-                  {inProgressCount}
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 pt-3 px-3 md:pb-3 md:pt-4 md:px-4">
-            <div className="flex items-center gap-2 md:gap-3 w-full">
-              <div className="p-1.5 md:p-2 rounded-lg bg-green-500/20 flex-shrink-0">
-                <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground truncate">Completed</p>
-                <div className="text-xl md:text-2xl font-bold" data-testid="stat-completed">
-                  {completedCount}
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Card>
-          <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6 md:pb-3">
-            <CardTitle className="text-base md:text-lg">Last Service Requests</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 px-3 pb-3 md:px-6 md:pb-6">
-            {recentRequests.length === 0 ? (
-              <div className="text-center py-6 md:py-8 text-sm md:text-base text-muted-foreground">
-                No requests yet
-              </div>
-            ) : (
-              <div className="space-y-2 md:space-y-3">
-                {recentRequests.map((request) => (
-                  <Link
-                    key={request.id}
-                    href={`/requests/${request.id}`}
-                  >
-                    <div className="flex items-start gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-request-${request.id}`}>
-                      <div
-                        className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 flex-shrink-0 ${getStatusColor(
-                          request.status
-                        )}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start md:items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-medium text-sm md:text-base truncate">
-                            {request.title}
-                          </span>
-                          <Badge variant="outline" className="text-xs flex-shrink-0">
-                            {request.category}
-                          </Badge>
-                        </div>
-                        <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 md:truncate">
-                          {request.description}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6 md:pb-3">
-            <CardTitle className="text-base md:text-lg">Last Car Reservations</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 px-3 pb-3 md:px-6 md:pb-6">
-            {recentReservations.length === 0 ? (
-              <div className="text-center py-6 md:py-8 text-sm md:text-base text-muted-foreground">
-                No reservations yet
-              </div>
-            ) : (
-              <div className="space-y-2 md:space-y-3">
-                {recentReservations.map((reservation) => (
-                  <Link
-                    key={reservation.id}
-                    href={`/my-reservations`}
-                  >
-                    <div className="flex items-start gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border hover-elevate active-elevate-2" data-testid={`card-reservation-${reservation.id}`}>
-                      <div
-                        className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 flex-shrink-0 ${getReservationStatusColor(
-                          reservation.status
-                        )}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start md:items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-medium text-sm md:text-base truncate">
-                            {getVehicleName(reservation.vehicleId)}
-                          </span>
-                          <Badge variant="outline" className="text-xs flex-shrink-0">
-                            {reservation.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs md:text-sm text-muted-foreground truncate">
-                          {reservation.purpose}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {reservation.startDate ? new Date(reservation.startDate).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        <FilterCard
+          title="Due Today"
+          count={taskCounts.dueToday}
+          icon={CalendarDays}
+          color="blue"
+          isActive={activeFilter === "due_today"}
+          onClick={() => setActiveFilter("due_today")}
+          testId="filter-due-today"
+        />
+        <FilterCard
+          title="Overdue"
+          count={taskCounts.overdue}
+          icon={AlertTriangle}
+          color="red"
+          isActive={activeFilter === "overdue"}
+          onClick={() => setActiveFilter("overdue")}
+          testId="filter-overdue"
+        />
+        <FilterCard
+          title="High Priority"
+          count={taskCounts.highPriority}
+          icon={Clock}
+          color="orange"
+          isActive={activeFilter === "high_priority"}
+          onClick={() => setActiveFilter("high_priority")}
+          testId="filter-high-priority"
+        />
+        <FilterCard
+          title="Unassigned"
+          count={taskCounts.unassigned}
+          icon={User}
+          color="purple"
+          isActive={activeFilter === "unassigned"}
+          onClick={() => setActiveFilter("unassigned")}
+          testId="filter-unassigned"
+        />
+        <FilterCard
+          title="Completed Today"
+          count={taskCounts.completedToday}
+          icon={CheckCircle2}
+          color="green"
+          isActive={activeFilter === "completed_today"}
+          onClick={() => setActiveFilter("completed_today")}
+          testId="filter-completed-today"
+        />
       </div>
 
       <Card>
-        <CardHeader className="pb-2 px-3 pt-3 md:px-6 md:pt-6 md:pb-3">
-          <CardTitle className="text-base md:text-lg">Weekly Work</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Comparing tasks assigned this week vs last week
-          </p>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <CardTitle className="text-lg">{getFilterTitle()}</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="text-xs"
+                data-testid="toggle-completed"
+              >
+                {showCompleted ? (
+                  <><EyeOff className="w-3 h-3 mr-1" /> Hide Completed</>
+                ) : (
+                  <><Eye className="w-3 h-3 mr-1" /> Show Completed</>
+                )}
+              </Button>
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline")}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="list" className="text-xs px-2" data-testid="view-list">
+                    <List className="w-3 h-3 mr-1" />
+                    List
+                  </TabsTrigger>
+                  <TabsTrigger value="timeline" className="text-xs px-2" data-testid="view-timeline">
+                    <CalendarIcon className="w-3 h-3 mr-1" />
+                    Timeline
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="pt-0 px-2 pb-3 md:px-6 md:pb-6">
-          <ResponsiveContainer width="100%" height={240} className="md:h-[280px]">
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="This Week" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="Last Week" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <CardContent>
+          {filteredTasks.length === 0 ? (
+            <EmptyState
+              icon={CheckCircle2}
+              title={activeFilter === "completed_today" ? "No tasks completed yet" : "No tasks found"}
+              description={
+                activeFilter === "due_today"
+                  ? "Great job! No tasks scheduled for today"
+                  : activeFilter === "overdue"
+                  ? "All tasks are on track"
+                  : activeFilter === "unassigned"
+                  ? "All tasks have been assigned"
+                  : "Try selecting a different filter"
+              }
+              actionLabel={activeFilter !== "completed_today" ? "Create Task" : undefined}
+              actionHref={activeFilter !== "completed_today" ? "/tasks/new" : undefined}
+              testId="empty-tasks"
+            />
+          ) : viewMode === "list" ? (
+            <div className="space-y-3">
+              {filteredTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  assignee={getUserById(task.assignedToId)}
+                  property={getPropertyById(task.propertyId)}
+                  onStatusChange={handleStatusChange}
+                  onViewDetails={handleViewDetails}
+                  isPending={statusMutation.isPending}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredTasks.map((task) => {
+                const startHour = task.initialDate
+                  ? new Date(task.initialDate as unknown as string).getHours()
+                  : 9;
+                const widthPercent = Math.min(100, Math.max(20, 30 + Math.random() * 40));
+                const leftPercent = Math.max(0, (startHour - 8) * 6.25);
+
+                return (
+                  <div
+                    key={task.id}
+                    className="relative h-12 bg-muted/30 rounded-lg overflow-hidden"
+                    onClick={() => handleViewDetails(task)}
+                    data-testid={`timeline-task-${task.id}`}
+                  >
+                    <div
+                      className={`absolute top-1 bottom-1 rounded-md px-3 flex items-center cursor-pointer transition-all hover:brightness-95 ${
+                        task.urgency === "high"
+                          ? "bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500"
+                          : task.urgency === "medium"
+                          ? "bg-yellow-100 dark:bg-yellow-900/40 border-l-4 border-yellow-500"
+                          : "bg-blue-100 dark:bg-blue-900/40 border-l-4 border-blue-500"
+                      }`}
+                      style={{
+                        left: `${leftPercent}%`,
+                        width: `${widthPercent}%`,
+                      }}
+                    >
+                      <span className="text-xs font-medium truncate">{task.name}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-between text-[10px] text-muted-foreground px-1 pt-2">
+                {Array.from({ length: 9 }, (_, i) => (
+                  <span key={i}>{8 + i}:00</span>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card 
+          className="hover-elevate cursor-pointer" 
+          onClick={() => setLocation("/requests")}
+          data-testid="card-recent-requests"
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Recent Service Requests
+              </span>
+              <Badge variant="outline">{requests.filter(r => r.status === "pending").length} pending</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentRequests.length === 0 ? (
+              <EmptyState
+                icon={ClipboardList}
+                title="No requests yet"
+                description="Service requests will appear here"
+                testId="empty-recent-requests"
+              />
+            ) : (
+              <div className="space-y-2">
+                {recentRequests.map((request) => (
+                  <Link key={request.id} href={`/requests/${request.id}`}>
+                    <div 
+                      className="flex items-start gap-3 p-2 rounded-lg hover-elevate" 
+                      onClick={(e) => e.stopPropagation()}
+                      data-testid={`recent-request-${request.id}`}
+                    >
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getStatusColor(request.status)}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{request.title}</p>
+                        <p className="text-xs text-muted-foreground">{request.createdAt ? format(new Date(request.createdAt), "MMM d") : "N/A"}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="hover-elevate cursor-pointer" 
+          onClick={() => setLocation("/vehicle-reservations")}
+          data-testid="card-vehicle-status"
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Car className="w-5 h-5" />
+              Vehicle Reservations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {vehicleReservations.length === 0 ? (
+              <EmptyState
+                icon={Car}
+                title="No reservations"
+                description="Vehicle reservations will appear here"
+                actionLabel="View Fleet"
+                actionHref="/vehicles"
+                testId="empty-vehicle-reservations"
+              />
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-3xl font-bold">{vehicleReservations.length}</div>
+                <p className="text-sm text-muted-foreground mb-2">Active Reservations</p>
+                <Button variant="ghost" size="sm">Manage Reservations</Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <TaskDetailDrawer
+        task={selectedTask}
+        assignee={selectedTask ? getUserById(selectedTask.assignedToId) : null}
+        property={selectedTask ? getPropertyById(selectedTask.propertyId) : null}
+        isOpen={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setSelectedTask(null);
+        }}
+        onStatusChange={handleStatusChange}
+        isPending={statusMutation.isPending}
+      />
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Reservation</DialogTitle>
+            <DialogDescription>
+              Reserve a vehicle for your upcoming trip
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="adminPassengerCount">Number of Passengers *</Label>
+                <Input
+                  id="adminPassengerCount"
+                  type="number"
+                  min="1"
+                  value={passengerCount}
+                  onChange={(e) => setPassengerCount(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="adminStartDate">Start Date *</Label>
+                <Input
+                  id="adminStartDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
+                      setStartTime("09:00");
+                    }
+                  }}
+                  min={getTodayDateString()}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminStartTime">Start Time *</Label>
+                <Input
+                  id="adminStartTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  min={getMinTime()}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="adminEndDate">End Date *</Label>
+                <Input
+                  id="adminEndDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || getTodayDateString()}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminEndTime">End Time *</Label>
+                <Input
+                  id="adminEndTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminPurpose">Purpose *</Label>
+              <Input
+                id="adminPurpose"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder="e.g., Trip to Washington"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminNotes">Notes (Optional)</Label>
+              <Textarea
+                id="adminNotes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any additional information..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateReservation} disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Creating..." : "Create Reservation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
