@@ -1,0 +1,195 @@
+You are improving an existing College Maintenance Management Platform dashboard.
+The current dashboard already works, but it needs to be much simpler, more intuitive, and highly interactive.
+
+The redesign must focus on:
+
+Fast understanding
+
+Minimal cognitive load
+
+Clickable elements everywhere
+
+Clear paths to action
+
+This dashboard will be used daily by non-technical users.
+
+Core Design Philosophy (VERY IMPORTANT)
+
+Less information per screen, more interaction
+
+Everything that shows information must be clickable
+
+The dashboard should feel like a control panel, not a report
+
+Users should never wonder “what do I do next?”
+
+Required Dashboard Behavior
+1. Clickable Summary Cards (Top Priority)
+
+Replace static counters with large, simple, clickable cards:
+
+Cards:
+
+🗓 Tasks Due Today
+
+⚠ Overdue
+
+🔴 High Priority
+
+👷 Unassigned
+
+✅ Completed Today
+
+Each card:
+
+Acts as a button
+
+Filters the main task list instantly
+
+Shows only the most relevant number
+
+Uses color and icon for meaning, not text
+
+Has hover and active states
+
+Example behavior:
+
+Clicking “Overdue” shows only overdue tasks everywhere on the page
+
+2. Main “Today’s Tasks” Panel (One Source of Truth)
+
+This is the central element of the dashboard.
+
+Display tasks as clean cards or rows, not dense tables.
+
+Each task shows only:
+
+Title
+
+Location
+
+Priority (icon + color)
+
+Assigned person
+
+Status
+
+Everything else:
+
+Opens via click (drawer / modal / expand)
+
+Actions directly on the task:
+
+Change status
+
+Assign / reassign
+
+View details
+
+3. Clickable Sections, Not Static Widgets
+
+Remove passive widgets.
+
+Examples:
+
+“Last Service Requests” → clicking opens filtered task view
+
+“No reservations yet” → clicking opens reservation module
+
+Empty states must guide the user (“Create a task”, “View calendar”)
+
+4. Simple Timeline Toggle (Optional but Powerful)
+
+Instead of showing everything at once:
+
+Toggle between:
+
+List View
+
+Timeline View (Today)
+
+Timeline shows:
+
+Tasks plotted by time
+
+Visual overlaps
+
+Click a task → opens details
+
+5. Sidebar That Acts Like a Filter, Not Just Navigation
+
+Sidebar items should:
+
+Be clickable filters where applicable
+
+Highlight active sections clearly
+
+Show subtle counts (badges)
+
+Example:
+
+Tasks (12)
+
+Service Requests (3 new)
+
+Vehicles (1 reserved today)
+
+6. Smart Defaults (No Thinking Required)
+
+When the dashboard loads:
+
+Automatically shows today’s tasks
+
+Hides completed tasks unless requested
+
+Prioritizes urgent items at the top
+
+Users should never need to configure filters on first load.
+
+7. Clean Visual Language
+
+UI rules:
+
+No dense text blocks
+
+No tables unless necessary
+
+Icons + color = meaning
+
+Consistent spacing
+
+Large click targets (touch friendly)
+
+Avoid:
+
+Over-explaining
+
+Technical labels
+
+Nested menus
+
+Technical Guidance for Replit AI
+
+Reuse existing data sources
+
+Add centralized state for filters
+
+Make all cards and sections interactive
+
+Use reusable components for cards, lists, and filters
+
+Add comments explaining interaction logic
+
+Ensure smooth transitions (no full page reloads)
+
+Expected Outcome
+
+A simple, modern, highly clickable dashboard where:
+
+Users immediately see what matters
+
+Every number leads somewhere
+
+Actions are one click away
+
+The dashboard feels fast and intuitive
