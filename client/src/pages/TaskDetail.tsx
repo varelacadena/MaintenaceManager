@@ -603,13 +603,15 @@ export default function TaskDetail() {
             <div className="flex items-center gap-2 text-sm">
               <User className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium truncate" data-testid="text-assignee">
-                {assignedUser?.firstName && assignedUser?.lastName 
-                  ? `${assignedUser.firstName} ${assignedUser.lastName}` 
-                  : task.assignedPool === "student_pool" 
-                    ? "Student Pool"
-                    : task.assignedPool === "technician_pool"
-                      ? "Technician Pool"
-                      : "Unassigned"}
+                {task.assignedToId === user?.id 
+                  ? "You"
+                  : assignedUser?.firstName && assignedUser?.lastName 
+                    ? `${assignedUser.firstName} ${assignedUser.lastName}` 
+                    : task.assignedPool === "student_pool" 
+                      ? "Student Pool"
+                      : task.assignedPool === "technician_pool"
+                        ? "Technician Pool"
+                        : "Unassigned"}
               </span>
             </div>
             <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
@@ -1221,17 +1223,6 @@ export default function TaskDetail() {
       {/* Sticky Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
         <div className="flex items-center justify-around px-2 py-2 max-w-2xl mx-auto gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 h-12 flex-col gap-0.5"
-            onClick={() => navigate("/tasks")}
-            data-testid="bottom-button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-xs">Back</span>
-          </Button>
-
           <Button
             variant={activeTimer ? "default" : "ghost"}
             size="sm"
