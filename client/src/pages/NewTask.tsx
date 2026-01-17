@@ -629,7 +629,9 @@ export default function NewTask() {
                         <SelectContent>
                           {studentUsers.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
-                              {user.firstName} {user.lastName}
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName} ${user.lastName}` 
+                                : user.username}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -659,7 +661,9 @@ export default function NewTask() {
                         <SelectContent>
                           {technicianUsers.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
-                              {user.firstName} {user.lastName}
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName} ${user.lastName}` 
+                                : user.username}
                             </SelectItem>
                           ))}
                         </SelectContent>
