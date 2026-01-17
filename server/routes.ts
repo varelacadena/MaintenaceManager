@@ -1085,6 +1085,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               (task.assignedToId !== userId && task.assignedPool !== "student_pool")) {
             return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
           }
+          // Students cannot reassign tasks
+          if (req.body.assignedToId !== undefined) {
+            return res.status(403).json({ message: "Forbidden: Students cannot reassign tasks" });
+          }
         }
       }
 

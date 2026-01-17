@@ -726,15 +726,17 @@ export default function TaskDetail() {
               )}
             </Button>
 
-            <Button
-              variant="outline"
-              className="h-14 flex-col gap-1"
-              onClick={() => setIsAssignDialogOpen(true)}
-              data-testid="button-assign"
-            >
-              <UserPlus className="w-5 h-5" />
-              <span className="text-xs">{assignedUser ? "Reassign" : "Assign"}</span>
-            </Button>
+            {isTechnicianOrAdmin && (
+              <Button
+                variant="outline"
+                className="h-14 flex-col gap-1"
+                onClick={() => setIsAssignDialogOpen(true)}
+                data-testid="button-assign"
+              >
+                <UserPlus className="w-5 h-5" />
+                <span className="text-xs">{assignedUser ? "Reassign" : "Assign"}</span>
+              </Button>
+            )}
 
             {task.requestId && (
               <Link href={`/requests/${task.requestId}`}>
