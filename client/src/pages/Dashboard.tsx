@@ -38,7 +38,7 @@ import FilterCard from "@/components/dashboard/FilterCard";
 import TaskCard from "@/components/dashboard/TaskCard";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import EmptyState from "@/components/dashboard/EmptyState";
-import { isToday, isPast, parseISO, startOfDay, format } from "date-fns";
+import { isToday, isPast, parseISO, startOfDay, format, isSameDay } from "date-fns";
 
 type FilterType = "due_today" | "overdue" | "high_priority" | "unassigned" | "completed_today" | "all";
 
@@ -228,43 +228,64 @@ export default function Dashboard() {
   const getUserById = (id: string | null) => users.find((u) => u.id === id) || null;
   const getPropertyById = (id: string | null) => properties.find((p) => p.id === id) || null;
 
+  // Filter tasks for students - only show tasks assigned to them or student_pool AND only for TODAY
+  const studentTodayTasks = useMemo(() => {
+    if (user?.role !== "student") return tasks;
+    
+    const today = new Date();
+    
+    return tasks.filter((t) => {
+      // Only show tasks assigned to this student or to the student pool
+      const isAssignedToMe = t.assignedToId === user.id;
+      const isStudentPoolTask = t.assignedToId === "student_pool";
+      if (!isAssignedToMe && !isStudentPoolTask) return false;
+      
+      // Only show tasks for today (using isSameDay for better timezone handling)
+      if (!t.initialDate) return false;
+      return isSameDay(parseISO(t.initialDate as unknown as string), today);
+    });
+  }, [tasks, user?.role, user?.id]);
+
+  // Use student-filtered tasks for students, all tasks for other roles
+  const baseTasks = user?.role === "student" ? studentTodayTasks : tasks;
+
   const taskCounts = useMemo(() => {
     const today = startOfDay(new Date());
     
-    const dueToday = tasks.filter((t) => {
+    const dueToday = baseTasks.filter((t) => {
       if (t.status === "completed") return false;
       if (!t.initialDate) return false;
       const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
       return taskDate.getTime() === today.getTime();
     }).length;
 
-    const overdue = tasks.filter((t) => {
+    const overdue = baseTasks.filter((t) => {
       if (t.status === "completed") return false;
       if (!t.estimatedCompletionDate) return false;
       return isPast(parseISO(t.estimatedCompletionDate as unknown as string));
     }).length;
 
-    const highPriority = tasks.filter(
+    const highPriority = baseTasks.filter(
       (t) => t.urgency === "high" && t.status !== "completed"
     ).length;
 
-    const unassigned = tasks.filter(
+    const unassigned = baseTasks.filter(
       (t) => !t.assignedToId && t.status !== "completed"
     ).length;
 
-    const completedToday = tasks.filter((t) => {
+    const completedToday = baseTasks.filter((t) => {
       if (t.status !== "completed") return false;
       if (!t.actualCompletionDate) return false;
       return isToday(parseISO(t.actualCompletionDate as unknown as string));
     }).length;
 
     return { dueToday, overdue, highPriority, unassigned, completedToday };
-  }, [tasks]);
+  }, [baseTasks]);
 
   const filteredTasks = useMemo(() => {
     const today = startOfDay(new Date());
     
-    let filtered = [...tasks];
+    let filtered = [...baseTasks];
 
     if (!showCompleted) {
       filtered = filtered.filter((t) => t.status !== "completed");
@@ -292,7 +313,7 @@ export default function Dashboard() {
         filtered = filtered.filter((t) => !t.assignedToId && t.status !== "completed");
         break;
       case "completed_today":
-        filtered = [...tasks].filter((t) => {
+        filtered = [...baseTasks].filter((t) => {
           if (t.status !== "completed") return false;
           if (!t.actualCompletionDate) return false;
           return isToday(parseISO(t.actualCompletionDate as unknown as string));
@@ -312,7 +333,7 @@ export default function Dashboard() {
       return new Date(a.estimatedCompletionDate as unknown as string).getTime() -
              new Date(b.estimatedCompletionDate as unknown as string).getTime();
     });
-  }, [tasks, activeFilter, showCompleted]);
+  }, [baseTasks, activeFilter, showCompleted]);
 
   const handleStatusChange = (taskId: string, status: Task["status"]) => {
     statusMutation.mutate({ taskId, status });
@@ -635,7 +656,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <CardTitle className="text-lg">My Student Tasks</CardTitle>
+              <CardTitle className="text-lg">Today's Tasks</CardTitle>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -657,8 +678,8 @@ export default function Dashboard() {
             {filteredTasks.length === 0 ? (
               <EmptyState
                 icon={CheckCircle2}
-                title="No tasks assigned"
-                description="You don't have any student tasks at the moment"
+                title="No tasks for today"
+                description="You don't have any student tasks assigned for today"
                 testId="empty-student-tasks"
               />
             ) : (
