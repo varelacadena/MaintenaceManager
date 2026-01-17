@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Calendar, User as UserIcon, MapPin, Repeat } from "lucide-react";
+import { Plus, Calendar, User as UserIcon, MapPin, Repeat, Play, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import type { Task, Area, User, Property } from "@shared/schema";
@@ -104,6 +104,7 @@ export default function Tasks() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
   const [holdReason, setHoldReason] = useState("");
+  const [showCompleted, setShowCompleted] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     taskId: string;
     newStatus: StatusType;
@@ -267,6 +268,145 @@ export default function Tasks() {
             <Skeleton key={i} className="h-96 w-full" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  const getPropertyById = (propertyId: string | null) => {
+    if (!propertyId) return null;
+    return properties?.find((p: any) => p.id === propertyId) || null;
+  };
+
+  const handleStudentStatusChange = (taskId: string, newStatus: StatusType) => {
+    updateTaskStatusMutation.mutate({ taskId, newStatus });
+  };
+
+  if (user?.role === "student") {
+    const studentTasks = tasks?.filter(t => 
+      showCompleted ? true : t.status !== "completed"
+    ) || [];
+
+    return (
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
+              My Tasks
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              View and complete your assigned tasks
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="text-sm"
+            data-testid="toggle-completed-tasks"
+          >
+            {showCompleted ? (
+              <><EyeOff className="w-4 h-4 mr-2" /> Hide Completed</>
+            ) : (
+              <><Eye className="w-4 h-4 mr-2" /> Show Completed</>
+            )}
+          </Button>
+        </div>
+
+        <Card>
+          <CardContent className="p-4">
+            {studentTasks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-500" />
+                <p className="font-medium">No tasks to show</p>
+                <p className="text-sm">You're all caught up!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {studentTasks.map((task) => {
+                  const property = getPropertyById(task.propertyId);
+                  const statusLabel = statusConfig.find(s => s.key === task.status)?.label || "Unknown";
+                  const statusColor = statusColors[task.status] || statusColors.not_started;
+                  
+                  return (
+                    <Card
+                      key={task.id}
+                      className="hover-elevate"
+                      data-testid={`student-task-card-${task.id}`}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <h3 className="font-medium text-base" data-testid={`text-task-name-${task.id}`}>
+                              {task.name}
+                            </h3>
+                            {property && (
+                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{property.name}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${statusColor}`}
+                                data-testid={`badge-status-${task.id}`}
+                              >
+                                {statusLabel}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs capitalize ${urgencyColors[task.urgency]}`}
+                                data-testid={`badge-urgency-${task.id}`}
+                              >
+                                {task.urgency}
+                              </Badge>
+                            </div>
+                            {!task.assignedToId && (
+                              <div className="flex items-center gap-1.5 text-sm text-orange-500">
+                                <UserIcon className="w-3.5 h-3.5" />
+                                <span>Unassigned</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0">
+                            {task.status === "not_started" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleStudentStatusChange(task.id, "in_progress")}
+                                disabled={updateTaskStatusMutation.isPending}
+                                data-testid={`button-start-task-${task.id}`}
+                              >
+                                <Play className="w-4 h-4 mr-1" />
+                                Start
+                              </Button>
+                            )}
+                            {task.status === "in_progress" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-green-600"
+                                onClick={() => handleStudentStatusChange(task.id, "completed")}
+                                disabled={updateTaskStatusMutation.isPending}
+                                data-testid={`button-complete-task-${task.id}`}
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                Complete
+                              </Button>
+                            )}
+                            {task.status === "completed" && (
+                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
