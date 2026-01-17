@@ -1,0 +1,226 @@
+Context
+You are working on an existing College Maintenance Management Platform with dashboards, task lists, task detail pages, and role-based access.
+
+The platform currently supports Admin, Staff, and Maintenance roles.
+This must be updated to a new execution model without breaking existing functionality.
+
+🎯 New Role Model (Must Be Implemented)
+Roles
+
+Admin – Full control (platform, scheduling, task creation, assignment)
+
+Student – Executes simple tasks only
+
+Technician – Executes technical tasks only
+
+Admin is the only role that creates and manages tasks.
+Students and Technicians only see and complete assigned tasks.
+
+🔁 Scope of Changes (IMPORTANT)
+
+These changes must be:
+
+Fully linked to existing dashboards and pages
+
+Backward-compatible
+
+Centralized through the Task Creation page
+
+🔹 CHANGE #1: Task Creation Page (Admin-Only)
+1. Add Required Field: Task Executor Type
+
+Admin must select one:
+
+Student Task
+
+Technician Task
+
+This selection determines:
+
+What fields appear on the task creation form
+
+How the task behaves downstream
+
+Which UI the assignee sees
+
+2. Dynamic Form Behavior (Conditional Rendering)
+If Student Task is selected:
+
+Show ONLY:
+
+Task title (simple wording)
+
+Location (building / room)
+
+Due date
+
+Instructions (required)
+
+Optional checklist
+
+Optional photo upload requirement
+
+Hide:
+
+Asset/system fields
+
+Advanced priority levels
+
+Estimated time
+
+Technical metadata
+
+If Technician Task is selected:
+
+Show:
+
+Task title
+
+Location
+
+Asset/system
+
+Priority
+
+Due date
+
+Estimated time
+
+Instructions
+
+Attachments
+
+Escalation flags
+
+3. Assignment Rules (Mandatory)
+
+Task must be assigned to:
+
+A specific Student or Technician
+
+OR a role-based queue (Student Pool / Technician Pool)
+
+Prevent silent unassigned tasks
+
+4. Review Before Create
+
+Before saving, show a summary:
+
+Task type (Student / Technician)
+
+Assigned user or pool
+
+Due date
+
+Preview of what the assignee will see
+
+🔹 CHANGE #2: Link Task Type to Existing Pages
+A. Dashboards
+
+Modify existing dashboards so that:
+
+Admin dashboard shows all tasks
+
+Student dashboard shows only:
+
+Assigned Student Tasks
+
+Due today & upcoming
+
+Technician dashboard shows only:
+
+Assigned Technician Tasks
+
+Dashboards must automatically filter based on:
+
+Logged-in user role
+
+Task executor type
+
+Assignment
+
+B. Task Lists
+
+Update task list queries:
+
+Admin: no filtering
+
+Student: taskType = student AND assignedTo = user
+
+Technician: taskType = technician AND assignedTo = user
+
+No manual filters required for Students or Technicians.
+
+C. Task Detail Page (Reuse Existing Page)
+
+Use the same Task Detail route but render different UI layers:
+
+Student Task Detail
+
+Read-only metadata
+
+Clear instructions
+
+Checklist (if present)
+
+Upload photo
+
+Add short note
+
+Mark complete
+
+Hide:
+
+Assignment
+
+Priority
+
+Scheduling
+
+Admin actions
+
+Technician Task Detail
+
+Full technical view
+
+Notes
+
+Attachments
+
+Asset/system info
+
+Flag issues
+
+Mark complete
+
+🧠 Technical Guidance
+
+Reuse existing task schema where possible
+
+Add taskType field (student | technician)
+
+Add conditional rendering based on:
+
+Role
+
+Task type
+
+Centralize permissions logic
+
+Avoid duplicating pages
+
+Comment all role-based logic clearly
+
+✅ Expected Outcome
+
+After implementation:
+
+Admin controls all planning
+
+Students and Technicians see only what they need
+
+Task creation defines execution behavior
+
+Existing pages remain intact but smarter
+
+The platform becomes simpler, safer, and easier to use
