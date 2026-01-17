@@ -378,37 +378,6 @@ export default function Tasks() {
                             )}
                           </div>
                           <div className="flex-shrink-0">
-                            {task.status === "not_started" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStudentStatusChange(task.id, "in_progress");
-                                }}
-                                disabled={updateTaskStatusMutation.isPending}
-                                data-testid={`button-start-task-${task.id}`}
-                              >
-                                <Play className="w-4 h-4 mr-1" />
-                                Start
-                              </Button>
-                            )}
-                            {task.status === "in_progress" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-green-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStudentStatusChange(task.id, "completed");
-                                }}
-                                disabled={updateTaskStatusMutation.isPending}
-                                data-testid={`button-complete-task-${task.id}`}
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-1" />
-                                Complete
-                              </Button>
-                            )}
                             {task.status === "completed" && (
                               <CheckCircle2 className="w-5 h-5 text-green-500" />
                             )}
