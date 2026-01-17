@@ -57,7 +57,7 @@ export default function EditTask() {
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
-  const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
+  const [assignmentType, setAssignmentType] = useState<"technician" | "vendor" | "">("");
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
@@ -152,7 +152,7 @@ export default function EditTask() {
       // Set assignment type based on what's assigned
       if (task.assignedToId) {
         form.setValue("assignedToId", task.assignedToId);
-        setAssignmentType("maintenance");
+        setAssignmentType("technician");
       } else if (task.assignedVendorId) {
         form.setValue("assignedVendorId", task.assignedVendorId);
         setSelectedVendorId(task.assignedVendorId);
@@ -639,9 +639,9 @@ export default function EditTask() {
                 <FormLabel>Assign To (Optional)</FormLabel>
                 <Select 
                   onValueChange={(value) => {
-                    setAssignmentType(value as "maintenance" | "vendor" | "");
+                    setAssignmentType(value as "technician" | "vendor" | "");
                     // Clear both assignment fields when changing type
-                    if (value === "maintenance") {
+                    if (value === "technician") {
                       form.setValue("assignedVendorId", undefined);
                     } else if (value === "vendor") {
                       form.setValue("assignedToId", undefined);
@@ -658,26 +658,26 @@ export default function EditTask() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="maintenance">Maintenance Team</SelectItem>
+                    <SelectItem value="technician">Technician Team</SelectItem>
                     <SelectItem value="vendor">Vendor</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>
 
-              {assignmentType === "maintenance" && (
+              {assignmentType === "technician" && (
                 <FormField
                   control={form.control}
                   name="assignedToId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Select Maintenance Staff</FormLabel>
+                      <FormLabel>Select Technician</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         value={field.value || ""}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-assigned-user">
-                            <SelectValue placeholder="Select maintenance staff member" />
+                            <SelectValue placeholder="Select technician" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

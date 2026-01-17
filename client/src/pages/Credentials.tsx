@@ -433,7 +433,6 @@ export default function Credentials() {
                         <SelectItem value="staff">Staff</SelectItem>
                         <SelectItem value="student">Student</SelectItem>
                         <SelectItem value="technician">Technician</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
