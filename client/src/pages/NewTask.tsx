@@ -286,7 +286,7 @@ export default function NewTask() {
       return res.json();
     },
     onSuccess: (newEquipment: Equipment) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment", selectedPropertyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId] });
       form.setValue("equipmentId", newEquipment.id);
       setIsEquipmentDialogOpen(false);
       equipmentForm.reset({
