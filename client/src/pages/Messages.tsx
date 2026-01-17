@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Send, Trash2, MessageCircle, FileText } from "lucide-react";
+import { Search, Send, Trash2, MessageCircle, FileText, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -381,14 +381,14 @@ export default function Messages() {
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold">Messages</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-xl md:text-2xl font-semibold">Messages</h1>
+        <p className="text-xs md:text-sm text-muted-foreground mt-1">
           Your conversations with team members
         </p>
       </div>
 
-      <div className="flex-1 flex rounded-xl overflow-hidden border bg-card shadow-sm">
-        <div className="w-80 border-r flex flex-col bg-muted/30">
+      <div className="flex-1 flex flex-col md:flex-row rounded-xl overflow-hidden border bg-card shadow-sm">
+        <div className={`w-full md:w-80 border-b md:border-b-0 md:border-r flex flex-col bg-muted/30 ${selectedUserId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b bg-card/50">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -478,13 +478,22 @@ export default function Messages() {
           </ScrollArea>
         </div>
 
-        <div className="flex-1 flex flex-col bg-gradient-to-b from-background to-muted/20">
+        <div className={`flex-1 flex flex-col bg-gradient-to-b from-background to-muted/20 ${selectedUserId ? 'flex' : 'hidden md:flex'}`}>
           {selectedConversation ? (
             <>
-              <div className="p-4 border-b bg-card/80 backdrop-blur-sm">
+              <div className="p-3 md:p-4 border-b bg-card/80 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className={`w-10 h-10 ${getAvatarColor(selectedConversation.user.id)}`}>
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="md:hidden shrink-0"
+                      onClick={() => setSelectedUserId(null)}
+                      data-testid="button-back-to-conversations"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <Avatar className={`w-8 h-8 md:w-10 md:h-10 ${getAvatarColor(selectedConversation.user.id)}`}>
                       <AvatarFallback className="text-white font-medium text-sm">
                         {getInitials(selectedConversation.user)}
                       </AvatarFallback>

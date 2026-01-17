@@ -114,7 +114,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -125,14 +125,14 @@ export default function Settings() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold">Settings</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
             Manage your account settings and preferences
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 max-w-2xl">
+      <div className="grid gap-4 md:gap-6 max-w-2xl">
         {/* Profile Information */}
         <Card>
           <CardHeader>
@@ -146,7 +146,7 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleProfileSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
                   <Input

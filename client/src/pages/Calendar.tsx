@@ -548,19 +548,19 @@ export default function Calendar() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
               Task Calendar
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               {isMaintenanceOrAdmin
                 ? "Drag tasks to reschedule them"
                 : "View scheduled maintenance tasks"}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap overflow-x-auto">
             <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as CalendarView)}>
               <ToggleGroupItem value="month" aria-label="Month view">
                 Month
@@ -582,12 +582,12 @@ export default function Calendar() {
             </Button>
             <Button
               variant="outline"
-              className="flex items-center gap-2 px-4 py-2 min-w-[200px] justify-center"
+              className="flex items-center gap-2 px-2 md:px-4 py-2 min-w-0 md:min-w-[200px] justify-center"
               onClick={handleCalendarClick}
               data-testid="button-calendar-display"
             >
-              <CalendarIcon className="w-4 h-4" />
-              <span className="font-medium text-sm">{getDisplayDate()}</span>
+              <CalendarIcon className="w-4 h-4 shrink-0" />
+              <span className="font-medium text-xs md:text-sm truncate">{getDisplayDate()}</span>
             </Button>
             <Button
               variant="outline"

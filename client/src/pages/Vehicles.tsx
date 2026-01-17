@@ -138,14 +138,14 @@ export default function Vehicles() {
 
   return (
     <div className="flex-1 space-y-4 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Fleet</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Fleet</h2>
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage your vehicle fleet and reservations
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {user?.role === "admin" && (
             <Button 
               variant="outline" 
@@ -353,7 +353,7 @@ export default function Vehicles() {
         </div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -365,7 +365,7 @@ export default function Vehicles() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]" data-testid="select-status-filter">
+          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -381,7 +381,7 @@ export default function Vehicles() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
               <CardHeader className="animate-pulse">
@@ -395,7 +395,7 @@ export default function Vehicles() {
           ))}
         </div>
       ) : filteredVehicles && filteredVehicles.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredVehicles.map((vehicle) => (
             <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`}>
               <Card className="hover-elevate cursor-pointer" data-testid={`card-vehicle-${vehicle.id}`}>

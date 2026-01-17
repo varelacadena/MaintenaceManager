@@ -278,22 +278,22 @@ export default function VehicleReservations() {
 
   return (
     <div className="flex-1 space-y-4 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-page-title">
             All Vehicle Reservations
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             View and manage all vehicle reservations
           </p>
         </div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by vehicle, user, or purpose..."
+            placeholder="Search reservations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
@@ -301,7 +301,7 @@ export default function VehicleReservations() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]" data-testid="select-status-filter">
+          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>

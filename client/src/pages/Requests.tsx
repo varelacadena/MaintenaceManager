@@ -202,15 +202,15 @@ export default function Requests() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-4xl font-semibold tracking-tight">Service Requests</h1>
-          <p className="text-muted-foreground">Manage and review all maintenance requests</p>
+          <h1 className="text-2xl md:text-4xl font-semibold tracking-tight">Service Requests</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage and review all maintenance requests</p>
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -223,7 +223,7 @@ export default function Requests() {
         </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-status-filter">
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -236,7 +236,7 @@ export default function Requests() {
         </Select>
 
         <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-urgency-filter">
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-urgency-filter">
             <SelectValue placeholder="Filter by urgency" />
           </SelectTrigger>
           <SelectContent>
