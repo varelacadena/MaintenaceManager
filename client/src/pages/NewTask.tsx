@@ -279,7 +279,11 @@ export default function NewTask() {
       const res = await fetch("/api/equipment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, propertyId: selectedPropertyId }),
+        body: JSON.stringify({ 
+          ...data, 
+          propertyId: selectedPropertyId,
+          spaceId: selectedSpaceId || undefined 
+        }),
         credentials: "include",
       });
       if (!res.ok) throw new Error(await res.text());
