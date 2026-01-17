@@ -729,6 +729,19 @@ export default function TaskDetail() {
             </div>
           )}
 
+          {/* Instructions - Important for student tasks */}
+          {task.instructions && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg" data-testid="task-instructions">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Instructions</p>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{task.instructions}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Time Logged - Prominent Display for Students */}
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg" data-testid="time-logged-card">
             <div className="flex items-center gap-3">
