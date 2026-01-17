@@ -6,6 +6,24 @@ This web-based platform streamlines maintenance operations for college facilitie
 
 ## Recent Updates (January 17, 2026)
 
+**AUTOMATIC VEHICLE FLEET STATUS SYNC:**
+
+Vehicle fleet statuses now update automatically without requiring manual intervention. When any of the following actions occur, the system automatically recalculates and updates the vehicle status:
+
+- Reservation created, updated, or deleted
+- Check-out log deleted
+- Check-in log updated or deleted
+
+**Status Logic:**
+- If a vehicle has an active check-out without a matching check-in, status = "in_use"
+- If a vehicle has pending/approved reservations, status = "reserved"
+- Otherwise, status = "available"
+- Manual statuses (needs_maintenance, needs_cleaning, out_of_service) are respected and not overridden
+
+The manual "Sync Statuses" button still exists as a fallback for admin users, but it's now rarely needed.
+
+---
+
 **TASK DETAIL PAGE REDESIGN - MOBILE-FIRST ACTION-FOCUSED:**
 
 The Task Detail page (`client/src/pages/TaskDetail.tsx`) has been completely redesigned with a mobile-first, action-focused approach that prioritizes quick actions over information display.

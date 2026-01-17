@@ -45,6 +45,56 @@ async function getAuthUser(req: any) {
   }
 }
 
+// Helper function to automatically sync vehicle status based on current state
+async function syncVehicleStatus(vehicleId: string): Promise<void> {
+  try {
+    const vehicle = await storage.getVehicle(vehicleId);
+    if (!vehicle) return;
+
+    // Don't change maintenance/cleaning statuses automatically - those are manually set
+    if (vehicle.status === "needs_maintenance" || vehicle.status === "needs_cleaning" || vehicle.status === "out_of_service") {
+      return;
+    }
+
+    // Check for active check-out logs without check-ins (vehicle is in use)
+    const checkOutLogs = await storage.getVehicleCheckOutLogs({ vehicleId });
+    const checkInLogs = await storage.getVehicleCheckInLogs({ vehicleId });
+    
+    const activeCheckOut = checkOutLogs.find(checkOut => {
+      const hasMatchingCheckIn = checkInLogs.some(checkIn => checkIn.checkOutLogId === checkOut.id);
+      return !hasMatchingCheckIn;
+    });
+
+    if (activeCheckOut) {
+      // Vehicle is currently checked out - set to in_use
+      if (vehicle.status !== "in_use") {
+        await storage.updateVehicleStatus(vehicleId, "in_use");
+      }
+      return;
+    }
+
+    // Check for active reservations (pending or approved)
+    const reservations = await storage.getVehicleReservations({ vehicleId });
+    const hasActiveReservations = reservations.some(
+      r => r.status === "pending" || r.status === "approved"
+    );
+
+    if (hasActiveReservations) {
+      // Vehicle has active reservations - set to reserved
+      if (vehicle.status !== "reserved") {
+        await storage.updateVehicleStatus(vehicleId, "reserved");
+      }
+    } else {
+      // No active reservations or checkouts - set to available
+      if (vehicle.status !== "available") {
+        await storage.updateVehicleStatus(vehicleId, "available");
+      }
+    }
+  } catch (error) {
+    console.error(`Error syncing vehicle status for ${vehicleId}:`, error);
+  }
+}
+
 // Placeholder for authenticateUser function (assuming it exists elsewhere)
 async function authenticateUser(req: any): Promise<any | null> {
   // This is a placeholder. Replace with your actual authentication logic.
@@ -2024,12 +2074,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!isAvailable) {
           return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
         }
-
-        // Update vehicle status to reserved
-        await storage.updateVehicleStatus(reservationData.vehicleId, "reserved");
       }
 
       const reservation = await storage.createVehicleReservation(reservationData);
+
+      // Auto-sync vehicle status
+      if (reservationData.vehicleId) {
+        await syncVehicleStatus(reservationData.vehicleId);
+      }
 
       res.json(reservation);
     } catch (error) {
@@ -2077,6 +2129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Handle potential vehicle status changes if vehicleId is updated
+      const oldVehicleId = reservation.vehicleId;
       if (updates.vehicleId && updates.vehicleId !== reservation.vehicleId) {
         const isAvailable = await storage.checkVehicleAvailability(
           updates.vehicleId,
@@ -2088,44 +2141,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!isAvailable) {
           return res.status(409).json({ message: "Vehicle is not available for the selected dates" });
         }
-
-        // Set old vehicle to available if no other active reservations
-        if (reservation.vehicleId) {
-          const activeReservations = await storage.getVehicleReservations({
-            vehicleId: reservation.vehicleId,
-          });
-          const hasOtherActiveReservations = activeReservations.some(
-            r => r.id !== id && (r.status === "pending" || r.status === "approved")
-          );
-          if (!hasOtherActiveReservations) {
-            await storage.updateVehicleStatus(reservation.vehicleId, "available");
-          }
-        }
-
-        // Set new vehicle to reserved if status is pending or approved
-        if (updates.status === "pending" || updates.status === "approved") {
-          await storage.updateVehicleStatus(updates.vehicleId, "reserved");
-        }
-      }
-
-      // Handle status change that might make a vehicle available
-      if (updates.status && updates.status !== reservation.status) {
-        if (updates.status === "cancelled" || updates.status === "completed") {
-          const activeReservations = await storage.getVehicleReservations({
-            vehicleId: reservation.vehicleId ?? undefined,
-          });
-          const hasActiveReservations = activeReservations.some(
-            r => r.id !== id && (r.status === "pending" || r.status === "approved")
-          );
-          if (!hasActiveReservations && reservation.vehicleId) {
-            await storage.updateVehicleStatus(reservation.vehicleId, "available");
-          }
-        } else if (updates.status === "approved" && reservation.vehicleId) {
-          await storage.updateVehicleStatus(reservation.vehicleId, "reserved");
-        }
       }
 
       const updatedReservation = await storage.updateVehicleReservation(id, updates);
+
+      // Auto-sync vehicle statuses for both old and new vehicles
+      if (oldVehicleId) {
+        await syncVehicleStatus(oldVehicleId);
+      }
+      if (updates.vehicleId && updates.vehicleId !== oldVehicleId) {
+        await syncVehicleStatus(updates.vehicleId);
+      }
+      // Also sync current vehicle if status changed
+      if (updates.status && updatedReservation?.vehicleId && !updates.vehicleId) {
+        await syncVehicleStatus(updatedReservation.vehicleId);
+      }
+
       res.json(updatedReservation);
     } catch (error: any) {
       console.error("Error updating vehicle reservation:", error);
@@ -2179,20 +2210,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // If a vehicle is associated, set it back to available if no other reservations exist
-      if (reservation.vehicleId) {
-        const activeReservations = await storage.getVehicleReservations({
-          vehicleId: reservation.vehicleId,
-        });
-        const hasOtherActiveReservations = activeReservations.some(
-          r => r.id !== id && (r.status === "pending" || r.status === "approved")
-        );
-        if (!hasOtherActiveReservations) {
-          await storage.updateVehicleStatus(reservation.vehicleId, "available");
-        }
+      const vehicleId = reservation.vehicleId;
+      await storage.deleteVehicleReservation(id);
+
+      // Auto-sync vehicle status after deletion
+      if (vehicleId) {
+        await syncVehicleStatus(vehicleId);
       }
 
-      await storage.deleteVehicleReservation(id);
       res.status(204).send(); // No Content
     } catch (error: any) {
       console.error("Error deleting vehicle reservation:", error);
@@ -2479,7 +2504,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/vehicle-checkout-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
+      // Get the log first to know the vehicle ID for syncing
+      const log = await storage.getVehicleCheckOutLog(req.params.id);
+      const vehicleId = log?.vehicleId;
+
       await storage.deleteVehicleCheckOutLog(req.params.id);
+
+      // Auto-sync vehicle status after deletion
+      if (vehicleId) {
+        await syncVehicleStatus(vehicleId);
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting vehicle check-out log:", error);
@@ -2612,6 +2647,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateVehicleMileage(log.vehicleId, logData.endMileage);
       }
 
+      // Auto-sync vehicle status
+      await syncVehicleStatus(log.vehicleId);
+
       res.json(log);
     } catch (error) {
       console.error("Error updating vehicle check-in log:", error);
@@ -2621,7 +2659,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/vehicle-checkin-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
     try {
+      // Get the log first to know the vehicle ID for syncing
+      const log = await storage.getVehicleCheckInLog(req.params.id);
+      const vehicleId = log?.vehicleId;
+
       await storage.deleteVehicleCheckInLog(req.params.id);
+
+      // Auto-sync vehicle status after deletion
+      if (vehicleId) {
+        await syncVehicleStatus(vehicleId);
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting vehicle check-in log:", error);
@@ -2629,33 +2677,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sync vehicle statuses (admin only) - fixes vehicles stuck in reserved state
+  // Sync vehicle statuses (admin only) - fixes vehicles stuck in incorrect state
   app.post("/api/vehicles/sync-statuses", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const vehicles = await storage.getVehicles();
+      const allVehicles = await storage.getVehicles();
       let updatedCount = 0;
 
-      for (const vehicle of vehicles) {
-        if (vehicle.status === "reserved") {
-          // Check if there are any active reservations
-          const activeReservations = await storage.getVehicleReservations({
-            vehicleId: vehicle.id,
-          });
-
-          const hasActiveReservations = activeReservations.some(
-            r => r.status === "pending" || r.status === "approved"
-          );
-
-          if (!hasActiveReservations) {
-            await storage.updateVehicleStatus(vehicle.id, "available");
-            updatedCount++;
-          }
+      for (const vehicle of allVehicles) {
+        const oldStatus = vehicle.status;
+        await syncVehicleStatus(vehicle.id);
+        
+        // Check if status changed
+        const updatedVehicle = await storage.getVehicle(vehicle.id);
+        if (updatedVehicle && updatedVehicle.status !== oldStatus) {
+          updatedCount++;
         }
       }
 
       res.json({ 
         success: true, 
-        message: `Updated ${updatedCount} vehicle(s) from reserved to available` 
+        message: `Synced all vehicles. ${updatedCount} vehicle(s) had their status updated.` 
       });
     } catch (error) {
       console.error("Error syncing vehicle statuses:", error);
