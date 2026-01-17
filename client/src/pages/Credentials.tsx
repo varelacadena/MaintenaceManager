@@ -254,11 +254,17 @@ export default function Credentials() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-red-500 hover:bg-red-600";
+        return "bg-purple-500 hover:bg-purple-600";
       case "maintenance":
         return "bg-blue-500 hover:bg-blue-600";
-      default:
+      case "staff":
         return "bg-green-500 hover:bg-green-600";
+      case "student":
+        return "bg-amber-500 hover:bg-amber-600";
+      case "technician":
+        return "bg-cyan-500 hover:bg-cyan-600";
+      default:
+        return "bg-muted";
     }
   };
 
@@ -363,6 +369,8 @@ export default function Credentials() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="technician">Technician</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>

@@ -94,6 +94,10 @@ export default function Users() {
         return "bg-blue-500 text-white";
       case "staff":
         return "bg-green-500 text-white";
+      case "student":
+        return "bg-amber-500 text-white";
+      case "technician":
+        return "bg-cyan-500 text-white";
       default:
         return "bg-muted";
     }
@@ -107,6 +111,10 @@ export default function Users() {
         return "Maintenance";
       case "staff":
         return "Staff";
+      case "student":
+        return "Student";
+      case "technician":
+        return "Technician";
       default:
         return role;
     }
@@ -200,6 +208,8 @@ export default function Users() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="technician">Technician</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
@@ -213,10 +223,10 @@ export default function Users() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">Total</CardTitle>
             <UsersIcon className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
@@ -227,7 +237,7 @@ export default function Users() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium">Admin</CardTitle>
-            <Shield className="w-4 h-4 text-muted-foreground" />
+            <Shield className="w-4 h-4 text-purple-500" />
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
             <div className="text-xl md:text-2xl font-semibold">
@@ -239,11 +249,47 @@ export default function Users() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium">Maintenance</CardTitle>
-            <UsersIcon className="w-4 h-4 text-muted-foreground" />
+            <UsersIcon className="w-4 h-4 text-blue-500" />
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
             <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "maintenance").length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Staff</CardTitle>
+            <UsersIcon className="w-4 h-4 text-green-500" />
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-semibold">
+              {users.filter((u) => u.role === "staff").length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Student</CardTitle>
+            <UsersIcon className="w-4 h-4 text-amber-500" />
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-semibold">
+              {users.filter((u) => u.role === "student").length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Technician</CardTitle>
+            <UsersIcon className="w-4 h-4 text-cyan-500" />
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="text-xl md:text-2xl font-semibold">
+              {users.filter((u) => u.role === "technician").length}
             </div>
           </CardContent>
         </Card>
@@ -302,6 +348,8 @@ export default function Users() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="technician">Technician</SelectItem>
                       <SelectItem value="maintenance">Maintenance</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
