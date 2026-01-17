@@ -2,237 +2,7 @@
 
 ## Overview
 
-This web-based platform streamlines maintenance operations for college facilities. It supports four user roles—administrators, technicians, college staff, and students—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
-
-## Recent Updates (January 17, 2026)
-
-**ROLE MODEL UPDATE - REPLACED MAINTENANCE WITH TECHNICIAN:**
-
-The system now uses a 4-role model replacing the old "maintenance" role with "technician":
-
-**Roles:**
-- **Admin**: Full system access, user management, all tasks, requests, vehicles, properties, inventory, vendors, analytics
-- **Technician**: LIMITED access - can only view and update technician-type tasks assigned to them or in the technician pool (similar to student access level)
-- **Staff**: Can submit service requests and vehicle reservations, view their own submissions
-- **Student**: Can view and complete student-assigned tasks only (simpler tasks like cleaning, basic maintenance)
-
-**Role Badge Colors:**
-- Admin: Purple
-- Technician: Blue
-- Staff: Green
-- Student: Amber
-
-**Database Changes:**
-- `users.role` field supports: "admin", "technician", "staff", "student"
-- Added `executorType` field to tasks table (enum: "student" | "technician")
-- Added `assignedPool` field for queue-based assignment ("student_pool" or "technician_pool")
-- Added `instructions` text field for detailed task instructions (primarily for student tasks)
-- Added `requiresPhoto` boolean field to require photo upload on task completion
-
-**Task Assignment:**
-- Tasks can be assigned to a specific user OR to a pool (student_pool/technician_pool)
-- Students see only student tasks (assigned to them or in student_pool)
-- Technicians see all technician tasks assigned to them or in technician_pool
-- Admins can see and manage all tasks
-
-**Conditional Task Creation Form:**
-- When executor type is "Student", additional fields appear:
-  - Instructions textarea for detailed step-by-step guidance
-  - Photo upload requirement checkbox
-- Technician tasks use standard task fields
-
-**Role-Based Dashboards:**
-- Students see a simplified dashboard with their assigned student tasks
-- Technicians see a simplified dashboard with their assigned technician tasks (LIMITED access like students)
-- Staff role is blocked from viewing tasks entirely
-- Only Admin has full dashboard access with all features
-
-**API Route Protection:**
-- GET /api/tasks: Filters by user role and executor type
-- PATCH /api/tasks/:id/status: Students/technicians can only update their assigned tasks
-- All task mutations require proper role authorization
-
-**Sidebar Navigation:**
-- Admin: Full access to all features
-- Technician: Dashboard, My Tasks, Calendar, Messages, Settings (LIMITED access like students)
-- Staff: Dashboard, My Requests, New Request, My Reservations, Messages, Settings
-- Students: Dashboard, My Tasks, Messages, Settings
-
----
-
-**AUTOMATIC VEHICLE FLEET STATUS SYNC:**
-
-Vehicle fleet statuses now update automatically without requiring manual intervention. When any of the following actions occur, the system automatically recalculates and updates the vehicle status:
-
-- Reservation created, updated, or deleted
-- Check-out log deleted
-- Check-in log updated or deleted
-
-**Status Logic:**
-- If a vehicle has an active check-out without a matching check-in, status = "in_use"
-- If a vehicle has pending/approved reservations, status = "reserved"
-- Otherwise, status = "available"
-- Manual statuses (needs_maintenance, needs_cleaning, out_of_service) are respected and not overridden
-
-The manual "Sync Statuses" button still exists as a fallback for admin users, but it's now rarely needed.
-
----
-
-**TASK DETAIL PAGE REDESIGN - MOBILE-FIRST ACTION-FOCUSED:**
-
-The Task Detail page (`client/src/pages/TaskDetail.tsx`) has been completely redesigned with a mobile-first, action-focused approach that prioritizes quick actions over information display.
-
-**Key Design Changes:**
-- **Simplified Header**: Sticky header showing assigned technician and due date with back/delete buttons
-- **Task Identity Block**: Compact display of status, priority, and task type badges with clickable property/equipment links
-- **Quick Action Buttons**: Grid of large tap-friendly buttons (Start/Pause, Assign, Original Request, History)
-- **Editable Details Section**: Phone (tap-to-call), status and priority (inline dropdowns), time logged
-- **Collapsible Sections**: Notes, Messages, Attachments, Checklists, Parts - collapsed by default to reduce information overload
-- **Sticky Bottom Action Bar**: Fixed bottom bar with primary actions (Back, Start/Pause, Complete, Photos, Add Note)
-
-**Mobile UX Improvements:**
-- Large tap targets (h-12, h-14) for mobile users
-- Sheet components for uploads and history viewing
-- Collapsible sections minimize scrolling
-- Inline editing eliminates navigation to separate edit screens
-- Bottom action bar for easy thumb access
-
-**Components Used:**
-- `Sheet` - Bottom sheets for photo uploads and task history
-- `Collapsible` - Expandable/collapsible content sections
-- `Select` - Inline status and priority editing
-- `Dialog` - All existing dialogs preserved (Assign, Add Note, Stop Timer, Hold Reason, Add Part)
-
-**Test IDs Updated:**
-- Header: `button-back`, `text-assignee`, `text-due-date`, `button-delete-task`
-- Identity: `badge-status`, `badge-urgency`, `badge-task-type`, `text-task-name`, `link-property`
-- Quick Actions: `button-start-pause`, `button-assign`, `link-original-request`, `button-history`
-- Details: `link-phone`, `select-status`, `select-priority`, `text-time-logged`
-- Sections: `toggle-notes`, `toggle-messages`, `toggle-attachments`, `toggle-checklist`, `toggle-parts`
-- Bottom Bar: `bottom-button-back`, `bottom-button-start-pause`, `bottom-button-complete`, `bottom-button-upload`, `bottom-button-add-note`
-
----
-
-## Previous Updates (January 16, 2026)
-
-**DASHBOARD REDESIGN - INTERACTIVE CONTROL PANEL:**
-
-The main dashboard has been completely redesigned to be simpler, more intuitive, and highly interactive. The redesign focuses on fast understanding with minimal cognitive load, making every element clickable.
-
-**New Dashboard Components (client/src/components/dashboard/):**
-- `FilterCard.tsx` - Large, clickable summary cards that filter the task list instantly
-- `TaskCard.tsx` - Clean task display with inline quick actions (start, complete, view)
-- `TaskDetailDrawer.tsx` - Slide-out drawer for quick task details without full navigation
-- `EmptyState.tsx` - Actionable empty states that guide users to next steps
-
-**Key Features:**
-- **Clickable Filter Cards**: Five summary cards (Due Today, Overdue, High Priority, Unassigned, Completed Today) act as buttons to filter the main task list
-- **Central Task Panel**: Main "Today's Tasks" panel shows filtered tasks as clean cards with priority indicators and quick actions
-- **List/Timeline Toggle**: Switch between list view and visual timeline view of tasks
-- **Show/Hide Completed**: Toggle to show or hide completed tasks
-- **Task Quick Actions**: Inline buttons to start, complete, or put tasks on hold without navigating
-- **Quick View Drawer**: Click any task to open a detail drawer with full information and actions
-- **Smart Defaults**: Shows today's tasks by default, hides completed tasks, prioritizes urgent items
-
-**Design Philosophy:**
-- Less information per screen, more interaction
-- Every number/card leads somewhere actionable
-- Actions are one click away
-- Users never wonder "what do I do next?"
-
-**Staff View Improvements:**
-- Simplified cards for My Service Requests and My Vehicle Reservations
-- Clickable cards navigate to full list views
-- Empty states guide new users to create requests or reservations
-
----
-
-**ANALYTICS MODULE CONSOLIDATION - SINGLE PAGE DASHBOARD:**
-
-All 7 analytics report pages have been consolidated into a single dynamic page at `/analytics`. Report switching happens via tabs without changing routes, providing a smoother user experience.
-
-**New Architecture:**
-- **Single Route**: All analytics now accessible at `/analytics` instead of 7 separate routes
-- **Tab-Based Navigation**: Switch between report types (Work Orders, Technicians, Assets, Facilities, Fleet, Requests, Alerts) with tabs
-- **Lazy Loading**: Each report component is lazy-loaded for optimal performance
-- **Unified Filters**: Consistent filtering interface across all report types
-- **Export Functionality**: PDF and XLSX export available on every report
-
-**Report Components (client/src/pages/analytics/reports/):**
-- `WorkOrdersReport.tsx` - Task status, trends, status/urgency breakdowns
-- `TechniciansReport.tsx` - Team performance, hours logged, completion rates
-- `AssetsReport.tsx` - Equipment health, failure rates, maintenance costs
-- `FacilitiesReport.tsx` - Building-level work order analytics
-- `FleetReport.tsx` - Vehicle status, reservations, utilization rates
-- `ServiceRequestsReport.tsx` - Request metrics, conversion rates, top requesters
-- `AlertsReport.tsx` - Overdue work orders, SLA breaches, exceptions
-
-**API Endpoints:**
-- `GET /api/analytics/work-orders` - Work order overview with filters
-- `GET /api/analytics/technicians` - Technician performance metrics
-- `GET /api/analytics/assets` - Asset health and maintenance data
-- `GET /api/analytics/facilities` - Facility insights
-- `GET /api/analytics/alerts` - System alerts
-- `GET /api/analytics/trends` - Weekly trend data
-- `GET /api/analytics/fleet` - Fleet vehicle analytics
-- `GET /api/analytics/service-requests` - Service request analytics
-- `GET /api/analytics/export?type=...` - Export functionality (PDF/XLSX)
-
-**Features:**
-- Role-based access (Admin and Maintenance only)
-- Filterable by date range, property, area, technician, status, urgency
-- Clickable KPI cards with detailed dialog breakdowns
-- Interactive charts (pie, bar, line) with tooltips
-- Data tables with sorting and property/area links
-- PDF and XLSX export for all reports
-- Tabs for switching between chart and detailed table views
-
-**Components Added/Updated:**
-- `client/src/pages/analytics/FleetAnalytics.tsx` - Fleet management analytics
-- `client/src/pages/analytics/ServiceRequestAnalytics.tsx` - Service request analytics
-- `client/src/pages/analytics/MaintenanceOverview.tsx` - Redesigned as Reports hub
-- `client/src/components/analytics/KpiCard.tsx` - Reusable clickable KPI display
-- `client/src/components/analytics/AnalyticsFilters.tsx` - Filter controls with export
-- `client/src/components/analytics/AnalyticsCharts.tsx` - Chart components
-- `server/analyticsService.ts` - Analytics query builders with fleet and service request methods
-
----
-
-## Previous Updates (November 11, 2025)
-
-**DATABASE MIGRATION HARDENING - DEPLOYMENT READY:**
-
-All database migrations have been updated to be fully idempotent and production-deployment safe. The following critical issues were identified and fixed:
-
-**Migration Fixes Applied:**
-- ✅ **Migration 002** (nullable_request_id): Added IF NOT EXISTS check for `uploads_parent_check` constraint
-- ✅ **Migration 003** (note_type): Added existence checks for ENUM type and column creation
-- ✅ **Migration 004** (fix_phone_number_column): Added column existence check before rename operation
-- ✅ **Migration 007** (add_properties_and_equipment): Updated to use snake_case column names from the start (image_url, last_work_date, property_id, serial_number)
-- ✅ **Migrations 008 & 009**: Added to migration application list in applyMigrations.ts to ensure camelCase→snake_case fixes run on deployment
-- ✅ **Migration 011** (add_property_to_service_requests): Added conditional checks for column and foreign key constraint
-- ✅ **Migration 012** (add_equipment_id_to_tasks): Added conditional checks for column and foreign key constraint
-- ✅ **Migration 013** (add_recurring_parameters): Added conditional checks for all three recurring columns
-
-**Schema Alignment:**
-- All property and equipment columns now consistently use snake_case naming
-- Migration 007 creates tables with correct snake_case columns for fresh installations
-- Migration 009 ensures existing databases are migrated from camelCase to snake_case
-- Database schema now matches application code expectations across all environments
-
-**Session Configuration Fix:**
-- ✅ Removed duplicate session setup between server/index.ts and server/replitAuth.ts
-- ✅ Fixed connect-pg-simple initialization to use proper configuration pattern
-- ✅ Session store now correctly configured with PostgreSQL pool in server/index.ts
-- ✅ Eliminated "Cannot read properties of undefined (reading 'Store')" error
-
-**Deployment Readiness:**
-- ✅ All 14 migrations are idempotent and safe to run multiple times
-- ✅ No schema mismatch errors on deployment
-- ✅ Comprehensive error handling for constraints, types, and columns
-- ✅ Migration tracking prevents duplicate execution
-- ✅ Session management properly configured without conflicts
-- ✅ Safe for production deployment without database corruption
+This web-based platform centralizes maintenance operations for college facilities, supporting administrators, technicians, college staff, and students. It enables managing service requests, tracking tasks, and maintaining campus areas like grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions including user, vendor, inventory management, property mapping, and reporting. The platform aims to streamline facility management, improve response times, and optimize resource allocation across college campuses.
 
 ## User Preferences
 
@@ -240,40 +10,35 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Core System Design
 
-**Framework Stack:** React 18 (TypeScript), Vite, Wouter (routing), TanStack Query (server state).
-**UI Component System:** Radix UI, shadcn/ui ("new-york" style), Tailwind CSS.
-**Design System:** Inter and Roboto Mono fonts, HSL-based color theme with light/dark modes, custom urgency/status colors.
-**State Management:** React Query (server state), custom `useAuth` hook (authentication), React Hook Form with Zod (form state), React `useState` (local UI state).
+The platform uses a 4-role model (Admin, Technician, Staff, Student) with role-based access control and dashboards. Tasks are assigned to specific users or pools (student_pool/technician_pool), with conditional forms for student tasks including detailed instructions and photo requirements. API routes are protected to enforce role-based authorization for task management. Vehicle fleet statuses are automatically updated based on reservations and usage logs, with manual overrides for specific maintenance needs.
 
-### Backend Architecture
+### UI/UX Decisions
 
-**Server Framework:** Express.js (Node.js, TypeScript), ES modules, RESTful API.
-**Database Layer:** Drizzle ORM for PostgreSQL (Neon serverless), schema-first approach, connection pooling.
-**Authentication System:** Replit Auth (OpenID Connect) via Passport.js, session-based authentication (PostgreSQL store), role-based access control, user provisioning.
-**Authorization Model:** Three-tier role system (admin, maintenance, staff) with route-level middleware enforcement.
-**API Architecture:** Centralized routes, storage abstraction layer, consistent error handling, request/response logging.
-**File Upload System:** Google Cloud Storage integration, Uppy file uploader, custom ACL for object permissions.
+The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui for components, styled with Tailwind CSS. Design prioritizes a mobile-first, action-focused approach, especially for task detail pages, featuring simplified headers, quick action buttons, editable details, and collapsible sections to reduce information overload. The dashboard is interactive, with clickable filter cards, a central task panel with quick actions, and a quick view drawer for task details. Analytics are consolidated into a single dynamic page with tab-based navigation, lazy loading, and consistent filtering and export options.
 
-### Data Model
+### Technical Implementations
 
-**Core Entities:** Users, Vendors, Inventory Items, Areas, Subdivisions, Service Requests, Time Entries, Parts Used, Messages, Uploads, Task Notes.
-**Key Relationships:** Service requests link to areas/subdivisions, requesters, and assigned staff. Time entries and parts link to requests. Messages and uploads are attached to service requests.
-**Status Workflow:** `pending` → `in_progress` → `completed`, with an `on_hold` state and urgency levels.
+The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persistence is managed with Drizzle ORM for PostgreSQL (Neon serverless). Authentication is handled via Replit Auth (OpenID Connect) with Passport.js and session management. File uploads integrate with Google Cloud Storage. Database migrations are designed to be idempotent and production-ready, ensuring schema consistency and safe deployments.
 
-### External Dependencies
+### Feature Specifications
 
-**Third-Party Services:**
+- **User Roles:** Admin, Technician, Staff, Student, each with specific permissions and dashboard views.
+- **Task Management:** Creation, assignment (to users or pools), tracking, status updates, time logging, parts tracking, and conditional fields for student tasks.
+- **Vehicle Fleet Management:** Automatic status updates (in_use, reserved, available) based on reservations and usage logs; manual status overrides.
+- **Service Request Management:** Staff can submit requests; students can complete assigned tasks.
+- **Inventory & Vendor Management:** Administrative functions for managing parts, equipment, and suppliers.
+- **Property Mapping:** Tools for mapping and managing campus properties.
+- **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
+
+## External Dependencies
+
 - **Replit Authentication:** OIDC provider for user identity.
-- **Replit Object Storage:** Google Cloud Storage via sidecar endpoint.
-- **Neon PostgreSQL:** Serverless Postgres database.
-
-**Key Libraries:**
-- **Drizzle ORM:** Type-safe database queries.
+- **Replit Object Storage:** Google Cloud Storage via sidecar endpoint for file uploads.
+- **Neon PostgreSQL:** Serverless PostgreSQL database.
+- **Drizzle ORM:** For type-safe database interactions.
 - **Passport.js:** Authentication middleware.
-- **React Hook Form:** Form validation.
-- **Uppy:** File upload UI.
-- **TanStack Query:** Async state management.
-
-**Configuration Requirements:** DATABASE_URL, SESSION_SECRET, PRIVATE_OBJECT_DIR, ISSUER_URL, REPL_ID.
+- **React Hook Form:** For form management and validation.
+- **Uppy:** File upload UI library.
+- **TanStack Query:** For asynchronous state management.

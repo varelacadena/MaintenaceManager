@@ -88,8 +88,7 @@ export default function NewTask() {
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
-  const [executorType, setExecutorType] = useState<"student" | "technician" | "">("");
-  const [assignmentType, setAssignmentType] = useState<"technician" | "vendor" | "">("");
+  const [assignmentOption, setAssignmentOption] = useState<"student_pool" | "technician_pool" | "specific_technician" | "vendor" | "">("");
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
@@ -242,15 +241,21 @@ export default function NewTask() {
     }
   }, [request, form]);
 
-  // Set assignment type based on form values
+  // Set assignment option based on form values
   useEffect(() => {
     const assignedToId = form.watch("assignedToId");
     const assignedVendorId = form.watch("assignedVendorId");
+    const executorType = form.watch("executorType");
+    const assignedPool = form.watch("assignedPool");
 
     if (assignedToId) {
-      setAssignmentType("technician");
+      setAssignmentOption("specific_technician");
     } else if (assignedVendorId) {
-      setAssignmentType("vendor");
+      setAssignmentOption("vendor");
+    } else if (assignedPool === "student_pool" || executorType === "student") {
+      setAssignmentOption("student_pool");
+    } else if (assignedPool === "technician_pool" || executorType === "technician") {
+      setAssignmentOption("technician_pool");
     }
   }, [form]);
 
@@ -285,7 +290,10 @@ export default function NewTask() {
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
         executorType: data.executorType || undefined,
-        assignedPool: data.executorType ? `${data.executorType}_pool` : undefined,
+        // Only set assignedPool if task goes to a pool (no specific assignee)
+        assignedPool: (!data.assignedToId && !data.assignedVendorId && data.assignedPool) 
+          ? data.assignedPool 
+          : undefined,
         instructions: data.instructions || undefined,
         requiresPhoto: data.requiresPhoto || false,
         status: data.status,
@@ -565,40 +573,118 @@ export default function NewTask() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="executorType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Executor Type</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setExecutorType(value as "student" | "technician");
-                        form.setValue("assignedPool", `${value}_pool`);
-                      }}
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-executor-type">
-                          <SelectValue placeholder="Select executor type (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="technician">Technician</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Choose who should complete this task: students for simple tasks, technicians for technical work
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Assign To (Optional)</FormLabel>
+                <Select
+                  onValueChange={(value: string) => {
+                    const option = value as "student_pool" | "technician_pool" | "specific_technician" | "vendor" | "";
+                    setAssignmentOption(option);
+                    // Clear assignment fields when changing type
+                    form.setValue("assignedToId", undefined);
+                    form.setValue("assignedVendorId", undefined);
+                    
+                    // Set executor type and pool based on selection
+                    if (option === "student_pool") {
+                      form.setValue("executorType", "student");
+                      form.setValue("assignedPool", "student_pool");
+                    } else if (option === "technician_pool") {
+                      form.setValue("executorType", "technician");
+                      form.setValue("assignedPool", "technician_pool");
+                    } else if (option === "specific_technician") {
+                      form.setValue("executorType", "technician");
+                      form.setValue("assignedPool", undefined);
+                    } else if (option === "vendor") {
+                      form.setValue("executorType", undefined);
+                      form.setValue("assignedPool", undefined);
+                    } else {
+                      form.setValue("executorType", undefined);
+                      form.setValue("assignedPool", undefined);
+                    }
+                  }}
+                  value={assignmentOption}
+                >
+                  <FormControl>
+                    <SelectTrigger data-testid="select-assignment-option">
+                      <SelectValue placeholder="Select assignment (optional)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="student_pool">Student Pool</SelectItem>
+                    <SelectItem value="technician_pool">Technician Pool</SelectItem>
+                    <SelectItem value="specific_technician">Specific Technician</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Choose who should complete this task: student pool for simple tasks, technician pool or specific technician for technical work, or a vendor
+                </FormDescription>
+              </FormItem>
+
+              {assignmentOption === "specific_technician" && (
+                <FormField
+                  control={form.control}
+                  name="assignedToId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Technician</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-user">
+                            <SelectValue placeholder="Select technician" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {technicianUsers.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.firstName} {user.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {assignmentOption === "vendor" && (
+                <FormField
+                  control={form.control}
+                  name="assignedVendorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Vendor</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedVendorId(value);
+                        }}
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-vendor">
+                            <SelectValue placeholder="Select vendor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vendors.map((vendor) => (
+                            <SelectItem key={vendor.id} value={vendor.id}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
-            {executorType === "student" && (
+            {assignmentOption === "student_pool" && (
               <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
                 <h3 className="font-semibold">Student Task Instructions</h3>
                 <FormField
@@ -898,94 +984,6 @@ export default function NewTask() {
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="space-y-4">
-              <FormItem>
-                <FormLabel>Assign To (Optional)</FormLabel>
-                <Select
-                  onValueChange={(value) => {
-                    setAssignmentType(value as "technician" | "vendor" | "");
-                    // Clear both assignment fields when changing type
-                    form.setValue("assignedToId", undefined);
-                    form.setValue("assignedVendorId", undefined);
-                  }}
-                  value={assignmentType}
-                >
-                  <FormControl>
-                    <SelectTrigger data-testid="select-assignment-type">
-                      <SelectValue placeholder="Select assignment type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="technician">Technician Team</SelectItem>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-
-              {assignmentType === "technician" && (
-                <FormField
-                  control={form.control}
-                  name="assignedToId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Technician</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-assigned-user">
-                            <SelectValue placeholder="Select technician" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {technicianUsers.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.firstName} {user.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {assignmentType === "vendor" && (
-                <FormField
-                  control={form.control}
-                  name="assignedVendorId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Vendor</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedVendorId(value);
-                        }}
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-assigned-vendor">
-                            <SelectValue placeholder="Select vendor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {vendors.map((vendor) => (
-                            <SelectItem key={vendor.id} value={vendor.id}>
-                              {vendor.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
             </div>
 
             <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
