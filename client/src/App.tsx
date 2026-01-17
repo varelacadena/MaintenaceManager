@@ -38,6 +38,7 @@ import VehicleReservations from "./pages/VehicleReservations";
 import VehicleReservationDetails from "./pages/VehicleReservationDetails";
 import { ScrollToTop } from "./components/ScrollToTop";
 import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
+import RoleGuard from "./components/RoleGuard";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -118,35 +119,86 @@ function AuthenticatedApp() {
             <main className="flex-1 overflow-auto px-8 py-6 bg-muted/20">
               <ScrollToTop />
               <Switch>
+                {/* Routes accessible to all authenticated users */}
                 <Route path="/" component={Dashboard} />
-                <Route path="/requests" component={Requests} />
-                <Route path="/requests/:id" component={RequestDetail} />
-                <Route path="/new-request" component={NewRequest} />
-                <Route path="/tasks/new" component={NewTask} />
-                <Route path="/tasks/:id/edit" component={EditTask} />
                 <Route path="/tasks" component={Tasks} />
                 <Route path="/tasks/:id" component={TaskDetail} />
                 <Route path="/messages" component={Messages} />
-                <Route path="/calendar" component={Calendar} />
-                <Route path="/properties" component={PropertyMapPage} />
-                <Route path="/properties/:id" component={PropertyDetail} />
-                <Route path="/equipment/:id/work-history" component={EquipmentWorkHistory} />
                 <Route path="/settings" component={Settings} />
-                <Route path="/users" component={Users} />
-                <Route path="/credentials" component={Credentials} />
-                <Route path="/vendors" component={Vendors} />
-                <Route path="/inventory" component={Inventory} />
-                <Route path="/vehicles" component={Vehicles} />
-                <Route path="/vehicles/:id" component={VehicleDetail} />
-                <Route path="/vehicles/:id/edit" component={VehicleEdit} />
-                <Route path="/vehicles/:id/check-out" component={VehicleCheckOut} />
-                <Route path="/my-reservations" component={MyReservations} />
-                <Route path="/vehicle-reservations" component={VehicleReservations} />
-                <Route path="/vehicle-reservation-details/:reservationId" component={VehicleReservationDetails} />
-                <Route path="/vehicle-checkout/:reservationId" component={VehicleCheckOut} />
-                <Route path="/vehicle-checkin/:checkOutLogId" component={VehicleCheckIn} />
-                <Route path="/vehicle-checkin-verify/:checkInLogId" component={VehicleCheckInVerification} />
-                <Route path="/analytics" component={AnalyticsDashboard} />
+
+                {/* Protected routes - check user role and redirect students */}
+                <Route path="/requests" component={() => (
+                  <RoleGuard allowedRoles={["admin", "staff"]}><Requests /></RoleGuard>
+                )} />
+                <Route path="/requests/:id" component={() => (
+                  <RoleGuard allowedRoles={["admin", "staff", "technician"]}><RequestDetail /></RoleGuard>
+                )} />
+                <Route path="/new-request" component={() => (
+                  <RoleGuard allowedRoles={["admin", "staff"]}><NewRequest /></RoleGuard>
+                )} />
+                <Route path="/calendar" component={() => (
+                  <RoleGuard allowedRoles={["admin", "technician"]}><Calendar /></RoleGuard>
+                )} />
+                <Route path="/tasks/new" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
+                )} />
+                <Route path="/tasks/:id/edit" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><EditTask /></RoleGuard>
+                )} />
+                <Route path="/properties" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><PropertyMapPage /></RoleGuard>
+                )} />
+                <Route path="/properties/:id" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><PropertyDetail /></RoleGuard>
+                )} />
+                <Route path="/equipment/:id/work-history" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><EquipmentWorkHistory /></RoleGuard>
+                )} />
+                <Route path="/users" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><Users /></RoleGuard>
+                )} />
+                <Route path="/credentials" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><Credentials /></RoleGuard>
+                )} />
+                <Route path="/vendors" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><Vendors /></RoleGuard>
+                )} />
+                <Route path="/inventory" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><Inventory /></RoleGuard>
+                )} />
+                <Route path="/vehicles" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><Vehicles /></RoleGuard>
+                )} />
+                <Route path="/vehicles/:id" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleDetail /></RoleGuard>
+                )} />
+                <Route path="/vehicles/:id/edit" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleEdit /></RoleGuard>
+                )} />
+                <Route path="/vehicles/:id/check-out" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleCheckOut /></RoleGuard>
+                )} />
+                <Route path="/my-reservations" component={() => (
+                  <RoleGuard allowedRoles={["admin", "staff"]}><MyReservations /></RoleGuard>
+                )} />
+                <Route path="/vehicle-reservations" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleReservations /></RoleGuard>
+                )} />
+                <Route path="/vehicle-reservation-details/:reservationId" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleReservationDetails /></RoleGuard>
+                )} />
+                <Route path="/vehicle-checkout/:reservationId" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleCheckOut /></RoleGuard>
+                )} />
+                <Route path="/vehicle-checkin/:checkOutLogId" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleCheckIn /></RoleGuard>
+                )} />
+                <Route path="/vehicle-checkin-verify/:checkInLogId" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><VehicleCheckInVerification /></RoleGuard>
+                )} />
+                <Route path="/analytics" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><AnalyticsDashboard /></RoleGuard>
+                )} />
                 <Route component={NotFound} />
               </Switch>
             </main>
