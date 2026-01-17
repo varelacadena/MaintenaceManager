@@ -183,6 +183,7 @@ export default function NewTask() {
   const [dialogChecklistName, setDialogChecklistName] = useState("");
   const [dialogChecklistItems, setDialogChecklistItems] = useState<{ text: string; isCompleted: boolean }[]>([]);
   const [newDialogChecklistItem, setNewDialogChecklistItem] = useState("");
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   const equipmentForm = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentFormSchema),
@@ -1570,7 +1571,37 @@ export default function NewTask() {
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {dialogChecklistItems.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-sm">
-                      <span className="flex-1">{item.text}</span>
+                      {editingItemIndex === idx ? (
+                        <Input
+                          autoFocus
+                          className="flex-1 h-8"
+                          value={item.text}
+                          onChange={(e) => {
+                            setDialogChecklistItems(prev => prev.map((it, i) =>
+                              i === idx ? { ...it, text: e.target.value } : it
+                            ));
+                          }}
+                          onBlur={() => setEditingItemIndex(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              setEditingItemIndex(null);
+                            }
+                            if (e.key === "Escape") {
+                              setEditingItemIndex(null);
+                            }
+                          }}
+                          data-testid={`input-edit-item-${idx}`}
+                        />
+                      ) : (
+                        <span
+                          className="flex-1 cursor-pointer hover:bg-muted px-2 py-1 rounded"
+                          onClick={() => setEditingItemIndex(idx)}
+                          data-testid={`text-checklist-item-${idx}`}
+                        >
+                          {item.text}
+                        </span>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -1578,6 +1609,7 @@ export default function NewTask() {
                         className="h-6 w-6"
                         onClick={() => {
                           setDialogChecklistItems(dialogChecklistItems.filter((_, i) => i !== idx));
+                          if (editingItemIndex === idx) setEditingItemIndex(null);
                         }}
                         data-testid={`button-remove-dialog-item-${idx}`}
                       >
@@ -1620,7 +1652,7 @@ export default function NewTask() {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsChecklistDialogOpen(false)} data-testid="button-cancel-checklist">
+            <Button type="button" variant="outline" onClick={() => { setIsChecklistDialogOpen(false); setEditingItemIndex(null); }} data-testid="button-cancel-checklist">
               Cancel
             </Button>
             <Button
@@ -1642,6 +1674,7 @@ export default function NewTask() {
                   setDialogChecklistItems([]);
                   setNewDialogChecklistItem("");
                   setEditingChecklistIndex(null);
+                  setEditingItemIndex(null);
                 }
               }}
               data-testid="button-save-checklist"
