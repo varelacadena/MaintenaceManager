@@ -330,8 +330,9 @@ export default function Tasks() {
                   return (
                     <Card
                       key={task.id}
-                      className="hover-elevate"
+                      className="hover-elevate cursor-pointer"
                       data-testid={`student-task-card-${task.id}`}
+                      onClick={() => navigate(`/tasks/${task.id}`)}
                     >
                       <div className="p-4">
                         <div className="flex items-start justify-between gap-3">
@@ -373,7 +374,10 @@ export default function Tasks() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleStudentStatusChange(task.id, "in_progress")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStudentStatusChange(task.id, "in_progress");
+                                }}
                                 disabled={updateTaskStatusMutation.isPending}
                                 data-testid={`button-start-task-${task.id}`}
                               >
@@ -386,7 +390,10 @@ export default function Tasks() {
                                 size="sm"
                                 variant="ghost"
                                 className="text-green-600"
-                                onClick={() => handleStudentStatusChange(task.id, "completed")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStudentStatusChange(task.id, "completed");
+                                }}
                                 disabled={updateTaskStatusMutation.isPending}
                                 data-testid={`button-complete-task-${task.id}`}
                               >
