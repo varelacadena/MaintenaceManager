@@ -282,9 +282,17 @@ export default function Tasks() {
   };
 
   if (user?.role === "student") {
-    const studentTasks = tasks?.filter(t => 
-      showCompleted ? true : t.status !== "completed"
-    ) || [];
+    const studentTasks = tasks?.filter(t => {
+      // Only show tasks assigned to this student or to the student pool
+      const isAssignedToMe = t.assignedToId === user.id;
+      const isStudentPoolTask = t.assignedToId === "student_pool";
+      if (!isAssignedToMe && !isStudentPoolTask) return false;
+      
+      // Filter by completed status if not showing completed
+      if (!showCompleted && t.status === "completed") return false;
+      
+      return true;
+    }) || [];
 
     return (
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
