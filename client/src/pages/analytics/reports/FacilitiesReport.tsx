@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Building2, DollarSign, AlertTriangle, CheckCircle2, MapPin } from "lucide-react";
+import { Building2, DollarSign, AlertTriangle, CheckCircle2, MapPin, DoorOpen } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
 import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
 import { PropertyBarChart } from "@/components/analytics/AnalyticsCharts";
@@ -24,7 +24,17 @@ interface FacilityWorkOrder {
   assignedToName: string;
   areaName: string;
   equipmentName: string;
+  spaceName: string;
   taskType: string;
+}
+
+interface SpaceAnalytics {
+  spaceId: string;
+  spaceName: string;
+  floor: string | null;
+  workOrderCount: number;
+  completedWorkOrders: number;
+  openWorkOrders: number;
 }
 
 interface FacilityData {
@@ -38,6 +48,7 @@ interface FacilityData {
   emergencyWorkOrders: number;
   preventiveWorkOrders: number;
   workOrderDetails: FacilityWorkOrder[];
+  spaceAnalytics: SpaceAnalytics[];
 }
 
 export default function FacilitiesReport() {
@@ -235,6 +246,64 @@ export default function FacilitiesReport() {
         </CardContent>
       </Card>
 
+      {/* Space Analytics for Buildings */}
+      {data.filter(f => f.propertyType === "building" && f.spaceAnalytics && f.spaceAnalytics.length > 0).length > 0 && (
+        <Card>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <div className="flex items-center gap-2">
+              <DoorOpen className="w-4 h-4 text-primary" />
+              <CardTitle className="text-xs sm:text-sm font-medium">Space Analytics (Building Properties)</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <ScrollArea className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Building</TableHead>
+                    <TableHead className="text-xs">Space</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Floor</TableHead>
+                    <TableHead className="text-xs text-right">Total WOs</TableHead>
+                    <TableHead className="text-xs text-right">Open</TableHead>
+                    <TableHead className="text-xs text-right hidden sm:table-cell">Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.filter(f => f.propertyType === "building").flatMap(facility => 
+                    facility.spaceAnalytics?.map(space => (
+                      <TableRow key={space.spaceId} data-testid={`row-space-${space.spaceId}`}>
+                        <TableCell className="text-xs sm:text-sm py-2">
+                          <Link href={`/properties/${facility.propertyId}`}>
+                            <span className="text-primary hover:underline cursor-pointer">{facility.propertyName}</span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 font-medium">{space.spaceName}</TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell">{space.floor || "—"}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-right py-2">{space.workOrderCount}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-right py-2">
+                          <span className={space.openWorkOrders > 0 ? "text-yellow-600 font-medium" : ""}>
+                            {space.openWorkOrders}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">{space.completedWorkOrders}</TableCell>
+                      </TableRow>
+                    )) || []
+                  )}
+                  {data.filter(f => f.propertyType === "building").every(f => !f.spaceAnalytics || f.spaceAnalytics.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No spaces defined in building properties
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">
           <CardTitle className="text-xs sm:text-sm font-medium">All Work Orders by Facility</CardTitle>
@@ -248,7 +317,7 @@ export default function FacilitiesReport() {
                   <TableHead className="text-xs">Work Order</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs">Urgency</TableHead>
-                  <TableHead className="text-xs hidden sm:table-cell">Area</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Space</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Assigned To</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Type</TableHead>
                 </TableRow>
@@ -267,7 +336,7 @@ export default function FacilitiesReport() {
                       </TableCell>
                       <TableCell className="py-2">{getStatusBadge(wo.status)}</TableCell>
                       <TableCell className="py-2">{getUrgencyBadge(wo.urgency)}</TableCell>
-                      <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell">{wo.areaName}</TableCell>
+                      <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell">{wo.spaceName}</TableCell>
                       <TableCell className="text-xs sm:text-sm py-2 hidden md:table-cell">{wo.assignedToName}</TableCell>
                       <TableCell className="text-xs sm:text-sm py-2 hidden lg:table-cell">{wo.taskType}</TableCell>
                     </TableRow>

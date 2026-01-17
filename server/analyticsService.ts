@@ -11,6 +11,7 @@ import {
   vehicles,
   vehicleReservations,
   vehicleMaintenanceLogs,
+  spaces,
 } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, avg, desc, asc } from "drizzle-orm";
 
@@ -127,7 +128,17 @@ export interface FacilityWorkOrder {
   assignedToName: string;
   areaName: string;
   equipmentName: string;
+  spaceName: string;
   taskType: string;
+}
+
+export interface SpaceAnalytics {
+  spaceId: string;
+  spaceName: string;
+  floor: string | null;
+  workOrderCount: number;
+  completedWorkOrders: number;
+  openWorkOrders: number;
 }
 
 export interface FacilityInsights {
@@ -141,6 +152,7 @@ export interface FacilityInsights {
   emergencyWorkOrders: number;
   preventiveWorkOrders: number;
   workOrderDetails: FacilityWorkOrder[];
+  spaceAnalytics: SpaceAnalytics[];
 }
 
 export interface Alert {
@@ -556,10 +568,12 @@ export class AnalyticsService {
     const usersList = await db.select().from(users);
     const areasList = await db.select().from(areas);
     const equipmentList = await db.select().from(equipment);
+    const spacesList = await db.select().from(spaces);
 
     const userMap = new Map(usersList.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
     const areaMap = new Map(areasList.map(a => [a.id, a.name]));
     const equipmentMap = new Map(equipmentList.map(e => [e.id, e.name]));
+    const spaceMap = new Map(spacesList.map(s => [s.id, s]));
 
     const conditions = this.buildTaskConditions(filters);
     const allTasks = await db
@@ -607,8 +621,25 @@ export class AnalyticsService {
           assignedToName: task.assignedToId ? userMap.get(task.assignedToId) || "Unknown" : "Unassigned",
           areaName: task.areaId ? areaMap.get(task.areaId) || "Unknown" : "N/A",
           equipmentName: task.equipmentId ? equipmentMap.get(task.equipmentId) || "Unknown" : "N/A",
+          spaceName: task.spaceId ? spaceMap.get(task.spaceId)?.name || "Unknown" : "N/A",
           taskType: task.taskType,
         }));
+
+      // Calculate space analytics for building properties
+      const propertySpaces = spacesList.filter(s => s.propertyId === prop.id);
+      const spaceAnalytics: SpaceAnalytics[] = propertySpaces.map(space => {
+        const spaceTasks = propertyTasks.filter(t => t.spaceId === space.id);
+        const completedSpaceTasks = spaceTasks.filter(t => t.status === "completed");
+        const openSpaceTasks = spaceTasks.filter(t => t.status !== "completed");
+        return {
+          spaceId: space.id,
+          spaceName: space.name,
+          floor: space.floor,
+          workOrderCount: spaceTasks.length,
+          completedWorkOrders: completedSpaceTasks.length,
+          openWorkOrders: openSpaceTasks.length,
+        };
+      }).sort((a, b) => b.workOrderCount - a.workOrderCount);
 
       results.push({
         propertyId: prop.id,
@@ -621,6 +652,7 @@ export class AnalyticsService {
         emergencyWorkOrders: emergencyTasks.length,
         preventiveWorkOrders: recurringTasks.length,
         workOrderDetails,
+        spaceAnalytics,
       });
     }
 
