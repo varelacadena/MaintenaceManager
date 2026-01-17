@@ -29,6 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -37,13 +42,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, Plus, X, ListChecks } from "lucide-react";
+import { ArrowLeft, Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 const equipmentFormSchema = insertEquipmentSchema.omit({ propertyId: true }).extend({
   name: z.string().min(1, "Name is required"),
@@ -89,6 +95,20 @@ const formSchema = insertTaskSchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
+function SectionHeader({ number, icon: Icon, title, description }: { number: number; icon: any; title: string; description?: string }) {
+  return (
+    <div className="flex items-start gap-3 mb-4">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+        <Icon className="w-4 h-4 text-primary" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-lg">{title}</h3>
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function NewTask() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -97,10 +117,11 @@ export default function NewTask() {
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentOption, setAssignmentOption] = useState<"student" | "technician" | "vendor" | "">("");
-  const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
+  const [contactType, setContactType] = useState<"requester" | "staff" | "other" | "">("");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(true);
 
   const searchParams = new URLSearchParams(window.location.search);
   const requestId = searchParams.get('requestId');
@@ -119,7 +140,6 @@ export default function NewTask() {
     enabled: user?.role === "admin" || user?.role === "technician",
   });
 
-  // Filter users by role
   const technicianUsers = users.filter(u => u.role === "technician" || u.role === "admin");
   const studentUsers = users.filter(u => u.role === "student");
 
@@ -127,11 +147,9 @@ export default function NewTask() {
     queryKey: ["/api/vendors"],
   });
 
-  // Get selected property to check if it's a building (has spaces)
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
   const isBuilding = selectedProperty?.type === "building";
 
-  // Fetch spaces for building properties
   const { data: spaces = [] } = useQuery<Space[]>({
     queryKey: ["/api/spaces", selectedPropertyId],
     enabled: !!selectedPropertyId && isBuilding,
@@ -154,7 +172,6 @@ export default function NewTask() {
     },
   });
 
-  // Grouped checklists state
   type ChecklistGroup = {
     name: string;
     items: { text: string; isCompleted: boolean }[];
@@ -286,7 +303,7 @@ export default function NewTask() {
       recurringFrequency: undefined,
       recurringInterval: undefined,
       recurringEndDate: undefined,
-      contactType: "staff",
+      contactType: undefined,
       contactStaffId: undefined,
       contactName: "",
       contactEmail: "",
@@ -314,7 +331,6 @@ export default function NewTask() {
     }
   }, [request, form]);
 
-  // Set assignment option based on form values
   useEffect(() => {
     const assignedVendorId = form.watch("assignedVendorId");
     const executorType = form.watch("executorType");
@@ -328,7 +344,6 @@ export default function NewTask() {
     }
   }, [form]);
 
-  // Auto-populate contact info when vendor is selected
   useEffect(() => {
     if (selectedVendorId && vendors.length > 0) {
       const vendor = vendors.find(v => v.id === selectedVendorId);
@@ -360,7 +375,6 @@ export default function NewTask() {
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
         executorType: data.executorType || undefined,
-        // Only set assignedPool if task goes to a pool (no specific assignee)
         assignedPool: (!data.assignedToId && !data.assignedVendorId && data.assignedPool) 
           ? data.assignedPool 
           : undefined,
@@ -378,7 +392,6 @@ export default function NewTask() {
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
-        // Include grouped checklists in the task creation payload for atomic creation
         checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
@@ -421,9 +434,15 @@ export default function NewTask() {
     );
   }
 
+  const urgencyColors: Record<string, string> = {
+    low: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  };
+
   return (
-    <div className="max-w-3xl mx-auto space-y-4 md:space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3 md:gap-4">
+    <div className="max-w-2xl mx-auto p-4 md:p-6 pb-24">
+      <div className="flex items-center gap-3 mb-6">
         <Button
           variant="ghost"
           size="icon"
@@ -433,178 +452,41 @@ export default function NewTask() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
-            {requestId ? "Convert Request to Task" : "Create New Task"}
+          <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
+            {requestId ? "Convert to Task" : "New Task"}
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            {requestId
-              ? "Review the request details and set up the task"
-              : "Create a new maintenance task"}
+          <p className="text-sm text-muted-foreground">
+            {requestId ? "Create a task from this service request" : "Fill in the details below"}
           </p>
         </div>
       </div>
 
-      <Card className="p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Task Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter task name"
-                      {...field}
-                      data-testid="input-task-name"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          
+          {/* Section 1: Task Details */}
+          <Card className="p-5">
+            <SectionHeader 
+              number={1} 
+              icon={ClipboardList} 
+              title="Task Details" 
+              description="What needs to be done?"
             />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe the task in detail"
-                      className="min-h-[100px]"
-                      {...field}
-                      data-testid="textarea-description"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Task Checklists Section - Grouped/Named */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ListChecks className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Task Checklists</span>
-                  <span className="text-xs text-muted-foreground">(Optional)</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditingChecklistIndex(null);
-                    setDialogChecklistName("");
-                    setDialogChecklistItems([]);
-                    setNewDialogChecklistItem("");
-                    setIsChecklistDialogOpen(true);
-                  }}
-                  data-testid="button-add-checklist"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Checklist
-                </Button>
-              </div>
-              
-              {checklistGroups.length > 0 && (
-                <div className="space-y-3">
-                  {checklistGroups.map((group, groupIndex) => (
-                    <div key={groupIndex} className="border rounded-md p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{group.name}</span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              setEditingChecklistIndex(groupIndex);
-                              setDialogChecklistName(group.name);
-                              setDialogChecklistItems(group.items.map(item => ({ ...item })));
-                              setNewDialogChecklistItem("");
-                              setIsChecklistDialogOpen(true);
-                            }}
-                            data-testid={`button-edit-checklist-${groupIndex}`}
-                          >
-                            <span className="text-xs">Edit</span>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              setChecklistGroups(checklistGroups.filter((_, i) => i !== groupIndex));
-                            }}
-                            data-testid={`button-remove-checklist-${groupIndex}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      {group.items.length > 0 && (
-                        <div className="space-y-1 pl-2">
-                          {group.items.map((item, itemIndex) => (
-                            <div key={itemIndex} className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Checkbox
-                                checked={item.isCompleted}
-                                onCheckedChange={(checked) => {
-                                  setChecklistGroups(prev => prev.map((g, gIdx) =>
-                                    gIdx === groupIndex
-                                      ? {
-                                          ...g,
-                                          items: g.items.map((it, iIdx) =>
-                                            iIdx === itemIndex
-                                              ? { ...it, isCompleted: checked === true }
-                                              : it
-                                          )
-                                        }
-                                      : g
-                                  ));
-                                }}
-                                className="h-3 w-3"
-                                data-testid={`checkbox-checklist-${groupIndex}-item-${itemIndex}`}
-                              />
-                              <span className={item.isCompleted ? "line-through" : ""}>
-                                {item.text}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {group.items.length === 0 && (
-                        <span className="text-xs text-muted-foreground italic">No items in this checklist</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            
+            <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="urgency"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Urgency</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-urgency">
-                          <SelectValue placeholder="Select urgency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Task Name *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Fix leaking faucet in Room 101"
+                        {...field}
+                        data-testid="input-task-name"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -612,107 +494,546 @@ export default function NewTask() {
 
               <FormField
                 control={form.control}
-                name="taskType"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Task Type *</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setTaskType(value as "one_time" | "recurring" | "reminder");
-                      }}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-task-type">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="one_time">One Time</SelectItem>
-                        <SelectItem value="recurring">Recurring</SelectItem>
-                        <SelectItem value="reminder">Reminder</SelectItem>
-                        <SelectItem value="project">Project</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      One-time tasks are completed once, recurring tasks repeat, reminders are notifications
-                    </FormDescription>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe what needs to be done..."
+                        className="min-h-[80px] resize-none"
+                        {...field}
+                        data-testid="textarea-description"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormItem>
-                <FormLabel>Assign To (Optional)</FormLabel>
-                <Select
-                  onValueChange={(value: string) => {
-                    const option = value as "student" | "technician" | "vendor" | "";
-                    setAssignmentOption(option);
-                    // Clear assignment fields when changing type
-                    form.setValue("assignedToId", undefined);
-                    form.setValue("assignedVendorId", undefined);
-                    form.setValue("assignedPool", undefined);
-                    
-                    // Set executor type based on selection
-                    if (option === "student") {
-                      form.setValue("executorType", "student");
-                    } else if (option === "technician") {
-                      form.setValue("executorType", "technician");
-                    } else if (option === "vendor") {
-                      form.setValue("executorType", undefined);
-                    } else {
-                      form.setValue("executorType", undefined);
-                    }
-                  }}
-                  value={assignmentOption}
-                >
-                  <FormControl>
-                    <SelectTrigger data-testid="select-assignment-option">
-                      <SelectValue placeholder="Select assignment (optional)" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="technician">Technician</SelectItem>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Choose who should complete this task: students for simple tasks, technicians for technical work, or a vendor
-                </FormDescription>
-              </FormItem>
-
-              {assignmentOption === "student" && (
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="assignedToId"
+                  name="urgency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Select Student (Optional)</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                      >
+                      <FormLabel>Priority</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-assigned-student">
-                            <SelectValue placeholder="Select a student or leave empty for any student" />
+                          <SelectTrigger data-testid="select-urgency">
+                            <SelectValue placeholder="Select priority" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {studentUsers.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.firstName && user.lastName 
-                                ? `${user.firstName} ${user.lastName}` 
-                                : user.username}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="low">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                              Low
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="medium">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                              Medium
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="high">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-red-500" />
+                              High
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="taskType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setTaskType(value as "one_time" | "recurring" | "reminder" | "project");
+                        }}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-task-type">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="one_time">One-Time</SelectItem>
+                          <SelectItem value="recurring">Recurring</SelectItem>
+                          <SelectItem value="reminder">Reminder</SelectItem>
+                          <SelectItem value="project">Project</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Section 2: Location */}
+          <Card className="p-5">
+            <SectionHeader 
+              number={2} 
+              icon={MapPin} 
+              title="Location" 
+              description="Where is this task?"
+            />
+            
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="propertyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Property *</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedPropertyId(value);
+                        setSelectedSpaceId("");
+                        form.setValue("spaceId", "");
+                        form.setValue("equipmentId", "");
+                      }}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-property">
+                          <SelectValue placeholder="Select a property" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {properties.map((property) => (
+                          <SelectItem key={property.id} value={property.id}>
+                            {property.name}
+                            <span className="text-muted-foreground ml-1">({property.type})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {isBuilding && (
+                <FormField
+                  control={form.control}
+                  name="spaceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Room / Space</FormLabel>
+                      {spaces.length > 0 ? (
+                        <Select
+                          onValueChange={(value) => {
+                            const actualValue = value === "__none__" ? "" : value;
+                            field.onChange(actualValue);
+                            setSelectedSpaceId(actualValue);
+                            form.setValue("equipmentId", "");
+                          }}
+                          value={field.value || "__none__"}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-space">
+                              <SelectValue placeholder="Select room (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__none__">All spaces</SelectItem>
+                            {spaces.map((space) => (
+                              <SelectItem key={space.id} value={space.id}>
+                                {space.name}{space.floor ? ` (${space.floor})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
+                          <span className="text-sm text-muted-foreground">No rooms defined.</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsSpaceDialogOpen(true)}
+                            data-testid="button-add-space-inline"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Room
+                          </Button>
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="equipmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Equipment</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === "create_new") {
+                          equipmentForm.reset({
+                            name: "",
+                            category: "other",
+                            description: "",
+                            serialNumber: "",
+                            condition: "",
+                            notes: "",
+                            imageUrl: "",
+                          });
+                          setIsEquipmentDialogOpen(true);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}
+                      value={field.value || ""}
+                      disabled={!selectedPropertyId}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-equipment">
+                          <SelectValue placeholder={selectedPropertyId ? "Select equipment (optional)" : "Select property first"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="create_new" className="font-medium text-primary">
+                          <Plus className="w-3 h-3 inline mr-1" />
+                          Add New Equipment
+                        </SelectItem>
+                        {equipment.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </Card>
+
+          {/* Section 3: Schedule */}
+          <Card className="p-5">
+            <SectionHeader 
+              number={3} 
+              icon={Calendar} 
+              title="Schedule" 
+              description="When should this be done?"
+            />
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="initialDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              type="button"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "Pick date"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                field.onChange(`${year}-${month}-${day}`);
+                              } else {
+                                field.onChange(undefined);
+                              }
+                            }}
+                            initialFocus
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="estimatedCompletionDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Due Date *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              type="button"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "Pick date"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                field.onChange(`${year}-${month}-${day}`);
+                              } else {
+                                field.onChange(undefined);
+                              }
+                            }}
+                            initialFocus
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {taskType === "recurring" && (
+                <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+                  <p className="text-sm font-medium">Recurring Settings</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="recurringFrequency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Repeat</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-recurring-frequency">
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="recurringInterval"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Every</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="1"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                              value={field.value || ""}
+                              data-testid="input-recurring-interval"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="recurringEndDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date (optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-recurring-end-date"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Section 4: Assignment */}
+          <Card className="p-5">
+            <SectionHeader 
+              number={4} 
+              icon={Users} 
+              title="Assignment" 
+              description="Who will work on this?"
+            />
+            
+            <div className="space-y-4">
+              <FormItem>
+                <FormLabel>Assign To</FormLabel>
+                <Select
+                  onValueChange={(value: string) => {
+                    const option = value as "student" | "technician" | "vendor" | "";
+                    setAssignmentOption(option);
+                    form.setValue("assignedToId", undefined);
+                    form.setValue("assignedVendorId", undefined);
+                    
+                    if (option === "student") {
+                      form.setValue("executorType", "student");
+                      form.setValue("assignedPool", "student_pool");
+                    } else if (option === "technician") {
+                      form.setValue("executorType", "technician");
+                      form.setValue("assignedPool", "technician_pool");
+                    } else if (option === "vendor") {
+                      form.setValue("executorType", undefined);
+                      form.setValue("assignedPool", undefined);
+                    } else {
+                      form.setValue("executorType", undefined);
+                      form.setValue("assignedPool", undefined);
+                    }
+                  }}
+                  value={assignmentOption}
+                >
+                  <FormControl>
+                    <SelectTrigger data-testid="select-assignment-option">
+                      <SelectValue placeholder="Select who should do this (optional)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="student">Student Worker</SelectItem>
+                    <SelectItem value="technician">Technician</SelectItem>
+                    <SelectItem value="vendor">External Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+
+              {assignmentOption === "student" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="assignedToId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Student</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            if (value) {
+                              form.setValue("assignedPool", undefined);
+                            } else {
+                              form.setValue("assignedPool", "student_pool");
+                            }
+                          }} 
+                          value={field.value || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-assigned-student">
+                              <SelectValue placeholder="Any available student" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {studentUsers.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.firstName && user.lastName 
+                                  ? `${user.firstName} ${user.lastName}` 
+                                  : user.username}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+                    <p className="text-sm font-medium">Student Instructions</p>
+                    <FormField
+                      control={form.control}
+                      name="instructions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Step-by-step instructions for the student..."
+                              className="min-h-[80px] resize-none"
+                              data-testid="input-instructions"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="requiresPhoto"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-requires-photo"
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Require photo when completed
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
               )}
 
               {assignmentOption === "technician" && (
@@ -721,14 +1042,21 @@ export default function NewTask() {
                   name="assignedToId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Select Technician (Optional)</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
+                      <FormLabel>Select Technician</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value) {
+                            form.setValue("assignedPool", undefined);
+                          } else {
+                            form.setValue("assignedPool", "technician_pool");
+                          }
+                        }} 
                         value={field.value || ""}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-assigned-user">
-                            <SelectValue placeholder="Select a technician or leave empty for any technician" />
+                            <SelectValue placeholder="Any available technician" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -763,7 +1091,7 @@ export default function NewTask() {
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-assigned-vendor">
-                            <SelectValue placeholder="Select vendor" />
+                            <SelectValue placeholder="Choose a vendor" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -779,526 +1107,238 @@ export default function NewTask() {
                   )}
                 />
               )}
-            </div>
 
-            {assignmentOption === "student" && (
-              <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
-                <h3 className="font-semibold">Student Task Instructions</h3>
-                <FormField
-                  control={form.control}
-                  name="instructions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Instructions for Student</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Provide clear step-by-step instructions for the student to complete this task..."
-                          className="min-h-[100px]"
-                          data-testid="input-instructions"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Detailed instructions help students understand exactly what needs to be done
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="requiresPhoto"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-requires-photo"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Require Photo Upload</FormLabel>
-                        <FormDescription>
-                          Students must upload a photo when completing this task
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {taskType === "recurring" && (
-              <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
-                <h3 className="font-semibold">Recurring Parameters</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="recurringFrequency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Frequency</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-recurring-frequency">
-                              <SelectValue placeholder="Select frequency" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="yearly">Yearly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="recurringInterval"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Repeat Every</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="e.g., 1"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                            value={field.value || ""}
-                            data-testid="input-recurring-interval"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Number of periods between occurrences
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="recurringEndDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={field.value || ""}
-                          data-testid="input-recurring-end-date"
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Leave empty for tasks that never end
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            <FormField
-              control={form.control}
-              name="propertyId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property *</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedPropertyId(value);
-                      setSelectedSpaceId("");
-                      form.setValue("spaceId", "");
-                      form.setValue("equipmentId", "");
-                    }}
-                    value={field.value || ""}
-                  >
-                    <FormControl>
-                      <SelectTrigger data-testid="select-property">
-                        <SelectValue placeholder="Select property" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {properties.map((property) => (
-                        <SelectItem key={property.id} value={property.id}>
-                          {property.name} ({property.type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {isBuilding && (
-              <FormField
-                control={form.control}
-                name="spaceId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Room / Space (Optional)</FormLabel>
-                    {spaces.length > 0 ? (
-                      <Select
-                        onValueChange={(value) => {
-                          const actualValue = value === "__none__" ? "" : value;
-                          field.onChange(actualValue);
-                          setSelectedSpaceId(actualValue);
-                          form.setValue("equipmentId", "");
-                        }}
-                        value={field.value || "__none__"}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-space">
-                            <SelectValue placeholder="Select room/space (optional)" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="__none__">
-                            All spaces in building
-                          </SelectItem>
-                          {spaces.map((space) => (
-                            <SelectItem key={space.id} value={space.id}>
-                              {space.name}{space.floor ? ` (${space.floor})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
-                        <span className="text-sm text-muted-foreground">No rooms/spaces defined yet.</span>
+              {/* Contact Information */}
+              <Collapsible open={isContactOpen} onOpenChange={setIsContactOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" type="button" className="w-full justify-between p-0 h-auto hover:bg-transparent" data-testid="button-toggle-contact">
+                    <span className="text-sm font-medium">Point of Contact (Optional)</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isContactOpen && "rotate-180")} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  {requestId && requester ? (
+                    <div className="p-3 rounded-md border bg-muted/30 text-sm space-y-1">
+                      <p><span className="text-muted-foreground">Contact:</span> {requester.firstName} {requester.lastName}</p>
+                      {requester.email && <p><span className="text-muted-foreground">Email:</span> {requester.email}</p>}
+                      {requester.phoneNumber && <p><span className="text-muted-foreground">Phone:</span> {requester.phoneNumber}</p>}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant={contactType === "staff" ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setIsSpaceDialogOpen(true)}
-                          data-testid="button-add-space-inline"
+                          onClick={() => {
+                            setContactType("staff");
+                            form.setValue("contactType", "staff");
+                            form.setValue("contactName", "");
+                            form.setValue("contactEmail", "");
+                            form.setValue("contactPhone", "");
+                          }}
+                          data-testid="button-contact-staff"
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Room/Space
+                          Staff
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={contactType === "other" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setContactType("other");
+                            form.setValue("contactType", "other");
+                            form.setValue("contactStaffId", undefined);
+                          }}
+                          data-testid="button-contact-other"
+                        >
+                          Other
                         </Button>
                       </div>
-                    )}
-                    <FormDescription>
-                      Optionally narrow down to a specific room or area within the building
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
-            <FormField
-              control={form.control}
-              name="equipmentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Equipment *</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === "create_new") {
-                        equipmentForm.reset({
-                          name: "",
-                          category: "other",
-                          description: "",
-                          serialNumber: "",
-                          condition: "",
-                          notes: "",
-                          imageUrl: "",
-                        });
-                        setIsEquipmentDialogOpen(true);
-                      } else {
-                        field.onChange(value);
-                      }
-                    }}
-                    value={field.value || ""}
-                    disabled={!selectedPropertyId}
-                  >
-                    <FormControl>
-                      <SelectTrigger data-testid="select-equipment">
-                        <SelectValue placeholder="Select equipment" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="create_new" className="font-medium text-primary">
-                        + Create New Equipment
-                      </SelectItem>
-                      {equipment.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!selectedPropertyId && (
-                    <FormDescription>Select a property first to add equipment</FormDescription>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="initialDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            type="button"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              const year = date.getFullYear();
-                              const month = String(date.getMonth() + 1).padStart(2, '0');
-                              const day = String(date.getDate()).padStart(2, '0');
-                              field.onChange(`${year}-${month}-${day}`);
-                            } else {
-                              field.onChange(undefined);
-                            }
-                          }}
-                          initialFocus
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      {contactType === "staff" && (
+                        <FormField
+                          control={form.control}
+                          name="contactStaffId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-contact-staff">
+                                    <SelectValue placeholder="Select staff member" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {users.map((user) => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                      {user.firstName} {user.lastName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="estimatedCompletionDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Est. Completion Date *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            type="button"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              const year = date.getFullYear();
-                              const month = String(date.getMonth() + 1).padStart(2, '0');
-                              const day = String(date.getDate()).padStart(2, '0');
-                              field.onChange(`${year}-${month}-${day}`);
-                            } else {
-                              field.onChange(undefined);
-                            }
-                          }}
-                          initialFocus
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
-              <h3 className="font-semibold">Contact Information</h3>
-
-              {requestId && requester ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Contact information from service request
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium">Name</p>
-                      <p className="text-sm text-muted-foreground">
-                        {requester.firstName} {requester.lastName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">
-                        {requester.email || "Not provided"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Phone</p>
-                      <p className="text-sm text-muted-foreground">
-                        {requester.phoneNumber || "Not provided"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      type="button"
-                      variant={contactType === "staff" ? "default" : "outline"}
-                      onClick={() => {
-                        setContactType("staff");
-                        form.setValue("contactType", "staff");
-                        form.setValue("contactName", "");
-                        form.setValue("contactEmail", "");
-                        form.setValue("contactPhone", "");
-                      }}
-                      data-testid="button-contact-staff"
-                    >
-                      College Staff
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={contactType === "other" ? "default" : "outline"}
-                      onClick={() => {
-                        setContactType("other");
-                        form.setValue("contactType", "other");
-                        form.setValue("contactStaffId", undefined);
-                      }}
-                      data-testid="button-contact-other"
-                    >
-                      Other
-                    </Button>
-                  </div>
-
-                  {contactType === "staff" && (
-                    <FormField
-                      control={form.control}
-                      name="contactStaffId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Select Staff Member</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-contact-staff">
-                                <SelectValue placeholder="Select staff member" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {users.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.firstName} {user.lastName} - {user.email}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
                       )}
-                    />
-                  )}
 
-                  {contactType === "other" && (
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="contactName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Contact Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Enter contact name"
-                                {...field}
-                                data-testid="input-contact-name"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="contactEmail"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Contact Email</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="email"
-                                placeholder="Enter contact email"
-                                {...field}
-                                data-testid="input-contact-email"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="contactPhone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Contact Phone</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="tel"
-                                placeholder="Enter contact phone"
-                                {...field}
-                                data-testid="input-contact-phone"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {contactType === "other" && (
+                        <div className="grid gap-3">
+                          <FormField
+                            control={form.control}
+                            name="contactName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input placeholder="Contact name" {...field} data-testid="input-contact-name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <FormField
+                              control={form.control}
+                              name="contactEmail"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input type="email" placeholder="Email" {...field} data-testid="input-contact-email" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="contactPhone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input type="tel" placeholder="Phone" {...field} data-testid="input-contact-phone" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </>
-              )}
+                </CollapsibleContent>
+              </Collapsible>
             </div>
+          </Card>
 
-            <div className="flex gap-4">
+          {/* Section 5: Checklists - Optional */}
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Checklists</span>
+                <Badge variant="secondary" className="text-xs">Optional</Badge>
+              </div>
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingChecklistIndex(null);
+                  setDialogChecklistName("");
+                  setDialogChecklistItems([]);
+                  setNewDialogChecklistItem("");
+                  setIsChecklistDialogOpen(true);
+                }}
+                data-testid="button-add-checklist"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+            
+            {checklistGroups.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {checklistGroups.map((group, groupIndex) => (
+                  <div key={groupIndex} className="p-3 border rounded-md space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{group.name}</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChecklistIndex(groupIndex);
+                            setDialogChecklistName(group.name);
+                            setDialogChecklistItems(group.items.map(item => ({ ...item })));
+                            setNewDialogChecklistItem("");
+                            setIsChecklistDialogOpen(true);
+                          }}
+                          data-testid={`button-edit-checklist-${groupIndex}`}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setChecklistGroups(checklistGroups.filter((_, i) => i !== groupIndex));
+                          }}
+                          data-testid={`button-remove-checklist-${groupIndex}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {group.items.length > 0 && (
+                      <div className="space-y-1 pl-1">
+                        {group.items.map((item, itemIndex) => (
+                          <div key={itemIndex} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Checkbox
+                              checked={item.isCompleted}
+                              onCheckedChange={(checked) => {
+                                setChecklistGroups(prev => prev.map((g, gIdx) =>
+                                  gIdx === groupIndex
+                                    ? {
+                                        ...g,
+                                        items: g.items.map((it, iIdx) =>
+                                          iIdx === itemIndex
+                                            ? { ...it, isCompleted: checked === true }
+                                            : it
+                                        )
+                                      }
+                                    : g
+                                ));
+                              }}
+                              className="h-3 w-3"
+                              data-testid={`checkbox-checklist-${groupIndex}-item-${itemIndex}`}
+                            />
+                            <span className={item.isCompleted ? "line-through" : ""}>
+                              {item.text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {group.items.length === 0 && (
+                      <span className="text-xs text-muted-foreground italic">No items yet</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Sticky Footer */}
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t">
+            <div className="max-w-2xl mx-auto flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
                 onClick={() => navigate(requestId ? `/requests/${requestId}` : "/tasks")}
                 data-testid="button-cancel"
               >
@@ -1306,22 +1346,24 @@ export default function NewTask() {
               </Button>
               <Button
                 type="submit"
+                className="flex-1"
                 disabled={createTaskMutation.isPending}
                 data-testid="button-submit"
               >
                 {createTaskMutation.isPending ? "Creating..." : "Create Task"}
               </Button>
             </div>
-          </form>
-        </Form>
-      </Card>
+          </div>
+        </form>
+      </Form>
 
+      {/* Equipment Dialog */}
       <Dialog open={isEquipmentDialogOpen} onOpenChange={setIsEquipmentDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Equipment</DialogTitle>
+            <DialogTitle>Add Equipment</DialogTitle>
             <DialogDescription>
-              Add new equipment to the selected property
+              Add new equipment to {selectedProperty?.name || "the property"}
             </DialogDescription>
           </DialogHeader>
           <Form {...equipmentForm}>
@@ -1336,7 +1378,7 @@ export default function NewTask() {
                   <FormItem>
                     <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="HVAC Unit #1" data-testid="input-new-equipment-name" />
+                      <Input {...field} placeholder="e.g., HVAC Unit #1" data-testid="input-new-equipment-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1381,7 +1423,8 @@ export default function NewTask() {
                       <Textarea
                         {...field}
                         value={field.value || ""}
-                        placeholder="Equipment description"
+                        placeholder="Brief description"
+                        className="resize-none"
                         data-testid="textarea-new-equipment-description"
                       />
                     </FormControl>
@@ -1390,20 +1433,15 @@ export default function NewTask() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={equipmentForm.control}
                   name="serialNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Serial Number</FormLabel>
+                      <FormLabel>Serial #</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value || ""}
-                          placeholder="SN-12345"
-                          data-testid="input-new-equipment-serial"
-                        />
+                        <Input {...field} value={field.value || ""} placeholder="SN-12345" data-testid="input-new-equipment-serial" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1419,7 +1457,7 @@ export default function NewTask() {
                       <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger data-testid="select-new-equipment-condition">
-                            <SelectValue placeholder="Select condition" />
+                            <SelectValue placeholder="Select" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -1436,40 +1474,12 @@ export default function NewTask() {
                 />
               </div>
 
-              <FormField
-                control={equipmentForm.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Additional notes about this equipment"
-                        data-testid="textarea-new-equipment-notes"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEquipmentDialogOpen(false)}
-                  data-testid="button-cancel-equipment"
-                >
+                <Button type="button" variant="outline" onClick={() => setIsEquipmentDialogOpen(false)} data-testid="button-cancel-equipment">
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={createEquipmentMutation.isPending}
-                  data-testid="button-submit-equipment"
-                >
-                  {createEquipmentMutation.isPending ? "Adding..." : "Add Equipment"}
+                <Button type="submit" disabled={createEquipmentMutation.isPending} data-testid="button-submit-equipment">
+                  {createEquipmentMutation.isPending ? "Adding..." : "Add"}
                 </Button>
               </DialogFooter>
             </form>
@@ -1483,7 +1493,7 @@ export default function NewTask() {
           <DialogHeader>
             <DialogTitle>Add Room/Space</DialogTitle>
             <DialogDescription>
-              Add a new room or space to {selectedProperty?.name || "the building"}
+              Add a room to {selectedProperty?.name || "the building"}
             </DialogDescription>
           </DialogHeader>
           <Form {...spaceForm}>
@@ -1498,7 +1508,7 @@ export default function NewTask() {
                   <FormItem>
                     <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Room 101, Main Bathroom" data-testid="input-new-space-name" />
+                      <Input {...field} placeholder="e.g., Room 101" data-testid="input-new-space-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1512,7 +1522,7 @@ export default function NewTask() {
                   <FormItem>
                     <FormLabel>Floor</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value || ""} placeholder="e.g., 1st Floor, Ground" data-testid="input-new-space-floor" />
+                      <Input {...field} value={field.value || ""} placeholder="e.g., 1st Floor" data-testid="input-new-space-floor" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1529,7 +1539,8 @@ export default function NewTask() {
                       <Textarea
                         {...field}
                         value={field.value || ""}
-                        placeholder="Optional description of this room/space"
+                        placeholder="Brief description"
+                        className="resize-none"
                         data-testid="textarea-new-space-description"
                       />
                     </FormControl>
@@ -1539,20 +1550,11 @@ export default function NewTask() {
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsSpaceDialogOpen(false)}
-                  data-testid="button-cancel-space"
-                >
+                <Button type="button" variant="outline" onClick={() => setIsSpaceDialogOpen(false)} data-testid="button-cancel-space">
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={createSpaceMutation.isPending}
-                  data-testid="button-submit-space"
-                >
-                  {createSpaceMutation.isPending ? "Adding..." : "Add Room/Space"}
+                <Button type="submit" disabled={createSpaceMutation.isPending} data-testid="button-submit-space">
+                  {createSpaceMutation.isPending ? "Adding..." : "Add"}
                 </Button>
               </DialogFooter>
             </form>
@@ -1562,62 +1564,40 @@ export default function NewTask() {
 
       {/* Checklist Dialog */}
       <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingChecklistIndex !== null ? "Edit Checklist" : "Add New Checklist"}
-            </DialogTitle>
+            <DialogTitle>{editingChecklistIndex !== null ? "Edit Checklist" : "Add Checklist"}</DialogTitle>
             <DialogDescription>
-              {editingChecklistIndex !== null
-                ? "Update the checklist name and items"
-                : "Create a named checklist with items to track"}
+              Create a checklist with items to complete
             </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Checklist Name *</label>
+              <FormLabel>Checklist Name *</FormLabel>
               <Input
+                placeholder="e.g., Safety Checks"
                 value={dialogChecklistName}
                 onChange={(e) => setDialogChecklistName(e.target.value)}
-                placeholder="e.g., Safety Inspection, Equipment Check"
                 data-testid="input-checklist-name"
               />
             </div>
-
+            
             <div className="space-y-2">
-              <label className="text-sm font-medium">Checklist Items</label>
-              
+              <FormLabel>Items</FormLabel>
               {dialogChecklistItems.length > 0 && (
-                <div className="space-y-2 border rounded-md p-3 max-h-48 overflow-y-auto">
-                  {dialogChecklistItems.map((item, index) => (
-                    <div key={index} className="flex items-center gap-3 group">
-                      <Checkbox
-                        checked={item.isCompleted}
-                        onCheckedChange={(checked) => {
-                          setDialogChecklistItems(prev =>
-                            prev.map((it, i) =>
-                              i === index ? { ...it, isCompleted: checked === true } : it
-                            )
-                          );
-                        }}
-                        data-testid={`checkbox-dialog-item-${index}`}
-                      />
-                      <span className={cn(
-                        "flex-1 text-sm",
-                        item.isCompleted && "line-through text-muted-foreground"
-                      )}>
-                        {item.text}
-                      </span>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {dialogChecklistItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1">{item.text}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6"
                         onClick={() => {
-                          setDialogChecklistItems(dialogChecklistItems.filter((_, i) => i !== index));
+                          setDialogChecklistItems(dialogChecklistItems.filter((_, i) => i !== idx));
                         }}
-                        data-testid={`button-remove-dialog-item-${index}`}
+                        data-testid={`button-remove-dialog-item-${idx}`}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -1625,7 +1605,6 @@ export default function NewTask() {
                   ))}
                 </div>
               )}
-              
               <div className="flex gap-2">
                 <Input
                   placeholder="Add an item..."
@@ -1638,19 +1617,19 @@ export default function NewTask() {
                       setNewDialogChecklistItem("");
                     }
                   }}
-                  data-testid="input-dialog-new-item"
+                  data-testid="input-new-checklist-item"
                 />
                 <Button
                   type="button"
                   variant="outline"
+                  size="icon"
                   onClick={() => {
                     if (newDialogChecklistItem.trim()) {
                       setDialogChecklistItems([...dialogChecklistItems, { text: newDialogChecklistItem.trim(), isCompleted: false }]);
                       setNewDialogChecklistItem("");
                     }
                   }}
-                  disabled={!newDialogChecklistItem.trim()}
-                  data-testid="button-add-dialog-item"
+                  data-testid="button-add-checklist-item"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -1659,49 +1638,33 @@ export default function NewTask() {
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsChecklistDialogOpen(false)}
-              data-testid="button-cancel-checklist"
-            >
+            <Button type="button" variant="outline" onClick={() => setIsChecklistDialogOpen(false)} data-testid="button-cancel-checklist">
               Cancel
             </Button>
             <Button
               type="button"
-              onClick={() => {
-                if (!dialogChecklistName.trim()) {
-                  toast({
-                    title: "Error",
-                    description: "Please enter a checklist name",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                
-                const newGroup: ChecklistGroup = {
-                  name: dialogChecklistName.trim(),
-                  items: dialogChecklistItems,
-                };
-                
-                if (editingChecklistIndex !== null) {
-                  const updated = [...checklistGroups];
-                  updated[editingChecklistIndex] = newGroup;
-                  setChecklistGroups(updated);
-                } else {
-                  setChecklistGroups([...checklistGroups, newGroup]);
-                }
-                
-                setIsChecklistDialogOpen(false);
-                setDialogChecklistName("");
-                setDialogChecklistItems([]);
-                setNewDialogChecklistItem("");
-                setEditingChecklistIndex(null);
-              }}
               disabled={!dialogChecklistName.trim()}
+              onClick={() => {
+                if (dialogChecklistName.trim()) {
+                  if (editingChecklistIndex !== null) {
+                    setChecklistGroups(prev => prev.map((g, i) =>
+                      i === editingChecklistIndex
+                        ? { name: dialogChecklistName.trim(), items: dialogChecklistItems }
+                        : g
+                    ));
+                  } else {
+                    setChecklistGroups(prev => [...prev, { name: dialogChecklistName.trim(), items: dialogChecklistItems }]);
+                  }
+                  setIsChecklistDialogOpen(false);
+                  setDialogChecklistName("");
+                  setDialogChecklistItems([]);
+                  setNewDialogChecklistItem("");
+                  setEditingChecklistIndex(null);
+                }
+              }}
               data-testid="button-save-checklist"
             >
-              {editingChecklistIndex !== null ? "Update Checklist" : "Add Checklist"}
+              {editingChecklistIndex !== null ? "Save" : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>
