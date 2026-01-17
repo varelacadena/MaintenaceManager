@@ -862,21 +862,6 @@ export default function TaskDetail() {
               </div>
             )}
 
-            {/* Time Logged */}
-            <div className="flex items-center gap-3 p-3 bg-background rounded-md">
-              <Clock className="w-5 h-5 text-primary" />
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Time Logged</p>
-                <p className="font-medium" data-testid="text-time-logged">
-                  {totalHours}h {remainingMins}m
-                </p>
-              </div>
-              {activeTimer && (
-                <Badge variant="outline" className="animate-pulse bg-green-500/10 text-green-700 border-green-500/20">
-                  Recording
-                </Badge>
-              )}
-            </div>
           </div>
 
           {/* Description Block */}
@@ -902,17 +887,17 @@ export default function TaskDetail() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-4">
                 {checklistGroups.map((group) => (
-                  <div key={group.id} className="p-4 bg-muted/30 rounded-lg space-y-2">
+                  <div key={group.id} className="p-4 bg-muted/30 rounded-lg space-y-3">
                     <p className="font-medium text-sm">{group.name}</p>
                     {group.items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 p-2 bg-background rounded cursor-pointer hover-elevate"
+                        className="flex items-center gap-4 p-4 bg-background rounded-lg cursor-pointer hover-elevate active-elevate-2 min-h-[56px]"
                         onClick={() => toggleChecklistItemMutation.mutate({ itemId: item.id, isCompleted: !item.isCompleted })}
                         data-testid={`checklist-item-${item.id}`}
                       >
-                        <Checkbox checked={item.isCompleted} />
-                        <span className={`text-sm flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                        <Checkbox checked={item.isCompleted} className="w-6 h-6" />
+                        <span className={`text-base flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
                           {item.text}
                         </span>
                       </div>
@@ -973,6 +958,52 @@ export default function TaskDetail() {
               )}
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Time History - Show user's own entries for students, all entries for admin/tech */}
+          {(() => {
+            const myEntries = timeEntries.filter(e => e.userId === user?.id);
+            const entriesToShow = isTechnicianOrAdmin ? timeEntries : myEntries;
+            
+            if (entriesToShow.length === 0) return null;
+            
+            return (
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <History className="w-5 h-5 text-primary" />
+                  <span className="font-medium">{isTechnicianOrAdmin ? "Time Log" : "My Time Log"}</span>
+                </div>
+                <div className="space-y-2">
+                  {entriesToShow.slice(0, 5).map((entry) => {
+                    const entryUser = users.find(u => u.id === entry.userId);
+                    return (
+                      <div key={entry.id} className="flex items-center justify-between p-3 bg-background rounded-md" data-testid={`time-entry-${entry.id}`}>
+                        <div className="flex-1">
+                          <p className="text-sm">
+                            {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : "No start time"}
+                          </p>
+                          {isTechnicianOrAdmin && entryUser && (
+                            <p className="text-xs text-muted-foreground">
+                              {entryUser.firstName} {entryUser.lastName}
+                            </p>
+                          )}
+                        </div>
+                        {entry.durationMinutes ? (
+                          <Badge variant="secondary">{Math.floor(entry.durationMinutes / 60)}h {entry.durationMinutes % 60}m</Badge>
+                        ) : (
+                          <Badge variant="default" className="animate-pulse">Running</Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {entriesToShow.length > 5 && (
+                    <p className="text-xs text-center text-muted-foreground pt-2">
+                      +{entriesToShow.length - 5} more entries
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Messages - Collapsible (Only for Maintenance/Admin) */}
           {isTechnicianOrAdmin && (
