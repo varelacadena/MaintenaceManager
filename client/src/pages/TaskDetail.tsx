@@ -587,9 +587,9 @@ export default function TaskDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
-      {/* Header - Simple & Centered */}
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* Header - Compact, non-sticky for mobile scrolling */}
+      <div className="bg-background border-b">
+        <div className="flex items-center justify-between px-4 py-2">
           <Button
             variant="ghost"
             size="icon"
@@ -603,7 +603,13 @@ export default function TaskDetail() {
             <div className="flex items-center gap-2 text-sm">
               <User className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium truncate" data-testid="text-assignee">
-                {assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : "Unassigned"}
+                {assignedUser?.firstName && assignedUser?.lastName 
+                  ? `${assignedUser.firstName} ${assignedUser.lastName}` 
+                  : task.assignedPool === "student_pool" 
+                    ? "Student Pool"
+                    : task.assignedPool === "technician_pool"
+                      ? "Technician Pool"
+                      : "Unassigned"}
               </span>
             </div>
             <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
@@ -663,10 +669,23 @@ export default function TaskDetail() {
               {task.name}
             </h1>
 
-            {/* Location - Clickable */}
+            {/* Location - Clickable for admin/tech only */}
             {property && (
-              <Link href={`/properties/${property.id}`}>
-                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer" data-testid="link-property">
+              isTechnicianOrAdmin ? (
+                <Link href={`/properties/${property.id}`}>
+                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer" data-testid="link-property">
+                    <Building2 className="w-5 h-5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{property.name}</p>
+                      {property.address && (
+                        <p className="text-sm text-muted-foreground truncate">{property.address}</p>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-property">
                   <Building2 className="w-5 h-5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{property.name}</p>
@@ -674,9 +693,8 @@ export default function TaskDetail() {
                       <p className="text-sm text-muted-foreground truncate">{property.address}</p>
                     )}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </div>
-              </Link>
+              )
             )}
 
             {/* Space if present */}
