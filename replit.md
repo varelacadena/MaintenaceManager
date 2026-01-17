@@ -4,7 +4,44 @@
 
 This web-based platform streamlines maintenance operations for college facilities. It supports three user roles—administrators, maintenance staff, and college staff—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
 
-## Recent Updates (January 16, 2026)
+## Recent Updates (January 17, 2026)
+
+**TASK DETAIL PAGE REDESIGN - MOBILE-FIRST ACTION-FOCUSED:**
+
+The Task Detail page (`client/src/pages/TaskDetail.tsx`) has been completely redesigned with a mobile-first, action-focused approach that prioritizes quick actions over information display.
+
+**Key Design Changes:**
+- **Simplified Header**: Sticky header showing assigned technician and due date with back/delete buttons
+- **Task Identity Block**: Compact display of status, priority, and task type badges with clickable property/equipment links
+- **Quick Action Buttons**: Grid of large tap-friendly buttons (Start/Pause, Assign, Original Request, History)
+- **Editable Details Section**: Phone (tap-to-call), status and priority (inline dropdowns), time logged
+- **Collapsible Sections**: Notes, Messages, Attachments, Checklists, Parts - collapsed by default to reduce information overload
+- **Sticky Bottom Action Bar**: Fixed bottom bar with primary actions (Back, Start/Pause, Complete, Photos, Add Note)
+
+**Mobile UX Improvements:**
+- Large tap targets (h-12, h-14) for mobile users
+- Sheet components for uploads and history viewing
+- Collapsible sections minimize scrolling
+- Inline editing eliminates navigation to separate edit screens
+- Bottom action bar for easy thumb access
+
+**Components Used:**
+- `Sheet` - Bottom sheets for photo uploads and task history
+- `Collapsible` - Expandable/collapsible content sections
+- `Select` - Inline status and priority editing
+- `Dialog` - All existing dialogs preserved (Assign, Add Note, Stop Timer, Hold Reason, Add Part)
+
+**Test IDs Updated:**
+- Header: `button-back`, `text-assignee`, `text-due-date`, `button-delete-task`
+- Identity: `badge-status`, `badge-urgency`, `badge-task-type`, `text-task-name`, `link-property`
+- Quick Actions: `button-start-pause`, `button-assign`, `link-original-request`, `button-history`
+- Details: `link-phone`, `select-status`, `select-priority`, `text-time-logged`
+- Sections: `toggle-notes`, `toggle-messages`, `toggle-attachments`, `toggle-checklist`, `toggle-parts`
+- Bottom Bar: `bottom-button-back`, `bottom-button-start-pause`, `bottom-button-complete`, `bottom-button-upload`, `bottom-button-add-note`
+
+---
+
+## Previous Updates (January 16, 2026)
 
 **DASHBOARD REDESIGN - INTERACTIVE CONTROL PANEL:**
 
