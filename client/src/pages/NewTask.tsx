@@ -13,6 +13,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -1554,7 +1555,7 @@ export default function NewTask() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <FormLabel>Checklist Name *</FormLabel>
+              <Label>Checklist Name *</Label>
               <Input
                 placeholder="e.g., Safety Checks"
                 value={dialogChecklistName}
@@ -1564,7 +1565,7 @@ export default function NewTask() {
             </div>
             
             <div className="space-y-2">
-              <FormLabel>Items</FormLabel>
+              <Label>Items</Label>
               {dialogChecklistItems.length > 0 && (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {dialogChecklistItems.map((item, idx) => (
