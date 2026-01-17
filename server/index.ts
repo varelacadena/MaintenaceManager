@@ -9,6 +9,7 @@ import pgSession from "connect-pg-simple";
 import { seedDatabase } from "./seed";
 import passport from "passport";
 import { storage } from "./storage";
+import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
 
 const app = express();
 
@@ -143,6 +144,9 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the recurring task scheduler
+    startRecurringTaskScheduler();
   });
 
   // Graceful shutdown
