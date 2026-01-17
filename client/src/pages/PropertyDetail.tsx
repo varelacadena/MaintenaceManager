@@ -63,14 +63,14 @@ import { z } from "zod";
 
 const formSchema = insertEquipmentSchema.extend({
   name: z.string().min(1, "Name is required"),
-  category: z.string().min(1, "Category is required"),
+  category: z.enum(["appliances", "hvac", "electric", "plumbing", "structure", "landscaping", "diagrams", "other"]),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 const propertyFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
+  type: z.enum(["building", "lawn", "parking", "recreation", "utility", "road", "other"]),
   address: z.string().optional(),
 });
 
@@ -150,7 +150,7 @@ export default function PropertyDetail() {
     resolver: zodResolver(propertyFormSchema),
     defaultValues: {
       name: "",
-      type: "",
+      type: "building",
       address: "",
     },
   });
@@ -580,7 +580,7 @@ export default function PropertyDetail() {
                   <p>No rooms or spaces defined yet</p>
                   {canEdit && (
                     <Button
-                      variant="link"
+                      variant="ghost"
                       onClick={() => {
                         setEditingSpace(null);
                         spaceForm.reset({ propertyId: id || "" });
@@ -733,13 +733,13 @@ export default function PropertyDetail() {
                   <p className="text-sm md:text-base">No equipment in this category</p>
                   {canEdit && (
                     <Button
-                      variant="link"
+                      variant="ghost"
                       onClick={() => {
                         setEditingEquipment(null);
                         form.reset({
                           propertyId: id || "",
                           name: "",
-                          category: selectedCategory || "other",
+                          category: (selectedCategory as FormData["category"]) || "other",
                           description: "",
                           serialNumber: "",
                           condition: "",
@@ -1197,7 +1197,7 @@ export default function PropertyDetail() {
                   <FormItem>
                     <FormLabel>Floor</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 1st Floor, Basement, 2nd Floor" {...field} data-testid="input-space-floor" />
+                      <Input placeholder="e.g., 1st Floor, Basement, 2nd Floor" {...field} value={field.value || ""} data-testid="input-space-floor" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1211,7 +1211,7 @@ export default function PropertyDetail() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Optional description of this space" {...field} data-testid="input-space-description" />
+                      <Textarea placeholder="Optional description of this space" {...field} value={field.value || ""} data-testid="input-space-description" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

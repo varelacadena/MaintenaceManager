@@ -539,35 +539,51 @@ export default function EditTask() {
               )}
             />
 
-            {isBuilding && spaces.length > 0 && (
+            {isBuilding && (
               <FormField
                 control={form.control}
                 name="spaceId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Space (Room/Area)</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedSpaceId(value);
-                        form.setValue("equipmentId", "");
-                      }} 
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-space">
-                          <SelectValue placeholder="Select space (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">All Spaces</SelectItem>
-                        {spaces.map((space) => (
-                          <SelectItem key={space.id} value={space.id}>
-                            {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Room / Space (Optional)</FormLabel>
+                    {spaces.length > 0 ? (
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedSpaceId(value);
+                          form.setValue("equipmentId", "");
+                        }} 
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-space">
+                            <SelectValue placeholder="Select space (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">All Spaces</SelectItem>
+                          {spaces.map((space) => (
+                            <SelectItem key={space.id} value={space.id}>
+                              {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
+                        No rooms/spaces defined for this building yet. 
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="ml-1 h-auto p-0 text-primary underline"
+                          onClick={() => navigate(`/properties/${selectedPropertyId}`)}
+                          data-testid="button-go-to-property"
+                        >
+                          Add spaces in property settings
+                        </Button>
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
