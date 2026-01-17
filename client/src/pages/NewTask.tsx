@@ -926,19 +926,14 @@ export default function NewTask() {
                     setAssignmentOption(option);
                     form.setValue("assignedToId", undefined);
                     form.setValue("assignedVendorId", undefined);
+                    form.setValue("assignedPool", undefined);
                     
                     if (option === "student") {
                       form.setValue("executorType", "student");
-                      form.setValue("assignedPool", "student_pool");
                     } else if (option === "technician") {
                       form.setValue("executorType", "technician");
-                      form.setValue("assignedPool", "technician_pool");
-                    } else if (option === "vendor") {
-                      form.setValue("executorType", undefined);
-                      form.setValue("assignedPool", undefined);
                     } else {
                       form.setValue("executorType", undefined);
-                      form.setValue("assignedPool", undefined);
                     }
                   }}
                   value={assignmentOption}
@@ -965,19 +960,12 @@ export default function NewTask() {
                       <FormItem>
                         <FormLabel>Select Student</FormLabel>
                         <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            if (value) {
-                              form.setValue("assignedPool", undefined);
-                            } else {
-                              form.setValue("assignedPool", "student_pool");
-                            }
-                          }} 
+                          onValueChange={field.onChange} 
                           value={field.value || ""}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-assigned-student">
-                              <SelectValue placeholder="Any available student" />
+                              <SelectValue placeholder="Select a student" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -1044,19 +1032,12 @@ export default function NewTask() {
                     <FormItem>
                       <FormLabel>Select Technician</FormLabel>
                       <Select 
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          if (value) {
-                            form.setValue("assignedPool", undefined);
-                          } else {
-                            form.setValue("assignedPool", "technician_pool");
-                          }
-                        }} 
+                        onValueChange={field.onChange} 
                         value={field.value || ""}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-assigned-user">
-                            <SelectValue placeholder="Any available technician" />
+                            <SelectValue placeholder="Select a technician" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
