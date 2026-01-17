@@ -178,7 +178,10 @@ export default function Tasks() {
   const getAssigneeName = (userId: string) => {
     const user = users?.find((u: any) => u.id === userId);
     if (!user) return "Unknown";
-    return `${user.firstName} ${user.lastName}`;
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user.username || "Unknown";
   };
 
   const getAssigneeInitials = (userId: string) => {
