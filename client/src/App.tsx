@@ -120,7 +120,13 @@ function AuthenticatedApp() {
               <ScrollToTop />
               <Switch>
                 {/* Routes accessible to all authenticated users */}
-                <Route path="/" component={Dashboard} />
+                <Route path="/" component={() => {
+                  if (user?.role === "student") {
+                    window.location.replace("/tasks");
+                    return null;
+                  }
+                  return <Dashboard />;
+                }} />
                 <Route path="/tasks" component={Tasks} />
                 <Route path="/tasks/:id" component={TaskDetail} />
                 <Route path="/messages" component={Messages} />

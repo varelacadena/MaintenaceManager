@@ -71,7 +71,6 @@ const roleMenus = {
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   student: [
-    { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "My Tasks", url: "/tasks", icon: ClipboardList },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
