@@ -15,6 +15,7 @@ import {
   insertUploadSchema,
   insertTaskNoteSchema,
   insertTaskChecklistSchema,
+  insertChecklistTemplateSchema,
   insertAreaSchema,
   insertSubdivisionSchema,
   insertVendorSchema,
@@ -3088,6 +3089,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting vehicle maintenance schedule:", error);
       res.status(500).json({ message: "Failed to delete vehicle maintenance schedule" });
+    }
+  });
+
+  // Checklist Templates
+  app.get("/api/checklist-templates", isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getChecklistTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching checklist templates:", error);
+      res.status(500).json({ message: "Failed to fetch checklist templates" });
+    }
+  });
+
+  app.get("/api/checklist-templates/:id", isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getChecklistTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Checklist template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching checklist template:", error);
+      res.status(500).json({ message: "Failed to fetch checklist template" });
+    }
+  });
+
+  app.post("/api/checklist-templates", isAuthenticated, requireStaffOrHigher, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const templateData = insertChecklistTemplateSchema.parse({
+        ...req.body,
+        createdById: userId,
+      });
+      const template = await storage.createChecklistTemplate(templateData);
+      res.json(template);
+    } catch (error) {
+      console.error("Error creating checklist template:", error);
+      res.status(500).json({ message: "Failed to create checklist template" });
+    }
+  });
+
+  app.patch("/api/checklist-templates/:id", isAuthenticated, requireStaffOrHigher, async (req, res) => {
+    try {
+      const updateSchema = z.object({
+        name: z.string().min(1).max(200).optional(),
+        description: z.string().optional(),
+        items: z.array(z.object({
+          text: z.string(),
+          sortOrder: z.number().optional(),
+        })).optional(),
+      });
+      
+      const validated = updateSchema.parse(req.body);
+      
+      const template = await storage.updateChecklistTemplate(req.params.id, validated);
+      if (!template) {
+        return res.status(404).json({ message: "Checklist template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating checklist template:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update checklist template" });
+    }
+  });
+
+  app.delete("/api/checklist-templates/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteChecklistTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting checklist template:", error);
+      res.status(500).json({ message: "Failed to delete checklist template" });
     }
   });
 

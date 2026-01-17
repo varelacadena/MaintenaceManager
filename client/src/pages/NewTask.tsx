@@ -41,9 +41,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
-import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space } from "@shared/schema";
+import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -184,6 +184,82 @@ export default function NewTask() {
   const [dialogChecklistItems, setDialogChecklistItems] = useState<{ text: string; isCompleted: boolean }[]>([]);
   const [newDialogChecklistItem, setNewDialogChecklistItem] = useState("");
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState("");
+  const [saveTemplateDescription, setSaveTemplateDescription] = useState("");
+  const [isTemplatePopoverOpen, setIsTemplatePopoverOpen] = useState(false);
+
+  const { data: checklistTemplates = [] } = useQuery<ChecklistTemplate[]>({
+    queryKey: ["/api/checklist-templates"],
+  });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; items: { text: string; sortOrder: number }[] }) => {
+      const response = await apiRequest("POST", "/api/checklist-templates", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates"] });
+      setIsTemplateDialogOpen(false);
+      setSaveTemplateName("");
+      setSaveTemplateDescription("");
+      toast({
+        title: "Template Saved",
+        description: "The checklist template has been saved for future use.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save template",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const applyTemplate = (template: ChecklistTemplate) => {
+    const rawItems = template.items;
+    let validItems: { text: string; isCompleted: boolean }[] = [];
+    
+    if (Array.isArray(rawItems)) {
+      validItems = rawItems
+        .filter((item: any) => item && typeof item.text === 'string' && item.text.trim())
+        .map((item: any) => ({ text: item.text.trim(), isCompleted: false }));
+    }
+    
+    const newGroup: ChecklistGroup = {
+      name: template.name,
+      items: validItems,
+    };
+    setChecklistGroups(prev => [...prev, newGroup]);
+    setIsTemplatePopoverOpen(false);
+    toast({
+      title: "Template Applied",
+      description: `Checklist "${template.name}" has been added.`,
+    });
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!dialogChecklistName.trim() || dialogChecklistItems.length === 0) {
+      toast({
+        title: "Cannot Save Template",
+        description: "Please add a name and at least one item to save as template.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaveTemplateName(dialogChecklistName);
+    setIsTemplateDialogOpen(true);
+  };
+
+  const confirmSaveTemplate = () => {
+    if (!saveTemplateName.trim()) return;
+    saveTemplateMutation.mutate({
+      name: saveTemplateName.trim(),
+      description: saveTemplateDescription.trim() || undefined,
+      items: dialogChecklistItems.map((item, idx) => ({ text: item.text, sortOrder: idx })),
+    });
+  };
 
   const equipmentForm = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentFormSchema),
@@ -1216,28 +1292,67 @@ export default function NewTask() {
 
           {/* Section 5: Checklists - Optional */}
           <Card className="p-5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <ListChecks className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">Checklists</span>
                 <Badge variant="secondary" className="text-xs">Optional</Badge>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditingChecklistIndex(null);
-                  setDialogChecklistName("");
-                  setDialogChecklistItems([]);
-                  setNewDialogChecklistItem("");
-                  setIsChecklistDialogOpen(true);
-                }}
-                data-testid="button-add-checklist"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
+              <div className="flex items-center gap-2">
+                {checklistTemplates.length > 0 && (
+                  <Popover open={isTemplatePopoverOpen} onOpenChange={setIsTemplatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="gap-1"
+                        data-testid="button-use-template"
+                      >
+                        <FileText className="h-3 w-3" />
+                        Use Template
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-1" align="end">
+                      <div className="space-y-1">
+                        {checklistTemplates.map((template) => (
+                          <Button
+                            key={template.id}
+                            type="button"
+                            variant="ghost"
+                            className="w-full justify-start h-auto py-2 px-2"
+                            onClick={() => applyTemplate(template)}
+                            data-testid={`button-template-${template.id}`}
+                          >
+                            <div className="flex flex-col items-start text-left">
+                              <span className="text-sm font-medium">{template.name}</span>
+                              {template.description && (
+                                <span className="text-xs text-muted-foreground">{template.description}</span>
+                              )}
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingChecklistIndex(null);
+                    setDialogChecklistName("");
+                    setDialogChecklistItems([]);
+                    setNewDialogChecklistItem("");
+                    setIsChecklistDialogOpen(true);
+                  }}
+                  data-testid="button-add-checklist"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              </div>
             </div>
             
             {checklistGroups.length > 0 && (
@@ -1651,35 +1766,98 @@ export default function NewTask() {
             </div>
           </div>
 
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={!dialogChecklistName.trim() || dialogChecklistItems.length === 0}
+              onClick={handleSaveAsTemplate}
+              className="mr-auto"
+              data-testid="button-save-as-template"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Save as Template
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => { setIsChecklistDialogOpen(false); setEditingItemIndex(null); }} data-testid="button-cancel-checklist">
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!dialogChecklistName.trim()}
+                onClick={() => {
+                  if (dialogChecklistName.trim()) {
+                    if (editingChecklistIndex !== null) {
+                      setChecklistGroups(prev => prev.map((g, i) =>
+                        i === editingChecklistIndex
+                          ? { name: dialogChecklistName.trim(), items: dialogChecklistItems }
+                          : g
+                      ));
+                    } else {
+                      setChecklistGroups(prev => [...prev, { name: dialogChecklistName.trim(), items: dialogChecklistItems }]);
+                    }
+                    setIsChecklistDialogOpen(false);
+                    setDialogChecklistName("");
+                    setDialogChecklistItems([]);
+                    setNewDialogChecklistItem("");
+                    setEditingChecklistIndex(null);
+                    setEditingItemIndex(null);
+                  }
+                }}
+                data-testid="button-save-checklist"
+              >
+                {editingChecklistIndex !== null ? "Save" : "Add"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Template Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>
+              Save this checklist as a reusable template for future tasks
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Template Name *</Label>
+              <Input
+                placeholder="e.g., Safety Inspection Checklist"
+                value={saveTemplateName}
+                onChange={(e) => setSaveTemplateName(e.target.value)}
+                data-testid="input-template-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description (Optional)</Label>
+              <Textarea
+                placeholder="Brief description of when to use this template..."
+                value={saveTemplateDescription}
+                onChange={(e) => setSaveTemplateDescription(e.target.value)}
+                className="resize-none"
+                data-testid="textarea-template-description"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              This template will include {dialogChecklistItems.length} item{dialogChecklistItems.length !== 1 ? "s" : ""}.
+            </div>
+          </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => { setIsChecklistDialogOpen(false); setEditingItemIndex(null); }} data-testid="button-cancel-checklist">
+            <Button type="button" variant="outline" onClick={() => setIsTemplateDialogOpen(false)} data-testid="button-cancel-template">
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={!dialogChecklistName.trim()}
-              onClick={() => {
-                if (dialogChecklistName.trim()) {
-                  if (editingChecklistIndex !== null) {
-                    setChecklistGroups(prev => prev.map((g, i) =>
-                      i === editingChecklistIndex
-                        ? { name: dialogChecklistName.trim(), items: dialogChecklistItems }
-                        : g
-                    ));
-                  } else {
-                    setChecklistGroups(prev => [...prev, { name: dialogChecklistName.trim(), items: dialogChecklistItems }]);
-                  }
-                  setIsChecklistDialogOpen(false);
-                  setDialogChecklistName("");
-                  setDialogChecklistItems([]);
-                  setNewDialogChecklistItem("");
-                  setEditingChecklistIndex(null);
-                  setEditingItemIndex(null);
-                }
-              }}
-              data-testid="button-save-checklist"
+              disabled={!saveTemplateName.trim() || saveTemplateMutation.isPending}
+              onClick={confirmSaveTemplate}
+              data-testid="button-confirm-save-template"
             >
-              {editingChecklistIndex !== null ? "Save" : "Add"}
+              {saveTemplateMutation.isPending ? "Saving..." : "Save Template"}
             </Button>
           </DialogFooter>
         </DialogContent>

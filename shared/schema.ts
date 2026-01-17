@@ -310,6 +310,21 @@ export const insertTaskChecklistItemSchema = createInsertSchema(taskChecklistIte
 export type InsertTaskChecklistItem = z.infer<typeof insertTaskChecklistItemSchema>;
 export type TaskChecklistItem = typeof taskChecklistItems.$inferSelect;
 
+// Checklist templates - reusable checklist patterns
+export const checklistTemplates = pgTable("checklist_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  items: jsonb("items").notNull().default([]), // Array of { text: string, sortOrder: number }
+  createdById: varchar("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertChecklistTemplateSchema = createInsertSchema(checklistTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertChecklistTemplate = z.infer<typeof insertChecklistTemplateSchema>;
+export type ChecklistTemplate = typeof checklistTemplates.$inferSelect;
+
 // Properties (map-based property system)
 export const propertyTypeEnum = pgEnum("property_type", [
   "building",
