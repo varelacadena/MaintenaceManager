@@ -913,13 +913,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Role-based filtering
       if (currentUser.role === "student") {
-        // Students only see student tasks assigned to them or to student pool
-        filters.executorType = "student";
-        filters.assignedToIdOrPool = { userId, pool: "student_pool" };
+        // Students only see tasks directly assigned to them
+        filters.assignedToId = userId;
       } else if (currentUser.role === "technician") {
-        // Technicians only see technician tasks assigned to them or to technician pool
-        filters.executorType = "technician";
-        filters.assignedToIdOrPool = { userId, pool: "technician_pool" };
+        // Technicians only see tasks directly assigned to them
+        filters.assignedToId = userId;
       }
       // Admin sees all
 
@@ -967,18 +965,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden: Staff cannot access tasks" });
       }
       
-      // Students can only view student tasks assigned to them
+      // Students can only view tasks directly assigned to them
       if (currentUser.role === "student") {
-        if (task.executorType !== "student" || 
-            (task.assignedToId !== userId && task.assignedPool !== "student_pool")) {
+        if (task.assignedToId !== userId) {
           return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
         }
       }
       
-      // Technicians can only view technician tasks assigned to them
+      // Technicians can only view tasks directly assigned to them
       if (currentUser.role === "technician") {
-        if (task.executorType !== "technician" || 
-            (task.assignedToId !== userId && task.assignedPool !== "technician_pool")) {
+        if (task.assignedToId !== userId) {
           return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
         }
       }
