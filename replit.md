@@ -32,6 +32,21 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
 
+### Hierarchical Property Structure
+
+The platform supports a hierarchical organization for campus properties:
+
+- **Building Properties:** Support internal spaces (rooms like bathrooms, classrooms, offices). Equipment can belong to specific spaces within buildings.
+- **Flat Properties:** Lawn, Parking, and Road types remain flat without spaces. Equipment belongs directly to these properties.
+- **Spaces:** Represent rooms/areas within buildings with name, optional description, and optional floor number. Managed via the "Spaces" tab on building property detail pages.
+- **Flexible Task Assignment:** Tasks support assignment to:
+  - Property only (for general property maintenance)
+  - Property + Space (for room-specific work)
+  - Property + Equipment (for equipment in flat properties)
+  - Property + Space + Equipment (for equipment within specific rooms)
+- **Service Requests:** Can also target specific spaces within building properties.
+- **Space Management API:** `/api/spaces` endpoint with full CRUD operations, restricted to building-type properties only.
+
 ## External Dependencies
 
 - **Replit Authentication:** OIDC provider for user identity.

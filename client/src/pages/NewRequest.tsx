@@ -113,6 +113,7 @@ export default function NewRequest() {
       const response = await apiRequest("POST", "/api/service-requests", {
         ...data,
         requestedDate: new Date(data.requestedDate),
+        spaceId: data.spaceId || undefined,
       });
       const requestData = await response.json();
 
