@@ -66,21 +66,71 @@ export async function canAccessRequest(userId: string, requestId: string, requir
   const request = await storage.getServiceRequest(requestId);
   if (!request) return false;
 
-  // Technician can access all requests
-  if (user.role === "technician") {
-    if (requireAssignedOrRequester) {
-      // For modifications, must be assigned to the request
-      return request.assignedToId === userId || request.requesterId === userId;
-    }
-    return true;
-  }
-
   // Staff can only access their own requests
   if (user.role === "staff") {
     return request.requesterId === userId;
   }
 
+  // Technicians and students cannot access service requests
   return false;
+}
+
+// Helper to check if user can access a specific task
+export async function canAccessTask(userId: string, taskId: string): Promise<boolean> {
+  const { storage } = await import("./storage");
+
+  const user = await storage.getUser(userId);
+  if (!user) return false;
+
+  // Admins can access all tasks
+  if (user.role === "admin") return true;
+
+  const task = await storage.getTask(taskId);
+  if (!task) return false;
+
+  // Technicians can only access technician tasks assigned to them or in technician pool
+  if (user.role === "technician") {
+    if (task.executorType !== "technician") return false;
+    return task.assignedToId === userId || task.assignedPool === "technician_pool";
+  }
+
+  // Students can only access student tasks assigned to them or in student pool
+  if (user.role === "student") {
+    if (task.executorType !== "student") return false;
+    return task.assignedToId === userId || task.assignedPool === "student_pool";
+  }
+
+  // Staff cannot access tasks
+  return false;
+}
+
+// Middleware to require task access
+export function requireTaskAccess(): RequestHandler {
+  return async (req: any, res, next) => {
+    // Get user if not already set by requireRole middleware
+    if (!req.currentUser && req.userId) {
+      const { storage } = await import("./storage");
+      req.currentUser = await storage.getUser(req.userId);
+    }
+
+    if (!req.currentUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const taskId = req.params.taskId || req.params.id || req.body.taskId;
+    if (!taskId) {
+      return res.status(400).json({ message: "Task ID required" });
+    }
+
+    const hasAccess = await canAccessTask(req.currentUser.id, taskId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        message: "Forbidden: You don't have access to this task"
+      });
+    }
+
+    next();
+  };
 }
 
 // Middleware to require request access

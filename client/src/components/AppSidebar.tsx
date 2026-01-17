@@ -57,16 +57,9 @@ const roleMenus = {
   ],
   technician: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "My Tasks", url: "/tasks", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
-    { title: "Analytics", url: "/analytics", icon: BarChart3 },
-    { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
-    { title: "Vehicle Reservations", url: "/vehicle-reservations", icon: Calendar },
-    { title: "Properties", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "Vendors", url: "/vendors", icon: Building2 },
-    { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   staff: [

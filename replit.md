@@ -11,8 +11,8 @@ This web-based platform streamlines maintenance operations for college facilitie
 The system now uses a 4-role model replacing the old "maintenance" role with "technician":
 
 **Roles:**
-- **Admin**: Full system access, user management, all tasks and requests
-- **Technician**: Replaces "maintenance" role - can manage service requests, tasks, vehicles, properties, inventory, vendors
+- **Admin**: Full system access, user management, all tasks, requests, vehicles, properties, inventory, vendors, analytics
+- **Technician**: LIMITED access - can only view and update technician-type tasks assigned to them or in the technician pool (similar to student access level)
 - **Staff**: Can submit service requests and vehicle reservations, view their own submissions
 - **Student**: Can view and complete student-assigned tasks only (simpler tasks like cleaning, basic maintenance)
 
@@ -42,9 +42,10 @@ The system now uses a 4-role model replacing the old "maintenance" role with "te
 - Technician tasks use standard task fields
 
 **Role-Based Dashboards:**
-- Students see a simplified dashboard with their assigned tasks
-- Technicians see full dashboard with service requests, tasks, vehicles, analytics
+- Students see a simplified dashboard with their assigned student tasks
+- Technicians see a simplified dashboard with their assigned technician tasks (LIMITED access like students)
 - Staff role is blocked from viewing tasks entirely
+- Only Admin has full dashboard access with all features
 
 **API Route Protection:**
 - GET /api/tasks: Filters by user role and executor type
@@ -53,7 +54,7 @@ The system now uses a 4-role model replacing the old "maintenance" role with "te
 
 **Sidebar Navigation:**
 - Admin: Full access to all features
-- Technician: Dashboard, Service Requests, My Tasks, Calendar, Analytics, Vehicle Fleet, Vehicle Reservations, Properties, Messages, Vendors, Inventory, Settings
+- Technician: Dashboard, My Tasks, Calendar, Messages, Settings (LIMITED access like students)
 - Staff: Dashboard, My Requests, New Request, My Reservations, Messages, Settings
 - Students: Dashboard, My Tasks, Messages, Settings
 

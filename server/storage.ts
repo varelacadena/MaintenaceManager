@@ -187,6 +187,7 @@ export interface IStorage {
 
   // Task checklist operations (legacy flat model)
   getChecklistsByTask(taskId: string): Promise<TaskChecklist[]>;
+  getTaskChecklist(id: string): Promise<TaskChecklist | undefined>;
   createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist>;
   updateTaskChecklist(id: string, data: Partial<InsertTaskChecklist>): Promise<TaskChecklist | undefined>;
   deleteTaskChecklist(id: string): Promise<void>;
@@ -194,9 +195,11 @@ export interface IStorage {
 
   // Task checklist group/item operations (named checklists)
   getChecklistGroupsByTask(taskId: string): Promise<(TaskChecklistGroup & { items: TaskChecklistItem[] })[]>;
+  getChecklistGroup(id: string): Promise<TaskChecklistGroup | undefined>;
   createChecklistGroup(group: InsertTaskChecklistGroup): Promise<TaskChecklistGroup>;
   updateChecklistGroup(id: string, data: Partial<InsertTaskChecklistGroup>): Promise<TaskChecklistGroup | undefined>;
   deleteChecklistGroup(id: string): Promise<void>;
+  getChecklistItem(id: string): Promise<TaskChecklistItem | undefined>;
   createChecklistItem(item: InsertTaskChecklistItem): Promise<TaskChecklistItem>;
   updateChecklistItem(id: string, data: Partial<InsertTaskChecklistItem>): Promise<TaskChecklistItem | undefined>;
   deleteChecklistItem(id: string): Promise<void>;
@@ -896,6 +899,11 @@ export class DatabaseStorage implements IStorage {
       .orderBy(taskChecklists.sortOrder);
   }
 
+  async getTaskChecklist(id: string): Promise<TaskChecklist | undefined> {
+    const [checklist] = await this.db.select().from(taskChecklists).where(eq(taskChecklists.id, id));
+    return checklist;
+  }
+
   async createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist> {
     const [result] = await this.db.insert(taskChecklists).values(checklist).returning();
     return result;
@@ -941,6 +949,11 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getChecklistGroup(id: string): Promise<TaskChecklistGroup | undefined> {
+    const [group] = await this.db.select().from(taskChecklistGroups).where(eq(taskChecklistGroups.id, id));
+    return group;
+  }
+
   async createChecklistGroup(group: InsertTaskChecklistGroup): Promise<TaskChecklistGroup> {
     const [result] = await this.db.insert(taskChecklistGroups).values(group).returning();
     return result;
@@ -957,6 +970,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteChecklistGroup(id: string): Promise<void> {
     await this.db.delete(taskChecklistGroups).where(eq(taskChecklistGroups.id, id));
+  }
+
+  async getChecklistItem(id: string): Promise<TaskChecklistItem | undefined> {
+    const [item] = await this.db.select().from(taskChecklistItems).where(eq(taskChecklistItems.id, id));
+    return item;
   }
 
   async createChecklistItem(item: InsertTaskChecklistItem): Promise<TaskChecklistItem> {
