@@ -349,7 +349,7 @@ export default function Calendar() {
     return tasksByDate.get(todayKey) || [];
   }, [tasksByDate]);
 
-  const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
+  const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task;
@@ -360,7 +360,7 @@ export default function Calendar() {
     const { active, over } = event;
     setActiveTask(null);
 
-    if (!over || !isMaintenanceOrAdmin) return;
+    if (!over || !isTechnicianOrAdmin) return;
 
     const taskId = active.id as string;
     const newDateKey = over.id as string;
@@ -555,7 +555,7 @@ export default function Calendar() {
               Task Calendar
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              {isMaintenanceOrAdmin
+              {isTechnicianOrAdmin
                 ? "Drag tasks to reschedule them"
                 : "View scheduled maintenance tasks"}
             </p>
@@ -600,7 +600,7 @@ export default function Calendar() {
             <Button onClick={goToToday} data-testid="button-today">
               Today
             </Button>
-            {isMaintenanceOrAdmin && (
+            {isTechnicianOrAdmin && (
               <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
                 <Plus className="w-4 h-4 mr-2" />
                 New Task

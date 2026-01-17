@@ -269,7 +269,7 @@ export default function VehicleReservationDetails() {
   };
 
   // Determine if the current user is an admin to show edit/cancel buttons
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "maintenance";
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "technician";
 
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">

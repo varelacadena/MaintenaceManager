@@ -168,8 +168,8 @@ export default function RequestDetail() {
   const area = areas.find(a => a.id === request.areaId);
   const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
 
-  const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
-  const canConvertToTask = isMaintenanceOrAdmin &&
+  const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
+  const canConvertToTask = isTechnicianOrAdmin &&
     (request.status === "pending" || request.status === "under_review");
 
   const getStatusColor = (status: string) => {
@@ -262,7 +262,7 @@ export default function RequestDetail() {
             </Badge>
           </div>
 
-          {isMaintenanceOrAdmin && request.status === "pending" && (
+          {isTechnicianOrAdmin && request.status === "pending" && (
             <div className="flex gap-2 mt-3">
               <Button
                 size="sm"
@@ -329,7 +329,7 @@ export default function RequestDetail() {
             </div>
           )}
 
-          {isMaintenanceOrAdmin && canConvertToTask && (
+          {isTechnicianOrAdmin && canConvertToTask && (
             <Link href={`/tasks/new?requestId=${id}`} className="block mt-2">
               <Button size="sm" className="w-full h-8 text-xs" data-testid="button-convert-to-task">
                 Convert to Task

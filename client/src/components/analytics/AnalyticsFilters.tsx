@@ -113,7 +113,7 @@ export default function AnalyticsFilters({
     queryKey: ["/api/users"],
   });
 
-  const technicians = users.filter(u => u.role === "maintenance" || u.role === "admin");
+  const technicians = users.filter(u => u.role === "technician" || u.role === "admin");
 
   const updateFilter = (key: keyof FilterState, value: string) => {
     onFilterChange({ ...filters, [key]: value });

@@ -255,14 +255,12 @@ export default function Credentials() {
     switch (role) {
       case "admin":
         return "bg-purple-500 hover:bg-purple-600";
-      case "maintenance":
+      case "technician":
         return "bg-blue-500 hover:bg-blue-600";
       case "staff":
         return "bg-green-500 hover:bg-green-600";
       case "student":
         return "bg-amber-500 hover:bg-amber-600";
-      case "technician":
-        return "bg-cyan-500 hover:bg-cyan-600";
       default:
         return "bg-muted";
     }
@@ -371,7 +369,6 @@ export default function Credentials() {
                     <SelectItem value="staff">Staff</SelectItem>
                     <SelectItem value="student">Student</SelectItem>
                     <SelectItem value="technician">Technician</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

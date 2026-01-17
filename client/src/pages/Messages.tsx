@@ -120,7 +120,7 @@ export default function Messages() {
       return userConversations.get(userId)!;
     };
 
-    const isAdminOrMaintenance = user.role === 'admin' || user.role === 'maintenance';
+    const isAdminOrTechnician = user.role === 'admin' || user.role === 'technician';
 
     allMessages.forEach((msg) => {
       if (msg.requestId) {
@@ -139,10 +139,10 @@ export default function Messages() {
         } else if (isCurrentUserSender) {
           const conv = getOrCreateConv(request.requesterId);
           conv.requestIds.add(msg.requestId);
-        } else if (isAdminOrMaintenance && isMsgFromRequester) {
+        } else if (isAdminOrTechnician && isMsgFromRequester) {
           const conv = getOrCreateConv(request.requesterId);
           conv.requestIds.add(msg.requestId);
-        } else if (isAdminOrMaintenance && !isMsgFromRequester) {
+        } else if (isAdminOrTechnician && !isMsgFromRequester) {
           const conv = getOrCreateConv(msg.senderId);
           conv.requestIds.add(msg.requestId);
         }

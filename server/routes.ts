@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess, requireTaskExecutorOrAdmin } from "./middleware";
+import { requireRole, getCurrentUser, requireAdmin, requireTechnicianOrAdmin, requireStaffOrHigher, requireRequestAccess, requireTaskExecutorOrAdmin } from "./middleware";
 import bcrypt from "bcryptjs";
 
 import { seedDatabase } from "./seed";
@@ -366,7 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { role } = req.body;
 
       // Validate role value
-      if (!["admin", "maintenance", "staff"].includes(role)) {
+      if (!["admin", "technician", "staff", "student"].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
 
@@ -417,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate role value
-      if (!["admin", "maintenance", "staff"].includes(role)) {
+      if (!["admin", "technician", "staff", "student"].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
 
@@ -584,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vendors", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/vendors", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const vendorData = insertVendorSchema.parse(req.body);
       const vendor = await storage.createVendor(vendorData);
@@ -595,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/vendors/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/vendors/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const vendorData = insertVendorSchema.partial().parse(req.body);
       const vendor = await storage.updateVendor(req.params.id, vendorData);
@@ -643,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/inventory", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/inventory", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const itemData = insertInventoryItemSchema.parse(req.body);
       const item = await storage.createInventoryItem(itemData);
@@ -654,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/inventory/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/inventory/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const itemData = insertInventoryItemSchema.partial().parse(req.body);
       const item = await storage.updateInventoryItem(req.params.id, itemData);
@@ -668,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/inventory/:id/quantity", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/inventory/:id/quantity", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const { change } = req.body;
       if (typeof change !== 'number') {
@@ -852,11 +852,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Request not found" });
       }
 
-      // Requester, maintenance, or admin can delete
+      // Requester, technician, or admin can delete
       const canDelete =
         request.requesterId === userId ||
         currentUser?.role === "admin" ||
-        currentUser?.role === "maintenance";
+        currentUser?.role === "technician";
 
       if (!canDelete) {
         return res.status(403).json({ message: "Forbidden: Cannot delete this request" });
@@ -873,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch(
     "/api/service-requests/:id/status",
     isAuthenticated,
-    requireMaintenanceOrAdmin,
+    requireTechnicianOrAdmin,
     async (req, res) => {
       try {
         const { status, rejectionReason } = req.body;
@@ -913,9 +913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filters: any = {};
 
       // Role-based filtering
-      if (currentUser.role === "maintenance") {
-        filters.assignedToId = userId; // Only see assigned tasks
-      } else if (currentUser.role === "student") {
+      if (currentUser.role === "student") {
         // Students only see student tasks assigned to them or to student pool
         filters.executorType = "student";
         filters.assignedToIdOrPool = { userId, pool: "student_pool" };
@@ -985,11 +983,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
         }
       }
-      
-      // Maintenance can only view their assigned tasks
-      if (currentUser.role === "maintenance" && task.assignedToId !== userId) {
-        return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
-      }
 
       res.json(task);
     } catch (error) {
@@ -998,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.post("/api/tasks", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const { checklists, checklistGroups, ...taskPayload } = req.body;
@@ -1065,7 +1058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.patch("/api/tasks/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const updateData: any = { ...req.body };
 
@@ -1140,11 +1133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
         }
       }
-      
-      // Maintenance can only update their assigned tasks
-      if (currentUser.role === "maintenance" && task.assignedToId !== userId) {
-        return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
-      }
 
       const updateData: any = { status };
       if (status === "completed") {
@@ -1194,7 +1182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Time tracking routes (for tasks)
-  app.post("/api/time-entries", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.post("/api/time-entries", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const entry = await storage.createTimeEntry({
@@ -1210,7 +1198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/time-entries/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.patch("/api/time-entries/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const timeEntry = await storage.getTimeEntry(req.params.id);
@@ -1255,7 +1243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/time-entries/task/:taskId",
     isAuthenticated,
-    requireMaintenanceOrAdmin,
+    requireTechnicianOrAdmin,
     async (req, res) => {
       try {
         const entries = await storage.getTimeEntriesByTask(
@@ -1270,7 +1258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Parts routes (for tasks)
-  app.post("/api/parts", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/parts", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const partData = insertPartUsedSchema.parse(req.body);
       const part = await storage.createPartUsed(partData);
@@ -1281,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/parts/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.delete("/api/parts/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       await storage.deletePartUsed(req.params.id);
       res.json({ success: true });
@@ -1294,7 +1282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/parts/task/:taskId",
     isAuthenticated,
-    requireMaintenanceOrAdmin,
+    requireTechnicianOrAdmin,
     async (req, res) => {
       try {
         const parts = await storage.getPartsByTask(req.params.taskId);
@@ -1374,7 +1362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/messages/task/:taskId",
     isAuthenticated,
-    requireMaintenanceOrAdmin,
+    requireTechnicianOrAdmin,
     async (req, res) => {
       try {
         const messages = await storage.getMessagesByTask(
@@ -1603,7 +1591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let unreadMessages = 0;
       let approvedReservations = 0;
 
-      if (currentUser.role === "admin" || currentUser.role === "maintenance") {
+      if (currentUser.role === "admin" || currentUser.role === "technician") {
         const serviceRequests = await storage.getServiceRequests({
           status: "pending",
         });
@@ -1646,7 +1634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task notes routes (for tasks)
-  app.post("/api/task-notes", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.post("/api/task-notes", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const noteData = insertTaskNoteSchema.parse({
@@ -1664,7 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/task-notes/task/:taskId",
     isAuthenticated,
-    requireMaintenanceOrAdmin,
+    requireTechnicianOrAdmin,
     async (req, res) => {
       try {
         const notes = await storage.getNotesByTask(req.params.taskId);
@@ -1676,7 +1664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  app.delete("/api/task-notes/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.delete("/api/task-notes/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
@@ -1712,7 +1700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:taskId/checklists", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.post("/api/tasks/:taskId/checklists", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const checklistData = {
         taskId: req.params.taskId,
@@ -1728,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/task-checklists/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.patch("/api/task-checklists/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const checklist = await storage.updateTaskChecklist(req.params.id, req.body);
       if (!checklist) {
@@ -1741,7 +1729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/task-checklists/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.delete("/api/task-checklists/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       await storage.deleteTaskChecklist(req.params.id);
       res.json({ success: true });
@@ -1762,7 +1750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:taskId/checklist-groups", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.post("/api/tasks/:taskId/checklist-groups", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const groupData = {
         taskId: req.params.taskId,
@@ -1777,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/checklist-groups/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.patch("/api/checklist-groups/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const group = await storage.updateChecklistGroup(req.params.id, req.body);
       if (!group) {
@@ -1790,7 +1778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/checklist-groups/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.delete("/api/checklist-groups/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       await storage.deleteChecklistGroup(req.params.id);
       res.json({ success: true });
@@ -1801,7 +1789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Checklist item routes (items within groups)
-  app.post("/api/checklist-groups/:groupId/items", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.post("/api/checklist-groups/:groupId/items", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const itemData = {
         groupId: req.params.groupId,
@@ -1817,7 +1805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/checklist-items/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.patch("/api/checklist-items/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const item = await storage.updateChecklistItem(req.params.id, req.body);
       if (!item) {
@@ -1830,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/checklist-items/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.delete("/api/checklist-items/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       await storage.deleteChecklistItem(req.params.id);
       res.json({ success: true });
@@ -1864,7 +1852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/properties", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/properties", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const propertyData = insertPropertySchema.parse(req.body);
       const property = await storage.createProperty(propertyData);
@@ -1875,7 +1863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/properties/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/properties/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const property = await storage.updateProperty(req.params.id, req.body);
       if (!property) {
@@ -1943,7 +1931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/equipment", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/equipment", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const equipmentData = insertEquipmentSchema.parse(req.body);
       const item = await storage.createEquipment(equipmentData);
@@ -1954,7 +1942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/equipment/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/equipment/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const item = await storage.updateEquipment(req.params.id, req.body);
       if (!item) {
@@ -1967,7 +1955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/equipment/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.delete("/api/equipment/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       await storage.deleteEquipment(req.params.id);
       res.json({ success: true });
@@ -2002,7 +1990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vehicles", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/vehicles", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const vehicleData = insertVehicleSchema.parse(req.body);
       const vehicle = await storage.createVehicle(vehicleData);
@@ -2013,7 +2001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/vehicles/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/vehicles/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const vehicle = await storage.updateVehicle(req.params.id, req.body);
       if (!vehicle) {
@@ -2026,7 +2014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/vehicles/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/vehicles/:id/status", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const { status } = req.body;
       if (!status) {
@@ -2201,10 +2189,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      // Only admin, maintenance, or the user who created the reservation can update it
+      // Only admin, technician, or the user who created the reservation can update it
       const canUpdate = 
         currentUser.role === "admin" || 
-        currentUser.role === "maintenance" || 
+        currentUser.role === "technician" || 
         reservation.userId === userId;
 
       if (!canUpdate) {
@@ -2217,7 +2205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // If admin is editing, reset lastViewedStatus so user sees the update
-      if ((currentUser.role === "admin" || currentUser.role === "maintenance") && 
+      if ((currentUser.role === "admin" || currentUser.role === "technician") && 
           reservation.userId !== userId) {
         updates.lastViewedStatus = "pending"; // Force notification
       }
@@ -2596,7 +2584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/vehicle-checkout-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.delete("/api/vehicle-checkout-logs/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       // Get the log first to know the vehicle ID for syncing
       const log = await storage.getVehicleCheckOutLog(req.params.id);
@@ -2751,7 +2739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/vehicle-checkin-logs/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.delete("/api/vehicle-checkin-logs/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       // Get the log first to know the vehicle ID for syncing
       const log = await storage.getVehicleCheckInLog(req.params.id);
@@ -2821,7 +2809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vehicles/:id/maintenance-logs", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/vehicles/:id/maintenance-logs", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const logData = insertVehicleMaintenanceLogSchema.parse({
         ...req.body,
@@ -2864,7 +2852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vehicle-maintenance-schedules", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.post("/api/vehicle-maintenance-schedules", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const scheduleData = insertVehicleMaintenanceScheduleSchema.parse(req.body);
       const schedule = await storage.createVehicleMaintenanceSchedule(scheduleData);
@@ -2875,7 +2863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.patch("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const schedule = await storage.updateVehicleMaintenanceSchedule(req.params.id, req.body);
       if (!schedule) {
@@ -2888,7 +2876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.delete("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       await storage.deleteVehicleMaintenanceSchedule(req.params.id);
       res.json({ success: true });
@@ -2901,7 +2889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics Routes
   const { analyticsService } = await import("./analyticsService");
 
-  app.get("/api/analytics/work-orders", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/work-orders", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -2920,7 +2908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/technicians", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/technicians", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -2936,7 +2924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/assets", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/assets", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -2952,7 +2940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/facilities", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/facilities", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -2967,7 +2955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/alerts", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/alerts", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -2982,7 +2970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/trends", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/trends", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -2997,7 +2985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/fleet", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/fleet", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -3011,7 +2999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/service-requests", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/analytics/service-requests", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const filters = {
         startDate: req.query.startDate as string | undefined,
@@ -3028,7 +3016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/export", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  app.get("/api/analytics/export", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const { type, format, ...filters } = req.query;
       const dataType = type as string;

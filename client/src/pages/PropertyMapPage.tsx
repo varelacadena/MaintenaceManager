@@ -172,7 +172,7 @@ export default function PropertyMapPage() {
     });
   };
 
-  const canEdit = user?.role === "admin" || user?.role === "maintenance";
+  const canEdit = user?.role === "admin" || user?.role === "technician";
 
   if (isLoading) {
     return (

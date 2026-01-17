@@ -80,11 +80,11 @@ export default function EditTask() {
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    enabled: user?.role === "admin" || user?.role === "maintenance",
+    enabled: user?.role === "admin" || user?.role === "technician",
   });
 
-  // Filter to only show maintenance and admin users (backend already filters for maintenance users)
-  const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
+  // Filter to only show technician and admin users
+  const technicianUsers = users.filter(u => u.role === "technician" || u.role === "admin");
 
   const { data: vendors = [] } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
@@ -274,7 +274,7 @@ export default function EditTask() {
     );
   }
 
-  if (user?.role !== "admin" && user?.role !== "maintenance") {
+  if (user?.role !== "admin" && user?.role !== "technician") {
     return (
       <div className="p-6 text-center">
         <p className="text-muted-foreground">You don't have permission to edit tasks.</p>
@@ -681,7 +681,7 @@ export default function EditTask() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {maintenanceUsers.map((user) => (
+                          {technicianUsers.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
                               {user.firstName} {user.lastName}
                             </SelectItem>

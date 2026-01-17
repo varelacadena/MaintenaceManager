@@ -229,7 +229,7 @@ export default function TaskDetail() {
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages/task", id],
-    enabled: !!id && (user?.role === "admin" || user?.role === "maintenance"),
+    enabled: !!id && (user?.role === "admin" || user?.role === "technician"),
     refetchInterval: 5000,
   });
 
@@ -546,9 +546,9 @@ export default function TaskDetail() {
     );
   }
 
-  const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
+  const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const assignedUser = users.find(u => u.id === task.assignedToId);
-  const maintenanceUsers = users.filter(u => u.role === "maintenance" || u.role === "admin");
+  const technicianUsers = users.filter(u => u.role === "technician" || u.role === "admin");
 
   const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
   const totalHours = Math.floor(totalMinutes / 60);
@@ -605,7 +605,7 @@ export default function TaskDetail() {
             </div>
           </div>
 
-          {isMaintenanceOrAdmin && (
+          {isTechnicianOrAdmin && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" data-testid="button-delete-task">
@@ -785,7 +785,7 @@ export default function TaskDetail() {
             )}
 
             {/* Status - Editable */}
-            {isMaintenanceOrAdmin && (
+            {isTechnicianOrAdmin && (
               <div className="flex items-center gap-3 p-3 bg-background rounded-md">
                 <div className="w-5 h-5 flex items-center justify-center">
                   <div className={`w-3 h-3 rounded-full ${
@@ -816,7 +816,7 @@ export default function TaskDetail() {
             )}
 
             {/* Priority - Editable */}
-            {isMaintenanceOrAdmin && (
+            {isTechnicianOrAdmin && (
               <div className="flex items-center gap-3 p-3 bg-background rounded-md">
                 <AlertTriangle className={`w-5 h-5 ${
                   task.urgency === "high" ? "text-red-500" :
@@ -955,7 +955,7 @@ export default function TaskDetail() {
           </Collapsible>
 
           {/* Messages - Collapsible (Only for Maintenance/Admin) */}
-          {isMaintenanceOrAdmin && (
+          {isTechnicianOrAdmin && (
             <Collapsible open={messagesExpanded} onOpenChange={setMessagesExpanded}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-messages">
@@ -1105,7 +1105,7 @@ export default function TaskDetail() {
           </Collapsible>
 
           {/* Parts Used - Collapsible */}
-          {isMaintenanceOrAdmin && (
+          {isTechnicianOrAdmin && (
             <Collapsible open={partsExpanded} onOpenChange={setPartsExpanded}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-parts">
@@ -1273,7 +1273,7 @@ export default function TaskDetail() {
             <DialogDescription>Select a team member to assign this task to.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4 max-h-[300px] overflow-y-auto">
-            {maintenanceUsers.map((u) => (
+            {technicianUsers.map((u) => (
               <div
                 key={u.id}
                 className={`flex items-center justify-between p-3 rounded-md cursor-pointer hover-elevate ${

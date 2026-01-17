@@ -305,7 +305,7 @@ export default function VehicleDetail() {
     queryKey: ['/api/users'],
   });
 
-  const canManageVehicles = user?.role === "admin" || user?.role === "maintenance";
+  const canManageVehicles = user?.role === "admin" || user?.role === "technician";
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {

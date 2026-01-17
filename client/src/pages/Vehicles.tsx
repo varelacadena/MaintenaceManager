@@ -134,7 +134,7 @@ export default function Vehicles() {
     },
   });
 
-  const canManageVehicles = user?.role === "admin" || user?.role === "maintenance";
+  const canManageVehicles = user?.role === "admin" || user?.role === "technician";
 
   return (
     <div className="flex-1 space-y-4 p-4">

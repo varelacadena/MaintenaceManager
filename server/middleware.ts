@@ -46,13 +46,12 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
 
 // Specific role middleware wrappers
 export const requireAdmin = requireRole("admin");
-export const requireMaintenanceOrAdmin = requireRole("maintenance", "admin");
-export const requireStaffOrHigher = requireRole("staff", "maintenance", "admin");
-// New role middleware for student/technician model
-export const requireStudentOrAdmin = requireRole("student", "admin");
 export const requireTechnicianOrAdmin = requireRole("technician", "admin");
+export const requireStaffOrHigher = requireRole("staff", "technician", "admin");
+// Role middleware for student/technician model
+export const requireStudentOrAdmin = requireRole("student", "admin");
 export const requireTaskExecutorOrAdmin = requireRole("student", "technician", "admin");
-export const requireAnyAuthenticated = requireRole("admin", "maintenance", "staff", "student", "technician");
+export const requireAnyAuthenticated = requireRole("admin", "technician", "staff", "student");
 
 // Helper to check if user can access a specific request
 export async function canAccessRequest(userId: string, requestId: string, requireAssignedOrRequester: boolean = false): Promise<boolean> {
@@ -67,8 +66,8 @@ export async function canAccessRequest(userId: string, requestId: string, requir
   const request = await storage.getServiceRequest(requestId);
   if (!request) return false;
 
-  // Maintenance can access all requests
-  if (user.role === "maintenance") {
+  // Technician can access all requests
+  if (user.role === "technician") {
     if (requireAssignedOrRequester) {
       // For modifications, must be assigned to the request
       return request.assignedToId === userId || request.requesterId === userId;

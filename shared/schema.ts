@@ -34,7 +34,7 @@ export const users = pgTable("users", {
   phoneNumber: varchar("phone_number", { length: 20 }),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  role: varchar("role", { length: 20 }).notNull().default("staff"), // admin, maintenance, staff, student, technician
+  role: varchar("role", { length: 20 }).notNull().default("staff"), // admin, technician, staff, student
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

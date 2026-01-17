@@ -391,7 +391,7 @@ export class AnalyticsService {
     const technicians = await db
       .select()
       .from(users)
-      .where(eq(users.role, "maintenance"));
+      .where(eq(users.role, "technician"));
 
     const conditions = this.buildTaskConditions(filters);
     const allTasks = await db

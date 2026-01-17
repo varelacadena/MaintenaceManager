@@ -301,7 +301,7 @@ export default function PropertyDetail() {
     return acc;
   }, {} as Record<string, Equipment[]>);
 
-  const canEdit = user?.role === "admin" || user?.role === "maintenance";
+  const canEdit = user?.role === "admin" || user?.role === "technician";
 
   if (isLoading) {
     return (

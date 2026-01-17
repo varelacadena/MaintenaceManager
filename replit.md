@@ -2,19 +2,28 @@
 
 ## Overview
 
-This web-based platform streamlines maintenance operations for college facilities. It supports five user roles—administrators, maintenance staff, college staff, students, and technicians—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
+This web-based platform streamlines maintenance operations for college facilities. It supports four user roles—administrators, technicians, college staff, and students—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
 
 ## Recent Updates (January 17, 2026)
 
-**NEW ROLE MODEL - STUDENT & TECHNICIAN EXECUTOR TYPES:**
+**ROLE MODEL UPDATE - REPLACED MAINTENANCE WITH TECHNICIAN:**
 
-The system now supports a new role-based task assignment model with Student and Technician executor types:
+The system now uses a 4-role model replacing the old "maintenance" role with "technician":
 
-**New Roles:**
-- **Student**: Can view and complete student-assigned tasks (simpler tasks like cleaning, basic maintenance)
-- **Technician**: Can view and complete technician-assigned tasks (technical work requiring expertise)
+**Roles:**
+- **Admin**: Full system access, user management, all tasks and requests
+- **Technician**: Replaces "maintenance" role - can manage service requests, tasks, vehicles, properties, inventory, vendors
+- **Staff**: Can submit service requests and vehicle reservations, view their own submissions
+- **Student**: Can view and complete student-assigned tasks only (simpler tasks like cleaning, basic maintenance)
+
+**Role Badge Colors:**
+- Admin: Purple
+- Technician: Blue
+- Staff: Green
+- Student: Amber
 
 **Database Changes:**
+- `users.role` field supports: "admin", "technician", "staff", "student"
 - Added `executorType` field to tasks table (enum: "student" | "technician")
 - Added `assignedPool` field for queue-based assignment ("student_pool" or "technician_pool")
 - Added `instructions` text field for detailed task instructions (primarily for student tasks)
@@ -23,8 +32,8 @@ The system now supports a new role-based task assignment model with Student and 
 **Task Assignment:**
 - Tasks can be assigned to a specific user OR to a pool (student_pool/technician_pool)
 - Students see only student tasks (assigned to them or in student_pool)
-- Technicians see only technician tasks (assigned to them or in technician_pool)
-- Admins and maintenance can see and manage all tasks
+- Technicians see all technician tasks assigned to them or in technician_pool
+- Admins can see and manage all tasks
 
 **Conditional Task Creation Form:**
 - When executor type is "Student", additional fields appear:
@@ -34,7 +43,7 @@ The system now supports a new role-based task assignment model with Student and 
 
 **Role-Based Dashboards:**
 - Students see a simplified dashboard with their assigned tasks
-- Technicians see a technical dashboard with task filters
+- Technicians see full dashboard with service requests, tasks, vehicles, analytics
 - Staff role is blocked from viewing tasks entirely
 
 **API Route Protection:**
@@ -43,8 +52,10 @@ The system now supports a new role-based task assignment model with Student and 
 - All task mutations require proper role authorization
 
 **Sidebar Navigation:**
+- Admin: Full access to all features
+- Technician: Dashboard, Service Requests, My Tasks, Calendar, Analytics, Vehicle Fleet, Vehicle Reservations, Properties, Messages, Vendors, Inventory, Settings
+- Staff: Dashboard, My Requests, New Request, My Reservations, Messages, Settings
 - Students: Dashboard, My Tasks, Messages, Settings
-- Technicians: Dashboard, My Tasks, Calendar, Messages, Settings
 
 ---
 

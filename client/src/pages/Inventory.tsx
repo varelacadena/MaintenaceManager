@@ -241,7 +241,7 @@ export default function Inventory() {
     return item.minQuantity && item.quantity <= item.minQuantity;
   };
 
-  if (!user || (user.role !== "admin" && user.role !== "maintenance")) {
+  if (!user || (user.role !== "admin" && user.role !== "technician")) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">You do not have permission to view this page.</p>

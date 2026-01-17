@@ -72,7 +72,7 @@ function AuthenticatedApp() {
       <SidebarProvider style={style as React.CSSProperties}>
         <div className="flex h-screen w-full">
           <AppSidebar
-            userRole={user?.role as "admin" | "maintenance" | "staff" | "student" | "technician"}
+            userRole={user?.role as "admin" | "staff" | "student" | "technician"}
             userName={userName}
             userInitials={userInitials}
           />

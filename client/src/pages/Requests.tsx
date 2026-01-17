@@ -187,11 +187,11 @@ export default function Requests() {
     return matchesSearch && matchesStatus && matchesUrgency;
   });
 
-  const isMaintenanceOrAdmin = user?.role === "admin" || user?.role === "maintenance";
+  const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const isStaff = user?.role === "staff";
 
-  // Maintenance and admin have same permissions for service requests
-  const canManageRequests = isMaintenanceOrAdmin;
+  // Technician and admin have same permissions for service requests
+  const canManageRequests = isTechnicianOrAdmin;
 
   if (isLoading || usersLoading) {
     return (
