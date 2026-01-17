@@ -580,6 +580,226 @@ export default function Dashboard() {
     );
   }
 
+  // Student Dashboard - shows only student tasks
+  if (user?.role === "student") {
+    return (
+      <div className="space-y-6 pb-8">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+            Welcome, {user?.firstName || "Student"}
+          </h1>
+          <p className="text-muted-foreground">
+            {format(new Date(), "EEEE, MMMM d, yyyy")}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <FilterCard
+            title="Due Today"
+            count={taskCounts.dueToday}
+            icon={CalendarDays}
+            color="blue"
+            isActive={activeFilter === "due_today"}
+            onClick={() => setActiveFilter("due_today")}
+            testId="filter-due-today"
+          />
+          <FilterCard
+            title="Overdue"
+            count={taskCounts.overdue}
+            icon={AlertTriangle}
+            color="red"
+            isActive={activeFilter === "overdue"}
+            onClick={() => setActiveFilter("overdue")}
+            testId="filter-overdue"
+          />
+          <FilterCard
+            title="High Priority"
+            count={taskCounts.highPriority}
+            icon={Clock}
+            color="orange"
+            isActive={activeFilter === "high_priority"}
+            onClick={() => setActiveFilter("high_priority")}
+            testId="filter-high-priority"
+          />
+          <FilterCard
+            title="Completed Today"
+            count={taskCounts.completedToday}
+            icon={CheckCircle2}
+            color="green"
+            isActive={activeFilter === "completed_today"}
+            onClick={() => setActiveFilter("completed_today")}
+            testId="filter-completed-today"
+          />
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <CardTitle className="text-lg">My Student Tasks</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="text-xs"
+                  data-testid="toggle-completed"
+                >
+                  {showCompleted ? (
+                    <><EyeOff className="w-3 h-3 mr-1" /> Hide Completed</>
+                  ) : (
+                    <><Eye className="w-3 h-3 mr-1" /> Show Completed</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredTasks.length === 0 ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title="No tasks assigned"
+                description="You don't have any student tasks at the moment"
+                testId="empty-student-tasks"
+              />
+            ) : (
+              <div className="space-y-3">
+                {filteredTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    assignedUser={getUserById(task.assignedToId)}
+                    property={getPropertyById(task.propertyId)}
+                    onStatusChange={handleStatusChange}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <TaskDetailDrawer
+          task={selectedTask}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          assignedUser={selectedTask ? getUserById(selectedTask.assignedToId) : null}
+          property={selectedTask ? getPropertyById(selectedTask.propertyId) : null}
+          onStatusChange={handleStatusChange}
+        />
+      </div>
+    );
+  }
+
+  // Technician Dashboard - shows only technician tasks
+  if (user?.role === "technician") {
+    return (
+      <div className="space-y-6 pb-8">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+            Welcome, {user?.firstName || "Technician"}
+          </h1>
+          <p className="text-muted-foreground">
+            {format(new Date(), "EEEE, MMMM d, yyyy")}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <FilterCard
+            title="Due Today"
+            count={taskCounts.dueToday}
+            icon={CalendarDays}
+            color="blue"
+            isActive={activeFilter === "due_today"}
+            onClick={() => setActiveFilter("due_today")}
+            testId="filter-due-today"
+          />
+          <FilterCard
+            title="Overdue"
+            count={taskCounts.overdue}
+            icon={AlertTriangle}
+            color="red"
+            isActive={activeFilter === "overdue"}
+            onClick={() => setActiveFilter("overdue")}
+            testId="filter-overdue"
+          />
+          <FilterCard
+            title="High Priority"
+            count={taskCounts.highPriority}
+            icon={Clock}
+            color="orange"
+            isActive={activeFilter === "high_priority"}
+            onClick={() => setActiveFilter("high_priority")}
+            testId="filter-high-priority"
+          />
+          <FilterCard
+            title="Completed Today"
+            count={taskCounts.completedToday}
+            icon={CheckCircle2}
+            color="green"
+            isActive={activeFilter === "completed_today"}
+            onClick={() => setActiveFilter("completed_today")}
+            testId="filter-completed-today"
+          />
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <CardTitle className="text-lg">My Technician Tasks</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="text-xs"
+                  data-testid="toggle-completed"
+                >
+                  {showCompleted ? (
+                    <><EyeOff className="w-3 h-3 mr-1" /> Hide Completed</>
+                  ) : (
+                    <><Eye className="w-3 h-3 mr-1" /> Show Completed</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredTasks.length === 0 ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title="No tasks assigned"
+                description="You don't have any technician tasks at the moment"
+                testId="empty-technician-tasks"
+              />
+            ) : (
+              <div className="space-y-3">
+                {filteredTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    assignedUser={getUserById(task.assignedToId)}
+                    property={getPropertyById(task.propertyId)}
+                    onStatusChange={handleStatusChange}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <TaskDetailDrawer
+          task={selectedTask}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          assignedUser={selectedTask ? getUserById(selectedTask.assignedToId) : null}
+          property={selectedTask ? getPropertyById(selectedTask.propertyId) : null}
+          onStatusChange={handleStatusChange}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-8">
       <div className="flex items-start justify-between flex-wrap gap-4">

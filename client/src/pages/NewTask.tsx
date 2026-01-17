@@ -58,6 +58,10 @@ const formSchema = insertTaskSchema.extend({
   propertyId: z.string().min(1, "Please select a property"),
   equipmentId: z.string().min(1, "Please select equipment"),
   taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
+  executorType: z.enum(["student", "technician"]).optional(),
+  assignedPool: z.string().optional(),
+  instructions: z.string().optional(),
+  requiresPhoto: z.boolean().optional(),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
   contactName: z.string().optional(),
@@ -84,6 +88,7 @@ export default function NewTask() {
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
+  const [executorType, setExecutorType] = useState<"student" | "technician" | "">("");
   const [assignmentType, setAssignmentType] = useState<"maintenance" | "vendor" | "">("");
   const [contactType, setContactType] = useState<"requester" | "staff" | "other">("staff");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
@@ -199,6 +204,10 @@ export default function NewTask() {
       assignedToId: undefined,
       assignedVendorId: undefined,
       taskType: "one_time",
+      executorType: undefined,
+      assignedPool: undefined,
+      instructions: "",
+      requiresPhoto: false,
       status: "not_started",
       onHoldReason: undefined,
       createdById: user?.id || "",
@@ -275,6 +284,10 @@ export default function NewTask() {
         assignedToId: data.assignedToId || undefined,
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
+        executorType: data.executorType || undefined,
+        assignedPool: data.executorType ? `${data.executorType}_pool` : undefined,
+        instructions: data.instructions || undefined,
+        requiresPhoto: data.requiresPhoto || false,
         status: data.status,
         onHoldReason: data.onHoldReason || undefined,
         requestId: data.requestId || undefined,
@@ -551,7 +564,87 @@ export default function NewTask() {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="executorType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Executor Type</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setExecutorType(value as "student" | "technician");
+                        form.setValue("assignedPool", `${value}_pool`);
+                      }}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-executor-type">
+                          <SelectValue placeholder="Select executor type (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="technician">Technician</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Choose who should complete this task: students for simple tasks, technicians for technical work
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+
+            {executorType === "student" && (
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+                <h3 className="font-semibold">Student Task Instructions</h3>
+                <FormField
+                  control={form.control}
+                  name="instructions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructions for Student</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Provide clear step-by-step instructions for the student to complete this task..."
+                          className="min-h-[100px]"
+                          data-testid="input-instructions"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Detailed instructions help students understand exactly what needs to be done
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="requiresPhoto"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-requires-photo"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Require Photo Upload</FormLabel>
+                        <FormDescription>
+                          Students must upload a photo when completing this task
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {taskType === "recurring" && (
               <div className="space-y-4 border rounded-lg p-4 bg-muted/50">

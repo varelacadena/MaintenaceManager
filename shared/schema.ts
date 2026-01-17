@@ -34,7 +34,7 @@ export const users = pgTable("users", {
   phoneNumber: varchar("phone_number", { length: 20 }),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  role: varchar("role", { length: 20 }).notNull().default("staff"), // admin, maintenance, staff
+  role: varchar("role", { length: 20 }).notNull().default("staff"), // admin, maintenance, staff, student, technician
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -123,10 +123,12 @@ export const serviceRequests = pgTable("service_requests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Tasks (created from reviewed requests, managed by admin/maintenance)
+// Tasks (created from reviewed requests, managed by admin)
 export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "reminder", "project"]);
 export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
 export const contactTypeEnum = pgEnum("contact_type", ["requester", "staff", "other"]);
+// Executor type determines whether task is for Student or Technician
+export const executorTypeEnum = pgEnum("executor_type", ["student", "technician"]);
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -145,6 +147,8 @@ export const tasks = pgTable("tasks", {
   assignedToId: varchar("assigned_to_id").references(() => users.id),
   assignedVendorId: varchar("assigned_vendor_id").references(() => vendors.id),
   taskType: taskTypeEnum("task_type").notNull().default("one_time"),
+  executorType: executorTypeEnum("executor_type"), // student or technician - determines task visibility and form
+  assignedPool: varchar("assigned_pool", { length: 50 }), // "student_pool" or "technician_pool" for unassigned tasks
   status: taskStatusEnum("task_status").notNull().default("not_started"),
   onHoldReason: text("on_hold_reason"),
   recurringFrequency: text("recurring_frequency"), // daily, weekly, monthly, yearly
@@ -155,6 +159,9 @@ export const tasks = pgTable("tasks", {
   contactName: varchar("contact_name", { length: 200 }),
   contactEmail: varchar("contact_email", { length: 200 }),
   contactPhone: varchar("contact_phone", { length: 20 }),
+  // Student task specific fields
+  instructions: text("instructions"), // Required instructions for student tasks
+  requiresPhoto: boolean("requires_photo").default(false), // Whether photo upload is required for completion
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

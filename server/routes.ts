@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess } from "./middleware";
+import { requireRole, getCurrentUser, requireAdmin, requireMaintenanceOrAdmin, requireStaffOrHigher, requireRequestAccess, requireTaskExecutorOrAdmin } from "./middleware";
 import bcrypt from "bcryptjs";
 
 import { seedDatabase } from "./seed";
@@ -894,17 +894,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Task routes (admin and maintenance only)
-  app.get("/api/tasks", isAuthenticated, requireMaintenanceOrAdmin, async (req: any, res) => {
+  // Task routes (admin, maintenance, student, technician)
+  // Students and technicians can only see their assigned tasks filtered by executor type
+  app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
 
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Staff role cannot access tasks
+      if (currentUser.role === "staff") {
+        return res.status(403).json({ message: "Forbidden: Staff cannot access tasks" });
+      }
+
       let filters: any = {};
 
       // Role-based filtering
-      if (currentUser?.role === "maintenance") {
+      if (currentUser.role === "maintenance") {
         filters.assignedToId = userId; // Only see assigned tasks
+      } else if (currentUser.role === "student") {
+        // Students only see student tasks assigned to them or to student pool
+        filters.executorType = "student";
+        filters.assignedToIdOrPool = { userId, pool: "student_pool" };
+      } else if (currentUser.role === "technician") {
+        // Technicians only see technician tasks assigned to them or to technician pool
+        filters.executorType = "technician";
+        filters.assignedToIdOrPool = { userId, pool: "technician_pool" };
       }
       // Admin sees all
 
@@ -912,7 +930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.status) {
         filters.status = req.query.status;
       }
-      if (req.query.assignedToId) {
+      if (req.query.assignedToId && currentUser.role === "admin") {
         filters.assignedToId = req.query.assignedToId;
       }
       if (req.query.assignedVendorId) {
@@ -920,6 +938,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (req.query.areaId) {
         filters.areaId = req.query.areaId;
+      }
+      if (req.query.executorType && currentUser.role === "admin") {
+        filters.executorType = req.query.executorType;
       }
 
       const tasks = await storage.getTasks(filters);
@@ -930,12 +951,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:id", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  app.get("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
       const task = await storage.getTask(req.params.id);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
+
+      // Role-based access control for viewing tasks
+      if (currentUser.role === "staff") {
+        return res.status(403).json({ message: "Forbidden: Staff cannot access tasks" });
+      }
+      
+      // Students can only view student tasks assigned to them
+      if (currentUser.role === "student") {
+        if (task.executorType !== "student" || 
+            (task.assignedToId !== userId && task.assignedPool !== "student_pool")) {
+          return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
+        }
+      }
+      
+      // Technicians can only view technician tasks assigned to them
+      if (currentUser.role === "technician") {
+        if (task.executorType !== "technician" || 
+            (task.assignedToId !== userId && task.assignedPool !== "technician_pool")) {
+          return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
+        }
+      }
+      
+      // Maintenance can only view their assigned tasks
+      if (currentUser.role === "maintenance" && task.assignedToId !== userId) {
+        return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
+      }
+
       res.json(task);
     } catch (error) {
       console.error("Error fetching task:", error);
@@ -1043,13 +1098,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id/status", isAuthenticated, requireMaintenanceOrAdmin, async (req, res) => {
+  // Allow students and technicians to update status on their assigned tasks
+  app.patch("/api/tasks/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const { status, onHoldReason } = req.body;
       const taskId = req.params.id;
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
 
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
+      }
+
+      // Get the task to check access
+      const task = await storage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Role-based access control for updating task status
+      if (currentUser.role === "staff") {
+        return res.status(403).json({ message: "Forbidden: Staff cannot update tasks" });
+      }
+      
+      // Students can only update student tasks assigned to them
+      if (currentUser.role === "student") {
+        if (task.executorType !== "student" || 
+            (task.assignedToId !== userId && task.assignedPool !== "student_pool")) {
+          return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
+        }
+      }
+      
+      // Technicians can only update technician tasks assigned to them
+      if (currentUser.role === "technician") {
+        if (task.executorType !== "technician" || 
+            (task.assignedToId !== userId && task.assignedPool !== "technician_pool")) {
+          return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
+        }
+      }
+      
+      // Maintenance can only update their assigned tasks
+      if (currentUser.role === "maintenance" && task.assignedToId !== userId) {
+        return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
       }
 
       const updateData: any = { status };

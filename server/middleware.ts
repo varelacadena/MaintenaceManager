@@ -48,6 +48,11 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
 export const requireAdmin = requireRole("admin");
 export const requireMaintenanceOrAdmin = requireRole("maintenance", "admin");
 export const requireStaffOrHigher = requireRole("staff", "maintenance", "admin");
+// New role middleware for student/technician model
+export const requireStudentOrAdmin = requireRole("student", "admin");
+export const requireTechnicianOrAdmin = requireRole("technician", "admin");
+export const requireTaskExecutorOrAdmin = requireRole("student", "technician", "admin");
+export const requireAnyAuthenticated = requireRole("admin", "maintenance", "staff", "student", "technician");
 
 // Helper to check if user can access a specific request
 export async function canAccessRequest(userId: string, requestId: string, requireAssignedOrRequester: boolean = false): Promise<boolean> {

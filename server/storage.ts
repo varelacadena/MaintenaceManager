@@ -145,6 +145,8 @@ export interface IStorage {
     assignedVendorId?: string;
     status?: string;
     areaId?: string;
+    executorType?: string;
+    assignedToIdOrPool?: { userId: string; pool: string };
   }): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
@@ -560,6 +562,8 @@ export class DatabaseStorage implements IStorage {
     assignedVendorId?: string;
     status?: string;
     areaId?: string;
+    executorType?: string;
+    assignedToIdOrPool?: { userId: string; pool: string };
   }): Promise<Task[]> {
     let query = this.db.select({
         id: tasks.id,
@@ -578,6 +582,8 @@ export class DatabaseStorage implements IStorage {
         assignedToId: tasks.assignedToId,
         assignedVendorId: tasks.assignedVendorId,
         taskType: tasks.taskType,
+        executorType: tasks.executorType,
+        assignedPool: tasks.assignedPool,
         status: tasks.status,
         onHoldReason: tasks.onHoldReason,
         recurringFrequency: tasks.recurringFrequency,
@@ -588,6 +594,8 @@ export class DatabaseStorage implements IStorage {
         contactName: tasks.contactName,
         contactEmail: tasks.contactEmail,
         contactPhone: tasks.contactPhone,
+        instructions: tasks.instructions,
+        requiresPhoto: tasks.requiresPhoto,
         createdById: tasks.createdById,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
@@ -609,6 +617,19 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.areaId) {
       conditions.push(eq(tasks.areaId, filters.areaId));
+    }
+    if (filters?.executorType) {
+      conditions.push(eq(tasks.executorType, filters.executorType as any));
+    }
+    // Filter by assigned user OR assigned pool (for students/technicians)
+    if (filters?.assignedToIdOrPool) {
+      const { userId, pool } = filters.assignedToIdOrPool;
+      conditions.push(
+        or(
+          eq(tasks.assignedToId, userId),
+          eq(tasks.assignedPool, pool)
+        )
+      );
     }
 
     if (conditions.length > 0) {
@@ -636,6 +657,8 @@ export class DatabaseStorage implements IStorage {
       assignedToId: tasks.assignedToId,
       assignedVendorId: tasks.assignedVendorId,
       taskType: tasks.taskType,
+      executorType: tasks.executorType,
+      assignedPool: tasks.assignedPool,
       status: tasks.status,
       onHoldReason: tasks.onHoldReason,
       recurringFrequency: tasks.recurringFrequency,
@@ -646,6 +669,8 @@ export class DatabaseStorage implements IStorage {
       contactName: tasks.contactName,
       contactEmail: tasks.contactEmail,
       contactPhone: tasks.contactPhone,
+      instructions: tasks.instructions,
+      requiresPhoto: tasks.requiresPhoto,
       createdById: tasks.createdById,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
@@ -1090,6 +1115,8 @@ export class DatabaseStorage implements IStorage {
       assignedToId: tasks.assignedToId,
       assignedVendorId: tasks.assignedVendorId,
       taskType: tasks.taskType,
+      executorType: tasks.executorType,
+      assignedPool: tasks.assignedPool,
       status: tasks.status,
       onHoldReason: tasks.onHoldReason,
       recurringFrequency: tasks.recurringFrequency,
@@ -1100,6 +1127,8 @@ export class DatabaseStorage implements IStorage {
       contactName: tasks.contactName,
       contactEmail: tasks.contactEmail,
       contactPhone: tasks.contactPhone,
+      instructions: tasks.instructions,
+      requiresPhoto: tasks.requiresPhoto,
       createdById: tasks.createdById,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,

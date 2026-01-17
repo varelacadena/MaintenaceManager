@@ -33,7 +33,7 @@ import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { Badge } from "@/components/ui/badge";
 
 interface AppSidebarProps {
-  userRole: "admin" | "maintenance" | "staff";
+  userRole: "admin" | "maintenance" | "staff" | "student" | "technician";
   userName: string;
   userInitials: string;
 }
@@ -74,6 +74,19 @@ const roleMenus = {
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Settings", url: "/settings", icon: Settings },
+  ],
+  student: [
+    { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "My Tasks", url: "/tasks", icon: ClipboardList },
+    { title: "Messages", url: "/messages", icon: MessageSquare },
+    { title: "Settings", url: "/settings", icon: Settings },
+  ],
+  technician: [
+    { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "My Tasks", url: "/tasks", icon: Wrench },
+    { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],

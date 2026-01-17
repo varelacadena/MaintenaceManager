@@ -2,9 +2,51 @@
 
 ## Overview
 
-This web-based platform streamlines maintenance operations for college facilities. It supports three user roles—administrators, maintenance staff, and college staff—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
+This web-based platform streamlines maintenance operations for college facilities. It supports five user roles—administrators, maintenance staff, college staff, students, and technicians—to manage service requests, track tasks, and maintain campus areas including grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions such as user, vendor, and inventory management, property mapping, and reporting.
 
 ## Recent Updates (January 17, 2026)
+
+**NEW ROLE MODEL - STUDENT & TECHNICIAN EXECUTOR TYPES:**
+
+The system now supports a new role-based task assignment model with Student and Technician executor types:
+
+**New Roles:**
+- **Student**: Can view and complete student-assigned tasks (simpler tasks like cleaning, basic maintenance)
+- **Technician**: Can view and complete technician-assigned tasks (technical work requiring expertise)
+
+**Database Changes:**
+- Added `executorType` field to tasks table (enum: "student" | "technician")
+- Added `assignedPool` field for queue-based assignment ("student_pool" or "technician_pool")
+- Added `instructions` text field for detailed task instructions (primarily for student tasks)
+- Added `requiresPhoto` boolean field to require photo upload on task completion
+
+**Task Assignment:**
+- Tasks can be assigned to a specific user OR to a pool (student_pool/technician_pool)
+- Students see only student tasks (assigned to them or in student_pool)
+- Technicians see only technician tasks (assigned to them or in technician_pool)
+- Admins and maintenance can see and manage all tasks
+
+**Conditional Task Creation Form:**
+- When executor type is "Student", additional fields appear:
+  - Instructions textarea for detailed step-by-step guidance
+  - Photo upload requirement checkbox
+- Technician tasks use standard task fields
+
+**Role-Based Dashboards:**
+- Students see a simplified dashboard with their assigned tasks
+- Technicians see a technical dashboard with task filters
+- Staff role is blocked from viewing tasks entirely
+
+**API Route Protection:**
+- GET /api/tasks: Filters by user role and executor type
+- PATCH /api/tasks/:id/status: Students/technicians can only update their assigned tasks
+- All task mutations require proper role authorization
+
+**Sidebar Navigation:**
+- Students: Dashboard, My Tasks, Messages, Settings
+- Technicians: Dashboard, My Tasks, Calendar, Messages, Settings
+
+---
 
 **AUTOMATIC VEHICLE FLEET STATUS SYNC:**
 
