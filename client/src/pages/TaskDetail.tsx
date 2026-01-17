@@ -587,107 +587,101 @@ export default function TaskDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
-      {/* Header - Compact, non-sticky for mobile scrolling */}
+      {/* Header - Integrated with task info */}
       <div className="bg-background border-b">
-        <div className="flex items-center justify-between px-4 py-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/tasks")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          
-          <div className="flex flex-col items-center flex-1 min-w-0 mx-4">
-            <div className="flex items-center gap-2 text-sm">
-              <User className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium truncate" data-testid="text-assignee">
-                {task.assignedToId === user?.id 
-                  ? "You"
-                  : assignedUser?.firstName && assignedUser?.lastName 
-                    ? `${assignedUser.firstName} ${assignedUser.lastName}` 
-                    : task.assignedPool === "student_pool" 
-                      ? "Student Pool"
-                      : task.assignedPool === "technician_pool"
-                        ? "Technician Pool"
-                        : "Unassigned"}
-              </span>
+        <div className="px-4 py-3 space-y-2">
+          {/* Top row: Back, Title, Delete */}
+          <div className="flex items-start gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 -ml-2"
+              onClick={() => navigate("/tasks")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-semibold leading-tight line-clamp-2" data-testid="text-task-name">
+                {task.name}
+              </h1>
             </div>
-            <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
-              <Calendar className="w-3 h-3" />
-              <span data-testid="text-due-date">{dateLabel}</span>
-            </div>
+
+            {isTechnicianOrAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-delete-task">
+                    <Trash2 className="w-5 h-5 text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. All associated data will be permanently deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteTaskMutation.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
 
-          {isTechnicianOrAdmin && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" data-testid="button-delete-task">
-                  <Trash2 className="w-5 h-5 text-destructive" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Task?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. All associated data will be permanently deleted.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteTaskMutation.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+          {/* Bottom row: Badges + Assignee/Date */}
+          <div className="flex items-center justify-between gap-2 pl-8">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="outline" className={`text-xs ${statusColors[task.status]}`} data-testid="badge-status">
+                {statusLabels[task.status]}
+              </Badge>
+              <Badge variant="outline" className={`text-xs capitalize ${urgencyColors[task.urgency]}`} data-testid="badge-urgency">
+                {task.urgency}
+              </Badge>
+              <Badge variant="secondary" className="text-xs capitalize" data-testid="badge-task-type">
+                {task.taskType.replace("_", " ")}
+              </Badge>
+            </div>
+            
+            <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+              <div className="flex items-center gap-1">
+                <User className="w-3.5 h-3.5" />
+                <span data-testid="text-assignee">
+                  {task.assignedToId === user?.id 
+                    ? "You"
+                    : assignedUser?.firstName && assignedUser?.lastName 
+                      ? `${assignedUser.firstName} ${assignedUser.lastName}` 
+                      : task.assignedPool === "student_pool" 
+                        ? "Student Pool"
+                        : task.assignedPool === "technician_pool"
+                          ? "Technician Pool"
+                          : "Unassigned"}
+                </span>
+              </div>
+              <div className={`flex items-center gap-1 ${isOverdue ? "text-red-500" : ""}`}>
+                <Calendar className="w-3.5 h-3.5" />
+                <span data-testid="text-due-date">{dateLabel}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
-          
-          {/* Task Identity Block */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={statusColors[task.status]} data-testid="badge-status">
-                {statusLabels[task.status]}
-              </Badge>
-              <Badge variant="outline" className={urgencyColors[task.urgency]} data-testid="badge-urgency">
-                {task.urgency}
-              </Badge>
-              <Badge variant="secondary" className="capitalize" data-testid="badge-task-type">
-                {task.taskType.replace("_", " ")}
-              </Badge>
-            </div>
-            
-            <h1 className="text-xl font-semibold leading-tight" data-testid="text-task-name">
-              {task.name}
-            </h1>
-
-            {/* Location - Clickable for admin/tech only */}
-            {property && (
-              isTechnicianOrAdmin ? (
-                <Link href={`/properties/${property.id}`}>
-                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer" data-testid="link-property">
-                    <Building2 className="w-5 h-5 text-primary shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{property.name}</p>
-                      {property.address && (
-                        <p className="text-sm text-muted-foreground truncate">{property.address}</p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </Link>
-              ) : (
-                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-property">
+          {/* Location - Clickable for admin/tech only */}
+          {property && (
+            isTechnicianOrAdmin ? (
+              <Link href={`/properties/${property.id}`}>
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer" data-testid="link-property">
                   <Building2 className="w-5 h-5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{property.name}</p>
@@ -695,34 +689,45 @@ export default function TaskDetail() {
                       <p className="text-sm text-muted-foreground truncate">{property.address}</p>
                     )}
                   </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </div>
-              )
-            )}
-
-            {/* Space if present */}
-            {space && (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-space">
-                <DoorOpen className="w-5 h-5 text-primary shrink-0" />
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-property">
+                <Building2 className="w-5 h-5 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{space.name}</p>
-                  {space.floor && (
-                    <p className="text-sm text-muted-foreground">Floor {space.floor}</p>
+                  <p className="font-medium truncate">{property.name}</p>
+                  {property.address && (
+                    <p className="text-sm text-muted-foreground truncate">{property.address}</p>
                   )}
                 </div>
               </div>
-            )}
+            )
+          )}
 
-            {/* Equipment if present */}
-            {equipment && (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-equipment">
-                <Package className="w-5 h-5 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{equipment.name}</p>
-                  <p className="text-sm text-muted-foreground capitalize">{equipment.category}</p>
-                </div>
+          {/* Space if present */}
+          {space && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-space">
+              <DoorOpen className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{space.name}</p>
+                {space.floor && (
+                  <p className="text-sm text-muted-foreground">Floor {space.floor}</p>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Equipment if present */}
+          {equipment && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-equipment">
+              <Package className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{equipment.name}</p>
+                <p className="text-sm text-muted-foreground capitalize">{equipment.category}</p>
+              </div>
+            </div>
+          )}
 
           {/* Time Logged - Prominent Display for Students */}
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg" data-testid="time-logged-card">
