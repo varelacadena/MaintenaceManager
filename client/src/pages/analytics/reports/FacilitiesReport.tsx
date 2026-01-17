@@ -56,6 +56,7 @@ export default function FacilitiesReport() {
     startDate: "",
     endDate: "",
     propertyId: "",
+    spaceId: "",
     areaId: "",
     technicianId: "",
     status: "",

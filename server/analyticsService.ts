@@ -19,6 +19,7 @@ export interface AnalyticsFilters {
   startDate?: string;
   endDate?: string;
   propertyId?: string;
+  spaceId?: string;
   areaId?: string;
   technicianId?: string;
   equipmentId?: string;
@@ -39,6 +40,8 @@ export interface DetailedWorkOrder {
   assignedToName: string;
   propertyId: string | null;
   propertyName: string;
+  spaceId: string | null;
+  spaceName: string;
   areaId: string | null;
   areaName: string;
   equipmentId: string | null;
@@ -59,6 +62,7 @@ export interface WorkOrderOverview {
   byStatus: { status: string; count: number }[];
   byUrgency: { urgency: string; count: number }[];
   byProperty: { propertyId: string; propertyName: string; count: number }[];
+  bySpace: { spaceId: string; spaceName: string; propertyName: string; count: number }[];
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; count: number; completed: number }[];
   overdueWorkOrders: number;
@@ -258,11 +262,13 @@ export class AnalyticsService {
 
     const propertiesList = await db.select().from(properties);
     const areasList = await db.select().from(areas);
+    const spacesList = await db.select().from(spaces);
     const usersList = await db.select().from(users);
     const equipmentList = await db.select().from(equipment);
 
     const propertyMap = new Map(propertiesList.map(p => [p.id, p.name]));
     const areaMap = new Map(areasList.map(a => [a.id, a.name]));
+    const spaceMap = new Map(spacesList.map(s => [s.id, { name: s.name, propertyId: s.propertyId }]));
     const userMap = new Map(usersList.map(u => [u.id, `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username]));
     const equipmentMap = new Map(equipmentList.map(e => [e.id, e.name]));
 
@@ -336,6 +342,25 @@ export class AnalyticsService {
       }))
       .sort((a, b) => b.count - a.count);
 
+    const spaceGroups: Record<string, number> = {};
+    allTasks.forEach(t => {
+      if (t.spaceId) {
+        spaceGroups[t.spaceId] = (spaceGroups[t.spaceId] || 0) + 1;
+      }
+    });
+    const bySpace = Object.entries(spaceGroups)
+      .map(([spaceId, count]) => {
+        const spaceInfo = spaceMap.get(spaceId);
+        return {
+          spaceId,
+          spaceName: spaceInfo?.name || "Unknown",
+          propertyName: spaceInfo?.propertyId ? propertyMap.get(spaceInfo.propertyId) || "Unknown" : "Unknown",
+          count,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
     const monthlyGroups: Record<string, { count: number; completed: number }> = {};
     allTasks.forEach(t => {
       const date = new Date(t.createdAt!);
@@ -372,6 +397,8 @@ export class AnalyticsService {
         assignedToName: t.assignedToId ? userMap.get(t.assignedToId) || "Unknown" : "Unassigned",
         propertyId: t.propertyId,
         propertyName: t.propertyId ? propertyMap.get(t.propertyId) || "Unknown" : "N/A",
+        spaceId: t.spaceId,
+        spaceName: t.spaceId ? spaceMap.get(t.spaceId)?.name || "Unknown" : "N/A",
         areaId: t.areaId,
         areaName: t.areaId ? areaMap.get(t.areaId) || "Unknown" : "N/A",
         equipmentId: t.equipmentId,
@@ -392,6 +419,7 @@ export class AnalyticsService {
       byStatus,
       byUrgency,
       byProperty,
+      bySpace,
       byArea,
       monthlyTrend,
       overdueWorkOrders,
@@ -1491,6 +1519,9 @@ export class AnalyticsService {
     }
     if (filters.propertyId) {
       conditions.push(eq(tasks.propertyId, filters.propertyId));
+    }
+    if (filters.spaceId) {
+      conditions.push(eq(tasks.spaceId, filters.spaceId));
     }
     if (filters.areaId) {
       conditions.push(eq(tasks.areaId, filters.areaId));

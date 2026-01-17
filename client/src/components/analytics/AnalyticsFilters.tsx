@@ -20,11 +20,19 @@ import { Badge } from "@/components/ui/badge";
 interface Property {
   id: string;
   name: string;
+  type: string;
 }
 
 interface Area {
   id: string;
   name: string;
+}
+
+interface Space {
+  id: string;
+  name: string;
+  propertyId: string;
+  floor: string | null;
 }
 
 interface User {
@@ -39,6 +47,7 @@ export interface FilterState {
   startDate: string;
   endDate: string;
   propertyId: string;
+  spaceId: string;
   areaId: string;
   technicianId: string;
   status: string;
@@ -109,11 +118,22 @@ export default function AnalyticsFilters({
     queryKey: ["/api/areas"],
   });
 
+  const { data: allSpaces = [] } = useQuery<Space[]>({
+    queryKey: ["/api/spaces"],
+  });
+
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
 
   const technicians = users.filter(u => u.role === "technician" || u.role === "admin");
+
+  // Filter spaces by selected property (only show if a building is selected)
+  const selectedProperty = properties.find(p => p.id === filters.propertyId);
+  const isBuilding = selectedProperty?.type === "building";
+  const filteredSpaces = isBuilding 
+    ? allSpaces.filter(s => s.propertyId === filters.propertyId)
+    : [];
 
   const updateFilter = (key: keyof FilterState, value: string) => {
     onFilterChange({ ...filters, [key]: value });
@@ -129,11 +149,17 @@ export default function AnalyticsFilters({
       startDate: "",
       endDate: "",
       propertyId: "",
+      spaceId: "",
       areaId: "",
       technicianId: "",
       status: "",
       urgency: "",
     });
+  };
+
+  const handlePropertyChange = (value: string) => {
+    // Clear spaceId when property changes
+    onFilterChange({ ...filters, propertyId: value === "all" ? "" : value, spaceId: "" });
   };
 
   const activeFiltersCount = Object.entries(filters).filter(([key, value]) => {
@@ -251,7 +277,7 @@ export default function AnalyticsFilters({
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="property" className="text-xs">Property / Building</Label>
-                <Select value={filters.propertyId || "all"} onValueChange={v => updateFilter("propertyId", v === "all" ? "" : v)}>
+                <Select value={filters.propertyId || "all"} onValueChange={handlePropertyChange}>
                   <SelectTrigger id="property" data-testid="select-property" className="h-8 text-xs">
                     <SelectValue placeholder="All Properties" />
                   </SelectTrigger>
@@ -265,6 +291,25 @@ export default function AnalyticsFilters({
                   </SelectContent>
                 </Select>
               </div>
+
+              {isBuilding && filteredSpaces.length > 0 && (
+                <div className="space-y-1">
+                  <Label htmlFor="space" className="text-xs">Space / Room</Label>
+                  <Select value={filters.spaceId || "all"} onValueChange={v => updateFilter("spaceId", v === "all" ? "" : v)}>
+                    <SelectTrigger id="space" data-testid="select-space" className="h-8 text-xs">
+                      <SelectValue placeholder="All Spaces" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Spaces</SelectItem>
+                      {filteredSpaces.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}{s.floor ? ` (Floor ${s.floor})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <Label htmlFor="area" className="text-xs">Area / Department</Label>

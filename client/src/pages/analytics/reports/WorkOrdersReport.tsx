@@ -46,6 +46,8 @@ interface DetailedWorkOrder {
   assignedToName: string;
   propertyId: string | null;
   propertyName: string;
+  spaceId: string | null;
+  spaceName: string;
   areaId: string | null;
   areaName: string;
   equipmentId: string | null;
@@ -66,6 +68,7 @@ interface WorkOrderOverview {
   byStatus: { status: string; count: number }[];
   byUrgency: { urgency: string; count: number }[];
   byProperty: { propertyId: string; propertyName: string; count: number }[];
+  bySpace: { spaceId: string; spaceName: string; propertyName: string; count: number }[];
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; count: number; completed: number }[];
   overdueWorkOrders: number;
@@ -90,6 +93,7 @@ export default function WorkOrdersReport() {
     startDate: "",
     endDate: "",
     propertyId: "",
+    spaceId: "",
     areaId: "",
     technicianId: "",
     status: "",
@@ -434,9 +438,9 @@ export default function WorkOrdersReport() {
                   <TableHead className="text-xs">Priority</TableHead>
                   <TableHead className="text-xs">Assigned To</TableHead>
                   <TableHead className="text-xs">Building</TableHead>
-                  <TableHead className="text-xs">Area</TableHead>
-                  <TableHead className="text-xs">Start Date</TableHead>
-                  <TableHead className="text-xs">Due Date</TableHead>
+                  <TableHead className="text-xs hidden md:table-cell">Space</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Start Date</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Due Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -488,13 +492,13 @@ export default function WorkOrdersReport() {
                     </TableCell>
                     <TableCell className="text-sm py-2">{record.assignedToName}</TableCell>
                     <TableCell className="text-sm py-2">{record.propertyName}</TableCell>
-                    <TableCell className="text-sm py-2">{record.areaName}</TableCell>
-                    <TableCell className="text-sm py-2">
+                    <TableCell className="text-sm py-2 hidden md:table-cell">{record.spaceName || "—"}</TableCell>
+                    <TableCell className="text-sm py-2 hidden lg:table-cell">
                       {record.initialDate
                         ? new Date(record.initialDate).toLocaleDateString()
                         : "-"}
                     </TableCell>
-                    <TableCell className="text-sm py-2">
+                    <TableCell className="text-sm py-2 hidden lg:table-cell">
                       {record.estimatedCompletionDate
                         ? new Date(record.estimatedCompletionDate).toLocaleDateString()
                         : "-"}
