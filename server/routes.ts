@@ -2107,7 +2107,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = req.query.category as string;
 
       let equipment;
-      if (spaceId) {
+      if (propertyId && spaceId) {
+        // When both propertyId and spaceId are provided, get equipment for the property
+        // that either has no space assigned OR belongs to the specific space
+        equipment = await storage.getEquipmentByPropertyAndSpace(propertyId, spaceId);
+      } else if (spaceId) {
         equipment = await storage.getEquipmentBySpace(spaceId);
       } else if (propertyId && category) {
         equipment = await storage.getEquipmentByCategory(propertyId, category);

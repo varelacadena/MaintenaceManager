@@ -76,7 +76,7 @@ import {
   type InsertVehicleMaintenanceLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, or, sql, ne } from "drizzle-orm";
+import { eq, and, desc, or, sql, ne, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -244,6 +244,7 @@ export interface IStorage {
   getEquipmentItem(id: string): Promise<Equipment | undefined>;
   getEquipmentByProperty(propertyId: string): Promise<Equipment[]>;
   getEquipmentBySpace(spaceId: string): Promise<Equipment[]>;
+  getEquipmentByPropertyAndSpace(propertyId: string, spaceId: string): Promise<Equipment[]>;
   getEquipmentByCategory(propertyId: string, category: string): Promise<Equipment[]>;
   createEquipment(equipment: InsertEquipment): Promise<Equipment>;
   updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined>;
@@ -1237,6 +1238,19 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(equipment)
       .where(eq(equipment.spaceId, spaceId))
+      .orderBy(equipment.category, equipment.name);
+  }
+
+  async getEquipmentByPropertyAndSpace(propertyId: string, spaceId: string): Promise<Equipment[]> {
+    return await this.db
+      .select()
+      .from(equipment)
+      .where(
+        and(
+          eq(equipment.propertyId, propertyId),
+          or(isNull(equipment.spaceId), eq(equipment.spaceId, spaceId))
+        )
+      )
       .orderBy(equipment.category, equipment.name);
   }
 

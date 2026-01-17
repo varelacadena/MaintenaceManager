@@ -166,7 +166,7 @@ export default function NewTask() {
     queryFn: async () => {
       let url = `/api/equipment?propertyId=${selectedPropertyId}`;
       if (selectedSpaceId) {
-        url = `/api/equipment?spaceId=${selectedSpaceId}`;
+        url += `&spaceId=${selectedSpaceId}`;
       }
       const response = await apiRequest("GET", url);
       return response.json();
