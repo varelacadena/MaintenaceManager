@@ -31,7 +31,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertServiceRequestSchema } from "@shared/schema";
-import type { Area, Subdivision, Property } from "@shared/schema";
+import type { Area, Subdivision, Property, Space } from "@shared/schema";
 import { z } from "zod";
 import { Upload, X, Check, CalendarIcon, Paperclip } from "lucide-react";
 import { format } from "date-fns";
@@ -56,6 +56,7 @@ const formSchema = insertServiceRequestSchema.extend({
   category: z.string().min(1, "Category is required"),
   urgency: z.string().min(1, "Urgency is required"),
   propertyId: z.string().min(1, "Property is required"),
+  spaceId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -64,6 +65,7 @@ export default function NewRequest() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [pendingAttachments, setPendingAttachments] = useState<Array<{
     name: string;
     url: string;
@@ -73,6 +75,20 @@ export default function NewRequest() {
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+  });
+
+  // Get selected property to check if it's a building
+  const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+  const isBuilding = selectedProperty?.type === "building";
+
+  // Fetch spaces for building properties
+  const { data: spaces = [] } = useQuery<Space[]>({
+    queryKey: ["/api/spaces", selectedPropertyId],
+    enabled: isBuilding && !!selectedPropertyId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/spaces?propertyId=${selectedPropertyId}`);
+      return response.json();
+    },
   });
 
   const form = useForm<FormData>({
@@ -88,6 +104,7 @@ export default function NewRequest() {
       subdivisionId: null,
       assignedToId: null,
       onHoldReason: null,
+      spaceId: "",
     },
   });
 
@@ -314,7 +331,11 @@ export default function NewRequest() {
                 <FormItem>
                   <FormLabel>Property</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedPropertyId(value);
+                      form.setValue("spaceId", "");
+                    }}
                     value={field.value || undefined}
                   >
                     <FormControl>
@@ -334,6 +355,37 @@ export default function NewRequest() {
                 </FormItem>
               )}
             />
+
+            {isBuilding && spaces.length > 0 && (
+              <FormField
+                control={form.control}
+                name="spaceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Space (Room/Area)</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-space">
+                          <SelectValue placeholder="Select space (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">All Spaces</SelectItem>
+                        {spaces.map((space) => (
+                          <SelectItem key={space.id} value={space.id}>
+                            {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

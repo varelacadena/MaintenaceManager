@@ -64,6 +64,7 @@ import {
   Building2,
   MapPin,
   Phone,
+  DoorOpen,
   ChevronDown,
   ChevronRight,
   CheckCircle2,
@@ -91,6 +92,7 @@ import type {
   Message,
   Property,
   Equipment,
+  Space,
   TaskChecklistGroup,
   TaskChecklistItem,
 } from "@shared/schema";
@@ -213,6 +215,11 @@ export default function TaskDetail() {
   const { data: equipment } = useQuery<Equipment>({
     queryKey: ["/api/equipment", task?.equipmentId],
     enabled: !!task?.equipmentId,
+  });
+
+  const { data: space } = useQuery<Space>({
+    queryKey: ["/api/spaces", task?.spaceId],
+    enabled: !!task?.spaceId,
   });
 
   type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
@@ -672,9 +679,22 @@ export default function TaskDetail() {
               </Link>
             )}
 
+            {/* Space if present */}
+            {space && (
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-space">
+                <DoorOpen className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{space.name}</p>
+                  {space.floor && (
+                    <p className="text-sm text-muted-foreground">Floor {space.floor}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Equipment if present */}
             {equipment && (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-equipment">
                 <Package className="w-5 h-5 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{equipment.name}</p>

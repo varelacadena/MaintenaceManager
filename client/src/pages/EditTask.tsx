@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema } from "@shared/schema";
-import type { Property, Equipment, User, Vendor, Task } from "@shared/schema";
+import type { Property, Equipment, User, Vendor, Task, Space } from "@shared/schema";
 import { z } from "zod";
 import { ArrowLeft, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,7 +39,8 @@ const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
   propertyId: z.string().min(1, "Please select a property"),
-  equipmentId: z.string().min(1, "Please select equipment"),
+  spaceId: z.string().optional(),
+  equipmentId: z.string().optional(),
   taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
@@ -56,6 +57,7 @@ export default function EditTask() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string>("");
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentType, setAssignmentType] = useState<"technician" | "vendor" | "">("");
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
@@ -69,11 +71,29 @@ export default function EditTask() {
     queryKey: ["/api/properties"],
   });
 
+  // Get selected property to check if it's a building
+  const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+  const isBuilding = selectedProperty?.type === "building";
+
+  // Fetch spaces for building properties
+  const { data: spaces = [] } = useQuery<Space[]>({
+    queryKey: ["/api/spaces", selectedPropertyId],
+    enabled: isBuilding && !!selectedPropertyId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/spaces?propertyId=${selectedPropertyId}`);
+      return response.json();
+    },
+  });
+
   const { data: equipment = [] } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment", selectedPropertyId],
+    queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId],
     enabled: !!selectedPropertyId,
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/equipment?propertyId=${selectedPropertyId}`);
+      let url = `/api/equipment?propertyId=${selectedPropertyId}`;
+      if (selectedSpaceId) {
+        url += `&spaceId=${selectedSpaceId}`;
+      }
+      const response = await apiRequest("GET", url);
       return response.json();
     },
   });
@@ -100,6 +120,7 @@ export default function EditTask() {
       initialDate: new Date().toISOString().split("T")[0],
       estimatedCompletionDate: "",
       propertyId: "",
+      spaceId: "",
       equipmentId: "",
       assignedToId: undefined,
       assignedVendorId: undefined,
@@ -144,6 +165,10 @@ export default function EditTask() {
       if (task.propertyId) {
         form.setValue("propertyId", task.propertyId);
         setSelectedPropertyId(task.propertyId);
+      }
+      if (task.spaceId) {
+        form.setValue("spaceId", task.spaceId);
+        setSelectedSpaceId(task.spaceId);
       }
       if (task.equipmentId) {
         form.setValue("equipmentId", task.equipmentId);
@@ -208,6 +233,7 @@ export default function EditTask() {
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
         propertyId: data.propertyId || undefined,
+        spaceId: data.spaceId || undefined,
         equipmentId: data.equipmentId || undefined,
         assignedToId: data.assignedToId || undefined,
         assignedVendorId: data.assignedVendorId || undefined,
@@ -489,6 +515,8 @@ export default function EditTask() {
                     onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedPropertyId(value);
+                      setSelectedSpaceId("");
+                      form.setValue("spaceId", "");
                       form.setValue("equipmentId", "");
                     }} 
                     value={field.value || ""}
@@ -511,12 +539,47 @@ export default function EditTask() {
               )}
             />
 
+            {isBuilding && spaces.length > 0 && (
+              <FormField
+                control={form.control}
+                name="spaceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Space (Room/Area)</FormLabel>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedSpaceId(value);
+                        form.setValue("equipmentId", "");
+                      }} 
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-space">
+                          <SelectValue placeholder="Select space (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">All Spaces</SelectItem>
+                        {spaces.map((space) => (
+                          <SelectItem key={space.id} value={space.id}>
+                            {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="equipmentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Equipment *</FormLabel>
+                  <FormLabel>Equipment</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || ""}
@@ -524,10 +587,11 @@ export default function EditTask() {
                   >
                     <FormControl>
                       <SelectTrigger data-testid="select-equipment">
-                        <SelectValue placeholder="Select equipment" />
+                        <SelectValue placeholder="Select equipment (optional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="">None</SelectItem>
                       {equipment.map((item) => (
                         <SelectItem key={item.id} value={item.id}>
                           {item.name}
