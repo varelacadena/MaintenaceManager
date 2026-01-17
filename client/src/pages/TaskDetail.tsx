@@ -704,29 +704,27 @@ export default function TaskDetail() {
             )}
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Button
-              variant={activeTimer ? "default" : "outline"}
-              className="h-14 flex-col gap-1"
-              onClick={handleStartOrPause}
-              disabled={startTimerMutation.isPending}
-              data-testid="button-start-pause"
-            >
-              {activeTimer ? (
-                <>
-                  <Pause className="w-5 h-5" />
-                  <span className="text-xs">Pause</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5" />
-                  <span className="text-xs">{task.status === "not_started" ? "Start" : "Resume"}</span>
-                </>
-              )}
-            </Button>
+          {/* Time Logged - Prominent Display for Students */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg" data-testid="time-logged-card">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${activeTimer ? "bg-primary text-primary-foreground animate-pulse" : "bg-muted"}`}>
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Time Logged</p>
+                <p className="text-2xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
+              </div>
+            </div>
+            {activeTimer && (
+              <Badge variant="default" className="animate-pulse">
+                Timer Running
+              </Badge>
+            )}
+          </div>
 
-            {isTechnicianOrAdmin && (
+          {/* Quick Action Buttons - Admin/Technician Only */}
+          {isTechnicianOrAdmin && (
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 variant="outline"
                 className="h-14 flex-col gap-1"
@@ -736,16 +734,15 @@ export default function TaskDetail() {
                 <UserPlus className="w-5 h-5" />
                 <span className="text-xs">{assignedUser ? "Reassign" : "Assign"}</span>
               </Button>
-            )}
 
-            {task.requestId && (
-              <Link href={`/requests/${task.requestId}`}>
-                <Button variant="outline" className="h-14 flex-col gap-1 w-full" data-testid="link-original-request">
-                  <ExternalLink className="w-5 h-5" />
-                  <span className="text-xs">Original Request</span>
-                </Button>
-              </Link>
-            )}
+              {task.requestId && (
+                <Link href={`/requests/${task.requestId}`}>
+                  <Button variant="outline" className="h-14 flex-col gap-1 w-full" data-testid="link-original-request">
+                    <ExternalLink className="w-5 h-5" />
+                    <span className="text-xs">Original Request</span>
+                  </Button>
+                </Link>
+              )}
 
             <Sheet open={isHistorySheetOpen} onOpenChange={setIsHistorySheetOpen}>
               <SheetTrigger asChild>
@@ -786,7 +783,8 @@ export default function TaskDetail() {
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
+            </div>
+          )}
 
           {/* Editable Details Section */}
           <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
