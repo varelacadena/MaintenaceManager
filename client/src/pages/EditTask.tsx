@@ -26,14 +26,29 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertTaskSchema } from "@shared/schema";
+import { insertTaskSchema, insertSpaceSchema } from "@shared/schema";
 import type { Property, Equipment, User, Vendor, Task, Space } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, CalendarIcon } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+
+const spaceFormSchema = insertSpaceSchema.omit({ propertyId: true }).extend({
+  name: z.string().min(1, "Name is required"),
+});
+
+type SpaceFormData = z.infer<typeof spaceFormSchema>;
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
@@ -62,6 +77,7 @@ export default function EditTask() {
   const [assignmentType, setAssignmentType] = useState<"technician" | "vendor" | "">("");
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
+  const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
 
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -136,6 +152,50 @@ export default function EditTask() {
       contactName: "",
       contactEmail: "",
       contactPhone: "",
+    },
+  });
+
+  const spaceForm = useForm<SpaceFormData>({
+    resolver: zodResolver(spaceFormSchema),
+    defaultValues: {
+      name: "",
+      floor: "",
+      description: "",
+    },
+  });
+
+  const createSpaceMutation = useMutation({
+    mutationFn: async (data: SpaceFormData) => {
+      const res = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, propertyId: selectedPropertyId }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (newSpace: Space) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/spaces", selectedPropertyId] });
+      form.setValue("spaceId", newSpace.id);
+      setSelectedSpaceId(newSpace.id);
+      setIsSpaceDialogOpen(false);
+      spaceForm.reset({
+        name: "",
+        floor: "",
+        description: "",
+      });
+      toast({
+        title: "Room/Space Created",
+        description: "The new room/space has been added and selected.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create room/space",
+        variant: "destructive",
+      });
     },
   });
 
@@ -570,17 +630,17 @@ export default function EditTask() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
-                        No rooms/spaces defined for this building yet. 
+                      <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
+                        <span className="text-sm text-muted-foreground">No rooms/spaces defined yet.</span>
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="ml-1 h-auto p-0 text-primary underline"
-                          onClick={() => navigate(`/properties/${selectedPropertyId}`)}
-                          data-testid="button-go-to-property"
+                          onClick={() => setIsSpaceDialogOpen(true)}
+                          data-testid="button-add-space-inline"
                         >
-                          Add spaces in property settings
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Room/Space
                         </Button>
                       </div>
                     )}
@@ -893,6 +953,89 @@ export default function EditTask() {
           </form>
         </Form>
       </Card>
+
+      {/* Space Dialog */}
+      <Dialog open={isSpaceDialogOpen} onOpenChange={setIsSpaceDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Room/Space</DialogTitle>
+            <DialogDescription>
+              Add a new room or space to {selectedProperty?.name || "the building"}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...spaceForm}>
+            <form
+              onSubmit={spaceForm.handleSubmit((data) => createSpaceMutation.mutate(data))}
+              className="space-y-4"
+            >
+              <FormField
+                control={spaceForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., Room 101, Main Bathroom" data-testid="input-new-space-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={spaceForm.control}
+                name="floor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Floor</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ""} placeholder="e.g., 1st Floor, Ground" data-testid="input-new-space-floor" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={spaceForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value || ""}
+                        placeholder="Optional description of this room/space"
+                        data-testid="textarea-new-space-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsSpaceDialogOpen(false)}
+                  data-testid="button-cancel-space"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createSpaceMutation.isPending}
+                  data-testid="button-submit-space"
+                >
+                  {createSpaceMutation.isPending ? "Adding..." : "Add Room/Space"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
