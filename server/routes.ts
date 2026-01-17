@@ -20,6 +20,7 @@ import {
   insertVendorSchema,
   insertInventoryItemSchema,
   insertPropertySchema,
+  insertSpaceSchema,
   insertEquipmentSchema,
   insertVehicleSchema,
   insertVehicleReservationSchema,
@@ -2021,14 +2022,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Space routes (rooms within buildings)
+  app.get("/api/spaces", isAuthenticated, async (req, res) => {
+    try {
+      const propertyId = req.query.propertyId as string;
+      
+      let spacesData;
+      if (propertyId) {
+        spacesData = await storage.getSpacesByProperty(propertyId);
+      } else {
+        spacesData = await storage.getSpaces();
+      }
+      
+      res.json(spacesData);
+    } catch (error) {
+      console.error("Error fetching spaces:", error);
+      res.status(500).json({ message: "Failed to fetch spaces" });
+    }
+  });
+
+  app.get("/api/spaces/:id", isAuthenticated, async (req, res) => {
+    try {
+      const space = await storage.getSpace(req.params.id);
+      if (!space) {
+        return res.status(404).json({ message: "Space not found" });
+      }
+      res.json(space);
+    } catch (error) {
+      console.error("Error fetching space:", error);
+      res.status(500).json({ message: "Failed to fetch space" });
+    }
+  });
+
+  app.post("/api/spaces", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const spaceData = insertSpaceSchema.parse(req.body);
+      
+      // Verify property exists and is a building
+      const property = await storage.getProperty(spaceData.propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      if (property.type !== "building") {
+        return res.status(400).json({ message: "Spaces can only be added to building properties" });
+      }
+      
+      const space = await storage.createSpace(spaceData);
+      res.json(space);
+    } catch (error) {
+      console.error("Error creating space:", error);
+      res.status(500).json({ message: "Failed to create space" });
+    }
+  });
+
+  app.patch("/api/spaces/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const space = await storage.updateSpace(req.params.id, req.body);
+      if (!space) {
+        return res.status(404).json({ message: "Space not found" });
+      }
+      res.json(space);
+    } catch (error) {
+      console.error("Error updating space:", error);
+      res.status(500).json({ message: "Failed to update space" });
+    }
+  });
+
+  app.delete("/api/spaces/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteSpace(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting space:", error);
+      res.status(500).json({ message: "Failed to delete space" });
+    }
+  });
+
   // Equipment routes
   app.get("/api/equipment", isAuthenticated, async (req, res) => {
     try {
       const propertyId = req.query.propertyId as string;
+      const spaceId = req.query.spaceId as string;
       const category = req.query.category as string;
 
       let equipment;
-      if (propertyId && category) {
+      if (spaceId) {
+        equipment = await storage.getEquipmentBySpace(spaceId);
+      } else if (propertyId && category) {
         equipment = await storage.getEquipmentByCategory(propertyId, category);
       } else if (propertyId) {
         equipment = await storage.getEquipmentByProperty(propertyId);

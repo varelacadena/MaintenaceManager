@@ -116,6 +116,7 @@ export const serviceRequests = pgTable("service_requests", {
   status: requestStatusEnum("status").notNull().default("pending"),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
   propertyId: varchar("property_id").references(() => properties.id),
+  spaceId: varchar("space_id").references(() => spaces.id), // For requests in building spaces
   areaId: varchar("area_id").references(() => areas.id),
   subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
   rejectionReason: text("rejection_reason"),
@@ -134,6 +135,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "set null" }),
   propertyId: varchar("property_id").references(() => properties.id),
+  spaceId: varchar("space_id").references(() => spaces.id), // For tasks in building spaces
   equipmentId: varchar("equipment_id").references(() => equipment.id),
   vehicleId: varchar("vehicle_id").references(() => vehicles.id), // For vehicle-related tasks
   name: varchar("name", { length: 200 }).notNull(),
@@ -339,7 +341,26 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type Property = typeof properties.$inferSelect;
 
-// Equipment (linked to properties)
+// Spaces (rooms within buildings - bathrooms, classrooms, offices, etc.)
+export const spaces = pgTable("spaces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  floor: varchar("floor", { length: 50 }), // e.g., "1st Floor", "Basement", "2nd Floor"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSpaceSchema = createInsertSchema(spaces).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSpace = z.infer<typeof insertSpaceSchema>;
+export type Space = typeof spaces.$inferSelect;
+
+// Equipment (linked to spaces for buildings, or directly to properties for flat properties)
 export const equipmentCategoryEnum = pgEnum("equipment_category", [
   "appliances",
   "hvac",
@@ -354,6 +375,7 @@ export const equipmentCategoryEnum = pgEnum("equipment_category", [
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  spaceId: varchar("space_id").references(() => spaces.id, { onDelete: "cascade" }), // Optional - for equipment in building spaces
   category: equipmentCategoryEnum("category").notNull(),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
@@ -435,6 +457,14 @@ export const serviceRequestsRelations = relations(serviceRequests, ({ one, many 
     references: [users.id],
     relationName: "requester",
   }),
+  property: one(properties, {
+    fields: [serviceRequests.propertyId],
+    references: [properties.id],
+  }),
+  space: one(spaces, {
+    fields: [serviceRequests.spaceId],
+    references: [spaces.id],
+  }),
   area: one(areas, {
     fields: [serviceRequests.areaId],
     references: [areas.id],
@@ -456,6 +486,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   property: one(properties, {
     fields: [tasks.propertyId],
     references: [properties.id],
+  }),
+  space: one(spaces, {
+    fields: [tasks.spaceId],
+    references: [spaces.id],
   }),
   equipment: one(equipment, {
     fields: [tasks.equipmentId],
@@ -590,6 +624,16 @@ export const taskChecklistItemsRelations = relations(taskChecklistItems, ({ one 
 }));
 
 export const propertiesRelations = relations(properties, ({ many }) => ({
+  spaces: many(spaces),
+  equipment: many(equipment),
+  tasks: many(tasks),
+}));
+
+export const spacesRelations = relations(spaces, ({ one, many }) => ({
+  property: one(properties, {
+    fields: [spaces.propertyId],
+    references: [properties.id],
+  }),
   equipment: many(equipment),
   tasks: many(tasks),
 }));
@@ -598,6 +642,10 @@ export const equipmentRelations = relations(equipment, ({ one }) => ({
   property: one(properties, {
     fields: [equipment.propertyId],
     references: [properties.id],
+  }),
+  space: one(spaces, {
+    fields: [equipment.spaceId],
+    references: [spaces.id],
   }),
 }));
 

@@ -49,13 +49,14 @@ import {
   FileText,
   Calendar,
   MapPin,
+  DoorOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import PropertyMap from "@/components/PropertyMap";
-import type { Property, Equipment, Task, InsertEquipment, InsertProperty } from "@shared/schema";
-import { insertEquipmentSchema } from "@shared/schema";
+import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace } from "@shared/schema";
+import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -75,6 +76,12 @@ const propertyFormSchema = z.object({
 
 type PropertyFormData = z.infer<typeof propertyFormSchema>;
 
+const spaceFormSchema = insertSpaceSchema.extend({
+  name: z.string().min(1, "Name is required"),
+});
+
+type SpaceFormData = z.infer<typeof spaceFormSchema>;
+
 const categoryIcons: Record<string, any> = {
   appliances: Wrench,
   hvac: Wind,
@@ -93,8 +100,11 @@ export default function PropertyDetail() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditPropertyDialogOpen, setIsEditPropertyDialogOpen] = useState(false);
+  const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
 
   const { data: property, isLoading } = useQuery<Property>({
     queryKey: ["/api/properties", id],
@@ -108,6 +118,18 @@ export default function PropertyDetail() {
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/properties", id, "tasks"],
     enabled: !!id,
+  });
+
+  // Only fetch spaces for building properties
+  const isBuilding = property?.type === "building";
+  
+  const { data: spaces = [] } = useQuery<Space[]>({
+    queryKey: ["/api/spaces", id],
+    enabled: !!id && isBuilding,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/spaces?propertyId=${id}`);
+      return response.json();
+    },
   });
 
   const form = useForm<FormData>({
@@ -130,6 +152,91 @@ export default function PropertyDetail() {
       name: "",
       type: "",
       address: "",
+    },
+  });
+
+  const spaceForm = useForm<SpaceFormData>({
+    resolver: zodResolver(spaceFormSchema),
+    defaultValues: {
+      propertyId: id || "",
+      name: "",
+      description: "",
+      floor: "",
+    },
+  });
+
+  const createSpaceMutation = useMutation({
+    mutationFn: async (data: SpaceFormData) => {
+      const res = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
+      setIsSpaceDialogOpen(false);
+      setEditingSpace(null);
+      spaceForm.reset({ propertyId: id || "" });
+      toast({
+        title: "Success",
+        description: "Room/space added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create room/space",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateSpaceMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertSpace> }) => {
+      return await apiRequest("PATCH", `/api/spaces/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
+      toast({
+        title: "Success",
+        description: "Room/space updated successfully",
+      });
+      setEditingSpace(null);
+      setIsSpaceDialogOpen(false);
+      spaceForm.reset({ propertyId: id || "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update room/space",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteSpaceMutation = useMutation({
+    mutationFn: async (spaceId: string) => {
+      return await apiRequest("DELETE", `/api/spaces/${spaceId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      if (selectedSpaceId) setSelectedSpaceId(null);
+      toast({
+        title: "Success",
+        description: "Room/space deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete room/space",
+        variant: "destructive",
+      });
     },
   });
 
@@ -246,6 +353,34 @@ export default function PropertyDetail() {
     });
   };
 
+  const onSpaceSubmit = (data: SpaceFormData) => {
+    if (editingSpace) {
+      updateSpaceMutation.mutate({
+        id: editingSpace.id,
+        data,
+      });
+    } else {
+      createSpaceMutation.mutate(data);
+    }
+  };
+
+  const handleEditSpace = (space: Space) => {
+    setEditingSpace(space);
+    spaceForm.reset({
+      propertyId: space.propertyId,
+      name: space.name,
+      description: space.description || "",
+      floor: space.floor || "",
+    });
+    setIsSpaceDialogOpen(true);
+  };
+
+  const handleDeleteSpace = (spaceId: string) => {
+    if (confirm("Are you sure you want to delete this room/space? This will also affect any equipment assigned to it.")) {
+      deleteSpaceMutation.mutate(spaceId);
+    }
+  };
+
   const handleEditProperty = () => {
     if (property) {
       propertyForm.reset({
@@ -289,11 +424,16 @@ export default function PropertyDetail() {
     "other",
   ];
 
-  const filteredEquipment = selectedCategory
-    ? equipment.filter((e) => e.category === selectedCategory)
+  // Filter equipment by space first (if building), then by category
+  const spaceFilteredEquipment = selectedSpaceId 
+    ? equipment.filter(e => e.spaceId === selectedSpaceId)
     : equipment;
+  
+  const filteredEquipment = selectedCategory
+    ? spaceFilteredEquipment.filter((e) => e.category === selectedCategory)
+    : spaceFilteredEquipment;
 
-  const groupedEquipment = equipment.reduce((acc, item) => {
+  const groupedEquipment = spaceFilteredEquipment.reduce((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = [];
     }
@@ -399,13 +539,137 @@ export default function PropertyDetail() {
         </Card>
       </div>
 
-      <Tabs defaultValue="equipment" className="flex-1">
+      <Tabs defaultValue={isBuilding ? "spaces" : "equipment"} className="flex-1">
         <TabsList>
+          {isBuilding && (
+            <TabsTrigger value="spaces" data-testid="tab-spaces">
+              <DoorOpen className="w-4 h-4 mr-1" />
+              Rooms ({spaces.length})
+            </TabsTrigger>
+          )}
           <TabsTrigger value="equipment" data-testid="tab-equipment">Equipment</TabsTrigger>
           <TabsTrigger value="work-history" data-testid="tab-work-history">Work History</TabsTrigger>
         </TabsList>
 
+        {/* Spaces Tab for Buildings */}
+        {isBuilding && (
+          <TabsContent value="spaces" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">
+                Manage rooms, offices, bathrooms and other spaces within this building
+              </p>
+              {canEdit && (
+                <Button
+                  onClick={() => {
+                    setEditingSpace(null);
+                    spaceForm.reset({ propertyId: id || "", name: "", description: "", floor: "" });
+                    setIsSpaceDialogOpen(true);
+                  }}
+                  data-testid="button-add-space"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Room/Space
+                </Button>
+              )}
+            </div>
+            
+            {spaces.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <DoorOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No rooms or spaces defined yet</p>
+                  {canEdit && (
+                    <Button
+                      variant="link"
+                      onClick={() => {
+                        setEditingSpace(null);
+                        spaceForm.reset({ propertyId: id || "" });
+                        setIsSpaceDialogOpen(true);
+                      }}
+                      data-testid="button-add-first-space"
+                    >
+                      Add your first room or space
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {spaces.map((space) => (
+                  <Card key={space.id} data-testid={`card-space-${space.id}`} className="hover-elevate cursor-pointer" onClick={() => setSelectedSpaceId(space.id)}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <DoorOpen className="w-5 h-5 text-primary" />
+                          <CardTitle className="text-base">{space.name}</CardTitle>
+                        </div>
+                        {canEdit && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditSpace(space);
+                              }}
+                              data-testid={`button-edit-space-${space.id}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSpace(space.id);
+                              }}
+                              data-testid={`button-delete-space-${space.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {space.floor && (
+                        <Badge variant="outline" className="mb-2">{space.floor}</Badge>
+                      )}
+                      {space.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">{space.description}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {equipment.filter(e => e.spaceId === space.id).length} equipment items
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
+
         <TabsContent value="equipment" className="space-y-4">
+          {/* Space filter for buildings */}
+          {isBuilding && spaces.length > 0 && (
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm text-muted-foreground">Filter by room:</span>
+              <Select value={selectedSpaceId || "__all__"} onValueChange={(v) => setSelectedSpaceId(v === "__all__" ? null : v)}>
+                <SelectTrigger className="w-48" data-testid="select-space-filter">
+                  <SelectValue placeholder="All rooms" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All rooms</SelectItem>
+                  {spaces.map((space) => (
+                    <SelectItem key={space.id} value={space.id}>
+                      {space.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap">
               <Button
@@ -888,6 +1152,91 @@ export default function PropertyDetail() {
                   data-testid="button-submit-equipment"
                 >
                   {editingEquipment ? "Update Equipment" : "Add Equipment"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Space Dialog for Buildings */}
+      <Dialog open={isSpaceDialogOpen} onOpenChange={(open) => {
+        setIsSpaceDialogOpen(open);
+        if (!open) {
+          setEditingSpace(null);
+          spaceForm.reset({ propertyId: id || "" });
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingSpace ? "Edit Room/Space" : "Add Room/Space"}</DialogTitle>
+            <DialogDescription>
+              Add rooms, offices, classrooms, or other spaces within this building.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...spaceForm}>
+            <form onSubmit={spaceForm.handleSubmit(onSpaceSubmit)} className="space-y-4">
+              <FormField
+                control={spaceForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Room 101, Men's Bathroom, Main Office" {...field} data-testid="input-space-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={spaceForm.control}
+                name="floor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Floor</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 1st Floor, Basement, 2nd Floor" {...field} data-testid="input-space-floor" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={spaceForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Optional description of this space" {...field} data-testid="input-space-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsSpaceDialogOpen(false);
+                    setEditingSpace(null);
+                    spaceForm.reset({ propertyId: id || "" });
+                  }}
+                  data-testid="button-cancel-space"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createSpaceMutation.isPending || updateSpaceMutation.isPending}
+                  data-testid="button-submit-space"
+                >
+                  {editingSpace ? "Update" : "Add Space"}
                 </Button>
               </DialogFooter>
             </form>

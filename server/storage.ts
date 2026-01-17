@@ -15,6 +15,7 @@ import {
   taskChecklistGroups,
   taskChecklistItems,
   properties,
+  spaces,
   equipment,
   vehicles,
   vehicleReservations,
@@ -54,6 +55,8 @@ import {
   type InsertTaskChecklistItem,
   type Property,
   type InsertProperty,
+  type Space,
+  type InsertSpace,
   type Equipment,
   type InsertEquipment,
   type Vehicle,
@@ -225,10 +228,19 @@ export interface IStorage {
   deleteProperty(id: string): Promise<void>;
   getTasksByProperty(propertyId: string): Promise<Task[]>;
 
+  // Space operations (rooms within buildings)
+  getSpaces(): Promise<Space[]>;
+  getSpace(id: string): Promise<Space | undefined>;
+  getSpacesByProperty(propertyId: string): Promise<Space[]>;
+  createSpace(space: InsertSpace): Promise<Space>;
+  updateSpace(id: string, data: Partial<InsertSpace>): Promise<Space | undefined>;
+  deleteSpace(id: string): Promise<void>;
+
   // Equipment operations
   getEquipment(): Promise<Equipment[]>;
   getEquipmentItem(id: string): Promise<Equipment | undefined>;
   getEquipmentByProperty(propertyId: string): Promise<Equipment[]>;
+  getEquipmentBySpace(spaceId: string): Promise<Equipment[]>;
   getEquipmentByCategory(propertyId: string, category: string): Promise<Equipment[]>;
   createEquipment(equipment: InsertEquipment): Promise<Equipment>;
   updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined>;
@@ -572,6 +584,7 @@ export class DatabaseStorage implements IStorage {
         id: tasks.id,
         requestId: tasks.requestId,
         propertyId: tasks.propertyId,
+        spaceId: tasks.spaceId,
         equipmentId: tasks.equipmentId,
         vehicleId: tasks.vehicleId,
         name: tasks.name,
@@ -647,6 +660,7 @@ export class DatabaseStorage implements IStorage {
       id: tasks.id,
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
+      spaceId: tasks.spaceId,
       equipmentId: tasks.equipmentId,
       vehicleId: tasks.vehicleId,
       name: tasks.name,
@@ -1120,6 +1134,7 @@ export class DatabaseStorage implements IStorage {
       id: tasks.id,
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
+      spaceId: tasks.spaceId,
       equipmentId: tasks.equipmentId,
       vehicleId: tasks.vehicleId,
       name: tasks.name,
@@ -1153,6 +1168,42 @@ export class DatabaseStorage implements IStorage {
     }).from(tasks).where(eq(tasks.propertyId, propertyId)).orderBy(desc(tasks.initialDate));
   }
 
+  // Space operations (rooms within buildings)
+  async getSpaces(): Promise<Space[]> {
+    return await this.db.select().from(spaces).orderBy(spaces.name);
+  }
+
+  async getSpace(id: string): Promise<Space | undefined> {
+    const [space] = await this.db.select().from(spaces).where(eq(spaces.id, id));
+    return space;
+  }
+
+  async getSpacesByProperty(propertyId: string): Promise<Space[]> {
+    return await this.db
+      .select()
+      .from(spaces)
+      .where(eq(spaces.propertyId, propertyId))
+      .orderBy(spaces.floor, spaces.name);
+  }
+
+  async createSpace(spaceData: InsertSpace): Promise<Space> {
+    const [space] = await this.db.insert(spaces).values(spaceData).returning();
+    return space;
+  }
+
+  async updateSpace(id: string, data: Partial<InsertSpace>): Promise<Space | undefined> {
+    const [space] = await this.db
+      .update(spaces)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(spaces.id, id))
+      .returning();
+    return space;
+  }
+
+  async deleteSpace(id: string): Promise<void> {
+    await this.db.delete(spaces).where(eq(spaces.id, id));
+  }
+
   // Equipment operations
   async getEquipment(): Promise<Equipment[]> {
     return await this.db.select().from(equipment).orderBy(equipment.name);
@@ -1168,6 +1219,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(equipment)
       .where(eq(equipment.propertyId, propertyId))
+      .orderBy(equipment.category, equipment.name);
+  }
+
+  async getEquipmentBySpace(spaceId: string): Promise<Equipment[]> {
+    return await this.db
+      .select()
+      .from(equipment)
+      .where(eq(equipment.spaceId, spaceId))
       .orderBy(equipment.category, equipment.name);
   }
 
