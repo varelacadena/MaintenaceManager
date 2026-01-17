@@ -183,17 +183,17 @@ export default function Vendors() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold" data-testid="text-vendors-title">
+          <h1 className="text-2xl md:text-3xl font-semibold" data-testid="text-vendors-title">
             Vendor Management
           </h1>
-          <p className="text-muted-foreground">Manage vendors and service providers</p>
+          <p className="text-sm md:text-base text-muted-foreground">Manage vendors and service providers</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-vendor">
+            <Button className="w-full sm:w-auto" data-testid="button-create-vendor">
               <Plus className="w-4 h-4 mr-2" />
               Add Vendor
             </Button>
@@ -206,8 +206,8 @@ export default function Vendors() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateVendor} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="name">Vendor Name *</Label>
                   <Input
                     id="name"
@@ -365,8 +365,8 @@ export default function Vendors() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateVendor} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="editName">Vendor Name</Label>
                 <Input
                   id="editName"
@@ -460,10 +460,10 @@ export default function Vendors() {
                 <p className="text-sm text-muted-foreground">Vendor Name</p>
                 <p className="font-medium">{selectedVendor.name}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{selectedVendor.email || "-"}</p>
+                  <p className="font-medium break-all">{selectedVendor.email || "-"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone Number</p>
@@ -482,14 +482,14 @@ export default function Vendors() {
                 <p className="text-sm text-muted-foreground">Notes</p>
                 <p className="font-medium whitespace-pre-wrap">{selectedVendor.notes || "-"}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
                 <div>
                   <p className="text-sm text-muted-foreground">Created</p>
-                  <p className="text-sm">{selectedVendor.createdAt ? new Date(selectedVendor.createdAt).toLocaleString() : "-"}</p>
+                  <p className="text-xs sm:text-sm">{selectedVendor.createdAt ? new Date(selectedVendor.createdAt).toLocaleString() : "-"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Last Updated</p>
-                  <p className="text-sm">{selectedVendor.updatedAt ? new Date(selectedVendor.updatedAt).toLocaleString() : "-"}</p>
+                  <p className="text-xs sm:text-sm">{selectedVendor.updatedAt ? new Date(selectedVendor.updatedAt).toLocaleString() : "-"}</p>
                 </div>
               </div>
             </div>

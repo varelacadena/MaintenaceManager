@@ -331,8 +331,8 @@ export default function NewTask() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 p-6">
-      <div className="flex items-center gap-4">
+    <div className="max-w-3xl mx-auto space-y-4 md:space-y-6 p-4 md:p-6">
+      <div className="flex items-center gap-3 md:gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -342,10 +342,10 @@ export default function NewTask() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
             {requestId ? "Convert Request to Task" : "Create New Task"}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             {requestId
               ? "Review the request details and set up the task"
               : "Create a new maintenance task"}
