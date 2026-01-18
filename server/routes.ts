@@ -29,6 +29,7 @@ import {
   insertVehicleCheckInLogSchema,
   insertVehicleMaintenanceScheduleSchema,
   insertVehicleMaintenanceLogSchema,
+  insertEmergencyContactSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3354,6 +3355,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Export error:", error);
       res.status(500).json({ message: "Export failed" });
+    }
+  });
+
+  // ===================== Emergency Contact Routes =====================
+  
+  // Get all emergency contacts (admin only)
+  app.get("/api/emergency-contacts", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const contacts = await storage.getEmergencyContacts();
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error fetching emergency contacts:", error);
+      res.status(500).json({ message: "Failed to fetch emergency contacts" });
+    }
+  });
+
+  // Get active emergency contact (all authenticated users)
+  app.get("/api/emergency-contacts/active", isAuthenticated, async (req, res) => {
+    try {
+      const contact = await storage.getActiveEmergencyContact();
+      res.json(contact || null);
+    } catch (error) {
+      console.error("Error fetching active emergency contact:", error);
+      res.status(500).json({ message: "Failed to fetch active emergency contact" });
+    }
+  });
+
+  // Get single emergency contact (admin only)
+  app.get("/api/emergency-contacts/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const contact = await storage.getEmergencyContact(req.params.id);
+      if (!contact) {
+        return res.status(404).json({ message: "Emergency contact not found" });
+      }
+      res.json(contact);
+    } catch (error) {
+      console.error("Error fetching emergency contact:", error);
+      res.status(500).json({ message: "Failed to fetch emergency contact" });
+    }
+  });
+
+  // Create emergency contact (admin only)
+  app.post("/api/emergency-contacts", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const validatedData = insertEmergencyContactSchema.parse({
+        ...req.body,
+        assignedById: req.userId,
+      });
+      
+      const contact = await storage.createEmergencyContact(validatedData);
+      res.status(201).json(contact);
+    } catch (error: any) {
+      console.error("Error creating emergency contact:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create emergency contact" });
+    }
+  });
+
+  // Update emergency contact (admin only)
+  app.patch("/api/emergency-contacts/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const contact = await storage.updateEmergencyContact(req.params.id, req.body);
+      if (!contact) {
+        return res.status(404).json({ message: "Emergency contact not found" });
+      }
+      res.json(contact);
+    } catch (error) {
+      console.error("Error updating emergency contact:", error);
+      res.status(500).json({ message: "Failed to update emergency contact" });
+    }
+  });
+
+  // Set a contact as active (admin only)
+  app.post("/api/emergency-contacts/:id/activate", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const contact = await storage.setActiveEmergencyContact(req.params.id);
+      if (!contact) {
+        return res.status(404).json({ message: "Emergency contact not found" });
+      }
+      res.json(contact);
+    } catch (error) {
+      console.error("Error activating emergency contact:", error);
+      res.status(500).json({ message: "Failed to activate emergency contact" });
+    }
+  });
+
+  // Clear active contact (admin only)
+  app.post("/api/emergency-contacts/clear-active", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.clearActiveEmergencyContact();
+      res.json({ message: "Active emergency contact cleared" });
+    } catch (error) {
+      console.error("Error clearing active emergency contact:", error);
+      res.status(500).json({ message: "Failed to clear active emergency contact" });
+    }
+  });
+
+  // Delete emergency contact (admin only)
+  app.delete("/api/emergency-contacts/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteEmergencyContact(req.params.id);
+      res.json({ message: "Emergency contact deleted" });
+    } catch (error) {
+      console.error("Error deleting emergency contact:", error);
+      res.status(500).json({ message: "Failed to delete emergency contact" });
     }
   });
 
