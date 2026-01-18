@@ -39,6 +39,7 @@ import FilterCard from "@/components/dashboard/FilterCard";
 import TaskCard from "@/components/dashboard/TaskCard";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import EmptyState from "@/components/dashboard/EmptyState";
+import EmergencyContactBanner from "@/components/EmergencyContactBanner";
 import { isToday, isPast, parseISO, startOfDay, format, isSameDay } from "date-fns";
 
 type FilterType = "due_today" | "overdue" | "high_priority" | "unassigned" | "completed_today" | "all";
@@ -356,6 +357,8 @@ export default function Dashboard() {
             {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
         </div>
+
+        <EmergencyContactBanner />
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Link href="/new-request">
