@@ -24,6 +24,7 @@ import {
   vehicleCheckInLogs,
   vehicleMaintenanceSchedules,
   vehicleMaintenanceLogs,
+  emergencyContacts,
   type User,
   type UpsertUser,
   type Vendor,
@@ -74,6 +75,8 @@ import {
   type InsertVehicleMaintenanceSchedule,
   type VehicleMaintenanceLog,
   type InsertVehicleMaintenanceLog,
+  type EmergencyContact,
+  type InsertEmergencyContact,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull } from "drizzle-orm";
@@ -306,6 +309,16 @@ export interface IStorage {
   createChecklistTemplate(template: InsertChecklistTemplate): Promise<ChecklistTemplate>;
   updateChecklistTemplate(id: string, data: Partial<InsertChecklistTemplate>): Promise<ChecklistTemplate | undefined>;
   deleteChecklistTemplate(id: string): Promise<void>;
+
+  // Emergency contact operations
+  getEmergencyContacts(): Promise<EmergencyContact[]>;
+  getActiveEmergencyContact(): Promise<EmergencyContact | undefined>;
+  getEmergencyContact(id: string): Promise<EmergencyContact | undefined>;
+  createEmergencyContact(contact: InsertEmergencyContact): Promise<EmergencyContact>;
+  updateEmergencyContact(id: string, data: Partial<InsertEmergencyContact>): Promise<EmergencyContact | undefined>;
+  deleteEmergencyContact(id: string): Promise<void>;
+  setActiveEmergencyContact(id: string): Promise<EmergencyContact | undefined>;
+  clearActiveEmergencyContact(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1662,6 +1675,105 @@ export class DatabaseStorage implements IStorage {
 
   async deleteChecklistTemplate(id: string): Promise<void> {
     await this.db.delete(checklistTemplates).where(eq(checklistTemplates.id, id));
+  }
+
+  // Emergency contact operations
+  async getEmergencyContacts(): Promise<EmergencyContact[]> {
+    return await this.db
+      .select()
+      .from(emergencyContacts)
+      .orderBy(desc(emergencyContacts.createdAt));
+  }
+
+  async getActiveEmergencyContact(): Promise<EmergencyContact | undefined> {
+    const now = new Date();
+    const [contact] = await this.db
+      .select()
+      .from(emergencyContacts)
+      .where(
+        and(
+          eq(emergencyContacts.isActive, true),
+          or(
+            isNull(emergencyContacts.validFrom),
+            sql`${emergencyContacts.validFrom} <= ${now}`
+          ),
+          or(
+            isNull(emergencyContacts.validUntil),
+            sql`${emergencyContacts.validUntil} >= ${now}`
+          )
+        )
+      )
+      .orderBy(desc(emergencyContacts.updatedAt))
+      .limit(1);
+    return contact;
+  }
+
+  async getEmergencyContact(id: string): Promise<EmergencyContact | undefined> {
+    const [contact] = await this.db
+      .select()
+      .from(emergencyContacts)
+      .where(eq(emergencyContacts.id, id));
+    return contact;
+  }
+
+  async createEmergencyContact(contactData: InsertEmergencyContact): Promise<EmergencyContact> {
+    // If this contact is set as active, deactivate all others first
+    if (contactData.isActive) {
+      await this.db
+        .update(emergencyContacts)
+        .set({ isActive: false, updatedAt: new Date() });
+    }
+    
+    const [contact] = await this.db
+      .insert(emergencyContacts)
+      .values(contactData)
+      .returning();
+    return contact;
+  }
+
+  async updateEmergencyContact(
+    id: string,
+    data: Partial<InsertEmergencyContact>
+  ): Promise<EmergencyContact | undefined> {
+    // If setting this contact as active, deactivate all others first
+    if (data.isActive) {
+      await this.db
+        .update(emergencyContacts)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(ne(emergencyContacts.id, id));
+    }
+
+    const [contact] = await this.db
+      .update(emergencyContacts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(emergencyContacts.id, id))
+      .returning();
+    return contact;
+  }
+
+  async deleteEmergencyContact(id: string): Promise<void> {
+    await this.db.delete(emergencyContacts).where(eq(emergencyContacts.id, id));
+  }
+
+  async setActiveEmergencyContact(id: string): Promise<EmergencyContact | undefined> {
+    // Deactivate all contacts first
+    await this.db
+      .update(emergencyContacts)
+      .set({ isActive: false, updatedAt: new Date() });
+    
+    // Then activate the specified contact
+    const [contact] = await this.db
+      .update(emergencyContacts)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(emergencyContacts.id, id))
+      .returning();
+    return contact;
+  }
+
+  async clearActiveEmergencyContact(): Promise<void> {
+    await this.db
+      .update(emergencyContacts)
+      .set({ isActive: false, updatedAt: new Date() });
   }
 }
 
