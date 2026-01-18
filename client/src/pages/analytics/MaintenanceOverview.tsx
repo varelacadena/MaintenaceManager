@@ -106,7 +106,7 @@ const reportCategories = [
   },
   {
     id: "technicians",
-    title: "Technicians",
+    title: "Team",
     description: "Team performance",
     icon: Users,
     href: "/analytics/technicians",

@@ -33,7 +33,7 @@ const reportTabs = [
   },
   {
     id: "technicians" as ReportTab,
-    title: "Technicians",
+    title: "Team",
     description: "Team performance",
     icon: Users,
     color: "bg-purple-100 dark:bg-purple-900/30 text-purple-600",
