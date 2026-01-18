@@ -1,6 +1,6 @@
 import * as React from "react";
-import { format, addDays, addWeeks, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,13 +60,6 @@ export function DateTimePicker({
     }
   };
 
-  const handleQuickSelect = (date: Date) => {
-    setSelectedDate(date);
-    const newDate = new Date(date);
-    newDate.setHours(parseInt(selectedHour), parseInt(selectedMinute), 0, 0);
-    onChange(newDate);
-  };
-
   const handleTimeChange = (hour: string, minute: string) => {
     setSelectedHour(hour);
     setSelectedMinute(minute);
@@ -91,14 +84,6 @@ export function DateTimePicker({
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
   const minutes = ["00", "15", "30", "45"];
 
-  const today = new Date();
-  const quickOptions = [
-    { label: "Today", date: today, display: format(today, "EEE") },
-    { label: "Tomorrow", date: addDays(today, 1), display: format(addDays(today, 1), "EEE") },
-    { label: "Next week", date: addWeeks(today, 1), display: format(addWeeks(today, 1), "EEE") },
-    { label: "In 2 weeks", date: addWeeks(today, 2), display: format(addWeeks(today, 2), "MMM d") },
-  ];
-
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -121,69 +106,42 @@ export function DateTimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 z-[150]" align="start" sideOffset={4}>
-        <div className="flex">
-          {/* Quick select options */}
-          <div className="border-r p-2 min-w-[120px]">
-            <div className="space-y-1">
-              {quickOptions.map((option) => (
-                <button
-                  key={option.label}
-                  type="button"
-                  onClick={() => handleQuickSelect(option.date)}
-                  className={cn(
-                    "w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md hover-elevate",
-                    selectedDate && format(selectedDate, "yyyy-MM-dd") === format(option.date, "yyyy-MM-dd")
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground"
-                  )}
-                >
-                  <span>{option.label}</span>
-                  <span className="text-xs opacity-70">{option.display}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Calendar */}
-          <div className="p-2">
-            <DayPicker
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              disabled={(date) => {
-                const minDay = minDate ? new Date(minDate) : new Date();
-                minDay.setHours(0, 0, 0, 0);
-                return date < minDay;
-              }}
-              showOutsideDays
-              className="mx-auto"
-              classNames={{
-                months: "flex flex-col",
-                month: "space-y-2",
-                caption: "flex justify-center pt-1 relative items-center",
-                caption_label: "text-sm font-medium",
-                nav: "space-x-1 flex items-center",
-                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input",
-                nav_button_previous: "absolute left-1",
-                nav_button_next: "absolute right-1",
-                table: "w-full border-collapse",
-                head_row: "flex",
-                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-xs",
-                row: "flex w-full mt-1",
-                cell: "h-8 w-8 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-                day: "h-8 w-8 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
-                day_range_end: "day-range-end",
-                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "bg-accent text-accent-foreground font-medium",
-                day_outside: "text-muted-foreground/40",
-                day_disabled: "text-muted-foreground/30",
-                day_hidden: "invisible",
-              }}
-            />
-          </div>
+        <div className="p-3">
+          <DayPicker
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            disabled={(date) => {
+              const minDay = minDate ? new Date(minDate) : new Date();
+              minDay.setHours(0, 0, 0, 0);
+              return date < minDay;
+            }}
+            showOutsideDays
+            classNames={{
+              months: "flex flex-col",
+              month: "space-y-3",
+              caption: "flex justify-center pt-1 relative items-center",
+              caption_label: "text-sm font-medium",
+              nav: "space-x-1 flex items-center",
+              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse",
+              head_row: "flex",
+              head_cell: "text-muted-foreground rounded-md w-9 font-normal text-xs",
+              row: "flex w-full mt-2",
+              cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+              day: "h-9 w-9 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
+              day_range_end: "day-range-end",
+              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+              day_today: "bg-accent text-accent-foreground font-medium",
+              day_outside: "text-muted-foreground/40",
+              day_disabled: "text-muted-foreground/30",
+              day_hidden: "invisible",
+            }}
+          />
         </div>
 
-        {/* Time picker footer */}
         <div className="border-t p-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Time:</span>
