@@ -29,7 +29,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, Building2, MapPin, Edit, Trash2 } from "lucide-react";
+import { Plus, Building2, MapPin, Edit, Trash2, ChevronDown, Trees, Car, Gamepad2, Wrench, Route, HelpCircle } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -55,10 +60,43 @@ export default function PropertyMapPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [pendingCoordinates, setPendingCoordinates] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const propertyTypes = [
+    { value: "building", label: "Buildings", icon: Building2 },
+    { value: "lawn", label: "Lawns", icon: Trees },
+    { value: "parking", label: "Parking", icon: Car },
+    { value: "recreation", label: "Recreation", icon: Gamepad2 },
+    { value: "utility", label: "Utilities", icon: Wrench },
+    { value: "road", label: "Roads", icon: Route },
+    { value: "other", label: "Other", icon: HelpCircle },
+  ];
+
+  const toggleSection = (type: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
 
   const { data: properties = [], isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
+
+  const groupedProperties = propertyTypes.reduce((acc, type) => {
+    acc[type.value] = properties.filter(p => p.type === type.value);
+    return acc;
+  }, {} as Record<string, Property[]>);
+
+  const scrollToSection = (type: string) => {
+    const element = document.getElementById(`section-${type}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (collapsedSections[type]) {
+        toggleSection(type);
+      }
+    }
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -221,85 +259,147 @@ export default function PropertyMapPage() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
               <CardTitle className="text-lg">Properties</CardTitle>
               <Badge variant="secondary">{properties.length}</Badge>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {properties.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground col-span-full">
-                      <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No properties yet</p>
-                      {canEdit && editMode && (
-                        <p className="text-xs mt-1">Draw shapes on the map to add properties</p>
-                      )}
-                    </div>
-                  ) : (
-                    properties.map((property) => (
-                      <Card
-                        key={property.id}
-                        className={`cursor-pointer hover-elevate ${
-                          selectedPropertyId === property.id ? "border-primary" : ""
-                        }`}
-                        onClick={() => setSelectedPropertyId(property.id)}
-                        data-testid={`card-property-${property.id}`}
-                      >
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                                <Building2 className="w-5 h-5 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-base mb-1">{property.name}</h4>
-                                <Badge variant="secondary" className="text-xs">
-                                  {property.type}
-                                </Badge>
-                              </div>
-                            </div>
-                            {property.address && (
-                              <p className="text-sm text-muted-foreground">
-                                {property.address}
-                              </p>
-                            )}
-                            <div className="flex gap-2 pt-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/properties/${property.id}`);
-                                }}
-                                data-testid={`button-view-${property.id}`}
-                              >
-                                View
-                              </Button>
-                              {canEdit && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="flex-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePropertyDelete(property.id);
-                                  }}
-                                  data-testid={`button-delete-${property.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
+            <CardContent className="space-y-4">
+              {properties.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No properties yet</p>
+                  {canEdit && editMode && (
+                    <p className="text-xs mt-1">Draw shapes on the map to add properties</p>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2 pb-2 border-b">
+                    {propertyTypes.map((type) => {
+                      const count = groupedProperties[type.value]?.length || 0;
+                      if (count === 0) return null;
+                      const Icon = type.icon;
+                      return (
+                        <Button
+                          key={type.value}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => scrollToSection(type.value)}
+                          className="gap-2"
+                          data-testid={`button-nav-${type.value}`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          {type.label}
+                          <Badge variant="secondary" className="ml-1">{count}</Badge>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {propertyTypes.map((type) => {
+                      const typeProperties = groupedProperties[type.value] || [];
+                      if (typeProperties.length === 0) return null;
+                      const Icon = type.icon;
+                      const isCollapsed = collapsedSections[type.value];
+                      
+                      return (
+                        <Collapsible
+                          key={type.value}
+                          open={!isCollapsed}
+                          onOpenChange={() => toggleSection(type.value)}
+                        >
+                          <div
+                            id={`section-${type.value}`}
+                            className="scroll-mt-4"
+                          >
+                            <CollapsibleTrigger asChild>
+                              <div
+                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 cursor-pointer hover-elevate"
+                                data-testid={`section-header-${type.value}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-primary/10">
+                                    <Icon className="w-5 h-5 text-primary" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-semibold">{type.label}</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      {typeProperties.length} {typeProperties.length === 1 ? 'property' : 'properties'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronDown
+                                  className={`w-5 h-5 text-muted-foreground transition-transform ${
+                                    !isCollapsed ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </div>
+                            </CollapsibleTrigger>
+                            
+                            <CollapsibleContent>
+                              <div className="mt-3 space-y-2">
+                                {typeProperties.map((property) => (
+                                  <div
+                                    key={property.id}
+                                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover-elevate ${
+                                      selectedPropertyId === property.id ? "border-primary bg-primary/5" : ""
+                                    }`}
+                                    onClick={() => setSelectedPropertyId(property.id)}
+                                    data-testid={`card-property-${property.id}`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                      <div className="p-2 rounded-md bg-muted flex-shrink-0">
+                                        <Icon className="w-4 h-4 text-muted-foreground" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <h4 className="font-medium truncate">{property.name}</h4>
+                                        {property.address && (
+                                          <p className="text-sm text-muted-foreground truncate">
+                                            {property.address}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(`/properties/${property.id}`);
+                                        }}
+                                        data-testid={`button-view-${property.id}`}
+                                      >
+                                        View
+                                      </Button>
+                                      {canEdit && (
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handlePropertyDelete(property.id);
+                                          }}
+                                          data-testid={`button-delete-${property.id}`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
           </div>
         </div>
 
