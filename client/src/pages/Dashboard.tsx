@@ -32,6 +32,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import FilterCard from "@/components/dashboard/FilterCard";
@@ -54,8 +55,8 @@ export default function Dashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [startDateTime, setStartDateTime] = useState("");
-  const [endDateTime, setEndDateTime] = useState("");
+  const [startDateTime, setStartDateTime] = useState<Date | undefined>(undefined);
+  const [endDateTime, setEndDateTime] = useState<Date | undefined>(undefined);
   const [passengerCount, setPassengerCount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
@@ -128,8 +129,8 @@ export default function Dashboard() {
         description: "Reservation request submitted successfully",
       });
       setCreateDialogOpen(false);
-      setStartDateTime("");
-      setEndDateTime("");
+      setStartDateTime(undefined);
+      setEndDateTime(undefined);
       setPassengerCount("");
       setPurpose("");
       setNotes("");
@@ -153,11 +154,9 @@ export default function Dashboard() {
       return;
     }
 
-    const start = new Date(startDateTime);
-    const end = new Date(endDateTime);
     const now = new Date();
 
-    if (start < now) {
+    if (startDateTime < now) {
       toast({
         title: "Error",
         description: "Cannot create reservations for past dates",
@@ -166,7 +165,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (end <= start) {
+    if (endDateTime <= startDateTime) {
       toast({
         title: "Error",
         description: "Return time must be after pickup time",
@@ -176,8 +175,8 @@ export default function Dashboard() {
     }
 
     createMutation.mutate({
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString(),
       passengerCount: parseInt(passengerCount),
       purpose,
       notes,
@@ -484,35 +483,33 @@ export default function Dashboard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="startDateTime" className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
+                <Label className="flex items-center gap-2">
                   Pickup Date & Time *
                 </Label>
-                <Input
-                  id="startDateTime"
-                  type="datetime-local"
+                <DateTimePicker
                   value={startDateTime}
-                  onChange={(e) => {
-                    setStartDateTime(e.target.value);
-                    if (!endDateTime || endDateTime < e.target.value) {
-                      setEndDateTime(e.target.value);
+                  onChange={(date) => {
+                    setStartDateTime(date);
+                    if (date && (!endDateTime || endDateTime < date)) {
+                      const defaultEnd = new Date(date);
+                      defaultEnd.setHours(defaultEnd.getHours() + 2);
+                      setEndDateTime(defaultEnd);
                     }
                   }}
-                  min={new Date().toISOString().slice(0, 16)}
+                  minDate={new Date()}
+                  placeholder="Select pickup date and time"
                   data-testid="input-start-datetime"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endDateTime" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
+                <Label className="flex items-center gap-2">
                   Return Date & Time *
                 </Label>
-                <Input
-                  id="endDateTime"
-                  type="datetime-local"
+                <DateTimePicker
                   value={endDateTime}
-                  onChange={(e) => setEndDateTime(e.target.value)}
-                  min={startDateTime || new Date().toISOString().slice(0, 16)}
+                  onChange={setEndDateTime}
+                  minDate={startDateTime || new Date()}
+                  placeholder="Select return date and time"
                   data-testid="input-end-datetime"
                 />
               </div>
