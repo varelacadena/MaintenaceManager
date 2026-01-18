@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Phone, Mail, Plus, Trash2, CheckCircle2, XCircle, UserCog, Edit2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phone, Mail, Plus, Trash2, CheckCircle2, XCircle, UserCog, Edit2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { EmergencyContact } from "@shared/schema";
+import type { EmergencyContact, User } from "@shared/schema";
 
 export default function EmergencyContacts() {
   const { toast } = useToast();
@@ -29,6 +30,29 @@ export default function EmergencyContacts() {
   const { data: contacts = [], isLoading } = useQuery<EmergencyContact[]>({
     queryKey: ["/api/emergency-contacts"],
   });
+
+  const { data: technicians = [] } = useQuery<User[]>({
+    queryKey: ["/api/users", { role: "technician" }],
+    queryFn: async () => {
+      const res = await fetch("/api/users?role=technician");
+      if (!res.ok) throw new Error("Failed to fetch technicians");
+      return res.json();
+    },
+  });
+
+  const handleSelectTechnician = (userId: string) => {
+    if (userId === "manual") {
+      resetForm();
+      return;
+    }
+    const technician = technicians.find((t) => t.id === userId);
+    if (technician) {
+      setName(`${technician.firstName || ""} ${technician.lastName || ""}`.trim() || technician.username || "");
+      setPhone(technician.phoneNumber || "");
+      setEmail(technician.email || "");
+      setRole("Technician");
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<EmergencyContact>) => {
@@ -403,6 +427,36 @@ export default function EmergencyContacts() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {!editingContact && technicians.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="select-technician">Select from Technicians</Label>
+                <Select onValueChange={handleSelectTechnician}>
+                  <SelectTrigger id="select-technician" data-testid="select-technician">
+                    <SelectValue placeholder="Choose a technician or enter manually" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">
+                      <span className="flex items-center gap-2">
+                        <Edit2 className="w-4 h-4" />
+                        Enter manually
+                      </span>
+                    </SelectItem>
+                    {technicians.map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        <span className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          {`${tech.firstName || ""} ${tech.lastName || ""}`.trim() || tech.username}
+                          {tech.phoneNumber && <span className="text-muted-foreground">({tech.phoneNumber})</span>}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select a technician to auto-fill their contact details, or enter manually below.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
