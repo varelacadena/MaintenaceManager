@@ -415,8 +415,8 @@ export default function EmergencyContacts() {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle>
               {editingContact ? "Edit Emergency Contact" : "Add Emergency Contact"}
             </DialogTitle>
@@ -426,7 +426,7 @@ export default function EmergencyContacts() {
                 : "Add a new after-hours emergency contact for staff to reach."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1">
             {!editingContact && technicians.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="select-technician">Select from Technicians</Label>
@@ -510,14 +510,15 @@ export default function EmergencyContacts() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="button-cancel">
+          <DialogFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="button-cancel" className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit} 
               disabled={createMutation.isPending || updateMutation.isPending}
               data-testid="button-save"
+              className="w-full sm:w-auto"
             >
               {(createMutation.isPending || updateMutation.isPending) 
                 ? "Saving..." 
