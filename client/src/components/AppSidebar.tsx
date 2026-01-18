@@ -27,6 +27,7 @@ import {
   Map,
   Car,
   BarChart3,
+  Phone,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -53,6 +54,7 @@ const roleMenus = {
     { title: "Credentials", url: "/credentials", icon: KeyRound },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
+    { title: "Emergency Contacts", url: "/emergency-contacts", icon: Phone },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   technician: [

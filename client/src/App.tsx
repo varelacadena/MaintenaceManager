@@ -39,6 +39,7 @@ import VehicleReservationDetails from "./pages/VehicleReservationDetails";
 import { ScrollToTop } from "./components/ScrollToTop";
 import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
+import EmergencyContacts from "./pages/EmergencyContacts";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -206,6 +207,9 @@ function AuthenticatedApp() {
                 )} />
                 <Route path="/analytics" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><AnalyticsDashboard /></RoleGuard>
+                )} />
+                <Route path="/emergency-contacts" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><EmergencyContacts /></RoleGuard>
                 )} />
                 <Route component={NotFound} />
               </Switch>
