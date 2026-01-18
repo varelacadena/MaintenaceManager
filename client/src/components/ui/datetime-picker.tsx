@@ -97,14 +97,19 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={4} avoidCollisions={true}>
         <div className="p-0">
           <Calendar
             mode="single"
             selected={selectedDate}
             onSelect={handleDateSelect}
-            disabled={(date) => minDate ? date < new Date(minDate.setHours(0, 0, 0, 0)) : date < new Date(new Date().setHours(0, 0, 0, 0))}
+            disabled={(date) => {
+              const minDay = minDate ? new Date(minDate) : new Date();
+              minDay.setHours(0, 0, 0, 0);
+              return date < minDay;
+            }}
             initialFocus
+            className="p-3"
           />
           <div className="border-t p-4 space-y-3">
             <div className="flex items-center gap-2">
