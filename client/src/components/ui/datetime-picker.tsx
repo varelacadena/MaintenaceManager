@@ -103,9 +103,9 @@ export function DateTimePicker({
         side="bottom" 
         sideOffset={4} 
         avoidCollisions={true}
-        collisionPadding={16}
+        collisionPadding={8}
       >
-        <div className="p-0">
+        <div className="p-0 max-h-[400px] overflow-y-auto">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -116,19 +116,19 @@ export function DateTimePicker({
               return date < minDay;
             }}
             initialFocus
-            className="p-3"
+            className="p-2"
           />
-          <div className="border-t p-4 space-y-3">
+          <div className="border-t p-3 space-y-2">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Select Time</span>
+              <span className="text-sm font-medium">Time</span>
             </div>
             <div className="flex items-center gap-2">
               <Select value={selectedHour} onValueChange={(h) => handleTimeChange(h, selectedMinute)}>
-                <SelectTrigger className="w-20" data-testid={testId ? `${testId}-hour` : undefined}>
-                  <SelectValue placeholder="Hour" />
+                <SelectTrigger className="w-16 h-8" data-testid={testId ? `${testId}-hour` : undefined}>
+                  <SelectValue placeholder="Hr" />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
+                <SelectContent className="max-h-48">
                   {hours.map((hour) => (
                     <SelectItem key={hour} value={hour}>
                       {hour}
@@ -136,9 +136,9 @@ export function DateTimePicker({
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-lg font-medium">:</span>
+              <span className="font-medium">:</span>
               <Select value={selectedMinute} onValueChange={(m) => handleTimeChange(selectedHour, m)}>
-                <SelectTrigger className="w-20" data-testid={testId ? `${testId}-minute` : undefined}>
+                <SelectTrigger className="w-16 h-8" data-testid={testId ? `${testId}-minute` : undefined}>
                   <SelectValue placeholder="Min" />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,15 +149,13 @@ export function DateTimePicker({
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground ml-2">
+              <span className="text-xs text-muted-foreground">
                 ({parseInt(selectedHour) >= 12 ? "PM" : "AM"})
               </span>
+              <Button size="sm" onClick={handleConfirm} className="ml-auto" data-testid={testId ? `${testId}-confirm` : undefined}>
+                Done
+              </Button>
             </div>
-          </div>
-          <div className="border-t p-3 flex justify-end">
-            <Button size="sm" onClick={handleConfirm} data-testid={testId ? `${testId}-confirm` : undefined}>
-              Done
-            </Button>
           </div>
         </div>
       </PopoverContent>
