@@ -894,3 +894,34 @@ export const vehicleMaintenanceLogsRelations = relations(vehicleMaintenanceLogs,
 export const vendorsRelations = relations(vendors, ({ many }) => ({
   tasks: many(tasks),
 }));
+
+// Emergency contacts (after-hours contacts assigned by admin for staff view)
+export const emergencyContacts = pgTable("emergency_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 200 }),
+  role: varchar("role", { length: 100 }), // e.g., "On-Call Supervisor"
+  notes: text("notes"), // Instructions like "Call first, text if no answer"
+  isActive: boolean("is_active").notNull().default(true),
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  assignedById: varchar("assigned_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEmergencyContactSchema = createInsertSchema(emergencyContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEmergencyContact = z.infer<typeof insertEmergencyContactSchema>;
+export type EmergencyContact = typeof emergencyContacts.$inferSelect;
+
+export const emergencyContactsRelations = relations(emergencyContacts, ({ one }) => ({
+  assignedBy: one(users, {
+    fields: [emergencyContacts.assignedById],
+    references: [users.id],
+  }),
+}));
