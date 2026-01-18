@@ -25,6 +25,7 @@ export interface AnalyticsFilters {
   equipmentId?: string;
   status?: string;
   urgency?: string;
+  roleType?: "all" | "technician" | "student";
 }
 
 export interface DetailedWorkOrder {
@@ -85,6 +86,7 @@ export interface TechnicianTaskDetail {
 export interface TechnicianPerformance {
   technicianId: string;
   technicianName: string;
+  memberType: "technician" | "student";
   tasksCompleted: number;
   tasksAssigned: number;
   totalHoursLogged: number;
@@ -428,10 +430,34 @@ export class AnalyticsService {
   }
 
   async getTechnicianPerformance(filters: AnalyticsFilters): Promise<TechnicianPerformance[]> {
-    const technicians = await db
-      .select()
-      .from(users)
-      .where(eq(users.role, "technician"));
+    const roleType = filters.roleType || "all";
+    
+    let teamMembers;
+    if (roleType === "technician") {
+      teamMembers = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, "technician"));
+    } else if (roleType === "student") {
+      teamMembers = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, "student"));
+    } else {
+      const technicians = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, "technician"));
+      const students = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, "student"));
+      teamMembers = [...technicians, ...students];
+    }
+    
+    if (filters.technicianId) {
+      teamMembers = teamMembers.filter(m => m.id === filters.technicianId);
+    }
 
     const conditions = this.buildTaskConditions(filters);
     const allTasks = await db
@@ -448,12 +474,12 @@ export class AnalyticsService {
 
     const results: TechnicianPerformance[] = [];
 
-    for (const tech of technicians) {
-      const techTasks = allTasks.filter(t => t.assignedToId === tech.id);
-      const completedTasks = techTasks.filter(t => t.status === "completed");
+    for (const member of teamMembers) {
+      const memberTasks = allTasks.filter(t => t.assignedToId === member.id);
+      const completedTasks = memberTasks.filter(t => t.status === "completed");
 
-      const techTimeEntries = allTimeEntries.filter(te => te.userId === tech.id);
-      const totalMinutes = techTimeEntries.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
+      const memberTimeEntries = allTimeEntries.filter(te => te.userId === member.id);
+      const totalMinutes = memberTimeEntries.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
 
       const completedTasksWithDates = completedTasks.filter(t => t.actualCompletionDate && t.initialDate);
       let avgCompletionTimeHours = 0;
@@ -466,14 +492,14 @@ export class AnalyticsService {
         avgCompletionTimeHours = Math.round((totalMs / completedTasksWithDates.length) / (1000 * 60 * 60));
       }
 
-      const taskDetails: TechnicianTaskDetail[] = techTasks
+      const taskDetails: TechnicianTaskDetail[] = memberTasks
         .sort((a, b) => {
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
         })
         .map(task => {
-          const taskTimeEntries = allTimeEntries.filter(te => te.taskId === task.id && te.userId === tech.id);
+          const taskTimeEntries = allTimeEntries.filter(te => te.taskId === task.id && te.userId === member.id);
           const taskMinutes = taskTimeEntries.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
           return {
             taskId: task.id,
@@ -490,13 +516,14 @@ export class AnalyticsService {
         });
 
       results.push({
-        technicianId: tech.id,
-        technicianName: `${tech.firstName || ""} ${tech.lastName || ""}`.trim() || tech.username,
+        technicianId: member.id,
+        technicianName: `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.username,
+        memberType: member.role === "student" ? "student" : "technician",
         tasksCompleted: completedTasks.length,
-        tasksAssigned: techTasks.length,
+        tasksAssigned: memberTasks.length,
         totalHoursLogged: Math.round(totalMinutes / 60),
         avgCompletionTimeHours,
-        completionRate: techTasks.length > 0 ? Math.round((completedTasks.length / techTasks.length) * 100) : 0,
+        completionRate: memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 0,
         taskDetails,
       });
     }

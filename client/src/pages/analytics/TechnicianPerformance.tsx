@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, CheckCircle2, Clock, Award, TrendingUp, ArrowLeft } from "lucide-react";
+import { Users, CheckCircle2, Clock, Award, TrendingUp, ArrowLeft, GraduationCap, Wrench } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
 import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
 import { TechnicianPerformanceChart } from "@/components/analytics/AnalyticsCharts";
@@ -12,6 +12,9 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+type RoleFilter = "all" | "technician" | "student";
 
 interface TechnicianTaskDetail {
   taskId: string;
@@ -29,6 +32,7 @@ interface TechnicianTaskDetail {
 interface TechnicianData {
   technicianId: string;
   technicianName: string;
+  memberType: "technician" | "student";
   tasksCompleted: number;
   tasksAssigned: number;
   totalHoursLogged: number;
@@ -38,10 +42,12 @@ interface TechnicianData {
 }
 
 export default function TechnicianPerformance() {
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [filters, setFilters] = useState<FilterState>({
     startDate: "",
     endDate: "",
     propertyId: "",
+    spaceId: "",
     areaId: "",
     technicianId: "",
     status: "",
@@ -53,17 +59,42 @@ export default function TechnicianPerformance() {
     Object.entries(filters).forEach(([key, value]) => {
       if (value) params.append(key, value);
     });
+    if (roleFilter) params.append("roleType", roleFilter);
     return params.toString();
   };
 
   const { data = [], isLoading } = useQuery<TechnicianData[]>({
-    queryKey: ["/api/analytics/technicians", filters],
+    queryKey: ["/api/analytics/technicians", filters, roleFilter],
     queryFn: async () => {
       const response = await fetch(`/api/analytics/technicians?${buildQueryString()}`);
       if (!response.ok) throw new Error("Failed to fetch analytics");
       return response.json();
     },
   });
+
+  const getTitle = () => {
+    switch (roleFilter) {
+      case "technician": return "Technician Performance";
+      case "student": return "Student Performance";
+      default: return "Team Performance";
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (roleFilter) {
+      case "technician": return "Technician performance metrics";
+      case "student": return "Student performance metrics";
+      default: return "Combined technician and student performance metrics";
+    }
+  };
+
+  const getMemberLabel = () => {
+    switch (roleFilter) {
+      case "technician": return "Technicians";
+      case "student": return "Students";
+      default: return "Team Members";
+    }
+  };
 
   const handleExport = (format: string) => {
     const queryString = buildQueryString();
@@ -80,7 +111,7 @@ export default function TechnicianPerformance() {
   if (isLoading) {
     return (
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-        <h1 className="text-xl sm:text-2xl font-bold">Technician Performance</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{getTitle()}</h1>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-24 sm:h-32" />
@@ -92,15 +123,39 @@ export default function TechnicianPerformance() {
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-2 sm:gap-4">
-        <Link href="/analytics">
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Technician Performance</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Individual and team performance metrics</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link href="/analytics">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" data-testid="button-back-analytics">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{getTitle()}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">{getSubtitle()}</p>
+          </div>
+        </div>
+        <div className="sm:ml-auto">
+          <ToggleGroup 
+            type="single" 
+            value={roleFilter} 
+            onValueChange={(value) => value && setRoleFilter(value as RoleFilter)}
+            className="justify-start"
+            data-testid="toggle-role-filter"
+          >
+            <ToggleGroupItem value="all" aria-label="Show all" data-testid="toggle-all">
+              <Users className="h-4 w-4 mr-1" />
+              <span className="text-xs sm:text-sm">All</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="technician" aria-label="Show technicians" data-testid="toggle-technicians">
+              <Wrench className="h-4 w-4 mr-1" />
+              <span className="text-xs sm:text-sm">Technicians</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="student" aria-label="Show students" data-testid="toggle-students">
+              <GraduationCap className="h-4 w-4 mr-1" />
+              <span className="text-xs sm:text-sm">Students</span>
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
       </div>
 
@@ -113,7 +168,7 @@ export default function TechnicianPerformance() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
-          title="Technicians"
+          title={getMemberLabel()}
           value={data.length}
           icon={Users}
         />
@@ -153,11 +208,11 @@ export default function TechnicianPerformance() {
         </Card>
       )}
 
-      <TechnicianPerformanceChart data={data} />
+      <TechnicianPerformanceChart data={data} title={`${getTitle()} Chart`} />
 
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Technician Leaderboard</CardTitle>
+          <CardTitle className="text-xs sm:text-sm font-medium">{getMemberLabel()} Leaderboard</CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 pt-0">
           <ScrollArea className="w-full">
@@ -165,7 +220,8 @@ export default function TechnicianPerformance() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs w-8">#</TableHead>
-                  <TableHead className="text-xs">Technician</TableHead>
+                  <TableHead className="text-xs">Name</TableHead>
+                  {roleFilter === "all" && <TableHead className="text-xs hidden sm:table-cell">Type</TableHead>}
                   <TableHead className="text-xs text-right">Done</TableHead>
                   <TableHead className="text-xs text-right hidden sm:table-cell">Assigned</TableHead>
                   <TableHead className="text-xs text-right">Hours</TableHead>
@@ -175,7 +231,7 @@ export default function TechnicianPerformance() {
               </TableHeader>
               <TableBody>
                 {data.map((tech, index) => (
-                  <TableRow key={tech.technicianId}>
+                  <TableRow key={tech.technicianId} data-testid={`row-member-${tech.technicianId}`}>
                     <TableCell className="text-xs py-2">
                       {index < 3 ? (
                         <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs px-1.5 py-0.5">
@@ -186,6 +242,13 @@ export default function TechnicianPerformance() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs sm:text-sm font-medium py-2 max-w-[100px] sm:max-w-none truncate">{tech.technicianName}</TableCell>
+                    {roleFilter === "all" && (
+                      <TableCell className="py-2 hidden sm:table-cell">
+                        <Badge variant={tech.memberType === "student" ? "secondary" : "outline"} className="text-xs">
+                          {tech.memberType === "student" ? "Student" : "Technician"}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell className="text-xs sm:text-sm text-right py-2">{tech.tasksCompleted}</TableCell>
                     <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">{tech.tasksAssigned}</TableCell>
                     <TableCell className="text-xs sm:text-sm text-right py-2">{tech.totalHoursLogged}h</TableCell>
@@ -209,7 +272,7 @@ export default function TechnicianPerformance() {
         <Card>
           <CardHeader className="p-3 sm:p-4 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium">
-              All Task Details by Technician
+              All Task Details by {roleFilter === "student" ? "Student" : roleFilter === "technician" ? "Technician" : "Team Member"}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 pt-0">
@@ -217,7 +280,7 @@ export default function TechnicianPerformance() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Technician</TableHead>
+                    <TableHead className="text-xs">{roleFilter === "student" ? "Student" : roleFilter === "technician" ? "Technician" : "Member"}</TableHead>
                     <TableHead className="text-xs">Task</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
                     <TableHead className="text-xs">Urgency</TableHead>

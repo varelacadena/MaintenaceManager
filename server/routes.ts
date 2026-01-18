@@ -3205,12 +3205,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: req.query.endDate as string | undefined,
         propertyId: req.query.propertyId as string | undefined,
         areaId: req.query.areaId as string | undefined,
+        roleType: req.query.roleType as "all" | "technician" | "student" | undefined,
       };
       const data = await analyticsService.getTechnicianPerformance(filters);
       res.json(data);
     } catch (error) {
-      console.error("Error fetching technician analytics:", error);
-      res.status(500).json({ message: "Failed to fetch technician analytics" });
+      console.error("Error fetching team performance analytics:", error);
+      res.status(500).json({ message: "Failed to fetch team performance analytics" });
     }
   });
 
