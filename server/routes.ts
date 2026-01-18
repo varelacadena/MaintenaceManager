@@ -340,6 +340,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
       }
 
+      // Filter by role if specified
+      const roleFilter = req.query.role as string | undefined;
+      if (roleFilter && ["admin", "technician", "staff", "student"].includes(roleFilter)) {
+        usersWithoutPasswords = usersWithoutPasswords.filter(u => u.role === roleFilter);
+      }
+
       res.json(usersWithoutPasswords);
     } catch (error) {
       console.error("Error fetching users:", error);
