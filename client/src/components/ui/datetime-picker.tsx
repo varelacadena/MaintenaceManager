@@ -97,7 +97,14 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={4} avoidCollisions={true}>
+      <PopoverContent 
+        className="w-auto p-0 !z-[100]" 
+        align="start" 
+        side="bottom" 
+        sideOffset={4} 
+        avoidCollisions={true}
+        collisionPadding={16}
+      >
         <div className="p-0">
           <Calendar
             mode="single"
