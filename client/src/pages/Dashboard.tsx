@@ -54,40 +54,11 @@ export default function Dashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startDateTime, setStartDateTime] = useState("");
+  const [endDateTime, setEndDateTime] = useState("");
   const [passengerCount, setPassengerCount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
-
-  const getTodayDateString = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const isTomorrow = (dateString: string) => {
-    if (!dateString) return false;
-    const selected = new Date(dateString + "T00:00:00");
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    selected.setHours(0, 0, 0, 0);
-    return selected.getTime() === tomorrow.getTime();
-  };
-
-  const getMinTime = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    if (isTomorrow(startDate) && currentHour >= 16) {
-      return "09:00";
-    }
-    return "00:00";
-  };
 
   const { data: requests = [] } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
@@ -157,10 +128,8 @@ export default function Dashboard() {
         description: "Reservation request submitted successfully",
       });
       setCreateDialogOpen(false);
-      setStartDate("");
-      setStartTime("");
-      setEndDate("");
-      setEndTime("");
+      setStartDateTime("");
+      setEndDateTime("");
       setPassengerCount("");
       setPurpose("");
       setNotes("");
@@ -175,7 +144,7 @@ export default function Dashboard() {
   });
 
   const handleCreateReservation = () => {
-    if (!startDate || !startTime || !endDate || !endTime || !passengerCount || !purpose) {
+    if (!startDateTime || !endDateTime || !passengerCount || !purpose) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -184,8 +153,11 @@ export default function Dashboard() {
       return;
     }
 
-    const today = getTodayDateString();
-    if (startDate < today) {
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    const now = new Date();
+
+    if (start < now) {
       toast({
         title: "Error",
         description: "Cannot create reservations for past dates",
@@ -194,30 +166,18 @@ export default function Dashboard() {
       return;
     }
 
-    if (isTomorrow(startDate) && startTime < "09:00") {
+    if (end <= start) {
       toast({
         title: "Error",
-        description: "Reservations for tomorrow must start at or after 9:00 AM",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const startDateTime = new Date(`${startDate}T${startTime}`);
-    const endDateTime = new Date(`${endDate}T${endTime}`);
-
-    if (endDateTime <= startDateTime) {
-      toast({
-        title: "Error",
-        description: "End date/time must be after start date/time",
+        description: "Return time must be after pickup time",
         variant: "destructive",
       });
       return;
     }
 
     createMutation.mutate({
-      startDate: startDateTime.toISOString(),
-      endDate: endDateTime.toISOString(),
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
       passengerCount: parseInt(passengerCount),
       purpose,
       notes,
@@ -500,93 +460,70 @@ export default function Dashboard() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="passengerCount">Number of Passengers *</Label>
-                  <Input
-                    id="passengerCount"
-                    type="number"
-                    min="1"
-                    value={passengerCount}
-                    onChange={(e) => setPassengerCount(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date *</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
-                        setStartTime("09:00");
-                      }
-                    }}
-                    min={getTodayDateString()}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">Start Time *</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    min={getMinTime()}
-                    required
-                  />
-                  {isTomorrow(startDate) && (
-                    <p className="text-xs text-muted-foreground">
-                      Minimum start time for tomorrow: 9:00 AM
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date *</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || getTodayDateString()}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">End Time *</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label htmlFor="purpose">Purpose *</Label>
+                <Label htmlFor="purpose">Trip Purpose *</Label>
                 <Input
                   id="purpose"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="e.g., Trip to Washington"
-                  required
+                  placeholder="e.g., Client meeting in Washington"
+                  data-testid="input-purpose"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Label htmlFor="passengerCount">Number of Passengers *</Label>
+                <Input
+                  id="passengerCount"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={passengerCount}
+                  onChange={(e) => setPassengerCount(e.target.value)}
+                  placeholder="Enter number of passengers"
+                  data-testid="input-passenger-count"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="startDateTime" className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Pickup Date & Time *
+                </Label>
+                <Input
+                  id="startDateTime"
+                  type="datetime-local"
+                  value={startDateTime}
+                  onChange={(e) => {
+                    setStartDateTime(e.target.value);
+                    if (!endDateTime || endDateTime < e.target.value) {
+                      setEndDateTime(e.target.value);
+                    }
+                  }}
+                  min={new Date().toISOString().slice(0, 16)}
+                  data-testid="input-start-datetime"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDateTime" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Return Date & Time *
+                </Label>
+                <Input
+                  id="endDateTime"
+                  type="datetime-local"
+                  value={endDateTime}
+                  onChange={(e) => setEndDateTime(e.target.value)}
+                  min={startDateTime || new Date().toISOString().slice(0, 16)}
+                  data-testid="input-end-datetime"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
                 <Textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any additional information..."
+                  placeholder="Any special requirements or additional information..."
+                  data-testid="input-notes"
                 />
               </div>
             </div>
@@ -1098,88 +1035,70 @@ export default function Dashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="adminPassengerCount">Number of Passengers *</Label>
-                <Input
-                  id="adminPassengerCount"
-                  type="number"
-                  min="1"
-                  value={passengerCount}
-                  onChange={(e) => setPassengerCount(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="adminStartDate">Start Date *</Label>
-                <Input
-                  id="adminStartDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    if (isTomorrow(e.target.value) && startTime && startTime < "09:00") {
-                      setStartTime("09:00");
-                    }
-                  }}
-                  min={getTodayDateString()}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminStartTime">Start Time *</Label>
-                <Input
-                  id="adminStartTime"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  min={getMinTime()}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="adminEndDate">End Date *</Label>
-                <Input
-                  id="adminEndDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || getTodayDateString()}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminEndTime">End Time *</Label>
-                <Input
-                  id="adminEndTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="adminPurpose">Purpose *</Label>
+              <Label htmlFor="adminPurpose">Trip Purpose *</Label>
               <Input
                 id="adminPurpose"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                placeholder="e.g., Trip to Washington"
-                required
+                placeholder="e.g., Client meeting in Washington"
+                data-testid="input-admin-purpose"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="adminNotes">Notes (Optional)</Label>
+              <Label htmlFor="adminPassengerCount">Number of Passengers *</Label>
+              <Input
+                id="adminPassengerCount"
+                type="number"
+                min="1"
+                max="50"
+                value={passengerCount}
+                onChange={(e) => setPassengerCount(e.target.value)}
+                placeholder="Enter number of passengers"
+                data-testid="input-admin-passenger-count"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminStartDateTime" className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Pickup Date & Time *
+              </Label>
+              <Input
+                id="adminStartDateTime"
+                type="datetime-local"
+                value={startDateTime}
+                onChange={(e) => {
+                  setStartDateTime(e.target.value);
+                  if (!endDateTime || endDateTime < e.target.value) {
+                    setEndDateTime(e.target.value);
+                  }
+                }}
+                min={new Date().toISOString().slice(0, 16)}
+                data-testid="input-admin-start-datetime"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminEndDateTime" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Return Date & Time *
+              </Label>
+              <Input
+                id="adminEndDateTime"
+                type="datetime-local"
+                value={endDateTime}
+                onChange={(e) => setEndDateTime(e.target.value)}
+                min={startDateTime || new Date().toISOString().slice(0, 16)}
+                data-testid="input-admin-end-datetime"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminNotes">Additional Notes</Label>
               <Textarea
                 id="adminNotes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any additional information..."
+                placeholder="Any special requirements or additional information..."
+                data-testid="input-admin-notes"
               />
             </div>
           </div>
