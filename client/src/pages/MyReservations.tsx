@@ -227,101 +227,124 @@ export default function MyReservations() {
             <Plus className="h-4 w-4" />
             <span className="whitespace-nowrap">New Reservation</span>
           </Button>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create Reservation</DialogTitle>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="flex items-center gap-2">
+                <Car className="h-5 w-5" />
+                New Vehicle Reservation
+              </DialogTitle>
               <DialogDescription>
-                Reserve a vehicle for your upcoming trip
+                Fill in the details below to request a vehicle
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            
+            <div className="space-y-5 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="purpose" className="text-sm font-medium">
+                  Trip Purpose <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="purpose"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g., Client meeting in Washington"
+                  data-testid="input-purpose"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="passengerCount">Number of Passengers *</Label>
+                  <Label htmlFor="passengerCount" className="text-sm font-medium">
+                    Passengers <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="passengerCount"
                     type="number"
                     min="1"
+                    max="50"
                     value={passengerCount}
                     onChange={(e) => setPassengerCount(e.target.value)}
-                    required
+                    placeholder="1"
+                    data-testid="input-passenger-count"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date *</Label>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Pickup <span className="text-destructive">*</span>
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
                   <Input
                     id="startDate"
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      if (!endDate || endDate < e.target.value) {
+                        setEndDate(e.target.value);
+                      }
+                    }}
+                    min={new Date().toISOString().split('T')[0]}
+                    data-testid="input-start-date"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">Start Time *</Label>
                   <Input
                     id="startTime"
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    required
+                    data-testid="input-start-time"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date *</Label>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Return <span className="text-destructive">*</span>
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
                   <Input
                     id="endDate"
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    required
+                    min={startDate || new Date().toISOString().split('T')[0]}
+                    data-testid="input-end-date"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">End Time *</Label>
                   <Input
                     id="endTime"
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    required
+                    data-testid="input-end-time"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="purpose">Purpose *</Label>
-                <Input
-                  id="purpose"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="e.g., Trip to Washington"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Label htmlFor="notes" className="text-sm font-medium">
+                  Additional Notes
+                </Label>
                 <Textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any additional information..."
+                  placeholder="Any special requirements or additional information..."
+                  className="min-h-[80px] resize-none"
+                  data-testid="input-notes"
                 />
               </div>
             </div>
-            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setCreateDialogOpen(false)}
                 disabled={createMutation.isPending}
+                className="sm:flex-1"
                 data-testid="button-cancel-reservation"
               >
                 Cancel
@@ -330,9 +353,10 @@ export default function MyReservations() {
                 type="button"
                 onClick={handleCreateReservation}
                 disabled={createMutation.isPending}
+                className="sm:flex-1"
                 data-testid="button-create-reservation"
               >
-                {createMutation.isPending ? "Creating..." : "Create Reservation"}
+                {createMutation.isPending ? "Submitting..." : "Submit Request"}
               </Button>
             </DialogFooter>
           </DialogContent>
