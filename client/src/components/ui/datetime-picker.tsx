@@ -105,9 +105,9 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[340px] p-0 z-[150]" align="start" sideOffset={4}>
+      <PopoverContent className="w-auto p-0 z-[150]" align="start" sideOffset={4}>
         {/* Calendar */}
-        <div className="p-3">
+        <div className="p-2">
           <DayPicker
             mode="single"
             selected={selectedDate}
@@ -117,24 +117,23 @@ export function DateTimePicker({
               minDay.setHours(0, 0, 0, 0);
               return date < minDay;
             }}
-            showOutsideDays
+            showOutsideDays={false}
             classNames={{
               months: "flex flex-col",
-              month: "space-y-2",
-              caption: "flex justify-center pt-1 relative items-center",
-              caption_label: "text-sm font-medium",
+              month: "space-y-1",
+              caption: "flex justify-center relative items-center h-7",
+              caption_label: "text-xs font-medium",
               nav: "space-x-1 flex items-center",
-              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input",
-              nav_button_previous: "absolute left-1",
-              nav_button_next: "absolute right-1",
+              nav_button: "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input",
+              nav_button_previous: "absolute left-0",
+              nav_button_next: "absolute right-0",
               table: "w-full border-collapse",
-              head_row: "flex justify-between",
-              head_cell: "text-muted-foreground rounded-md w-10 font-normal text-xs",
-              row: "flex w-full justify-between mt-1",
-              cell: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-              day: "h-10 w-10 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
-              day_range_end: "day-range-end",
-              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+              head_row: "flex",
+              head_cell: "text-muted-foreground w-7 font-normal text-[10px]",
+              row: "flex w-full",
+              cell: "h-7 w-7 text-center text-xs p-0 relative",
+              day: "h-7 w-7 p-0 font-normal rounded hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center text-xs",
+              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
               day_today: "bg-accent text-accent-foreground font-medium",
               day_outside: "text-muted-foreground/40",
               day_disabled: "text-muted-foreground/30",
@@ -144,39 +143,39 @@ export function DateTimePicker({
         </div>
 
         {/* Time picker footer */}
-        <div className="border-t p-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Time:</span>
+        <div className="border-t px-2 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Time:</span>
             <Select value={selectedHour} onValueChange={(h) => handleTimeChange(h, selectedMinute)}>
-              <SelectTrigger className="w-16 h-8" data-testid={testId ? `${testId}-hour` : undefined}>
-                <SelectValue placeholder="Hour" />
+              <SelectTrigger className="w-14 h-7 text-xs" data-testid={testId ? `${testId}-hour` : undefined}>
+                <SelectValue placeholder="Hr" />
               </SelectTrigger>
               <SelectContent className="max-h-48 z-[200]">
                 {hours.map((hour) => (
-                  <SelectItem key={hour} value={hour}>
+                  <SelectItem key={hour} value={hour} className="text-xs">
                     {hour}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-muted-foreground">:</span>
+            <span className="text-xs text-muted-foreground">:</span>
             <Select value={selectedMinute} onValueChange={(m) => handleTimeChange(selectedHour, m)}>
-              <SelectTrigger className="w-16 h-8" data-testid={testId ? `${testId}-minute` : undefined}>
+              <SelectTrigger className="w-14 h-7 text-xs" data-testid={testId ? `${testId}-minute` : undefined}>
                 <SelectValue placeholder="Min" />
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {minutes.map((minute) => (
-                  <SelectItem key={minute} value={minute}>
+                  <SelectItem key={minute} value={minute} className="text-xs">
                     {minute}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {parseInt(selectedHour) >= 12 ? "PM" : "AM"}
             </span>
           </div>
-          <Button size="sm" onClick={handleConfirm} data-testid={testId ? `${testId}-confirm` : undefined}>
+          <Button size="sm" className="h-7 text-xs px-3" onClick={handleConfirm} data-testid={testId ? `${testId}-confirm` : undefined}>
             Done
           </Button>
         </div>
