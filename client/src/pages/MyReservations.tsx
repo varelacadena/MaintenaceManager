@@ -316,10 +316,21 @@ export default function MyReservations() {
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+                disabled={createMutation.isPending}
+                data-testid="button-cancel-reservation"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
                 onClick={handleCreateReservation}
                 disabled={createMutation.isPending}
+                data-testid="button-create-reservation"
               >
                 {createMutation.isPending ? "Creating..." : "Create Reservation"}
               </Button>
