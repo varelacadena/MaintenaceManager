@@ -39,10 +39,8 @@ export default function MyReservations() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startDateTime, setStartDateTime] = useState("");
+  const [endDateTime, setEndDateTime] = useState("");
   const [passengerCount, setPassengerCount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
@@ -83,10 +81,8 @@ export default function MyReservations() {
         description: "Reservation request submitted successfully",
       });
       setCreateDialogOpen(false);
-      setStartDate("");
-      setStartTime("");
-      setEndDate("");
-      setEndTime("");
+      setStartDateTime("");
+      setEndDateTime("");
       setPassengerCount("");
       setPurpose("");
       setNotes("");
@@ -131,7 +127,7 @@ export default function MyReservations() {
   });
 
   const handleCreateReservation = () => {
-    if (!startDate || !startTime || !endDate || !endTime || !passengerCount || !purpose) {
+    if (!startDateTime || !endDateTime || !passengerCount || !purpose) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -140,8 +136,11 @@ export default function MyReservations() {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    if (startDate < today) {
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    const now = new Date();
+
+    if (start < now) {
       toast({
         title: "Error",
         description: "Cannot create reservations for past dates",
@@ -150,21 +149,18 @@ export default function MyReservations() {
       return;
     }
 
-    const startDateTime = new Date(`${startDate}T${startTime}`);
-    const endDateTime = new Date(`${endDate}T${endTime}`);
-
-    if (endDateTime <= startDateTime) {
+    if (end <= start) {
       toast({
         title: "Error",
-        description: "End date/time must be after start date/time",
+        description: "Return time must be after pickup time",
         variant: "destructive",
       });
       return;
     }
 
     createMutation.mutate({
-      startDate: startDateTime.toISOString(),
-      endDate: endDateTime.toISOString(),
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
       passengerCount: parseInt(passengerCount),
       purpose,
       notes,
@@ -252,75 +248,55 @@ export default function MyReservations() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="passengerCount" className="text-sm font-medium">
-                    Passengers <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="passengerCount"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={passengerCount}
-                    onChange={(e) => setPassengerCount(e.target.value)}
-                    placeholder="1"
-                    data-testid="input-passenger-count"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="passengerCount" className="text-sm font-medium">
+                  Number of Passengers <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="passengerCount"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={passengerCount}
+                  onChange={(e) => setPassengerCount(e.target.value)}
+                  placeholder="Enter number of passengers"
+                  data-testid="input-passenger-count"
+                />
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-sm font-medium flex items-center gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDateTime" className="text-sm font-medium flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Pickup <span className="text-destructive">*</span>
+                  Pickup Date & Time <span className="text-destructive">*</span>
                 </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      if (!endDate || endDate < e.target.value) {
-                        setEndDate(e.target.value);
-                      }
-                    }}
-                    min={new Date().toISOString().split('T')[0]}
-                    data-testid="input-start-date"
-                  />
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    data-testid="input-start-time"
-                  />
-                </div>
+                <Input
+                  id="startDateTime"
+                  type="datetime-local"
+                  value={startDateTime}
+                  onChange={(e) => {
+                    setStartDateTime(e.target.value);
+                    if (!endDateTime || endDateTime < e.target.value) {
+                      setEndDateTime(e.target.value);
+                    }
+                  }}
+                  min={new Date().toISOString().slice(0, 16)}
+                  data-testid="input-start-datetime"
+                />
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-sm font-medium flex items-center gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="endDateTime" className="text-sm font-medium flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Return <span className="text-destructive">*</span>
+                  Return Date & Time <span className="text-destructive">*</span>
                 </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || new Date().toISOString().split('T')[0]}
-                    data-testid="input-end-date"
-                  />
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    data-testid="input-end-time"
-                  />
-                </div>
+                <Input
+                  id="endDateTime"
+                  type="datetime-local"
+                  value={endDateTime}
+                  onChange={(e) => setEndDateTime(e.target.value)}
+                  min={startDateTime || new Date().toISOString().slice(0, 16)}
+                  data-testid="input-end-datetime"
+                />
               </div>
 
               <div className="space-y-2">
