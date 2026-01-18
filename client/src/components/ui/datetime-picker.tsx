@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { DayPicker } from "react-day-picker";
 import {
   Select,
   SelectContent,
@@ -71,10 +71,9 @@ export function DateTimePicker({
 
   const formatTimeDisplay = (hour: string) => {
     const h = parseInt(hour);
-    if (h === 0) return "12 AM";
-    if (h === 12) return "12 PM";
-    if (h > 12) return `${h - 12} PM`;
-    return `${h} AM`;
+    if (h === 0) return "12";
+    if (h > 12) return `${h - 12}`;
+    return `${h}`;
   };
 
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
@@ -96,7 +95,7 @@ export function DateTimePicker({
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-4 w-4 shrink-0" />
           {value ? (
-            <span className="truncate">{format(value, "EEE, MMM d, yyyy")} at {formatTimeDisplay(selectedHour)}:{selectedMinute}</span>
+            <span className="truncate">{format(value, "MMM d, yyyy")} at {formatTimeDisplay(selectedHour)}:{selectedMinute} {parseInt(selectedHour) >= 12 ? "PM" : "AM"}</span>
           ) : (
             <span>{placeholder}</span>
           )}
@@ -105,22 +104,22 @@ export function DateTimePicker({
       </Button>
       
       {isOpen && (
-        <div className="border rounded-lg bg-card shadow-lg overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-            <span className="text-sm font-medium">Pick a date & time</span>
+        <div className="border rounded-lg bg-card shadow-md overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+            <span className="text-xs font-medium text-muted-foreground">Select date & time</span>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-6 w-6"
               onClick={() => setIsOpen(false)}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
           
-          <div className="p-4">
-            <Calendar
+          <div className="p-2">
+            <DayPicker
               mode="single"
               selected={selectedDate}
               onSelect={handleDateSelect}
@@ -129,47 +128,68 @@ export function DateTimePicker({
                 minDay.setHours(0, 0, 0, 0);
                 return date < minDay;
               }}
+              showOutsideDays={false}
               className="mx-auto"
+              classNames={{
+                months: "flex flex-col",
+                month: "space-y-2",
+                caption: "flex justify-center pt-1 relative items-center",
+                caption_label: "text-xs font-medium",
+                nav: "space-x-1 flex items-center",
+                nav_button: "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-input",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse",
+                head_row: "flex",
+                head_cell: "text-muted-foreground rounded-md w-7 font-normal text-[10px]",
+                row: "flex w-full mt-1",
+                cell: "h-7 w-7 text-center text-xs p-0 relative focus-within:relative focus-within:z-20",
+                day: "h-7 w-7 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center",
+                day_range_end: "day-range-end",
+                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_today: "bg-accent text-accent-foreground font-medium",
+                day_outside: "text-muted-foreground/40",
+                day_disabled: "text-muted-foreground/30 opacity-50",
+                day_hidden: "invisible",
+              }}
             />
           </div>
           
-          <div className="border-t bg-muted/30 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex items-center gap-2">
-                  <Select value={selectedHour} onValueChange={(h) => handleTimeChange(h, selectedMinute)}>
-                    <SelectTrigger className="w-20 h-9" data-testid={testId ? `${testId}-hour` : undefined}>
-                      <SelectValue placeholder="Hour" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-48 z-[200]">
-                      {hours.map((hour) => (
-                        <SelectItem key={hour} value={hour}>
-                          {formatTimeDisplay(hour).split(" ")[0]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-lg font-medium text-muted-foreground">:</span>
-                  <Select value={selectedMinute} onValueChange={(m) => handleTimeChange(selectedHour, m)}>
-                    <SelectTrigger className="w-20 h-9" data-testid={testId ? `${testId}-minute` : undefined}>
-                      <SelectValue placeholder="Min" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[200]">
-                      {minutes.map((minute) => (
-                        <SelectItem key={minute} value={minute}>
-                          {minute}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {parseInt(selectedHour) >= 12 ? "PM" : "AM"}
-                  </span>
-                </div>
+          <div className="border-t bg-muted/30 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                <Select value={selectedHour} onValueChange={(h) => handleTimeChange(h, selectedMinute)}>
+                  <SelectTrigger className="w-14 h-7 text-xs" data-testid={testId ? `${testId}-hour` : undefined}>
+                    <SelectValue placeholder="Hr" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-40 z-[200]">
+                    {hours.map((hour) => (
+                      <SelectItem key={hour} value={hour} className="text-xs">
+                        {hour}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">:</span>
+                <Select value={selectedMinute} onValueChange={(m) => handleTimeChange(selectedHour, m)}>
+                  <SelectTrigger className="w-14 h-7 text-xs" data-testid={testId ? `${testId}-minute` : undefined}>
+                    <SelectValue placeholder="Min" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    {minutes.map((minute) => (
+                      <SelectItem key={minute} value={minute} className="text-xs">
+                        {minute}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {parseInt(selectedHour) >= 12 ? "PM" : "AM"}
+                </span>
               </div>
-              <Button onClick={handleConfirm} data-testid={testId ? `${testId}-confirm` : undefined}>
-                Confirm
+              <Button size="sm" className="h-7 text-xs px-3" onClick={handleConfirm} data-testid={testId ? `${testId}-confirm` : undefined}>
+                OK
               </Button>
             </div>
           </div>
