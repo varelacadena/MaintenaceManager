@@ -131,6 +131,12 @@ function AuthenticatedApp() {
                   return <Dashboard />;
                 }} />
                 <Route path="/tasks" component={Tasks} />
+                <Route path="/tasks/new" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
+                )} />
+                <Route path="/tasks/:id/edit" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><EditTask /></RoleGuard>
+                )} />
                 <Route path="/tasks/:id" component={TaskDetail} />
                 <Route path="/messages" component={Messages} />
                 <Route path="/settings" component={Settings} />
@@ -147,12 +153,6 @@ function AuthenticatedApp() {
                 )} />
                 <Route path="/calendar" component={() => (
                   <RoleGuard allowedRoles={["admin", "technician"]}><Calendar /></RoleGuard>
-                )} />
-                <Route path="/tasks/new" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
-                )} />
-                <Route path="/tasks/:id/edit" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><EditTask /></RoleGuard>
                 )} />
                 <Route path="/properties" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><PropertyMapPage /></RoleGuard>
