@@ -23,9 +23,11 @@ import {
   User,
   Mail,
   Phone,
-  Calendar,
   Paperclip,
   ExternalLink,
+  CheckCircle,
+  XCircle,
+  ClipboardList,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -74,22 +76,6 @@ export default function RequestDetail() {
       queryClient.invalidateQueries({
         queryKey: ["/api/messages/request", id],
       });
-    },
-  });
-
-  const approveRequestMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      return await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
-        status: "under_review",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
-      toast({ title: "Request approved and moved to under review" });
-    },
-    onError: () => {
-      toast({ title: "Failed to approve request", variant: "destructive" });
     },
   });
 
@@ -169,21 +155,36 @@ export default function RequestDetail() {
   const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
-  const canConvertToTask = isTechnicianOrAdmin &&
-    (request.status === "pending" || request.status === "under_review");
+  // Only pending requests can have actions taken - under_review is deprecated
+  const canTakeAction = isTechnicianOrAdmin && request.status === "pending";
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-blue-500";
+        return "bg-amber-500";
       case "under_review":
-        return "bg-yellow-500";
+        return "bg-blue-500";
       case "converted_to_task":
         return "bg-green-500";
       case "rejected":
         return "bg-red-500";
       default:
         return "bg-gray-500";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Awaiting Review";
+      case "under_review":
+        return "Under Review";
+      case "converted_to_task":
+        return "Approved";
+      case "rejected":
+        return "Rejected";
+      default:
+        return status.replace("_", " ");
     }
   };
 
@@ -248,93 +249,121 @@ export default function RequestDetail() {
           <div className="flex items-center gap-1.5 flex-wrap">
             <Badge
               variant="outline"
-              className={`${getStatusColor(request.status)} text-xs px-2 py-0.5`}
+              className={`${getStatusColor(request.status)} text-white text-xs px-2 py-0.5`}
               data-testid="badge-status"
             >
-              {request.status.replace("_", " ")}
+              {getStatusLabel(request.status)}
             </Badge>
             <Badge
               variant="outline"
               className={`${getUrgencyColor(request.urgency)} text-xs px-2 py-0.5`}
               data-testid="badge-urgency"
             >
-              {request.urgency}
+              {request.urgency} priority
             </Badge>
           </div>
 
-          {isTechnicianOrAdmin && request.status === "pending" && (
-            <div className="flex gap-2 mt-3">
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 hover:bg-green-500/20 h-8 text-xs"
-                onClick={() => approveRequestMutation.mutate(id)}
-                disabled={approveRequestMutation.isPending}
-                data-testid="button-approve-request"
-              >
-                Approve
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20 h-8 text-xs"
-                    data-testid="button-reject-request"
+          {/* Simplified Action Section - Only show when admin/technician can take action */}
+          {canTakeAction && (
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
+              <p className="text-xs font-medium mb-1">Take Action</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Create a maintenance task to approve this request, or reject it with a reason.
+              </p>
+              <div className="flex gap-2">
+                <Link href={`/tasks/new?requestId=${id}`} className="flex-1">
+                  <Button 
+                    size="sm" 
+                    className="w-full gap-2" 
+                    data-testid="button-approve-create-task"
                   >
-                    Reject
+                    <ClipboardList className="h-4 w-4" />
+                    Create Task
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reject Request</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Please provide a reason for rejecting this request.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <Textarea
-                    placeholder="Enter rejection reason..."
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="min-h-[80px]"
-                    data-testid="textarea-rejection-reason"
-                  />
-                  <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                    <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full sm:w-auto">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        if (!rejectionReason.trim()) {
-                          toast({
-                            title: "Please provide a rejection reason",
-                            variant: "destructive"
-                          });
-                          return;
-                        }
-                        rejectRequestMutation.mutate({
-                          requestId: id,
-                          reason: rejectionReason
-                        });
-                        setRejectionReason("");
-                      }}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
-                      data-testid="button-confirm-reject"
+                </Link>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                      data-testid="button-reject-request"
                     >
+                      <XCircle className="h-4 w-4" />
                       Reject
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Please provide a reason for rejecting this request. The requester will be notified.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <Textarea
+                      placeholder="Enter rejection reason..."
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="min-h-[80px]"
+                      data-testid="textarea-rejection-reason"
+                    />
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                      <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full sm:w-auto">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          if (!rejectionReason.trim()) {
+                            toast({
+                              title: "Please provide a rejection reason",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          rejectRequestMutation.mutate({
+                            requestId: id,
+                            reason: rejectionReason
+                          });
+                          setRejectionReason("");
+                        }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+                        data-testid="button-confirm-reject"
+                      >
+                        Reject Request
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           )}
 
-          {isTechnicianOrAdmin && canConvertToTask && (
-            <Link href={`/tasks/new?requestId=${id}`} className="block mt-2">
-              <Button size="sm" className="w-full h-8 text-xs" data-testid="button-convert-to-task">
-                Convert to Task
-              </Button>
-            </Link>
+          {/* Show linked task info when request is converted */}
+          {request.status === "converted_to_task" && (
+            <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                <CheckCircle className="h-4 w-4" />
+                <p className="text-sm font-medium">Request Approved - Task Created</p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This request has been approved and a maintenance task has been created.
+              </p>
+            </div>
+          )}
+
+          {/* Show rejection info */}
+          {request.status === "rejected" && (
+            <div className="mt-4 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+              <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                <XCircle className="h-4 w-4" />
+                <p className="text-sm font-medium">Request Rejected</p>
+              </div>
+              {request.rejectionReason && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Reason: {request.rejectionReason}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -376,15 +405,6 @@ export default function RequestDetail() {
                   </p>
                 </div>
               </div>
-
-              {request.status === "rejected" && request.rejectionReason && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-destructive mb-1">Rejection Reason</p>
-                  <p className="text-xs text-muted-foreground leading-snug" data-testid="text-rejection-reason">
-                    {request.rejectionReason}
-                  </p>
-                </div>
-              )}
 
               {/* Attachments Section */}
               {attachments.length > 0 && (

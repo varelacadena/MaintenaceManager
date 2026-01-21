@@ -483,16 +483,18 @@ export default function NewTask() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
 
       if (requestId) {
-        await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
-          status: "converted_to_task",
-        });
         queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/service-requests", requestId] });
+        toast({
+          title: "Request Approved",
+          description: "Task created successfully. The service request has been marked as approved.",
+        });
+      } else {
+        toast({
+          title: "Task Created",
+          description: "The task has been created successfully.",
+        });
       }
-
-      toast({
-        title: "Task Created",
-        description: "The task has been created successfully.",
-      });
       navigate(`/tasks/${data.id}`);
     },
     onError: (error: any) => {

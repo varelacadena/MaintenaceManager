@@ -32,10 +32,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ServiceRequest } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
-  pending: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  under_review: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
+  pending: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+  under_review: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
   converted_to_task: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
   rejected: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "Awaiting Review",
+  under_review: "Under Review",
+  converted_to_task: "Approved",
+  rejected: "Rejected",
 };
 
 const urgencyColors = {
@@ -228,9 +235,8 @@ export default function Requests() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="under_review">Under Review</SelectItem>
-            <SelectItem value="converted_to_task">Converted to Task</SelectItem>
+            <SelectItem value="pending">Awaiting Review</SelectItem>
+            <SelectItem value="converted_to_task">Approved</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
@@ -311,11 +317,7 @@ export default function Requests() {
                             variant="outline" 
                             className={cn("font-medium border-0", statusColors[request.status])}
                           >
-                            {request.status === 'converted_to_task' ? 'Converted to Task' : 
-                             request.status === 'under_review' ? 'Under Review' : 
-                             request.status === 'pending' ? 'Pending' :
-                             request.status === 'rejected' ? 'Rejected' :
-                             request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            {statusLabels[request.status] || request.status}
                           </Badge>
                         </td>
                         <td className="px-6 py-5">
