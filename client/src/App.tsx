@@ -40,6 +40,7 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
 import EmergencyContacts from "./pages/EmergencyContacts";
+import NotificationsWidget from "./components/NotificationsWidget";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -107,6 +108,7 @@ function AuthenticatedApp() {
                 )}
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
+                <NotificationsWidget />
                 <ThemeToggle />
                 <button
                   onClick={async () => {

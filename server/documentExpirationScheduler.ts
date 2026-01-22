@@ -1,7 +1,8 @@
 import { db } from "./db";
-import { vehicleDocuments, vehicles } from "@shared/schema";
+import { vehicleDocuments, vehicles, notifications } from "@shared/schema";
 import { eq, and, lte, gte, or, isNull } from "drizzle-orm";
 import { log } from "./vite";
+import { storage } from "./storage";
 
 interface ExpiringDocument {
   id: string;
@@ -92,6 +93,17 @@ async function processDocumentExpirationReminders(): Promise<void> {
       const vehicleName = `${doc.vehicle.make} ${doc.vehicle.model} (${doc.vehicle.vehicleId})`;
       
       log(`  - ${docTypeName} for ${vehicleName} expires in ${doc.daysUntilExpiration} days (${new Date(doc.expirationDate).toLocaleDateString()})`);
+      
+      // Create in-app notification (visible to all admins since userId is null)
+      await storage.createNotification({
+        userId: null, // Visible to all users
+        type: "document_expiration",
+        title: `${docTypeName} Expiring Soon`,
+        message: `${docTypeName} for ${vehicleName} expires in ${doc.daysUntilExpiration} days (${new Date(doc.expirationDate).toLocaleDateString()})`,
+        link: `/vehicles/${doc.vehicle.id}`,
+        relatedId: doc.id,
+        relatedType: "vehicle_document",
+      });
       
       await markReminderSent(doc.id);
     }

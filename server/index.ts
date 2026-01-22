@@ -11,6 +11,7 @@ import passport from "passport";
 import { storage } from "./storage";
 import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
 import { startDocumentExpirationScheduler } from "./documentExpirationScheduler";
+import { startTaskReminderScheduler } from "./taskReminderScheduler";
 
 const app = express();
 
@@ -151,6 +152,9 @@ app.use((req, res, next) => {
     
     // Start the document expiration reminder scheduler
     startDocumentExpirationScheduler();
+    
+    // Start the task reminder scheduler
+    startTaskReminderScheduler();
   });
 
   // Graceful shutdown
