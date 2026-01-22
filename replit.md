@@ -47,6 +47,18 @@ The platform supports a hierarchical organization for campus properties:
 - **Service Requests:** Can also target specific spaces within building properties.
 - **Space Management API:** `/api/spaces` endpoint with full CRUD operations, restricted to building-type properties only.
 
+### File Storage Architecture
+
+The platform uses Replit Object Storage for secure file uploads (photos, documents, attachments):
+
+- **Upload Flow:** Files are uploaded via `/api/uploads` endpoint using Uppy library. The server uploads files to Object Storage using the sidecar presigned URL API.
+- **Download Flow:** Files are downloaded via `/api/uploads/:uploadId/download` endpoint which generates fresh signed URLs with 1-hour expiry for secure access.
+- **Access Control:** 
+  - Admins and technicians can access all uploads
+  - Regular users can access uploads they uploaded OR uploads attached to their service requests, tasks, or vehicle logs
+- **Mock File Handling:** Files uploaded before Object Storage was properly configured have mock URLs and display as "Unavailable" - these files cannot be recovered.
+- **Environment Variables:** Requires `DEFAULT_OBJECT_STORAGE_BUCKET_ID` and `PRIVATE_OBJECT_DIR` environment variables.
+
 ## External Dependencies
 
 - **Replit Authentication:** OIDC provider for user identity.
