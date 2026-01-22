@@ -1289,7 +1289,7 @@ export default function NewTask() {
           </Card>
 
           {/* Section 5: Checklists - Optional */}
-          <Card className="p-5">
+          <Card className="p-5 mb-20">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <ListChecks className="h-4 w-4 text-muted-foreground" />
