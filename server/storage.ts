@@ -338,6 +338,7 @@ export interface IStorage {
   // Notification operations
   getNotifications(userId?: string): Promise<Notification[]>;
   getUnreadNotificationCount(userId?: string): Promise<number>;
+  hasNotificationForRelatedItem(relatedId: string, type: string): Promise<boolean>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string): Promise<Notification | undefined>;
   markAllNotificationsRead(userId?: string): Promise<void>;
@@ -1918,6 +1919,20 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result[0]?.count || 0;
+  }
+
+  async hasNotificationForRelatedItem(relatedId: string, type: string): Promise<boolean> {
+    const result = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.relatedId, relatedId),
+          eq(notifications.type, type as any),
+          eq(notifications.isDismissed, false)
+        )
+      );
+    return (result[0]?.count || 0) > 0;
   }
 
   async createNotification(notification: InsertNotification): Promise<Notification> {

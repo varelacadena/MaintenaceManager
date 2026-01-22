@@ -83,12 +83,7 @@ async function getOverdueTasks(): Promise<TaskWithReminder[]> {
 }
 
 async function hasExistingNotification(relatedId: string, type: string): Promise<boolean> {
-  const existingNotifications = await storage.getNotifications();
-  return existingNotifications.some(n => 
-    n.relatedId === relatedId && 
-    n.type === type &&
-    !n.isDismissed
-  );
+  return await storage.hasNotificationForRelatedItem(relatedId, type);
 }
 
 async function processTaskReminders(): Promise<void> {
