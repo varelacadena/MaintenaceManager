@@ -1673,8 +1673,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Otherwise, return the stored URL if it's a valid storage URL
+      // Otherwise, try to extract object path from the stored URL and generate a signed URL
       if (upload.objectUrl.startsWith('https://storage.googleapis.com/')) {
+        try {
+          const { getDownloadUrl, getPrivateDir } = await import("./objectStorage");
+          const privateDir = getPrivateDir();
+          
+          if (privateDir) {
+            // Extract the object path from the URL
+            // URL format: https://storage.googleapis.com/bucket-name/.private/uploads/filename
+            const url = new URL(upload.objectUrl);
+            const fullPath = url.pathname; // e.g., /bucket-name/.private/uploads/filename
+            
+            // Find the uploads portion of the path
+            const uploadsMatch = fullPath.match(/\/uploads\/(.+)$/);
+            if (uploadsMatch) {
+              const objectPath = `uploads/${uploadsMatch[1]}`;
+              const downloadUrl = await getDownloadUrl(objectPath);
+              return res.json({ downloadUrl, fileName: upload.fileName });
+            }
+          }
+        } catch (error) {
+          console.error("Error generating signed URL from objectUrl:", error);
+        }
+        
+        // Only return raw URL as last resort (this will likely fail for private files)
         return res.json({ downloadUrl: upload.objectUrl, fileName: upload.fileName });
       }
 
