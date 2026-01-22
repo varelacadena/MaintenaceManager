@@ -525,7 +525,7 @@ export default function NewTask() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 md:p-6 pb-24">
+    <div className="max-w-2xl mx-auto p-4 md:p-6 pb-40">
       <div className="flex items-center gap-3 mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
@@ -1289,7 +1289,7 @@ export default function NewTask() {
           </Card>
 
           {/* Section 5: Checklists - Optional */}
-          <Card className="p-5 mb-20">
+          <Card className="p-5 mb-8">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <ListChecks className="h-4 w-4 text-muted-foreground" />
@@ -1428,9 +1428,12 @@ export default function NewTask() {
             )}
           </Card>
 
+          {/* Spacer for fixed footer */}
+          <div className="h-24" aria-hidden="true" />
+
           {/* Sticky Footer */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t">
-            <div className="max-w-2xl mx-auto flex gap-3">
+          <div className="fixed bottom-0 inset-x-0 p-4 bg-background/95 backdrop-blur border-t z-10 md:left-[var(--sidebar-width)]">
+            <div className="max-w-2xl mx-auto flex gap-3 md:ml-0">
               <Button
                 type="button"
                 variant="outline"
