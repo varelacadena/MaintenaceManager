@@ -10,6 +10,7 @@ import { seedDatabase } from "./seed";
 import passport from "passport";
 import { storage } from "./storage";
 import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
+import { startDocumentExpirationScheduler } from "./documentExpirationScheduler";
 
 const app = express();
 
@@ -147,6 +148,9 @@ app.use((req, res, next) => {
     
     // Start the recurring task scheduler
     startRecurringTaskScheduler();
+    
+    // Start the document expiration reminder scheduler
+    startDocumentExpirationScheduler();
   });
 
   // Graceful shutdown

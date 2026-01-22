@@ -822,6 +822,41 @@ export const insertVehicleMaintenanceScheduleSchema = createInsertSchema(vehicle
 export type InsertVehicleMaintenanceSchedule = z.infer<typeof insertVehicleMaintenanceScheduleSchema>;
 export type VehicleMaintenanceSchedule = typeof vehicleMaintenanceSchedules.$inferSelect;
 
+// Vehicle document types enum
+export const vehicleDocumentTypeEnum = pgEnum("vehicle_document_type", [
+  "insurance",
+  "annual_inspection",
+  "registration",
+  "other"
+]);
+
+// Vehicle documents table (for tracking expiration dates)
+export const vehicleDocuments = pgTable("vehicle_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  documentType: vehicleDocumentTypeEnum("document_type").notNull(),
+  documentName: varchar("document_name", { length: 200 }),
+  expirationDate: timestamp("expiration_date").notNull(),
+  notes: text("notes"),
+  reminderSent: boolean("reminder_sent").default(false),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_vehicle_documents_vehicle").on(table.vehicleId),
+  index("idx_vehicle_documents_expiration").on(table.expirationDate),
+]);
+
+export const insertVehicleDocumentSchema = createInsertSchema(vehicleDocuments).omit({
+  id: true,
+  reminderSent: true,
+  reminderSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertVehicleDocument = z.infer<typeof insertVehicleDocumentSchema>;
+export type VehicleDocument = typeof vehicleDocuments.$inferSelect;
+
 // Vehicle relations
 export const vehiclesRelations = relations(vehicles, ({ many }) => ({
   reservations: many(vehicleReservations),
@@ -829,7 +864,15 @@ export const vehiclesRelations = relations(vehicles, ({ many }) => ({
   checkInLogs: many(vehicleCheckInLogs),
   maintenanceSchedules: many(vehicleMaintenanceSchedules),
   maintenanceLogs: many(vehicleMaintenanceLogs),
+  documents: many(vehicleDocuments),
   tasks: many(tasks),
+}));
+
+export const vehicleDocumentsRelations = relations(vehicleDocuments, ({ one }) => ({
+  vehicle: one(vehicles, {
+    fields: [vehicleDocuments.vehicleId],
+    references: [vehicles.id],
+  }),
 }));
 
 export const vehicleReservationsRelations = relations(vehicleReservations, ({ one, many }) => ({

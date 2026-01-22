@@ -29,6 +29,7 @@ import {
   insertVehicleCheckInLogSchema,
   insertVehicleMaintenanceScheduleSchema,
   insertVehicleMaintenanceLogSchema,
+  insertVehicleDocumentSchema,
   insertEmergencyContactSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -3226,6 +3227,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting vehicle maintenance schedule:", error);
       res.status(500).json({ message: "Failed to delete vehicle maintenance schedule" });
+    }
+  });
+
+  // Vehicle Documents (Insurance, Registration, Inspection, etc.)
+  app.get("/api/vehicles/:id/documents", isAuthenticated, async (req, res) => {
+    try {
+      const documents = await storage.getVehicleDocuments(req.params.id);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching vehicle documents:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle documents" });
+    }
+  });
+
+  app.get("/api/vehicle-documents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const document = await storage.getVehicleDocument(req.params.id);
+      if (!document) {
+        return res.status(404).json({ message: "Vehicle document not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      console.error("Error fetching vehicle document:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle document" });
+    }
+  });
+
+  app.post("/api/vehicles/:id/documents", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const documentData = insertVehicleDocumentSchema.parse({
+        ...req.body,
+        vehicleId: req.params.id,
+        expirationDate: new Date(req.body.expirationDate),
+      });
+      const document = await storage.createVehicleDocument(documentData);
+      res.json(document);
+    } catch (error) {
+      console.error("Error creating vehicle document:", error);
+      res.status(500).json({ message: "Failed to create vehicle document" });
+    }
+  });
+
+  app.patch("/api/vehicle-documents/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const updateData = { ...req.body };
+      if (updateData.expirationDate) {
+        updateData.expirationDate = new Date(updateData.expirationDate);
+      }
+      const document = await storage.updateVehicleDocument(req.params.id, updateData);
+      if (!document) {
+        return res.status(404).json({ message: "Vehicle document not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      console.error("Error updating vehicle document:", error);
+      res.status(500).json({ message: "Failed to update vehicle document" });
+    }
+  });
+
+  app.delete("/api/vehicle-documents/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteVehicleDocument(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle document:", error);
+      res.status(500).json({ message: "Failed to delete vehicle document" });
+    }
+  });
+
+  // Get documents expiring within specified days (for reminders)
+  app.get("/api/vehicle-documents/expiring/:days", isAuthenticated, async (req, res) => {
+    try {
+      const days = parseInt(req.params.days) || 30;
+      const expiringDocuments = await storage.getExpiringDocuments(days);
+      res.json(expiringDocuments);
+    } catch (error) {
+      console.error("Error fetching expiring documents:", error);
+      res.status(500).json({ message: "Failed to fetch expiring documents" });
+    }
+  });
+
+  // Mark document reminder as sent
+  app.post("/api/vehicle-documents/:id/mark-reminder-sent", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const document = await storage.markDocumentReminderSent(req.params.id);
+      if (!document) {
+        return res.status(404).json({ message: "Vehicle document not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      console.error("Error marking document reminder as sent:", error);
+      res.status(500).json({ message: "Failed to mark document reminder as sent" });
     }
   });
 

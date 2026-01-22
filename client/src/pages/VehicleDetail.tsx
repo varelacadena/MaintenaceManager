@@ -1,12 +1,12 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus } from "lucide-react";
+import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User, VehicleMaintenanceLog } from "@shared/schema";
+import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User, VehicleMaintenanceLog, VehicleDocument } from "@shared/schema";
 import { format } from "date-fns";
 import { Image, FileText, CheckCircle, XCircle, AlertTriangle, User as UserIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -321,6 +321,10 @@ export default function VehicleDetail() {
     queryKey: [`/api/vehicles/${id}/maintenance-logs`],
   });
 
+  const { data: vehicleDocuments } = useQuery<VehicleDocument[]>({
+    queryKey: [`/api/vehicles/${id}/documents`],
+  });
+
   const { data: users } = useQuery<User[]>({
     queryKey: ['/api/users'],
   });
@@ -351,6 +355,45 @@ export default function VehicleDetail() {
     },
     onError: () => {
       toast({ title: "Failed to add maintenance log", variant: "destructive" });
+    },
+  });
+
+  const addDocumentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", `/api/vehicles/${id}/documents`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}/documents`] });
+      toast({ title: "Document added successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add document", variant: "destructive" });
+    },
+  });
+
+  const updateDocumentMutation = useMutation({
+    mutationFn: async ({ docId, data }: { docId: string; data: any }) => {
+      return await apiRequest("PATCH", `/api/vehicle-documents/${docId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}/documents`] });
+      toast({ title: "Document updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update document", variant: "destructive" });
+    },
+  });
+
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      return await apiRequest("DELETE", `/api/vehicle-documents/${docId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}/documents`] });
+      toast({ title: "Document deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete document", variant: "destructive" });
     },
   });
 
@@ -418,7 +461,7 @@ export default function VehicleDetail() {
                   <AlertDialogCancel className="w-full sm:w-auto mt-0">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => deleteVehicleMutation.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+                    className="bg-destructive text-destructive-foreground w-full sm:w-auto"
                     data-testid="button-confirm-delete-vehicle"
                   >
                     Delete
@@ -431,8 +474,9 @@ export default function VehicleDetail() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs sm:text-sm">Documents</TabsTrigger>
           <TabsTrigger value="reservations" className="text-xs sm:text-sm">Reservations</TabsTrigger>
           <TabsTrigger value="logbook" className="text-xs sm:text-sm">Logbook</TabsTrigger>
           <TabsTrigger value="maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
@@ -523,6 +567,214 @@ export default function VehicleDetail() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-4">
+          {canManageVehicles && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base sm:text-lg">Add Document</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const data = {
+                      documentType: formData.get("documentType"),
+                      documentName: formData.get("documentName") || null,
+                      expirationDate: formData.get("expirationDate"),
+                      notes: formData.get("notes") || null,
+                    };
+                    addDocumentMutation.mutate(data);
+                    (e.target as HTMLFormElement).reset();
+                  }}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Document Type</label>
+                      <select name="documentType" required className="w-full border rounded p-2 text-sm bg-background" data-testid="select-document-type">
+                        <option value="">Select type...</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="annual_inspection">Annual Inspection</option>
+                        <option value="registration">Registration</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Document Name (optional)</label>
+                      <input name="documentName" className="w-full border rounded p-2 text-sm" placeholder="e.g., State Farm Policy" data-testid="input-document-name" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Expiration Date</label>
+                      <input name="expirationDate" type="date" required className="w-full border rounded p-2 text-sm" data-testid="input-expiration-date" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Notes (optional)</label>
+                      <input name="notes" className="w-full border rounded p-2 text-sm" placeholder="Additional details..." data-testid="input-document-notes" />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={addDocumentMutation.isPending} className="w-full sm:w-auto" data-testid="button-add-document">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Document
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="space-y-4">
+            <h3 className="text-base sm:text-lg font-semibold">Document Expiration Dates</h3>
+            {vehicleDocuments && vehicleDocuments.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {vehicleDocuments.map((doc) => {
+                  const expirationDate = new Date(doc.expirationDate);
+                  const now = new Date();
+                  const daysUntilExpiration = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  const isExpiringSoon = daysUntilExpiration <= 30 && daysUntilExpiration > 0;
+                  const isExpired = daysUntilExpiration <= 0;
+
+                  const documentTypeLabels: Record<string, string> = {
+                    insurance: "Insurance",
+                    annual_inspection: "Annual Inspection",
+                    registration: "Registration",
+                    other: "Other",
+                  };
+
+                  return (
+                    <Card key={doc.id} className={isExpired ? "border-destructive" : isExpiringSoon ? "border-yellow-500" : ""} data-testid={`card-document-${doc.id}`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex items-center gap-2">
+                            <FileCheck className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-sm sm:text-base">
+                              {documentTypeLabels[doc.documentType] || doc.documentType}
+                            </CardTitle>
+                          </div>
+                          {isExpired ? (
+                            <Badge variant="destructive" className="text-xs">Expired</Badge>
+                          ) : isExpiringSoon ? (
+                            <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                              <AlertTriangleIcon className="w-3 h-3 mr-1" />
+                              {daysUntilExpiration} days
+                            </Badge>
+                          ) : (
+                            <Badge variant="default" className="text-xs">{daysUntilExpiration} days</Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {doc.documentName && (
+                          <p className="text-muted-foreground">{doc.documentName}</p>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Expires:</span>
+                          <span className={isExpired ? "text-destructive font-medium" : isExpiringSoon ? "text-yellow-600 font-medium" : ""}>
+                            {format(expirationDate, "MMM d, yyyy")}
+                          </span>
+                        </div>
+                        {doc.notes && (
+                          <p className="text-xs text-muted-foreground italic">{doc.notes}</p>
+                        )}
+                        {canManageVehicles && (
+                          <div className="flex gap-2 pt-2">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" data-testid={`button-edit-document-${doc.id}`}>
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Edit
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="max-w-md">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Edit Document</AlertDialogTitle>
+                                </AlertDialogHeader>
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    updateDocumentMutation.mutate({
+                                      docId: doc.id,
+                                      data: {
+                                        documentName: formData.get("documentName") || null,
+                                        expirationDate: formData.get("expirationDate"),
+                                        notes: formData.get("notes") || null,
+                                      },
+                                    });
+                                  }}
+                                  className="space-y-4"
+                                >
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Document Name</label>
+                                    <input name="documentName" defaultValue={doc.documentName || ""} className="w-full border rounded p-2 text-sm" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Expiration Date</label>
+                                    <input
+                                      name="expirationDate"
+                                      type="date"
+                                      defaultValue={format(expirationDate, "yyyy-MM-dd")}
+                                      required
+                                      className="w-full border rounded p-2 text-sm"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Notes</label>
+                                    <input name="notes" defaultValue={doc.notes || ""} className="w-full border rounded p-2 text-sm" />
+                                  </div>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <Button type="submit" disabled={updateDocumentMutation.isPending}>
+                                      Save Changes
+                                    </Button>
+                                  </AlertDialogFooter>
+                                </form>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" data-testid={`button-delete-document-${doc.id}`}>
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this document record.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteDocumentMutation.mutate(doc.id)}
+                                    className="bg-destructive text-destructive-foreground"
+                                    data-testid={`button-confirm-delete-document-${doc.id}`}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <FileCheck className="h-10 w-10 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No documents tracked yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add insurance, registration, and inspection expiration dates</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 

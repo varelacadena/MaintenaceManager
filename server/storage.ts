@@ -24,6 +24,7 @@ import {
   vehicleCheckInLogs,
   vehicleMaintenanceSchedules,
   vehicleMaintenanceLogs,
+  vehicleDocuments,
   emergencyContacts,
   type User,
   type UpsertUser,
@@ -75,11 +76,13 @@ import {
   type InsertVehicleMaintenanceSchedule,
   type VehicleMaintenanceLog,
   type InsertVehicleMaintenanceLog,
+  type VehicleDocument,
+  type InsertVehicleDocument,
   type EmergencyContact,
   type InsertEmergencyContact,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, or, sql, ne, isNull } from "drizzle-orm";
+import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -302,6 +305,15 @@ export interface IStorage {
   getVehicleMaintenanceLogs(vehicleId: string): Promise<VehicleMaintenanceLog[]>;
   createVehicleMaintenanceLog(log: InsertVehicleMaintenanceLog): Promise<VehicleMaintenanceLog>;
   deleteVehicleMaintenanceLog(id: string): Promise<void>;
+
+  // Vehicle document operations
+  getVehicleDocuments(vehicleId: string): Promise<VehicleDocument[]>;
+  getVehicleDocument(id: string): Promise<VehicleDocument | undefined>;
+  createVehicleDocument(document: InsertVehicleDocument): Promise<VehicleDocument>;
+  updateVehicleDocument(id: string, data: Partial<InsertVehicleDocument>): Promise<VehicleDocument | undefined>;
+  deleteVehicleDocument(id: string): Promise<void>;
+  getExpiringDocuments(daysAhead: number): Promise<(VehicleDocument & { vehicle: { id: string; vehicleId: string; make: string; model: string } })[]>;
+  markDocumentReminderSent(id: string): Promise<VehicleDocument | undefined>;
 
   // Checklist template operations
   getChecklistTemplates(): Promise<ChecklistTemplate[]>;
@@ -1635,6 +1647,91 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVehicleMaintenanceLog(id: string): Promise<void> {
     await this.db.delete(vehicleMaintenanceLogs).where(eq(vehicleMaintenanceLogs.id, id));
+  }
+
+  // Vehicle document operations
+  async getVehicleDocuments(vehicleId: string): Promise<VehicleDocument[]> {
+    return await this.db
+      .select()
+      .from(vehicleDocuments)
+      .where(eq(vehicleDocuments.vehicleId, vehicleId))
+      .orderBy(vehicleDocuments.expirationDate);
+  }
+
+  async getVehicleDocument(id: string): Promise<VehicleDocument | undefined> {
+    const [document] = await this.db
+      .select()
+      .from(vehicleDocuments)
+      .where(eq(vehicleDocuments.id, id));
+    return document;
+  }
+
+  async createVehicleDocument(documentData: InsertVehicleDocument): Promise<VehicleDocument> {
+    const [document] = await this.db
+      .insert(vehicleDocuments)
+      .values(documentData)
+      .returning();
+    return document;
+  }
+
+  async updateVehicleDocument(id: string, data: Partial<InsertVehicleDocument>): Promise<VehicleDocument | undefined> {
+    const [document] = await this.db
+      .update(vehicleDocuments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(vehicleDocuments.id, id))
+      .returning();
+    return document;
+  }
+
+  async deleteVehicleDocument(id: string): Promise<void> {
+    await this.db.delete(vehicleDocuments).where(eq(vehicleDocuments.id, id));
+  }
+
+  async getExpiringDocuments(daysAhead: number): Promise<(VehicleDocument & { vehicle: { id: string; vehicleId: string; make: string; model: string } })[]> {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + daysAhead);
+    const now = new Date();
+    
+    const results = await this.db
+      .select({
+        id: vehicleDocuments.id,
+        vehicleId: vehicleDocuments.vehicleId,
+        documentType: vehicleDocuments.documentType,
+        documentName: vehicleDocuments.documentName,
+        expirationDate: vehicleDocuments.expirationDate,
+        notes: vehicleDocuments.notes,
+        reminderSent: vehicleDocuments.reminderSent,
+        reminderSentAt: vehicleDocuments.reminderSentAt,
+        createdAt: vehicleDocuments.createdAt,
+        updatedAt: vehicleDocuments.updatedAt,
+        vehicle: {
+          id: vehicles.id,
+          vehicleId: vehicles.vehicleId,
+          make: vehicles.make,
+          model: vehicles.model,
+        }
+      })
+      .from(vehicleDocuments)
+      .innerJoin(vehicles, eq(vehicleDocuments.vehicleId, vehicles.id))
+      .where(
+        and(
+          lte(vehicleDocuments.expirationDate, futureDate),
+          gte(vehicleDocuments.expirationDate, now),
+          eq(vehicleDocuments.reminderSent, false)
+        )
+      )
+      .orderBy(vehicleDocuments.expirationDate);
+    
+    return results;
+  }
+
+  async markDocumentReminderSent(id: string): Promise<VehicleDocument | undefined> {
+    const [document] = await this.db
+      .update(vehicleDocuments)
+      .set({ reminderSent: true, reminderSentAt: new Date(), updatedAt: new Date() })
+      .where(eq(vehicleDocuments.id, id))
+      .returning();
+    return document;
   }
 
   // Checklist template operations
