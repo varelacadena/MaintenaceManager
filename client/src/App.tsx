@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -81,6 +81,7 @@ function AuthenticatedApp() {
           <div className="flex flex-col flex-1 overflow-hidden">
             <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/40 bg-background">
               <div className="flex items-center gap-3">
+                <SidebarTrigger className="md:hidden" data-testid="button-sidebar-toggle" />
                 {user?.role !== "student" && (
                   <button
                     onClick={() => window.history.back()}
