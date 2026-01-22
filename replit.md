@@ -29,6 +29,12 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 - **Vehicle Fleet Management:** Automatic status updates (in_use, reserved, available) based on reservations and usage logs; manual status overrides.
 - **Service Request Management:** Staff can submit requests; students can complete assigned tasks.
 - **Inventory & Vendor Management:** Administrative functions for managing parts, equipment, and suppliers.
+- **In-App Notifications:** Bell icon widget in header displaying:
+  - Document expiration reminders (30 days ahead, visible to all users)
+  - Task reminders for upcoming tasks (7 days ahead)
+  - Task overdue notifications
+  - Mark as read/dismiss individual or all notifications
+  - Notifications stored per-user with unread count badge
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
 
