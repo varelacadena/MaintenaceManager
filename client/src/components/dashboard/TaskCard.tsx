@@ -127,8 +127,13 @@ export default function TaskCard({
                 </div>
                 {property && (
                   <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                    <MapPin className="w-3 h-3" />
-                    <span className="truncate">{property.name}</span>
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <div className="truncate">
+                      <span>{property.name}</span>
+                      {property.address && (
+                        <span className="text-muted-foreground/70"> - {property.address}</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

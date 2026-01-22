@@ -193,6 +193,9 @@ export default function TaskDetailDrawer({
                 <div className="flex-1">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Location</p>
                   <p className="text-sm">{property.name}</p>
+                  {property.address && (
+                    <p className="text-xs text-muted-foreground">{property.address}</p>
+                  )}
                 </div>
               </div>
             )}
