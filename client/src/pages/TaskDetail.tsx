@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation, useParams, Link } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,8 +132,9 @@ function getDateLabel(date: Date | string | null): { label: string; isOverdue: b
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
+  const taskPagePath = `/tasks/${id}`;
   const { toast } = useToast();
   const { downloadFile } = useFileDownload();
 
@@ -158,6 +159,9 @@ export default function TaskDetail() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
+  const [isLeaveConfirmDialogOpen, setIsLeaveConfirmDialogOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [allowNavigation, setAllowNavigation] = useState(false);
   
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [messagesExpanded, setMessagesExpanded] = useState(false);
@@ -248,6 +252,97 @@ export default function TaskDetail() {
       setActiveTimer(runningEntry.id);
     }
   }, [timeEntries]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (activeTimer) {
+        e.preventDefault();
+        e.returnValue = "You have an active timer running. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [activeTimer]);
+
+  useEffect(() => {
+    if (!activeTimer) return;
+
+    const handlePopState = () => {
+      if (allowNavigation) {
+        setAllowNavigation(false);
+        return;
+      }
+      window.history.pushState(null, "", window.location.href);
+      setPendingNavigation("back");
+      setIsLeaveConfirmDialogOpen(true);
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [activeTimer, allowNavigation]);
+
+  const previousLocationRef = useRef<string>(location);
+  const isInitialMountRef = useRef(true);
+  
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      previousLocationRef.current = location;
+      return;
+    }
+    
+    if (!activeTimer) {
+      previousLocationRef.current = location;
+      return;
+    }
+    
+    if (allowNavigation) {
+      previousLocationRef.current = location;
+      return;
+    }
+    
+    const isLeavingTaskPage = previousLocationRef.current.startsWith("/tasks/") && 
+                              !location.startsWith("/tasks/" + id);
+    
+    if (isLeavingTaskPage && !isLeaveConfirmDialogOpen) {
+      setPendingNavigation(location);
+      navigate(previousLocationRef.current);
+      setIsLeaveConfirmDialogOpen(true);
+    } else {
+      previousLocationRef.current = location;
+    }
+  }, [location, activeTimer, allowNavigation, id, isLeaveConfirmDialogOpen, navigate]);
+
+  const safeNavigate = (path: string) => {
+    if (activeTimer) {
+      setPendingNavigation(path);
+      setIsLeaveConfirmDialogOpen(true);
+    } else {
+      navigate(path);
+    }
+  };
+
+  const confirmLeave = () => {
+    setAllowNavigation(true);
+    if (pendingNavigation === "back") {
+      window.history.back();
+    } else if (pendingNavigation) {
+      navigate(pendingNavigation);
+    }
+    setIsLeaveConfirmDialogOpen(false);
+    setPendingNavigation(null);
+  };
+
+  const cancelLeave = () => {
+    setIsLeaveConfirmDialogOpen(false);
+    setPendingNavigation(null);
+  };
 
   const markAsReadMutation = useMutation({
     mutationFn: async (taskId: string) => {
@@ -672,18 +767,20 @@ export default function TaskDetail() {
           {/* Location - Clickable for admin/tech only */}
           {property && (
             isTechnicianOrAdmin ? (
-              <Link href={`/properties/${property.id}`}>
-                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer" data-testid="link-property">
-                  <Building2 className="w-5 h-5 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{property.name}</p>
-                    {property.address && (
-                      <p className="text-sm text-muted-foreground truncate">{property.address}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <div 
+                onClick={() => safeNavigate(`/properties/${property.id}`)}
+                className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer" 
+                data-testid="link-property"
+              >
+                <Building2 className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{property.name}</p>
+                  {property.address && (
+                    <p className="text-sm text-muted-foreground truncate">{property.address}</p>
+                  )}
                 </div>
-              </Link>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
             ) : (
               <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-property">
                 <Building2 className="w-5 h-5 text-primary shrink-0" />
@@ -766,12 +863,15 @@ export default function TaskDetail() {
               </Button>
 
               {task.requestId && (
-                <Link href={`/requests/${task.requestId}`}>
-                  <Button variant="outline" className="h-14 flex-col gap-1 w-full" data-testid="link-original-request">
-                    <ExternalLink className="w-5 h-5" />
-                    <span className="text-xs">Original Request</span>
-                  </Button>
-                </Link>
+                <Button 
+                  variant="outline" 
+                  className="h-14 flex-col gap-1 w-full" 
+                  data-testid="link-original-request"
+                  onClick={() => safeNavigate(`/requests/${task.requestId}`)}
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  <span className="text-xs">Original Request</span>
+                </Button>
               )}
 
             <Sheet open={isHistorySheetOpen} onOpenChange={setIsHistorySheetOpen}>
@@ -1695,6 +1795,39 @@ export default function TaskDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Leave Confirmation Dialog */}
+      <AlertDialog open={isLeaveConfirmDialogOpen} onOpenChange={setIsLeaveConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              Timer Still Running
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You have an active timer running for this task. If you leave now, the timer will continue running in the background. 
+              Would you like to stop the timer first, or leave anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <AlertDialogCancel onClick={cancelLeave}>
+              Stay on Page
+            </AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsLeaveConfirmDialogOpen(false);
+                setIsStopTimerDialogOpen(true);
+              }}
+            >
+              Stop Timer First
+            </Button>
+            <AlertDialogAction onClick={confirmLeave} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Leave Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
