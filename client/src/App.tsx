@@ -79,13 +79,13 @@ function AuthenticatedApp() {
             userInitials={userInitials}
           />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/40 bg-background">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger className="md:hidden" data-testid="button-sidebar-toggle" />
+            <header className="flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background">
+              <div className="flex items-center gap-1 sm:gap-3">
+                <SidebarTrigger className="md:hidden h-8 w-8 text-muted-foreground" data-testid="button-sidebar-toggle" />
                 {user?.role !== "student" && (
                   <button
                     onClick={() => window.history.back()}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    className="flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                     aria-label="Go back"
                     data-testid="button-back-global"
                   >
@@ -106,7 +106,7 @@ function AuthenticatedApp() {
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <ThemeToggle />
                 <button
                   onClick={async () => {
