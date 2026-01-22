@@ -1463,15 +1463,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {
       const { getSignedUploadUrl } = await import("./objectStorage");
-      const uploadURL = await getSignedUploadUrl();
-
-      // Check if this is a mock URL (Object Storage not configured)
-      const isMock = uploadURL.startsWith("https://mock-storage.local/");
+      const { uploadURL, objectPath } = await getSignedUploadUrl();
 
       res.json({ 
         uploadURL,
-        isMock,
-        warning: isMock ? "Object Storage not configured. Files will not be persisted." : undefined
+        objectPath,
+        isMock: false
       });
     } catch (error) {
       console.error("Error getting upload URL:", error);
@@ -1583,6 +1580,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid upload data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create upload" });
+    }
+  });
+
+  // Get signed download URL for a file
+  app.get("/api/uploads/:uploadId/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const upload = await storage.getUpload(req.params.uploadId);
+      if (!upload) {
+        return res.status(404).json({ message: "Upload not found" });
+      }
+
+      // Access control: verify user has permission to access this upload
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Admins and technicians can access all uploads
+      const isStaff = user.role === 'admin' || user.role === 'technician';
+      
+      // Regular users can only access uploads they uploaded or uploads attached to entities they have access to
+      if (!isStaff) {
+        let hasAccess = false;
+        
+        // Check if user uploaded this file
+        if (upload.uploadedById === userId) {
+          hasAccess = true;
+        }
+        
+        // Check if upload is attached to user's service request
+        if (!hasAccess && upload.requestId) {
+          const request = await storage.getServiceRequest(upload.requestId);
+          if (request && request.requesterId === userId) {
+            hasAccess = true;
+          }
+        }
+        
+        // Check if upload is attached to a task (anyone authenticated can view task attachments)
+        // since tasks are visible to all users who can see them
+        if (!hasAccess && upload.taskId) {
+          const task = await storage.getTask(upload.taskId);
+          if (task) {
+            // If task has a service request, check if user owns that request
+            if (task.requestId) {
+              const request = await storage.getServiceRequest(task.requestId);
+              if (request && request.requesterId === userId) {
+                hasAccess = true;
+              }
+            }
+          }
+        }
+        
+        // Check if upload is attached to vehicle logs - vehicle logs are visible to users who created them
+        if (!hasAccess && upload.vehicleCheckOutLogId) {
+          const checkOutLog = await storage.getVehicleCheckOutLog(upload.vehicleCheckOutLogId);
+          if (checkOutLog && checkOutLog.userId === userId) {
+            hasAccess = true;
+          }
+        }
+        
+        if (!hasAccess && upload.vehicleCheckInLogId) {
+          const checkInLog = await storage.getVehicleCheckInLog(upload.vehicleCheckInLogId);
+          if (checkInLog && checkInLog.userId === userId) {
+            hasAccess = true;
+          }
+        }
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      // Check if this is a mock URL (file was never actually stored)
+      if (upload.objectUrl.includes('mock-storage.local')) {
+        return res.status(400).json({ 
+          message: "This file was uploaded before storage was properly configured and cannot be downloaded.",
+          isMock: true
+        });
+      }
+
+      // If we have an objectPath, generate a new signed download URL
+      if (upload.objectPath) {
+        try {
+          const { getDownloadUrl } = await import("./objectStorage");
+          const downloadUrl = await getDownloadUrl(upload.objectPath);
+          return res.json({ downloadUrl, fileName: upload.fileName });
+        } catch (error) {
+          console.error("Error getting signed download URL:", error);
+          return res.status(500).json({ message: "Failed to generate download URL" });
+        }
+      }
+
+      // Otherwise, return the stored URL if it's a valid storage URL
+      if (upload.objectUrl.startsWith('https://storage.googleapis.com/')) {
+        return res.json({ downloadUrl: upload.objectUrl, fileName: upload.fileName });
+      }
+
+      return res.status(400).json({ message: "File cannot be downloaded - invalid storage URL" });
+    } catch (error) {
+      console.error("Error getting download URL:", error);
+      res.status(500).json({ message: "Failed to get download URL" });
     }
   });
 

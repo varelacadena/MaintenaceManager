@@ -58,6 +58,7 @@ import {
   Edit,
   Trash2,
   Paperclip,
+  AlertCircle,
   X,
   MessageSquare,
   Send,
@@ -77,6 +78,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useFileDownload } from "@/hooks/use-download";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -134,6 +136,7 @@ export default function TaskDetail() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { downloadFile } = useFileDownload();
 
   const [newNote, setNewNote] = useState("");
   const [newMessage, setNewMessage] = useState("");
@@ -1132,59 +1135,76 @@ export default function TaskDetail() {
               {requestAttachments.length > 0 && (
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground px-1">From Request</p>
-                  {requestAttachments.map((att) => (
-                    <a
-                      key={att.id}
-                      href={att.objectUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg hover-elevate"
-                    >
-                      <Paperclip className="w-4 h-4 text-primary" />
-                      <span className="text-sm flex-1 truncate">{att.fileName}</span>
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    </a>
-                  ))}
+                  {requestAttachments.map((att) => {
+                    const isMockFile = att.objectUrl.includes("mock-storage.local");
+                    return (
+                      <button
+                        key={att.id}
+                        onClick={() => downloadFile(att.id, att.objectUrl)}
+                        className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg hover-elevate w-full text-left"
+                      >
+                        {isMockFile ? (
+                          <AlertCircle className="w-4 h-4 text-destructive" />
+                        ) : (
+                          <Paperclip className="w-4 h-4 text-primary" />
+                        )}
+                        <span className="text-sm flex-1 truncate">{att.fileName}</span>
+                        {isMockFile ? (
+                          <span className="text-xs text-destructive">Unavailable</span>
+                        ) : (
+                          <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               {uploads.length > 0 && (
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground px-1">Task Attachments</p>
-                  {uploads.map((upload) => (
-                    <div key={upload.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                      <a
-                        href={upload.objectUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 flex-1 min-w-0 hover-elevate"
-                      >
-                        <Paperclip className="w-4 h-4 text-primary" />
-                        <span className="text-sm truncate">{upload.fileName}</span>
-                      </a>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Attachment?</AlertDialogTitle>
-                            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteUploadMutation.mutate(upload.id)}
-                              className="bg-destructive text-destructive-foreground"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  ))}
+                  {uploads.map((upload) => {
+                    const isMockFile = upload.objectUrl.includes("mock-storage.local");
+                    return (
+                      <div key={upload.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                        <button
+                          onClick={() => downloadFile(upload.id, upload.objectUrl)}
+                          className="flex items-center gap-3 flex-1 min-w-0 hover-elevate text-left"
+                        >
+                          {isMockFile ? (
+                            <AlertCircle className="w-4 h-4 text-destructive" />
+                          ) : (
+                            <Paperclip className="w-4 h-4 text-primary" />
+                          )}
+                          <span className="text-sm truncate">{upload.fileName}</span>
+                          {isMockFile && (
+                            <span className="text-xs text-destructive">Unavailable</span>
+                          )}
+                        </button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Attachment?</AlertDialogTitle>
+                              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteUploadMutation.mutate(upload.id)}
+                                className="bg-destructive text-destructive-foreground"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               {uploads.length === 0 && requestAttachments.length === 0 && (

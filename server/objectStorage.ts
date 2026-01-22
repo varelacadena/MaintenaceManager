@@ -234,38 +234,41 @@ async function signObjectURL({
   return signedURL;
 }
 
-// New Replit Object Storage helper functions
-import { Client } from "@replit/object-storage";
+// Helper functions for Object Storage using sidecar presigned URLs
 
 export function getBucketId(): string | null {
-  const bucketId = process.env.REPLIT_DB_BUCKET_ID || process.env.OBJECT_STORAGE_BUCKET_ID;
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || 
+                   process.env.REPLIT_DB_BUCKET_ID || 
+                   process.env.OBJECT_STORAGE_BUCKET_ID;
   return bucketId || null;
 }
 
-export async function getSignedUploadUrl(): Promise<string> {
-  const bucketId = getBucketId();
-  if (!bucketId) {
-    // Return a mock upload URL for development without Object Storage
-    // This allows the app to function without Object Storage configured
-    const mockKey = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    return `https://mock-storage.local/${mockKey}`;
+export function getPrivateDir(): string | null {
+  return process.env.PRIVATE_OBJECT_DIR || null;
+}
+
+export async function getSignedUploadUrl(): Promise<{ uploadURL: string; objectPath: string }> {
+  const privateDir = getPrivateDir();
+  if (!privateDir) {
+    throw new Error(
+      "PRIVATE_OBJECT_DIR not set. Please configure Object Storage in the Object Storage tool."
+    );
   }
   
   try {
-    const client = new Client();
-    await client.init(bucketId);
+    const objectKey = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const fullPath = `${privateDir}/${objectKey}`;
     
-    // Generate a unique key for the upload
-    const key = `uploads/${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
     
-    // Get a signed URL for uploading using Replit Object Storage
-    const result = await client.uploadUrl(key);
+    const uploadURL = await signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 900,
+    });
     
-    if (!result.ok) {
-      throw new Error(`Failed to get upload URL: ${result.error}`);
-    }
-    
-    return result.value;
+    return { uploadURL, objectPath: objectKey };
   } catch (error) {
     console.error("Error in getSignedUploadUrl:", error);
     throw error;
@@ -274,23 +277,24 @@ export async function getSignedUploadUrl(): Promise<string> {
 
 export async function getDownloadUrl(key: string): Promise<string> {
   try {
-    const bucketId = getBucketId();
-    if (!bucketId) {
+    const privateDir = getPrivateDir();
+    if (!privateDir) {
       throw new Error(
-        "Object Storage bucket not configured. Please create a bucket in the Object Storage tool."
+        "PRIVATE_OBJECT_DIR not set. Please configure Object Storage in the Object Storage tool."
       );
     }
     
-    const client = new Client();
-    await client.init(bucketId);
+    const fullPath = `${privateDir}/${key}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
     
-    const result = await client.downloadUrl(key);
+    const downloadUrl = await signObjectURL({
+      bucketName,
+      objectName,
+      method: "GET",
+      ttlSec: 3600,
+    });
     
-    if (!result.ok) {
-      throw new Error(`Failed to get download URL: ${result.error}`);
-    }
-    
-    return result.value;
+    return downloadUrl;
   } catch (error) {
     console.error("Error in getDownloadUrl:", error);
     throw error;

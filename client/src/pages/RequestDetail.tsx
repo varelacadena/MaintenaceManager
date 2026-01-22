@@ -24,11 +24,11 @@ import {
   Mail,
   Phone,
   Paperclip,
-  ExternalLink,
   CheckCircle,
   XCircle,
   ClipboardList,
 } from "lucide-react";
+import { FileAttachmentList } from "@/components/FileAttachment";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -409,37 +409,7 @@ export default function RequestDetail() {
               {/* Attachments Section */}
               {attachments.length > 0 && (
                 <div className="pt-2 border-t">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium">Attachments ({attachments.length})</p>
-                  </div>
-                  <div className="space-y-2">
-                    {attachments.map((attachment) => (
-                      <a
-                        key={attachment.id}
-                        href={attachment.objectUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-2 rounded-md border hover-elevate active-elevate-2"
-                        data-testid={`attachment-${attachment.id}`}
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="flex items-center justify-center w-8 h-8 rounded bg-primary/10 text-primary shrink-0">
-                            <Paperclip className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium truncate">
-                              {attachment.fileName}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {attachment.fileType}
-                            </p>
-                          </div>
-                          <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
-                        </div>
-                      </a>
-                    ))}
-                  </div>
+                  <FileAttachmentList attachments={attachments} />
                 </div>
               )}
             </CardContent>
