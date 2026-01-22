@@ -10,7 +10,6 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { PanelLeftClose, PanelLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
@@ -83,10 +82,26 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
   const [location] = useLocation();
   const menuItems = roleMenus[userRole];
   const notificationCounts = useNotificationCounts();
-  const { setOpenMobile, isMobile, toggleSidebar, state } = useSidebar();
+  const { setOpenMobile, isMobile, setOpen } = useSidebar();
+
+  const handleMouseEnter = () => {
+    if (!isMobile) {
+      setOpen(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      setOpen(false);
+    }
+  };
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar 
+      collapsible="icon"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <SidebarHeader className="p-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-md bg-primary shrink-0">
@@ -149,20 +164,6 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
             <p className="text-[10px] text-muted-foreground capitalize">{userRole}</p>
           </div>
         </div>
-        <button
-          onClick={toggleSidebar}
-          className="flex items-center justify-center gap-2 w-full p-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors group-data-[collapsible=icon]:p-1.5"
-          data-testid="button-sidebar-toggle"
-        >
-          {state === "expanded" ? (
-            <>
-              <PanelLeftClose className="w-4 h-4 shrink-0" />
-              <span className="group-data-[collapsible=icon]:hidden">Collapse</span>
-            </>
-          ) : (
-            <PanelLeft className="w-4 h-4" />
-          )}
-        </button>
       </SidebarFooter>
     </Sidebar>
   );
