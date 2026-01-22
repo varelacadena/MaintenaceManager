@@ -17,7 +17,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft,
   MessageSquare,
   Send,
   User,
@@ -227,15 +226,6 @@ export default function RequestDetail() {
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="p-3 sm:p-4">
           <div className="flex items-start gap-2 mb-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => window.history.back()}
-              data-testid="button-back"
-              className="h-8 w-8 shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
             <div className="flex-1 min-w-0">
               <h1 className="text-base sm:text-xl font-semibold leading-tight line-clamp-2" data-testid="text-request-title">
                 {request.title}

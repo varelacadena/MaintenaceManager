@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Building2, DollarSign, AlertTriangle, CheckCircle2, ArrowLeft, MapPin } from "lucide-react";
+import { Building2, DollarSign, AlertTriangle, CheckCircle2, MapPin } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
 import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
 import { PropertyBarChart } from "@/components/analytics/AnalyticsCharts";
@@ -112,9 +112,6 @@ export default function FacilityInsights() {
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" data-testid="button-back" onClick={() => window.history.back()}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Campus Facilities</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">Property and building analytics</p>

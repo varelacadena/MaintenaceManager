@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Car, Calendar, User as UserIcon, MapPin, FileText, Key, AlertTriangle } from "lucide-react";
+import { Car, Calendar, User as UserIcon, MapPin, FileText, Key, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -274,9 +274,6 @@ export default function VehicleReservationDetails() {
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" data-testid="button-back" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         <div className="flex-1">
           <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
             Reservation Details

@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus } from "lucide-react";
+import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -385,9 +385,6 @@ export default function VehicleDetail() {
       {/* Header Section - Mobile Optimized */}
       <div className="space-y-3 sm:space-y-0">
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" data-testid="button-back" className="shrink-0" onClick={() => window.history.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <div className="flex-1 min-w-0">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate" data-testid="text-vehicle-name">
               {vehicle.make} {vehicle.model}

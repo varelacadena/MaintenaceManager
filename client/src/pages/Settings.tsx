@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { User, Lock, ArrowLeft } from "lucide-react";
+import { User, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -116,14 +116,6 @@ export default function Settings() {
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => window.history.back()}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <div>
           <h1 className="text-xl md:text-2xl font-semibold">Settings</h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">

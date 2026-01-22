@@ -36,7 +36,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  ArrowLeft,
   Plus,
   Edit,
   Trash2,
@@ -455,10 +454,6 @@ export default function PropertyDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="text-muted-foreground">Property not found</div>
-        <Button onClick={() => window.history.back()} data-testid="button-back-to-map">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Properties
-        </Button>
       </div>
     );
   }
@@ -466,18 +461,6 @@ export default function PropertyDetail() {
   return (
     <div className="h-full flex flex-col gap-4 md:gap-6 p-4 md:p-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.history.back()}
-            data-testid="button-back"
-            className="h-9 text-xs md:text-sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </div>
         {canEdit && (
           <div className="flex gap-2 w-full sm:w-auto">
             <Button

@@ -44,7 +44,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  ArrowLeft,
   Clock,
   User,
   Calendar,
@@ -593,18 +592,8 @@ export default function TaskDetail() {
       {/* Header - Integrated with task info */}
       <div className="bg-background border-b">
         <div className="px-4 py-3 space-y-2">
-          {/* Top row: Back, Title, Delete */}
+          {/* Top row: Title, Delete */}
           <div className="flex items-start gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 -ml-2"
-              onClick={() => window.history.back()}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-semibold leading-tight line-clamp-2" data-testid="text-task-name">
                 {task.name}

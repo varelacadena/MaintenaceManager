@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, CheckCircle2, Clock, Award, TrendingUp, ArrowLeft, GraduationCap, Wrench } from "lucide-react";
+import { Users, CheckCircle2, Clock, Award, TrendingUp, GraduationCap, Wrench } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
 import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
 import { TechnicianPerformanceChart } from "@/components/analytics/AnalyticsCharts";
@@ -125,9 +125,6 @@ export default function TechnicianPerformance() {
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" data-testid="button-back" onClick={() => window.history.back()}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">{getTitle()}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">{getSubtitle()}</p>

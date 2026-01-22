@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Car, Calendar, DollarSign, CheckCircle2, XCircle, Wrench, Clock, ArrowLeft, TrendingUp } from "lucide-react";
+import { Car, Calendar, DollarSign, CheckCircle2, XCircle, Wrench, Clock, TrendingUp } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
 import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,9 +153,6 @@ export default function FleetAnalytics() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center gap-3 sm:gap-4">
-        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" data-testid="button-back" onClick={() => window.history.back()}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Fleet Analytics</h1>
           <p className="text-sm text-muted-foreground">Vehicle utilization and reservations</p>

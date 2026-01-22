@@ -1,6 +1,6 @@
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Car, Upload } from "lucide-react";
+import { Car, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -254,9 +254,6 @@ export default function VehicleCheckOut() {
   return (
     <div className="flex-1 space-y-4 p-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" data-testid="button-back" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         <div>
           <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Check-Out</h2>
           <p className="text-muted-foreground">

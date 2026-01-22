@@ -43,7 +43,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save } from "lucide-react";
+import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -527,14 +527,6 @@ export default function NewTask() {
   return (
     <div className="max-w-2xl mx-auto p-4 md:p-6 pb-24">
       <div className="flex items-center gap-3 mb-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => window.history.back()}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <div>
           <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
             {requestId ? "Convert to Task" : "New Task"}

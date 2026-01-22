@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User, MapPin, ExternalLink } from "lucide-react";
+import { Calendar, User, MapPin, ExternalLink } from "lucide-react";
 import type { Task, Equipment, User as UserType } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -66,14 +66,6 @@ export default function EquipmentWorkHistory() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => window.history.back()}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Work History: {equipment.name}</h1>
           <p className="text-muted-foreground">

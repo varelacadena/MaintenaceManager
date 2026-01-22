@@ -29,7 +29,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertSpaceSchema } from "@shared/schema";
 import type { Property, Equipment, User, Vendor, Task, Space } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -371,14 +371,6 @@ export default function EditTask() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 p-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => window.history.back()}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-page-title">
             Edit Task
