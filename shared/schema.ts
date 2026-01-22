@@ -968,3 +968,41 @@ export const emergencyContactsRelations = relations(emergencyContacts, ({ one })
     references: [users.id],
   }),
 }));
+
+// Notification type enum
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "document_expiration",
+  "task_reminder",
+  "task_due",
+  "task_overdue",
+  "system"
+]);
+
+// In-app notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }), // null = all users
+  type: notificationTypeEnum("type").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  link: varchar("link", { length: 500 }), // Optional link to related item
+  relatedId: varchar("related_id"), // ID of related entity (task, document, etc.)
+  relatedType: varchar("related_type", { length: 50 }), // Type of related entity
+  isRead: boolean("is_read").default(false),
+  isDismissed: boolean("is_dismissed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));

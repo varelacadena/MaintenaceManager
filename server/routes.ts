@@ -31,6 +31,7 @@ import {
   insertVehicleMaintenanceLogSchema,
   insertVehicleDocumentSchema,
   insertEmergencyContactSchema,
+  insertNotificationSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3683,6 +3684,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting emergency contact:", error);
       res.status(500).json({ message: "Failed to delete emergency contact" });
+    }
+  });
+
+  // ============== NOTIFICATIONS ==============
+
+  // Get all notifications for current user
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const notifications = await storage.getNotifications(user.id);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  // Get unread notification count
+  app.get("/api/notifications/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const count = await storage.getUnreadNotificationCount(user.id);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching notification count:", error);
+      res.status(500).json({ message: "Failed to fetch notification count" });
+    }
+  });
+
+  // Mark notification as read
+  app.post("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
+    try {
+      const notification = await storage.markNotificationRead(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post("/api/notifications/read-all", isAuthenticated, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      await storage.markAllNotificationsRead(user.id);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  // Dismiss notification
+  app.post("/api/notifications/:id/dismiss", isAuthenticated, async (req, res) => {
+    try {
+      await storage.dismissNotification(req.params.id);
+      res.json({ message: "Notification dismissed" });
+    } catch (error) {
+      console.error("Error dismissing notification:", error);
+      res.status(500).json({ message: "Failed to dismiss notification" });
+    }
+  });
+
+  // Dismiss all notifications
+  app.post("/api/notifications/dismiss-all", isAuthenticated, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      await storage.dismissAllNotifications(user.id);
+      res.json({ message: "All notifications dismissed" });
+    } catch (error) {
+      console.error("Error dismissing all notifications:", error);
+      res.status(500).json({ message: "Failed to dismiss all notifications" });
     }
   });
 
