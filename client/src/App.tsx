@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,7 +45,7 @@ function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   const style = {
-    "--sidebar-width": "16rem",
+    "--sidebar-width": "13rem",
     "--sidebar-width-icon": "3rem",
   };
 
@@ -79,20 +79,19 @@ function AuthenticatedApp() {
             userInitials={userInitials}
           />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/40 bg-background">
+              <div className="flex items-center gap-3">
                 {user?.role !== "student" && (
                   <button
                     onClick={() => window.history.back()}
-                    className="p-2 hover:bg-accent rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                     aria-label="Go back"
                     data-testid="button-back-global"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
+                      width="16"
+                      height="16"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -102,6 +101,7 @@ function AuthenticatedApp() {
                     >
                       <path d="m15 18-6-6 6-6" />
                     </svg>
+                    <span className="hidden sm:inline">Back</span>
                   </button>
                 )}
               </div>

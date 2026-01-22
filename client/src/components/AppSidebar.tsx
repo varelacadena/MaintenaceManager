@@ -3,7 +3,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -11,6 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { PanelLeftClose, PanelLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
@@ -83,24 +83,20 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
   const [location] = useLocation();
   const menuItems = roleMenus[userRole];
   const notificationCounts = useNotificationCounts();
-  const { setOpenMobile, isMobile } = useSidebar();
+  const { setOpenMobile, isMobile, toggleSidebar, state } = useSidebar();
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary">
-            <Wrench className="w-5 h-5 text-primary-foreground" />
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="p-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-primary shrink-0">
+            <Wrench className="w-4 h-4 text-primary-foreground" />
           </div>
-          <div>
-            <h2 className="font-semibold text-sm">Maintenance</h2>
-            <p className="text-xs text-muted-foreground">Management</p>
-          </div>
+          <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden">Maintenance</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
@@ -116,7 +112,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
 
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={location === item.url}>
+                    <SidebarMenuButton asChild isActive={location === item.url} tooltip={item.title}>
                       <Link 
                         href={item.url} 
                         data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
@@ -126,15 +122,13 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                           }
                         }}
                       >
-                        <div className="flex items-center gap-2 flex-1">
-                          <item.icon className="w-4 h-4" />
-                          <span>{item.title}</span>
-                          {badgeCount > 0 && (
-                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white" data-testid={`badge-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                              {badgeCount > 9 ? "9+" : badgeCount}
-                            </span>
-                          )}
-                        </div>
+                        <item.icon className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{item.title}</span>
+                        {badgeCount > 0 && (
+                          <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-medium text-white group-data-[collapsible=icon]:hidden" data-testid={`badge-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {badgeCount > 9 ? "9+" : badgeCount}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -144,17 +138,31 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4">
-        <div className="flex items-center gap-3 p-2 rounded-lg hover-elevate">
-          <Avatar className="w-8 h-8">
+      <SidebarFooter className="p-2">
+        <div className="flex items-center gap-2 p-2 rounded-md hover-elevate group-data-[collapsible=icon]:justify-center">
+          <Avatar className="w-7 h-7 shrink-0">
             <AvatarImage />
-            <AvatarFallback>{userInitials}</AvatarFallback>
+            <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{userName}</p>
-            <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+          <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+            <p className="text-xs font-medium truncate">{userName}</p>
+            <p className="text-[10px] text-muted-foreground capitalize">{userRole}</p>
           </div>
         </div>
+        <button
+          onClick={toggleSidebar}
+          className="flex items-center justify-center gap-2 w-full p-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors group-data-[collapsible=icon]:p-1.5"
+          data-testid="button-sidebar-toggle"
+        >
+          {state === "expanded" ? (
+            <>
+              <PanelLeftClose className="w-4 h-4 shrink-0" />
+              <span className="group-data-[collapsible=icon]:hidden">Collapse</span>
+            </>
+          ) : (
+            <PanelLeft className="w-4 h-4" />
+          )}
+        </button>
       </SidebarFooter>
     </Sidebar>
   );
