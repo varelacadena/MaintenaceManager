@@ -230,7 +230,7 @@ export default function RequestDetail() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/requests")}
+              onClick={() => window.history.back()}
               data-testid="button-back"
               className="h-8 w-8 shrink-0"
             >

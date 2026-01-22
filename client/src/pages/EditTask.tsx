@@ -374,7 +374,7 @@ export default function EditTask() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(`/tasks/${id}`)}
+          onClick={() => window.history.back()}
           data-testid="button-back"
         >
           <ArrowLeft className="w-4 h-4" />

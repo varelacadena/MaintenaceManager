@@ -274,11 +274,9 @@ export default function VehicleReservationDetails() {
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-4">
-        <Link href="/my-reservations">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+        <Button variant="ghost" size="icon" data-testid="button-back" onClick={() => window.history.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
         <div className="flex-1">
           <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
             Reservation Details

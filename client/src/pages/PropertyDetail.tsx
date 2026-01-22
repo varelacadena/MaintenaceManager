@@ -455,7 +455,7 @@ export default function PropertyDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="text-muted-foreground">Property not found</div>
-        <Button onClick={() => navigate("/properties")} data-testid="button-button-back-to-map">
+        <Button onClick={() => window.history.back()} data-testid="button-back-to-map">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Properties
         </Button>
@@ -470,12 +470,12 @@ export default function PropertyDetail() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/properties")}
+            onClick={() => window.history.back()}
             data-testid="button-back"
             className="h-9 text-xs md:text-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Map
+            Back
           </Button>
         </div>
         {canEdit && (

@@ -599,7 +599,7 @@ export default function TaskDetail() {
               variant="ghost"
               size="icon"
               className="shrink-0 -ml-2"
-              onClick={() => navigate("/tasks")}
+              onClick={() => window.history.back()}
               data-testid="button-back"
             >
               <ArrowLeft className="w-5 h-5" />

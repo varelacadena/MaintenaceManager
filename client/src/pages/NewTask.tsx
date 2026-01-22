@@ -530,7 +530,7 @@ export default function NewTask() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(requestId ? `/requests/${requestId}` : "/tasks")}
+          onClick={() => window.history.back()}
           data-testid="button-back"
         >
           <ArrowLeft className="w-4 h-4" />

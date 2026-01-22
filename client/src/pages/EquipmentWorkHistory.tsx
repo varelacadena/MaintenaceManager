@@ -69,7 +69,7 @@ export default function EquipmentWorkHistory() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(`/properties/${equipment.propertyId}`)}
+          onClick={() => window.history.back()}
           data-testid="button-back"
         >
           <ArrowLeft className="w-4 h-4" />
