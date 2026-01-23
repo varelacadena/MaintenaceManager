@@ -197,7 +197,7 @@ function AuthenticatedApp() {
                   <RoleGuard allowedRoles={["admin"]}><VehicleReservations /></RoleGuard>
                 )} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><VehicleReservationDetails /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff"]}><VehicleReservationDetails /></RoleGuard>
                 )} />
                 <Route path="/vehicle-checkout/:reservationId" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><VehicleCheckOut /></RoleGuard>
