@@ -76,6 +76,8 @@ const formSchema = insertTaskSchema.extend({
   assignedPool: z.string().optional(),
   instructions: z.string().optional(),
   requiresPhoto: z.boolean().optional(),
+  requiresEstimate: z.boolean().optional(),
+  projectId: z.string().optional(),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
   contactName: z.string().optional(),
@@ -154,6 +156,10 @@ export default function NewTask() {
 
   const { data: vendors = [] } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
+  });
+
+  const { data: projects = [] } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
   });
 
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
@@ -465,6 +471,8 @@ export default function NewTask() {
       assignedPool: undefined,
       instructions: "",
       requiresPhoto: false,
+      requiresEstimate: false,
+      projectId: projectId || undefined,
       status: "not_started",
       onHoldReason: undefined,
       createdById: user?.id || "",
@@ -548,7 +556,9 @@ export default function NewTask() {
           : undefined,
         instructions: data.instructions || undefined,
         requiresPhoto: data.requiresPhoto || false,
-        status: data.status,
+        requiresEstimate: data.requiresEstimate || false,
+        estimateStatus: data.requiresEstimate ? "needs_estimate" : null,
+        status: data.requiresEstimate ? "needs_estimate" : data.status,
         onHoldReason: data.onHoldReason || undefined,
         requestId: data.requestId || undefined,
         createdById: data.createdById,
@@ -561,7 +571,7 @@ export default function NewTask() {
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
         checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
-        projectId: projectId || undefined,
+        projectId: data.projectId || projectId || undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
@@ -762,6 +772,38 @@ export default function NewTask() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="projectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project (Optional)</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-project">
+                          <SelectValue placeholder="Assign to a project (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No Project</SelectItem>
+                        {projects.filter(p => p.status === "active" || p.status === "planning").map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Link this task to an existing project for organization
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </Card>
 
@@ -1200,6 +1242,27 @@ export default function NewTask() {
                           <FormLabel className="font-normal">
                             Require photo when completed
                           </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="requiresEstimate"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-requires-estimate"
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Requires estimate/quote approval before work begins
+                          </FormLabel>
+                          <FormDescription className="sr-only">
+                            When enabled, the task will start in "needs estimate" status and require quote approval
+                          </FormDescription>
                         </FormItem>
                       )}
                     />

@@ -31,7 +31,7 @@ import {
   projectTeamMembers,
   projectVendors,
   quotes,
-  quoteItems,
+  quoteAttachments,
   type User,
   type UpsertUser,
   type Vendor,
@@ -96,8 +96,8 @@ import {
   type InsertProjectVendor,
   type Quote,
   type InsertQuote,
-  type QuoteItem,
-  type InsertQuoteItem,
+  type QuoteAttachment,
+  type InsertQuoteAttachment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -382,18 +382,17 @@ export interface IStorage {
   updateProjectVendor(id: string, data: Partial<InsertProjectVendor>): Promise<ProjectVendor | undefined>;
 
   // Quote operations
-  getQuotes(filters?: { projectId?: string; vendorId?: string; status?: string }): Promise<Quote[]>;
+  getQuotes(filters?: { taskId?: string; status?: string }): Promise<Quote[]>;
   getQuote(id: string): Promise<Quote | undefined>;
+  getQuotesByTaskId(taskId: string): Promise<Quote[]>;
   createQuote(quote: InsertQuote): Promise<Quote>;
   updateQuote(id: string, data: Partial<InsertQuote>): Promise<Quote | undefined>;
   deleteQuote(id: string): Promise<void>;
 
-  // Quote item operations
-  getQuoteItems(quoteId: string): Promise<QuoteItem[]>;
-  getQuoteItem(id: string): Promise<QuoteItem | undefined>;
-  createQuoteItem(item: InsertQuoteItem): Promise<QuoteItem>;
-  updateQuoteItem(id: string, data: Partial<InsertQuoteItem>): Promise<QuoteItem | undefined>;
-  deleteQuoteItem(id: string): Promise<void>;
+  // Quote attachment operations
+  getQuoteAttachments(quoteId: string): Promise<QuoteAttachment[]>;
+  createQuoteAttachment(attachment: InsertQuoteAttachment): Promise<QuoteAttachment>;
+  deleteQuoteAttachment(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2082,13 +2081,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Quote operations
-  async getQuotes(filters?: { projectId?: string; vendorId?: string; status?: string }): Promise<Quote[]> {
+  async getQuotes(filters?: { taskId?: string; status?: string }): Promise<Quote[]> {
     const conditions = [];
-    if (filters?.projectId) {
-      conditions.push(eq(quotes.projectId, filters.projectId));
-    }
-    if (filters?.vendorId) {
-      conditions.push(eq(quotes.vendorId, filters.vendorId));
+    if (filters?.taskId) {
+      conditions.push(eq(quotes.taskId, filters.taskId));
     }
     if (filters?.status) {
       conditions.push(eq(quotes.status, filters.status as any));
@@ -2104,6 +2100,14 @@ export class DatabaseStorage implements IStorage {
   async getQuote(id: string): Promise<Quote | undefined> {
     const [quote] = await this.db.select().from(quotes).where(eq(quotes.id, id));
     return quote;
+  }
+
+  async getQuotesByTaskId(taskId: string): Promise<Quote[]> {
+    return await this.db
+      .select()
+      .from(quotes)
+      .where(eq(quotes.taskId, taskId))
+      .orderBy(desc(quotes.createdAt));
   }
 
   async createQuote(quoteData: InsertQuote): Promise<Quote> {
@@ -2124,38 +2128,21 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(quotes).where(eq(quotes.id, id));
   }
 
-  // Quote item operations
-  async getQuoteItems(quoteId: string): Promise<QuoteItem[]> {
+  // Quote attachment operations
+  async getQuoteAttachments(quoteId: string): Promise<QuoteAttachment[]> {
     return await this.db
       .select()
-      .from(quoteItems)
-      .where(eq(quoteItems.quoteId, quoteId));
+      .from(quoteAttachments)
+      .where(eq(quoteAttachments.quoteId, quoteId));
   }
 
-  async getQuoteItem(id: string): Promise<QuoteItem | undefined> {
-    const [item] = await this.db
-      .select()
-      .from(quoteItems)
-      .where(eq(quoteItems.id, id));
-    return item;
-  }
-
-  async createQuoteItem(item: InsertQuoteItem): Promise<QuoteItem> {
-    const [result] = await this.db.insert(quoteItems).values(item).returning();
+  async createQuoteAttachment(attachment: InsertQuoteAttachment): Promise<QuoteAttachment> {
+    const [result] = await this.db.insert(quoteAttachments).values(attachment).returning();
     return result;
   }
 
-  async updateQuoteItem(id: string, data: Partial<InsertQuoteItem>): Promise<QuoteItem | undefined> {
-    const [result] = await this.db
-      .update(quoteItems)
-      .set(data)
-      .where(eq(quoteItems.id, id))
-      .returning();
-    return result;
-  }
-
-  async deleteQuoteItem(id: string): Promise<void> {
-    await this.db.delete(quoteItems).where(eq(quoteItems.id, id));
+  async deleteQuoteAttachment(id: string): Promise<void> {
+    await this.db.delete(quoteAttachments).where(eq(quoteAttachments.id, id));
   }
 }
 

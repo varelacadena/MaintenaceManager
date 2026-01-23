@@ -38,13 +38,20 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
 - **Project Management:** Comprehensive project oversight for multi-task maintenance projects:
-  - Projects group related tasks under a single umbrella with budget tracking and timelines
+  - Projects serve as READ-ONLY organizational containers grouping related tasks with budget tracking and timelines
   - Team member assignment with roles (manager, lead, technician, support) and hour allocation
   - Vendor assignment with roles (primary, subcontractor, consultant, supplier)
-  - Quote management with status workflow (requested, submitted, under_review, approved, rejected, expired)
-  - Quote items with line-by-line cost breakdown and automatic total calculation
-  - Project analytics dashboard showing task progress, budget overview, time tracking, and quote summary
-  - Status tracking (planning, in_progress, on_hold, completed, cancelled) with priority levels
+  - Status tracking (planning, active, on_hold, completed, cancelled) with priority levels
+  - Project analytics dashboard showing task progress, budget overview, and time tracking
+  
+- **Internal Estimates/Quotes Workflow:** Task-level quote management for work requiring approval:
+  - Tasks can be marked as "requiresEstimate" during creation
+  - Task status flow: needs_estimate → waiting_approval → ready → in_progress → completed
+  - Multiple quotes can be added per task with vendor name, estimated cost, and notes
+  - Quote comparison UI allows reviewing and approving the best estimate
+  - Approving a quote automatically rejects others and updates task status to "ready"
+  - Quote statuses: draft, approved, rejected
+  - Quote attachments supported for storing PDF estimates, photos, etc.
 
 ### Hierarchical Property Structure
 

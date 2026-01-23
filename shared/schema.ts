@@ -127,10 +127,12 @@ export const serviceRequests = pgTable("service_requests", {
 
 // Tasks (created from reviewed requests, managed by admin)
 export const taskTypeEnum = pgEnum("task_type", ["one_time", "recurring", "reminder", "project"]);
-export const taskStatusEnum = pgEnum("task_status", ["not_started", "in_progress", "completed", "on_hold"]);
+export const taskStatusEnum = pgEnum("task_status", ["not_started", "needs_estimate", "waiting_approval", "ready", "in_progress", "completed", "on_hold"]);
 export const contactTypeEnum = pgEnum("contact_type", ["requester", "staff", "other"]);
 // Executor type determines whether task is for Student or Technician
 export const executorTypeEnum = pgEnum("executor_type", ["student", "technician"]);
+// Estimate status for tasks requiring internal estimates
+export const estimateStatusEnum = pgEnum("estimate_status", ["none", "needs_estimate", "waiting_approval", "approved"]);
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -166,6 +168,10 @@ export const tasks = pgTable("tasks", {
   // Student task specific fields
   instructions: text("instructions"), // Required instructions for student tasks
   requiresPhoto: boolean("requires_photo").default(false), // Whether photo upload is required for completion
+  // Internal estimate fields
+  requiresEstimate: boolean("requires_estimate").default(false), // Whether task requires internal estimate
+  estimateStatus: estimateStatusEnum("estimate_status").default("none"), // Estimate workflow status
+  approvedQuoteId: varchar("approved_quote_id"), // Reference to approved internal quote
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1120,30 +1126,21 @@ export const insertProjectVendorSchema = createInsertSchema(projectVendors).omit
 export type InsertProjectVendor = z.infer<typeof insertProjectVendorSchema>;
 export type ProjectVendor = typeof projectVendors.$inferSelect;
 
-// Quote status enum
+// Quote status enum - simplified for internal quotes
 export const quoteStatusEnum = pgEnum("quote_status", [
-  "requested",
-  "submitted",
-  "under_review",
+  "draft",
   "approved",
-  "rejected",
-  "expired"
+  "rejected"
 ]);
 
-// Quotes - vendor pricing for projects/tasks
+// Internal Quotes - for task estimates (simplified model)
 export const quotes = pgTable("quotes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
-  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  vendorId: varchar("vendor_id").notNull().references(() => vendors.id),
-  status: quoteStatusEnum("status").notNull().default("requested"),
-  totalAmount: doublePrecision("total_amount").default(0),
-  validUntil: timestamp("valid_until"),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  vendorName: varchar("vendor_name", { length: 200 }), // Optional vendor name for comparison
+  estimatedCost: doublePrecision("estimated_cost").notNull().default(0),
+  status: quoteStatusEnum("status").notNull().default("draft"),
   notes: text("notes"),
-  submittedAt: timestamp("submitted_at"),
-  approvedAt: timestamp("approved_at"),
-  approvedById: varchar("approved_by_id").references(() => users.id),
-  rejectionReason: text("rejection_reason"),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1153,31 +1150,28 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  submittedAt: true,
-  approvedAt: true,
 });
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 export type Quote = typeof quotes.$inferSelect;
 
-// Quote items - line items within a quote
-export const quoteItems = pgTable("quote_items", {
+// Quote Attachments - files attached to quotes
+export const quoteAttachments = pgTable("quote_attachments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   quoteId: varchar("quote_id").notNull().references(() => quotes.id, { onDelete: "cascade" }),
-  description: varchar("description", { length: 500 }).notNull(),
-  quantity: doublePrecision("quantity").notNull().default(1),
-  unitCost: doublePrecision("unit_cost").notNull().default(0),
-  lineTotal: doublePrecision("line_total").notNull().default(0),
-  inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileType: varchar("file_type", { length: 100 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  storageUrl: varchar("storage_url", { length: 1000 }).notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
-export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
+export const insertQuoteAttachmentSchema = createInsertSchema(quoteAttachments).omit({
   id: true,
-  createdAt: true,
+  uploadedAt: true,
 });
-export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
-export type QuoteItem = typeof quoteItems.$inferSelect;
+export type InsertQuoteAttachment = z.infer<typeof insertQuoteAttachmentSchema>;
+export type QuoteAttachment = typeof quoteAttachments.$inferSelect;
+
 
 // Project relations
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -1196,7 +1190,6 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   teamMembers: many(projectTeamMembers),
   projectVendors: many(projectVendors),
   tasks: many(tasks),
-  quotes: many(quotes),
 }));
 
 export const projectTeamMembersRelations = relations(projectTeamMembers, ({ one }) => ({
@@ -1222,36 +1215,20 @@ export const projectVendorsRelations = relations(projectVendors, ({ one }) => ({
 }));
 
 export const quotesRelations = relations(quotes, ({ one, many }) => ({
-  project: one(projects, {
-    fields: [quotes.projectId],
-    references: [projects.id],
-  }),
   task: one(tasks, {
     fields: [quotes.taskId],
     references: [tasks.id],
-  }),
-  vendor: one(vendors, {
-    fields: [quotes.vendorId],
-    references: [vendors.id],
   }),
   createdBy: one(users, {
     fields: [quotes.createdById],
     references: [users.id],
   }),
-  approvedBy: one(users, {
-    fields: [quotes.approvedById],
-    references: [users.id],
-  }),
-  items: many(quoteItems),
+  attachments: many(quoteAttachments),
 }));
 
-export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
+export const quoteAttachmentsRelations = relations(quoteAttachments, ({ one }) => ({
   quote: one(quotes, {
-    fields: [quoteItems.quoteId],
+    fields: [quoteAttachments.quoteId],
     references: [quotes.id],
-  }),
-  inventoryItem: one(inventoryItems, {
-    fields: [quoteItems.inventoryItemId],
-    references: [inventoryItems.id],
   }),
 }));

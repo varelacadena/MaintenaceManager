@@ -303,7 +303,7 @@ export default function ProjectDetail() {
     },
   });
 
-  const projectQuotes = quotes?.filter(q => q.projectId === projectId) || [];
+  // Quotes are now task-based, not project-based
 
   const getUserName = (userId: string) => {
     const user = users?.find(u => u.id === userId);
@@ -898,27 +898,9 @@ export default function ProjectDetail() {
               <CardTitle>Project Quotes</CardTitle>
             </CardHeader>
             <CardContent>
-              {projectQuotes.length > 0 ? (
-                <div className="space-y-3">
-                  {projectQuotes.map((quote) => (
-                    <div key={quote.id} className="flex items-center justify-between p-3 rounded-lg border" data-testid={`quote-row-${quote.id}`}>
-                      <div>
-                        <p className="font-medium">{getVendorName(quote.vendorId)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          ${(quote.totalAmount || 0).toLocaleString()}
-                        </p>
-                      </div>
-                      <Badge className={quoteStatusColors[quote.status]} variant="secondary">
-                        {quote.status.replace("_", " ")}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  No quotes for this project yet
-                </p>
-              )}
+              <p className="text-muted-foreground text-center py-8">
+                Quotes are managed at the task level. View individual tasks to see their estimates.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

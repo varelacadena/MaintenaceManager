@@ -36,7 +36,6 @@ import {
   insertProjectTeamMemberSchema,
   insertProjectVendorSchema,
   insertQuoteSchema,
-  insertQuoteItemSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3992,21 +3991,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============== QUOTES ==============
+  // ============== QUOTES (Internal Estimates) ==============
 
-  // Get all quotes
+  // Get all quotes / Get quotes by task ID
   app.get("/api/quotes", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { projectId, vendorId, status } = req.query;
+      const { taskId, status } = req.query;
       const filters: any = {};
-      if (projectId) filters.projectId = projectId as string;
-      if (vendorId) filters.vendorId = vendorId as string;
+      if (taskId) filters.taskId = taskId as string;
       if (status) filters.status = status as string;
       
       const quoteList = await storage.getQuotes(filters);
       res.json(quoteList);
     } catch (error) {
       console.error("Error fetching quotes:", error);
+      res.status(500).json({ message: "Failed to fetch quotes" });
+    }
+  });
+
+  // Get quotes by task ID
+  app.get("/api/tasks/:taskId/quotes", isAuthenticated, async (req, res) => {
+    try {
+      const quotes = await storage.getQuotesByTaskId(req.params.taskId);
+      res.json(quotes);
+    } catch (error) {
+      console.error("Error fetching task quotes:", error);
       res.status(500).json({ message: "Failed to fetch quotes" });
     }
   });
@@ -4025,7 +4034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create quote
+  // Create quote (internal estimate)
   app.post("/api/quotes", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const user = await getAuthUser(req);
@@ -4039,6 +4048,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const quote = await storage.createQuote(data);
+      
+      // If a task requires estimate, update its estimate status
+      if (req.body.taskId) {
+        const task = await storage.getTask(req.body.taskId);
+        if (task && task.requiresEstimate && task.estimateStatus === "needs_estimate") {
+          await storage.updateTask(req.body.taskId, { estimateStatus: "waiting_approval" });
+        }
+      }
+      
       res.status(201).json(quote);
     } catch (error: any) {
       console.error("Error creating quote:", error);
@@ -4052,23 +4070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update quote
   app.patch("/api/quotes/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const user = await getAuthUser(req);
-      if (!user) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const updateData: any = { ...req.body };
-      
-      // Handle status changes
-      if (req.body.status === "submitted" && !updateData.submittedAt) {
-        updateData.submittedAt = new Date();
-      }
-      if (req.body.status === "approved") {
-        updateData.approvedAt = new Date();
-        updateData.approvedById = user.id;
-      }
-      
-      const quote = await storage.updateQuote(req.params.id, updateData);
+      const quote = await storage.updateQuote(req.params.id, req.body);
       if (!quote) {
         return res.status(404).json({ message: "Quote not found" });
       }
@@ -4076,6 +4078,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating quote:", error);
       res.status(500).json({ message: "Failed to update quote" });
+    }
+  });
+
+  // Approve quote (marks others as rejected, updates task status)
+  app.post("/api/quotes/:id/approve", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Update this quote to approved
+      const approvedQuote = await storage.updateQuote(req.params.id, { status: "approved" });
+
+      // Reject all other quotes for this task
+      const taskQuotes = await storage.getQuotesByTaskId(quote.taskId);
+      for (const q of taskQuotes) {
+        if (q.id !== req.params.id && q.status !== "rejected") {
+          await storage.updateQuote(q.id, { status: "rejected" });
+        }
+      }
+
+      // Update task status to 'ready' and set approved quote ID
+      await storage.updateTask(quote.taskId, {
+        status: "ready",
+        estimateStatus: "approved",
+        approvedQuoteId: req.params.id,
+      });
+
+      res.json(approvedQuote);
+    } catch (error) {
+      console.error("Error approving quote:", error);
+      res.status(500).json({ message: "Failed to approve quote" });
     }
   });
 
@@ -4090,89 +4125,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============== QUOTE ITEMS ==============
+  // ============== QUOTE ATTACHMENTS ==============
 
-  // Get quote items
-  app.get("/api/quotes/:id/items", isAuthenticated, requireAdmin, async (req, res) => {
+  // Get quote attachments
+  app.get("/api/quotes/:id/attachments", isAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getQuoteItems(req.params.id);
-      res.json(items);
+      const attachments = await storage.getQuoteAttachments(req.params.id);
+      res.json(attachments);
     } catch (error) {
-      console.error("Error fetching quote items:", error);
-      res.status(500).json({ message: "Failed to fetch quote items" });
+      console.error("Error fetching quote attachments:", error);
+      res.status(500).json({ message: "Failed to fetch attachments" });
     }
   });
 
-  // Create quote item
-  app.post("/api/quotes/:id/items", isAuthenticated, requireAdmin, async (req, res) => {
+  // Create quote attachment
+  app.post("/api/quotes/:id/attachments", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const data = insertQuoteItemSchema.parse({
-        ...req.body,
+      const attachment = await storage.createQuoteAttachment({
         quoteId: req.params.id,
-        lineTotal: (req.body.quantity || 1) * (req.body.unitCost || 0),
+        fileName: req.body.fileName,
+        fileType: req.body.fileType,
+        fileSize: req.body.fileSize,
+        storageUrl: req.body.storageUrl,
       });
-      const item = await storage.createQuoteItem(data);
-      
-      // Update quote total
-      const items = await storage.getQuoteItems(req.params.id);
-      const total = items.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
-      await storage.updateQuote(req.params.id, { totalAmount: total });
-      
-      res.status(201).json(item);
-    } catch (error: any) {
-      console.error("Error creating quote item:", error);
-      if (error.name === "ZodError") {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create quote item" });
-    }
-  });
-
-  // Update quote item
-  app.patch("/api/quote-items/:id", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const updateData = {
-        ...req.body,
-        lineTotal: (req.body.quantity || 1) * (req.body.unitCost || 0),
-      };
-      const item = await storage.updateQuoteItem(req.params.id, updateData);
-      if (!item) {
-        return res.status(404).json({ message: "Quote item not found" });
-      }
-      
-      // Update quote total
-      const items = await storage.getQuoteItems(item.quoteId);
-      const total = items.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
-      await storage.updateQuote(item.quoteId, { totalAmount: total });
-      
-      res.json(item);
+      res.status(201).json(attachment);
     } catch (error) {
-      console.error("Error updating quote item:", error);
-      res.status(500).json({ message: "Failed to update quote item" });
+      console.error("Error creating quote attachment:", error);
+      res.status(500).json({ message: "Failed to create attachment" });
     }
   });
 
-  // Delete quote item
-  app.delete("/api/quote-items/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  // Delete quote attachment
+  app.delete("/api/quote-attachments/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      // Get the item first to know which quote to update
-      const item = await storage.getQuoteItem(req.params.id);
-      if (!item) {
-        return res.status(404).json({ message: "Quote item not found" });
-      }
-      
-      const quoteId = item.quoteId;
-      await storage.deleteQuoteItem(req.params.id);
-      
-      // Recalculate and update quote total
-      const remainingItems = await storage.getQuoteItems(quoteId);
-      const total = remainingItems.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
-      await storage.updateQuote(quoteId, { totalAmount: total });
-      
+      await storage.deleteQuoteAttachment(req.params.id);
       res.status(204).send();
     } catch (error) {
-      console.error("Error deleting quote item:", error);
-      res.status(500).json({ message: "Failed to delete quote item" });
+      console.error("Error deleting quote attachment:", error);
+      res.status(500).json({ message: "Failed to delete attachment" });
     }
   });
 
@@ -4205,10 +4195,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get project vendors
       const vendorLinks = await storage.getProjectVendors(projectId);
 
-      // Get quotes for this project
-      const projectQuotes = await storage.getQuotes({ projectId });
-      const approvedQuotes = projectQuotes.filter(q => q.status === "approved");
-      const quotedAmount = approvedQuotes.reduce((sum, q) => sum + (q.totalAmount || 0), 0);
+      // Calculate quote totals from task-based quotes
+      let quotedAmount = 0;
+      let totalQuotes = 0;
+      let approvedQuotes = 0;
+      let draftQuotes = 0;
 
       // Calculate actual costs from parts used on project tasks
       let actualPartsCost = 0;
@@ -4220,6 +4211,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const timeEntries = await storage.getTimeEntriesByTask(task.id);
         totalTimeMinutes += timeEntries.reduce((sum, t) => sum + (t.durationMinutes || 0), 0);
+        
+        // Get quotes for this task
+        const taskQuotes = await storage.getQuotesByTaskId(task.id);
+        totalQuotes += taskQuotes.length;
+        approvedQuotes += taskQuotes.filter(q => q.status === "approved").length;
+        draftQuotes += taskQuotes.filter(q => q.status === "draft").length;
+        quotedAmount += taskQuotes.filter(q => q.status === "approved").reduce((sum, q) => sum + (q.estimatedCost || 0), 0);
       }
 
       res.json({
@@ -4238,9 +4236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalHours: Math.round(totalTimeMinutes / 60 * 10) / 10,
         },
         quotes: {
-          total: projectQuotes.length,
-          approved: approvedQuotes.length,
-          pending: projectQuotes.filter(q => q.status === "requested" || q.status === "submitted" || q.status === "under_review").length,
+          total: totalQuotes,
+          approved: approvedQuotes,
+          pending: draftQuotes,
         },
       });
     } catch (error) {
