@@ -1,0 +1,153 @@
+You are redesigning and fixing an internal Project Management integration for a service-based operations app.
+
+IMPORTANT PRINCIPLES (DO NOT VIOLATE):
+
+* Do NOT create a new task system.
+* Reuse the existing daily task creation flow, layout, statuses, and logic.
+* Projects are ONLY organizational containers, not workflow engines.
+* Tasks remain the core unit of work.
+* Keep the UI minimal, intuitive, and fast. No enterprise PM complexity.
+
+CORE CONCEPT:
+A project is simply a grouping label for tasks.
+Tasks can exist with or without a project.
+Creating a project must NOT introduce a new way of creating tasks.
+
+DATA MODEL REQUIREMENTS:
+
+* Project:
+
+  * id
+  * name
+  * description (optional)
+  * status (active, completed, archived)
+
+* Task (existing model, extended only):
+
+  * project_id (nullable)
+  * requires_estimate (boolean)
+  * estimate_status (none, needs_estimate, waiting_approval, approved)
+  * approved_quote_id (nullable)
+
+* Quote (internal only):
+
+  * id
+  * task_id
+  * vendor_name (optional, for linking quote to a vendor)
+  * estimated_cost
+  * status (draft, approved, rejected)
+  * attachments (array of file references)
+
+* QuoteAttachment:
+
+  * id
+  * quote_id
+  * file_name
+  * file_type
+  * file_size
+  * storage_url
+  * uploaded_at
+
+TASK CREATION RULES:
+
+* There must be ONE universal “Create Task” experience.
+* The task creation UI must be identical for daily tasks and project tasks.
+* The only difference:
+
+  * Optional “Assign to Project” dropdown
+  * Optional “Requires Internal Estimate” toggle
+* If “Requires Internal Estimate” is ON:
+
+  * Task status automatically becomes “Needs Estimate”
+* If OFF:
+
+  * Task follows normal daily task flow
+
+PROJECT PAGE REDESIGN:
+
+* Project page is READ-ONLY by default (no special workflows).
+* Display:
+
+  * Project name
+  * Simple progress summary
+  * Task list filtered by project_id
+* Tasks are editable from the SAME task editor used everywhere else.
+* NO nested task creation UIs inside projects.
+
+TASK STATUS FLOW (REUSE EXISTING + ADD ONLY THESE):
+
+* Needs Estimate
+* Waiting Approval
+* Ready
+* In Progress
+* Completed
+
+INTERNAL QUOTE UX (WITH UPLOADS, MULTI-QUOTE, MULTI-VENDOR):
+
+* Quotes are created ONLY from inside a task.
+* A task may have multiple internal quotes for comparison purposes.
+* Each quote can optionally be linked to a vendor (via `vendor_name` or vendor ID if needed).
+* Only ONE quote per task may be in “Approved” status at any time.
+* Quote uploads are OPTIONAL and supporting only (e.g., vendor PDF, screenshot, email).
+* Uploads are attached to the QUOTE, not the project.
+* Supported file types: PDF, PNG, JPG, DOCX.
+* Each upload must display:
+
+  * File name
+  * File size
+  * Upload date
+  * Download / Preview action
+* Task remains in “Needs Estimate” or “Waiting Approval” until ONE quote is approved.
+* When a quote is approved:
+
+  * All other quotes for the task are automatically marked “Rejected”
+  * Task status is set to “Ready”
+  * Approved quote becomes read-only
+
+UI / UX DESIGN RULES:
+
+* Display quotes as a simple vertical list inside the task view.
+* Clearly highlight the approved quote.
+* Show uploaded files per quote.
+* Show vendor name inline for each quote.
+* Upload UI must be inline (no separate upload pages).
+* Use drag-and-drop or single “Upload file” button.
+* Show uploads only when a quote exists.
+* Use progressive disclosure (hide uploads unless user expands “Supporting Documents”).
+* Clean, calm, low-cognitive-load layout.
+* No modals inside modals.
+* No multi-step wizards.
+* Clear labels using plain language.
+* Visual hierarchy:
+
+  * Tasks first
+  * Estimates second
+  * Uploaded files last (supporting evidence only)
+
+DO NOT BUILD:
+
+* Project-specific task types
+* Project workflows
+* Automation rules engines
+* Phase/milestone systems
+* Separate project task editors
+* Document management system
+* Global file libraries
+* Project-level uploads
+* Upload-driven workflows
+* Approval logic based on file presence
+* Multi-quote approval workflows
+* Weighted scoring systems
+* Auto-selection logic
+* Project-level quote aggregation
+
+GOAL:
+The user should feel like:
+“I work with tasks like always. Sometimes I attach a vendor quote, compare options from multiple vendors, pick one, and move on.”
+
+OUTPUT EXPECTATION:
+
+* Refactor existing integration instead of expanding it.
+* Redesign pages to follow the rules above.
+* Ensure vendor-linked uploads and multiple quotes are simple, optional, and non-disruptive.
+* Ensure the system remains clean, debuggable, and scalable.
