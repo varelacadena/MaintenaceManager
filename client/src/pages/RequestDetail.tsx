@@ -227,34 +227,20 @@ export default function RequestDetail() {
   if (isMobile) {
     return (
       <div className="flex flex-col h-full bg-background -mx-8 -my-6">
-        {/* Compact Mobile Header */}
-        <div className="sticky top-0 z-10 bg-background border-b px-3 py-2">
-          {/* Top row with back button */}
-          <div className="flex items-center gap-2 mb-1">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => navigate("/requests")}
-              className="h-7 w-7 -ml-1 text-muted-foreground shrink-0"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs text-muted-foreground">Back to Requests</span>
-          </div>
-          
+        {/* Ultra-Compact Mobile Header - Title and badges only */}
+        <div className="px-3 py-2 border-b bg-background">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h1 className="text-base font-semibold truncate" data-testid="text-request-title">
+              <h1 className="text-sm font-semibold truncate" data-testid="text-request-title">
                 {request.title}
               </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-1.5 py-0" data-testid="badge-status">
+              <div className="flex items-center gap-1 mt-0.5">
+                <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-status">
                   {getStatusLabel(request.status)}
                 </Badge>
                 <Badge 
                   variant="outline" 
-                  className={`text-[10px] px-1.5 py-0 capitalize ${getPriorityColor(request.urgency)}`}
+                  className={`text-[10px] px-1.5 py-0 h-4 capitalize ${getPriorityColor(request.urgency)}`}
                   data-testid="badge-urgency"
                 >
                   {request.urgency}
@@ -268,10 +254,10 @@ export default function RequestDetail() {
                 <Link href={`/tasks/new?requestId=${id}`}>
                   <Button 
                     size="sm"
-                    className="h-8 px-2 text-xs"
+                    className="h-7 px-2 text-xs"
                     data-testid="button-approve-create-task"
                   >
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                    <CheckCircle className="h-3 w-3 mr-1" />
                     Approve
                   </Button>
                 </Link>
@@ -280,10 +266,10 @@ export default function RequestDetail() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-destructive"
+                      className="h-7 w-7 text-destructive"
                       data-testid="button-reject-request"
                     >
-                      <XCircle className="h-4 w-4" />
+                      <XCircle className="h-3.5 w-3.5" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent className="max-w-[90vw]">
@@ -330,22 +316,6 @@ export default function RequestDetail() {
               </div>
             )}
           </div>
-          
-          {/* Status Messages */}
-          {request.status === "converted_to_task" && (
-            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-              <CheckCircle className="h-3 w-3" />
-              <span>Approved - Task created</span>
-            </div>
-          )}
-          {request.status === "rejected" && (
-            <div className="mt-1.5 text-xs text-red-600 dark:text-red-400">
-              <div className="flex items-center gap-1.5">
-                <XCircle className="h-3 w-3" />
-                <span>Rejected</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Mobile Content */}
