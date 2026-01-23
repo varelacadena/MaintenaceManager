@@ -18,9 +18,11 @@ import {
   Calendar as CalendarIcon,
   Eye,
   EyeOff,
+  FolderKanban,
+  ArrowUpRight,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import type { ServiceRequest, Task, VehicleReservation, Vehicle, User as UserType, Property } from "@shared/schema";
+import type { ServiceRequest, Task, VehicleReservation, Vehicle, User as UserType, Property, Project } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +88,19 @@ export default function Dashboard() {
     queryKey: ["/api/vehicles"],
     enabled: createDialogOpen,
   });
+
+  const { data: projects = [] } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    enabled: user?.role === "admin",
+  });
+
+  const projectStats = useMemo(() => {
+    const inProgress = projects.filter(p => p.status === "in_progress").length;
+    const planning = projects.filter(p => p.status === "planning").length;
+    const totalBudget = projects.reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0);
+    const highPriority = projects.filter(p => (p.priority === "high" || p.priority === "critical") && p.status !== "completed").length;
+    return { total: projects.length, inProgress, planning, totalBudget, highPriority };
+  }, [projects]);
 
   const statusMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: Task["status"] }) => {
@@ -826,6 +841,45 @@ export default function Dashboard() {
           testId="filter-completed-today"
         />
       </div>
+
+      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-indigo-200 dark:border-indigo-800" data-testid="card-projects-summary">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="w-5 h-5 text-indigo-600" />
+              <CardTitle className="text-lg">Projects Overview</CardTitle>
+            </div>
+            <Link href="/projects">
+              <Button variant="outline" size="sm" data-testid="button-view-projects">
+                View All
+                <ArrowUpRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <p className="text-2xl font-bold text-indigo-600">{projectStats.total}</p>
+              <p className="text-xs text-muted-foreground">Total Projects</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold text-blue-600">{projectStats.inProgress}</p>
+              <p className="text-xs text-muted-foreground">In Progress</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold text-orange-600">{projectStats.highPriority}</p>
+              <p className="text-xs text-muted-foreground">High Priority</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold text-green-600">
+                ${projectStats.totalBudget.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground">Total Budget</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">

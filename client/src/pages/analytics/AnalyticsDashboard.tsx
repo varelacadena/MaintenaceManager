@@ -7,7 +7,8 @@ import {
   Car, 
   FileText, 
   Bell,
-  BarChart3
+  BarChart3,
+  FolderKanban
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,8 +21,9 @@ const FacilitiesReport = lazy(() => import("./reports/FacilitiesReport"));
 const FleetReport = lazy(() => import("./reports/FleetReport"));
 const ServiceRequestsReport = lazy(() => import("./reports/ServiceRequestsReport"));
 const AlertsReport = lazy(() => import("./reports/AlertsReport"));
+const ProjectsReport = lazy(() => import("./reports/ProjectsReport"));
 
-type ReportTab = "work-orders" | "technicians" | "assets" | "facilities" | "fleet" | "requests" | "alerts";
+type ReportTab = "work-orders" | "technicians" | "assets" | "facilities" | "fleet" | "requests" | "alerts" | "projects";
 
 const reportTabs = [
   {
@@ -73,6 +75,13 @@ const reportTabs = [
     icon: Bell,
     color: "bg-red-100 dark:bg-red-900/30 text-red-600",
   },
+  {
+    id: "projects" as ReportTab,
+    title: "Projects",
+    description: "Project overview",
+    icon: FolderKanban,
+    color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600",
+  },
 ];
 
 function LoadingSkeleton() {
@@ -110,6 +119,8 @@ export default function AnalyticsDashboard() {
         return <ServiceRequestsReport />;
       case "alerts":
         return <AlertsReport />;
+      case "projects":
+        return <ProjectsReport />;
       default:
         return <WorkOrdersReport />;
     }
