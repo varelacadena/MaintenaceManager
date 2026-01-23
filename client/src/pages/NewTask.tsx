@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -43,7 +43,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate } from "@shared/schema";
 import { z } from "zod";
-import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save } from "lucide-react";
+import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save, Upload, Paperclip, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -122,6 +122,8 @@ export default function NewTask() {
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
+  const [pendingEquipmentFiles, setPendingEquipmentFiles] = useState<File[]>([]);
+  const equipmentFileInputRef = useRef<HTMLInputElement>(null);
   const [isContactOpen, setIsContactOpen] = useState(true);
 
   const searchParams = new URLSearchParams(window.location.search);
@@ -289,7 +291,74 @@ export default function NewTask() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: (newEquipment: Equipment) => {
+    onSuccess: async (newEquipment: Equipment) => {
+      // Upload pending files if any
+      let uploadedCount = 0;
+      let failedCount = 0;
+      const filesToUpload = [...pendingEquipmentFiles];
+      
+      if (filesToUpload.length > 0) {
+        for (const file of filesToUpload) {
+          try {
+            // Get upload URL
+            const uploadUrlRes = await fetch("/api/objects/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fileName: file.name }),
+              credentials: "include",
+            });
+            if (!uploadUrlRes.ok) {
+              console.error("Failed to get upload URL for", file.name);
+              failedCount++;
+              continue;
+            }
+            const { url, objectPath } = await uploadUrlRes.json();
+            
+            // Upload file to object storage
+            const uploadRes = await fetch(url, {
+              method: "PUT",
+              body: file,
+              headers: { "Content-Type": file.type || "application/octet-stream" },
+            });
+            
+            if (!uploadRes.ok) {
+              console.error("Failed to upload file to storage:", file.name);
+              failedCount++;
+              continue;
+            }
+            
+            // Register the upload in database with equipment ID
+            const registerRes = await fetch("/api/uploads", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                fileName: file.name,
+                fileType: file.type || "application/octet-stream",
+                objectUrl: url.split("?")[0],
+                objectPath: objectPath,
+                equipmentId: newEquipment.id,
+              }),
+              credentials: "include",
+            });
+            
+            if (!registerRes.ok) {
+              console.error("Failed to register upload in database:", file.name);
+              failedCount++;
+              continue;
+            }
+            
+            uploadedCount++;
+          } catch (error) {
+            console.error("Error uploading file:", error);
+            failedCount++;
+          }
+        }
+        setPendingEquipmentFiles([]);
+        
+        // Invalidate equipment uploads cache
+        queryClient.invalidateQueries({ queryKey: ["/api/equipment", newEquipment.id, "uploads"] });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId] });
       form.setValue("equipmentId", newEquipment.id);
       setIsEquipmentDialogOpen(false);
@@ -302,9 +371,20 @@ export default function NewTask() {
         notes: "",
         imageUrl: "",
       });
+      let toastMessage = "The new equipment has been added and selected.";
+      if (filesToUpload.length > 0) {
+        if (failedCount === 0) {
+          toastMessage = `Equipment created with ${uploadedCount} attached file${uploadedCount > 1 ? 's' : ''}.`;
+        } else if (uploadedCount > 0) {
+          toastMessage = `Equipment created. ${uploadedCount} file${uploadedCount > 1 ? 's' : ''} uploaded, ${failedCount} failed.`;
+        } else {
+          toastMessage = "Equipment created, but file uploads failed.";
+        }
+      }
       toast({
         title: "Equipment Created",
-        description: "The new equipment has been added and selected.",
+        description: toastMessage,
+        variant: failedCount > 0 ? "destructive" : undefined,
       });
     },
     onError: (error: any) => {
@@ -774,6 +854,7 @@ export default function NewTask() {
                             notes: "",
                             imageUrl: "",
                           });
+                          setPendingEquipmentFiles([]);
                           setIsEquipmentDialogOpen(true);
                         } else {
                           field.onChange(value);
@@ -1573,8 +1654,74 @@ export default function NewTask() {
                 />
               </div>
 
+              {/* File Upload Section */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Attachments</Label>
+                <p className="text-xs text-muted-foreground">Add manuals, pictures, or other documents</p>
+                <input
+                  ref={equipmentFileInputRef}
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) {
+                      setPendingEquipmentFiles(prev => [...prev, ...Array.from(files)]);
+                    }
+                    if (equipmentFileInputRef.current) {
+                      equipmentFileInputRef.current.value = "";
+                    }
+                  }}
+                  className="hidden"
+                  data-testid="input-equipment-files"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => equipmentFileInputRef.current?.click()}
+                  className="w-full"
+                  data-testid="button-add-equipment-files"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Add Files
+                </Button>
+                {pendingEquipmentFiles.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {pendingEquipmentFiles.map((file, index) => (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="flex items-center justify-between text-sm bg-muted/50 rounded-md px-2 py-1"
+                        data-testid={`file-item-${index}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPendingEquipmentFiles(prev => prev.filter((_, i) => i !== index));
+                          }}
+                          data-testid={`button-remove-file-${index}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEquipmentDialogOpen(false)} data-testid="button-cancel-equipment">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsEquipmentDialogOpen(false);
+                  setPendingEquipmentFiles([]);
+                }} data-testid="button-cancel-equipment">
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createEquipmentMutation.isPending} data-testid="button-submit-equipment">

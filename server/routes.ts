@@ -2310,6 +2310,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Equipment uploads
+  app.get("/api/equipment/:id/uploads", isAuthenticated, async (req, res) => {
+    try {
+      const equipmentId = req.params.id;
+      const equipmentUploads = await storage.getUploadsByEquipment(equipmentId);
+      res.json(equipmentUploads);
+    } catch (error) {
+      console.error("Error fetching equipment uploads:", error);
+      res.status(500).json({ message: "Failed to fetch equipment uploads" });
+    }
+  });
+
   // Vehicle routes
   app.get("/api/vehicles", isAuthenticated, async (req, res) => {
     try {

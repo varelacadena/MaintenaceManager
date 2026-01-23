@@ -233,11 +233,12 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
-// Uploads (can be on requests, tasks, or vehicle logs for attachments)
+// Uploads (can be on requests, tasks, equipment, or vehicle logs for attachments)
 export const uploads = pgTable("uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
+  equipmentId: varchar("equipment_id").references(() => equipment.id, { onDelete: "cascade" }),
   vehicleCheckOutLogId: varchar("vehicle_check_out_log_id").references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
   vehicleCheckInLogId: varchar("vehicle_check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
   fileName: varchar("file_name", { length: 500 }).notNull(),
@@ -591,6 +592,10 @@ export const uploadsRelations = relations(uploads, ({ one }) => ({
     fields: [uploads.requestId],
     references: [serviceRequests.id],
   }),
+  equipment: one(equipment, {
+    fields: [uploads.equipmentId],
+    references: [equipment.id],
+  }),
   vehicleCheckOutLog: one(vehicleCheckOutLogs, {
     fields: [uploads.vehicleCheckOutLogId],
     references: [vehicleCheckOutLogs.id],
@@ -653,7 +658,7 @@ export const spacesRelations = relations(spaces, ({ one, many }) => ({
   tasks: many(tasks),
 }));
 
-export const equipmentRelations = relations(equipment, ({ one }) => ({
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
   property: one(properties, {
     fields: [equipment.propertyId],
     references: [properties.id],
@@ -662,6 +667,7 @@ export const equipmentRelations = relations(equipment, ({ one }) => ({
     fields: [equipment.spaceId],
     references: [spaces.id],
   }),
+  uploads: many(uploads),
 }));
 
 // Vehicle Fleet Management

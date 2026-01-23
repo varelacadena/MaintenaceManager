@@ -223,10 +223,11 @@ export interface IStorage {
     groups: { name: string; sortOrder?: number; items: { text: string; isCompleted?: boolean; sortOrder?: number }[] }[]
   ): Promise<{ task: Task; groups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] }>;
 
-  // Upload operations (can be on requests or tasks)
+  // Upload operations (can be on requests, tasks, equipment, or vehicle logs)
   createUpload(upload: InsertUpload): Promise<Upload>;
   getUploadsByRequest(requestId: string): Promise<Upload[]>;
   getUploadsByTask(taskId: string): Promise<Upload[]>;
+  getUploadsByEquipment(equipmentId: string): Promise<Upload[]>;
   getUploadsByVehicleCheckOutLog(checkOutLogId: string): Promise<Upload[]>;
   getUploadsByVehicleCheckInLog(checkInLogId: string): Promise<Upload[]>;
   getUpload(id: string): Promise<Upload | undefined>;
@@ -1119,6 +1120,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(uploads)
       .where(eq(uploads.taskId, taskId))
+      .orderBy(uploads.createdAt);
+  }
+
+  async getUploadsByEquipment(equipmentId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.equipmentId, equipmentId))
       .orderBy(uploads.createdAt);
   }
 
