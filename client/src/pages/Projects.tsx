@@ -34,7 +34,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Project, Property, Area } from "@shared/schema";
+import type { Project, Property, Space } from "@shared/schema";
 import { format } from "date-fns";
 
 const projectFormSchema = z.object({
@@ -43,7 +43,7 @@ const projectFormSchema = z.object({
   status: z.enum(["planning", "in_progress", "on_hold", "completed", "cancelled"]).default("planning"),
   priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
   propertyId: z.string().nullable().optional(),
-  areaId: z.string().nullable().optional(),
+  spaceId: z.string().nullable().optional(),
   budgetAmount: z.coerce.number().default(0),
   notes: z.string().optional(),
   startDate: z.string().optional(),
@@ -81,10 +81,6 @@ export default function Projects() {
     queryKey: ["/api/properties"],
   });
 
-  const { data: areas } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
-
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
@@ -93,11 +89,27 @@ export default function Projects() {
       status: "planning",
       priority: "medium",
       propertyId: null,
-      areaId: null,
+      spaceId: null,
       budgetAmount: 0,
       notes: "",
     },
   });
+
+  const selectedPropertyId = form.watch("propertyId");
+
+  const { data: spaces } = useQuery<Space[]>({
+    queryKey: ["/api/spaces", { propertyId: selectedPropertyId }],
+    queryFn: async () => {
+      if (!selectedPropertyId) return [];
+      const response = await fetch(`/api/spaces?propertyId=${selectedPropertyId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedPropertyId,
+  });
+
+  const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
+  const isBuildingProperty = selectedProperty?.type === "building";
 
   const createProjectMutation = useMutation({
     mutationFn: async (data: ProjectFormValues) => {
@@ -139,11 +151,6 @@ export default function Projects() {
   const getPropertyName = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find(p => p.id === propertyId)?.name;
-  };
-
-  const getAreaName = (areaId: string | null) => {
-    if (!areaId) return null;
-    return areas?.find(a => a.id === areaId)?.name;
   };
 
   if (isLoading) {
@@ -278,34 +285,36 @@ export default function Projects() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="areaId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Area (Optional)</FormLabel>
-                        <Select 
-                          onValueChange={(val) => field.onChange(val === "__none__" ? undefined : val)} 
-                          value={field.value || "__none__"}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-project-area">
-                              <SelectValue placeholder="Select area" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="__none__">None</SelectItem>
-                            {areas?.map((area) => (
-                              <SelectItem key={area.id} value={area.id}>
-                                {area.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {isBuildingProperty && spaces && spaces.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="spaceId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Space (Optional)</FormLabel>
+                          <Select 
+                            onValueChange={(val) => field.onChange(val === "__none__" ? undefined : val)} 
+                            value={field.value || "__none__"}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-project-space">
+                                <SelectValue placeholder="Select space" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="__none__">None</SelectItem>
+                              {spaces.map((space) => (
+                                <SelectItem key={space.id} value={space.id}>
+                                  {space.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
                 <FormField
                   control={form.control}
@@ -449,12 +458,10 @@ export default function Projects() {
                       </div>
                     )}
                   </div>
-                  {(getPropertyName(project.propertyId) || getAreaName(project.areaId)) && (
+                  {getPropertyName(project.propertyId) && (
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Building2 className="w-4 h-4" />
-                      <span>
-                        {getPropertyName(project.propertyId) || getAreaName(project.areaId)}
-                      </span>
+                      <span>{getPropertyName(project.propertyId)}</span>
                     </div>
                   )}
                 </CardContent>
