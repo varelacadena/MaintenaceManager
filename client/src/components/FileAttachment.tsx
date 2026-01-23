@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Paperclip, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
+import { Paperclip, ExternalLink, AlertCircle, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FileAttachmentProps {
   attachment: {
@@ -17,11 +18,13 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const isMockFile = attachment.objectUrl.includes("mock-storage.local");
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (isMockFile) {
       toast({
@@ -40,7 +43,31 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
       const data = await response.json();
 
       if (data.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
+        // On mobile, use a more reliable method to open files
+        // Create an anchor element and programmatically click it
+        const link = document.createElement('a');
+        link.href = data.downloadUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        
+        // For images and PDFs, just open in new tab
+        // For other files, try to trigger download
+        const isViewable = attachment.fileType.startsWith('image/') || attachment.fileType === 'application/pdf';
+        
+        if (!isViewable && isMobile) {
+          // For non-viewable files on mobile, set download attribute
+          link.download = data.fileName || attachment.fileName;
+        }
+        
+        // Append to body, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Opening file",
+          description: isViewable ? "Opening in new tab..." : "Starting download...",
+        });
       } else if (data.isMock) {
         toast({
           title: "File unavailable",
@@ -68,33 +95,43 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
     <button
       onClick={handleClick}
       disabled={isLoading}
-      className="flex items-center justify-between p-2 rounded-md border hover-elevate active-elevate-2 w-full text-left disabled:opacity-50"
+      className={`flex items-center justify-between rounded-md border hover-elevate active-elevate-2 w-full text-left disabled:opacity-50 ${
+        isMobile ? 'p-3 min-h-[52px]' : 'p-2'
+      }`}
       data-testid={`attachment-${attachment.id}`}
     >
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className={`flex items-center justify-center w-8 h-8 rounded shrink-0 ${
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className={`flex items-center justify-center rounded shrink-0 ${
+          isMobile ? 'w-10 h-10' : 'w-8 h-8'
+        } ${
           isMockFile || error 
             ? "bg-destructive/10 text-destructive" 
             : "bg-primary/10 text-primary"
         }`}>
           {isLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <Loader2 className={`animate-spin ${isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
           ) : isMockFile || error ? (
-            <AlertCircle className="w-3.5 h-3.5" />
+            <AlertCircle className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
           ) : (
-            <Paperclip className="w-3.5 h-3.5" />
+            <Paperclip className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium truncate">
+          <p className={`font-medium truncate ${isMobile ? 'text-sm' : 'text-xs'}`}>
             {attachment.fileName}
           </p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-[10px]'}`}>
             {isMockFile ? "File unavailable" : attachment.fileType}
           </p>
         </div>
         {!isLoading && !isMockFile && !error && (
-          <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
+          <div className={`shrink-0 ${isMobile ? 'p-2' : ''}`}>
+            {isMobile ? (
+              <Download className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ExternalLink className="w-3 h-3 text-muted-foreground" />
+            )}
+          </div>
         )}
       </div>
     </button>
