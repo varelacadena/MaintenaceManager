@@ -10,6 +10,7 @@ import {
   index,
   boolean,
   doublePrecision,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -134,6 +135,7 @@ export const executorTypeEnum = pgEnum("executor_type", ["student", "technician"
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "set null" }),
+  projectId: varchar("project_id"), // Links task to a project (forward reference, relation defined later)
   propertyId: varchar("property_id").references(() => properties.id),
   spaceId: varchar("space_id").references(() => spaces.id), // For tasks in building spaces
   equipmentId: varchar("equipment_id").references(() => equipment.id),
@@ -498,6 +500,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   request: one(serviceRequests, {
     fields: [tasks.requestId],
     references: [serviceRequests.id],
+  }),
+  project: one(projects, {
+    fields: [tasks.projectId],
+    references: [projects.id],
   }),
   property: one(properties, {
     fields: [tasks.propertyId],
@@ -1010,5 +1016,241 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
     references: [users.id],
+  }),
+}));
+
+// ============================================================================
+// PROJECT MANAGEMENT SYSTEM
+// ============================================================================
+
+// Project status enum
+export const projectStatusEnum = pgEnum("project_status", [
+  "planning",
+  "in_progress",
+  "on_hold",
+  "completed",
+  "cancelled"
+]);
+
+// Project priority enum
+export const projectPriorityEnum = pgEnum("project_priority", [
+  "low",
+  "medium",
+  "high",
+  "critical"
+]);
+
+// Projects table - groups multiple tasks under one project
+export const projects = pgTable("projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  status: projectStatusEnum("status").notNull().default("planning"),
+  priority: projectPriorityEnum("priority").notNull().default("medium"),
+  propertyId: uuid("property_id").references(() => properties.id),
+  areaId: varchar("area_id").references(() => areas.id),
+  startDate: timestamp("start_date"),
+  targetEndDate: timestamp("target_end_date"),
+  actualEndDate: timestamp("actual_end_date"),
+  budgetAmount: doublePrecision("budget_amount").default(0),
+  notes: text("notes"),
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProjectSchema = createInsertSchema(projects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  actualEndDate: true,
+});
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
+
+// Project team member role enum
+export const projectTeamRoleEnum = pgEnum("project_team_role", [
+  "manager",
+  "lead",
+  "technician",
+  "support"
+]);
+
+// Project team members - links users to projects
+export const projectTeamMembers = pgTable("project_team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: projectTeamRoleEnum("role").notNull().default("technician"),
+  allocationHours: integer("allocation_hours"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertProjectTeamMemberSchema = createInsertSchema(projectTeamMembers).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertProjectTeamMember = z.infer<typeof insertProjectTeamMemberSchema>;
+export type ProjectTeamMember = typeof projectTeamMembers.$inferSelect;
+
+// Project vendor role enum
+export const projectVendorRoleEnum = pgEnum("project_vendor_role", [
+  "primary",
+  "subcontractor",
+  "consultant",
+  "supplier"
+]);
+
+// Project vendors - links vendors to projects
+export const projectVendors = pgTable("project_vendors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  role: projectVendorRoleEnum("role").notNull().default("primary"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertProjectVendorSchema = createInsertSchema(projectVendors).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertProjectVendor = z.infer<typeof insertProjectVendorSchema>;
+export type ProjectVendor = typeof projectVendors.$inferSelect;
+
+// Quote status enum
+export const quoteStatusEnum = pgEnum("quote_status", [
+  "requested",
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
+  "expired"
+]);
+
+// Quotes - vendor pricing for projects/tasks
+export const quotes = pgTable("quotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id),
+  status: quoteStatusEnum("status").notNull().default("requested"),
+  totalAmount: doublePrecision("total_amount").default(0),
+  validUntil: timestamp("valid_until"),
+  notes: text("notes"),
+  submittedAt: timestamp("submitted_at"),
+  approvedAt: timestamp("approved_at"),
+  approvedById: varchar("approved_by_id").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertQuoteSchema = createInsertSchema(quotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  submittedAt: true,
+  approvedAt: true,
+});
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+export type Quote = typeof quotes.$inferSelect;
+
+// Quote items - line items within a quote
+export const quoteItems = pgTable("quote_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quoteId: varchar("quote_id").notNull().references(() => quotes.id, { onDelete: "cascade" }),
+  description: varchar("description", { length: 500 }).notNull(),
+  quantity: doublePrecision("quantity").notNull().default(1),
+  unitCost: doublePrecision("unit_cost").notNull().default(0),
+  lineTotal: doublePrecision("line_total").notNull().default(0),
+  inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
+export type QuoteItem = typeof quoteItems.$inferSelect;
+
+// Project relations
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  property: one(properties, {
+    fields: [projects.propertyId],
+    references: [properties.id],
+  }),
+  area: one(areas, {
+    fields: [projects.areaId],
+    references: [areas.id],
+  }),
+  createdBy: one(users, {
+    fields: [projects.createdById],
+    references: [users.id],
+  }),
+  teamMembers: many(projectTeamMembers),
+  projectVendors: many(projectVendors),
+  tasks: many(tasks),
+  quotes: many(quotes),
+}));
+
+export const projectTeamMembersRelations = relations(projectTeamMembers, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTeamMembers.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectTeamMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const projectVendorsRelations = relations(projectVendors, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectVendors.projectId],
+    references: [projects.id],
+  }),
+  vendor: one(vendors, {
+    fields: [projectVendors.vendorId],
+    references: [vendors.id],
+  }),
+}));
+
+export const quotesRelations = relations(quotes, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [quotes.projectId],
+    references: [projects.id],
+  }),
+  task: one(tasks, {
+    fields: [quotes.taskId],
+    references: [tasks.id],
+  }),
+  vendor: one(vendors, {
+    fields: [quotes.vendorId],
+    references: [vendors.id],
+  }),
+  createdBy: one(users, {
+    fields: [quotes.createdById],
+    references: [users.id],
+  }),
+  approvedBy: one(users, {
+    fields: [quotes.approvedById],
+    references: [users.id],
+  }),
+  items: many(quoteItems),
+}));
+
+export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [quoteItems.quoteId],
+    references: [quotes.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [quoteItems.inventoryItemId],
+    references: [inventoryItems.id],
   }),
 }));

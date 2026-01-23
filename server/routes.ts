@@ -32,6 +32,11 @@ import {
   insertVehicleDocumentSchema,
   insertEmergencyContactSchema,
   insertNotificationSchema,
+  insertProjectSchema,
+  insertProjectTeamMemberSchema,
+  insertProjectVendorSchema,
+  insertQuoteSchema,
+  insertQuoteItemSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3783,6 +3788,467 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error dismissing all notifications:", error);
       res.status(500).json({ message: "Failed to dismiss all notifications" });
+    }
+  });
+
+  // ============== PROJECT MANAGEMENT ==============
+
+  // Get all projects
+  app.get("/api/projects", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { status, createdById } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status as string;
+      if (createdById) filters.createdById = createdById as string;
+      
+      const projectList = await storage.getProjects(filters);
+      res.json(projectList);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  // Get single project
+  app.get("/api/projects/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  // Create project
+  app.post("/api/projects", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const data = insertProjectSchema.parse({
+        ...req.body,
+        createdById: user.id,
+      });
+      
+      const project = await storage.createProject(data);
+      res.status(201).json(project);
+    } catch (error: any) {
+      console.error("Error creating project:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  // Update project
+  app.patch("/api/projects/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const project = await storage.updateProject(req.params.id, req.body);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  // Delete project
+  app.delete("/api/projects/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteProject(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
+  // Get tasks by project
+  app.get("/api/projects/:id/tasks", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const tasksList = await storage.getTasksByProject(req.params.id);
+      res.json(tasksList);
+    } catch (error) {
+      console.error("Error fetching project tasks:", error);
+      res.status(500).json({ message: "Failed to fetch project tasks" });
+    }
+  });
+
+  // ============== PROJECT TEAM MEMBERS ==============
+
+  // Get project team members
+  app.get("/api/projects/:id/team", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const members = await storage.getProjectTeamMembers(req.params.id);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  // Add team member to project
+  app.post("/api/projects/:id/team", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const data = insertProjectTeamMemberSchema.parse({
+        ...req.body,
+        projectId: req.params.id,
+      });
+      const member = await storage.addProjectTeamMember(data);
+      res.status(201).json(member);
+    } catch (error: any) {
+      console.error("Error adding team member:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to add team member" });
+    }
+  });
+
+  // Update team member
+  app.patch("/api/project-team-members/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const member = await storage.updateProjectTeamMember(req.params.id, req.body);
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Error updating team member:", error);
+      res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
+  // Remove team member
+  app.delete("/api/project-team-members/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.removeProjectTeamMember(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing team member:", error);
+      res.status(500).json({ message: "Failed to remove team member" });
+    }
+  });
+
+  // ============== PROJECT VENDORS ==============
+
+  // Get project vendors
+  app.get("/api/projects/:id/vendors", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const vendorList = await storage.getProjectVendors(req.params.id);
+      res.json(vendorList);
+    } catch (error) {
+      console.error("Error fetching project vendors:", error);
+      res.status(500).json({ message: "Failed to fetch project vendors" });
+    }
+  });
+
+  // Add vendor to project
+  app.post("/api/projects/:id/vendors", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const data = insertProjectVendorSchema.parse({
+        ...req.body,
+        projectId: req.params.id,
+      });
+      const vendor = await storage.addProjectVendor(data);
+      res.status(201).json(vendor);
+    } catch (error: any) {
+      console.error("Error adding project vendor:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to add vendor to project" });
+    }
+  });
+
+  // Update project vendor
+  app.patch("/api/project-vendors/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const vendor = await storage.updateProjectVendor(req.params.id, req.body);
+      if (!vendor) {
+        return res.status(404).json({ message: "Project vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error updating project vendor:", error);
+      res.status(500).json({ message: "Failed to update project vendor" });
+    }
+  });
+
+  // Remove vendor from project
+  app.delete("/api/project-vendors/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.removeProjectVendor(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing project vendor:", error);
+      res.status(500).json({ message: "Failed to remove vendor" });
+    }
+  });
+
+  // ============== QUOTES ==============
+
+  // Get all quotes
+  app.get("/api/quotes", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { projectId, vendorId, status } = req.query;
+      const filters: any = {};
+      if (projectId) filters.projectId = projectId as string;
+      if (vendorId) filters.vendorId = vendorId as string;
+      if (status) filters.status = status as string;
+      
+      const quoteList = await storage.getQuotes(filters);
+      res.json(quoteList);
+    } catch (error) {
+      console.error("Error fetching quotes:", error);
+      res.status(500).json({ message: "Failed to fetch quotes" });
+    }
+  });
+
+  // Get single quote
+  app.get("/api/quotes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+      res.json(quote);
+    } catch (error) {
+      console.error("Error fetching quote:", error);
+      res.status(500).json({ message: "Failed to fetch quote" });
+    }
+  });
+
+  // Create quote
+  app.post("/api/quotes", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const data = insertQuoteSchema.parse({
+        ...req.body,
+        createdById: user.id,
+      });
+      
+      const quote = await storage.createQuote(data);
+      res.status(201).json(quote);
+    } catch (error: any) {
+      console.error("Error creating quote:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create quote" });
+    }
+  });
+
+  // Update quote
+  app.patch("/api/quotes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const updateData: any = { ...req.body };
+      
+      // Handle status changes
+      if (req.body.status === "submitted" && !updateData.submittedAt) {
+        updateData.submittedAt = new Date();
+      }
+      if (req.body.status === "approved") {
+        updateData.approvedAt = new Date();
+        updateData.approvedById = user.id;
+      }
+      
+      const quote = await storage.updateQuote(req.params.id, updateData);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+      res.json(quote);
+    } catch (error) {
+      console.error("Error updating quote:", error);
+      res.status(500).json({ message: "Failed to update quote" });
+    }
+  });
+
+  // Delete quote
+  app.delete("/api/quotes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteQuote(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting quote:", error);
+      res.status(500).json({ message: "Failed to delete quote" });
+    }
+  });
+
+  // ============== QUOTE ITEMS ==============
+
+  // Get quote items
+  app.get("/api/quotes/:id/items", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const items = await storage.getQuoteItems(req.params.id);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching quote items:", error);
+      res.status(500).json({ message: "Failed to fetch quote items" });
+    }
+  });
+
+  // Create quote item
+  app.post("/api/quotes/:id/items", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const data = insertQuoteItemSchema.parse({
+        ...req.body,
+        quoteId: req.params.id,
+        lineTotal: (req.body.quantity || 1) * (req.body.unitCost || 0),
+      });
+      const item = await storage.createQuoteItem(data);
+      
+      // Update quote total
+      const items = await storage.getQuoteItems(req.params.id);
+      const total = items.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
+      await storage.updateQuote(req.params.id, { totalAmount: total });
+      
+      res.status(201).json(item);
+    } catch (error: any) {
+      console.error("Error creating quote item:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create quote item" });
+    }
+  });
+
+  // Update quote item
+  app.patch("/api/quote-items/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const updateData = {
+        ...req.body,
+        lineTotal: (req.body.quantity || 1) * (req.body.unitCost || 0),
+      };
+      const item = await storage.updateQuoteItem(req.params.id, updateData);
+      if (!item) {
+        return res.status(404).json({ message: "Quote item not found" });
+      }
+      
+      // Update quote total
+      const items = await storage.getQuoteItems(item.quoteId);
+      const total = items.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
+      await storage.updateQuote(item.quoteId, { totalAmount: total });
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating quote item:", error);
+      res.status(500).json({ message: "Failed to update quote item" });
+    }
+  });
+
+  // Delete quote item
+  app.delete("/api/quote-items/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      // Get the item first to know which quote to update
+      const item = await storage.getQuoteItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Quote item not found" });
+      }
+      
+      const quoteId = item.quoteId;
+      await storage.deleteQuoteItem(req.params.id);
+      
+      // Recalculate and update quote total
+      const remainingItems = await storage.getQuoteItems(quoteId);
+      const total = remainingItems.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
+      await storage.updateQuote(quoteId, { totalAmount: total });
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting quote item:", error);
+      res.status(500).json({ message: "Failed to delete quote item" });
+    }
+  });
+
+  // ============== PROJECT ANALYTICS ==============
+
+  // Get project analytics
+  app.get("/api/projects/:id/analytics", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const projectId = req.params.id;
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Get project tasks
+      const projectTasks = await storage.getTasksByProject(projectId);
+      
+      // Calculate task stats
+      const taskStats = {
+        total: projectTasks.length,
+        completed: projectTasks.filter(t => t.status === "completed").length,
+        inProgress: projectTasks.filter(t => t.status === "in_progress").length,
+        notStarted: projectTasks.filter(t => t.status === "not_started").length,
+        onHold: projectTasks.filter(t => t.status === "on_hold").length,
+      };
+
+      // Get team members
+      const team = await storage.getProjectTeamMembers(projectId);
+      
+      // Get project vendors
+      const vendorLinks = await storage.getProjectVendors(projectId);
+
+      // Get quotes for this project
+      const projectQuotes = await storage.getQuotes({ projectId });
+      const approvedQuotes = projectQuotes.filter(q => q.status === "approved");
+      const quotedAmount = approvedQuotes.reduce((sum, q) => sum + (q.totalAmount || 0), 0);
+
+      // Calculate actual costs from parts used on project tasks
+      let actualPartsCost = 0;
+      let totalTimeMinutes = 0;
+      
+      for (const task of projectTasks) {
+        const parts = await storage.getPartsByTask(task.id);
+        actualPartsCost += parts.reduce((sum, p) => sum + (p.cost || 0), 0);
+        
+        const timeEntries = await storage.getTimeEntriesByTask(task.id);
+        totalTimeMinutes += timeEntries.reduce((sum, t) => sum + (t.durationMinutes || 0), 0);
+      }
+
+      res.json({
+        project,
+        taskStats,
+        teamCount: team.length,
+        vendorCount: vendorLinks.length,
+        budget: {
+          allocated: project.budgetAmount || 0,
+          quoted: quotedAmount,
+          actualParts: actualPartsCost,
+          remaining: (project.budgetAmount || 0) - actualPartsCost - quotedAmount,
+        },
+        time: {
+          totalMinutes: totalTimeMinutes,
+          totalHours: Math.round(totalTimeMinutes / 60 * 10) / 10,
+        },
+        quotes: {
+          total: projectQuotes.length,
+          approved: approvedQuotes.length,
+          pending: projectQuotes.filter(q => q.status === "requested" || q.status === "submitted" || q.status === "under_review").length,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching project analytics:", error);
+      res.status(500).json({ message: "Failed to fetch project analytics" });
     }
   });
 

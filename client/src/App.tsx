@@ -41,6 +41,8 @@ import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
 import EmergencyContacts from "./pages/EmergencyContacts";
 import NotificationsWidget from "./components/NotificationsWidget";
+import Projects from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -213,6 +215,12 @@ function AuthenticatedApp() {
                 )} />
                 <Route path="/emergency-contacts" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><EmergencyContacts /></RoleGuard>
+                )} />
+                <Route path="/projects" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><Projects /></RoleGuard>
+                )} />
+                <Route path="/projects/:id" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><ProjectDetail /></RoleGuard>
                 )} />
                 <Route component={NotFound} />
               </Switch>

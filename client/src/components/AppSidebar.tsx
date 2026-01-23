@@ -27,6 +27,7 @@ import {
   Car,
   BarChart3,
   Phone,
+  FolderKanban,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -43,6 +44,7 @@ const roleMenus = {
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "Tasks", url: "/tasks", icon: Wrench },
+    { title: "Projects", url: "/projects", icon: FolderKanban },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Vehicle Fleet", url: "/vehicles", icon: Car },

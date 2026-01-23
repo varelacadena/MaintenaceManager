@@ -27,6 +27,11 @@ import {
   vehicleDocuments,
   emergencyContacts,
   notifications,
+  projects,
+  projectTeamMembers,
+  projectVendors,
+  quotes,
+  quoteItems,
   type User,
   type UpsertUser,
   type Vendor,
@@ -83,6 +88,16 @@ import {
   type InsertEmergencyContact,
   type Notification,
   type InsertNotification,
+  type Project,
+  type InsertProject,
+  type ProjectTeamMember,
+  type InsertProjectTeamMember,
+  type ProjectVendor,
+  type InsertProjectVendor,
+  type Quote,
+  type InsertQuote,
+  type QuoteItem,
+  type InsertQuoteItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -345,6 +360,40 @@ export interface IStorage {
   markAllNotificationsRead(userId?: string): Promise<void>;
   dismissNotification(id: string): Promise<void>;
   dismissAllNotifications(userId?: string): Promise<void>;
+
+  // Project operations
+  getProjects(filters?: { status?: string; createdById?: string }): Promise<Project[]>;
+  getProject(id: string): Promise<Project | undefined>;
+  createProject(project: InsertProject): Promise<Project>;
+  updateProject(id: string, data: Partial<InsertProject>): Promise<Project | undefined>;
+  deleteProject(id: string): Promise<void>;
+  getTasksByProject(projectId: string): Promise<Task[]>;
+
+  // Project team member operations
+  getProjectTeamMembers(projectId: string): Promise<ProjectTeamMember[]>;
+  addProjectTeamMember(member: InsertProjectTeamMember): Promise<ProjectTeamMember>;
+  removeProjectTeamMember(id: string): Promise<void>;
+  updateProjectTeamMember(id: string, data: Partial<InsertProjectTeamMember>): Promise<ProjectTeamMember | undefined>;
+
+  // Project vendor operations
+  getProjectVendors(projectId: string): Promise<ProjectVendor[]>;
+  addProjectVendor(vendor: InsertProjectVendor): Promise<ProjectVendor>;
+  removeProjectVendor(id: string): Promise<void>;
+  updateProjectVendor(id: string, data: Partial<InsertProjectVendor>): Promise<ProjectVendor | undefined>;
+
+  // Quote operations
+  getQuotes(filters?: { projectId?: string; vendorId?: string; status?: string }): Promise<Quote[]>;
+  getQuote(id: string): Promise<Quote | undefined>;
+  createQuote(quote: InsertQuote): Promise<Quote>;
+  updateQuote(id: string, data: Partial<InsertQuote>): Promise<Quote | undefined>;
+  deleteQuote(id: string): Promise<void>;
+
+  // Quote item operations
+  getQuoteItems(quoteId: string): Promise<QuoteItem[]>;
+  getQuoteItem(id: string): Promise<QuoteItem | undefined>;
+  createQuoteItem(item: InsertQuoteItem): Promise<QuoteItem>;
+  updateQuoteItem(id: string, data: Partial<InsertQuoteItem>): Promise<QuoteItem | undefined>;
+  deleteQuoteItem(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -663,6 +712,7 @@ export class DatabaseStorage implements IStorage {
         instructions: tasks.instructions,
         requiresPhoto: tasks.requiresPhoto,
         createdById: tasks.createdById,
+        projectId: tasks.projectId,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
       })
@@ -706,43 +756,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    const result = await this.db.select({
-      id: tasks.id,
-      requestId: tasks.requestId,
-      propertyId: tasks.propertyId,
-      spaceId: tasks.spaceId,
-      equipmentId: tasks.equipmentId,
-      vehicleId: tasks.vehicleId,
-      name: tasks.name,
-      description: tasks.description,
-      urgency: tasks.urgency,
-      areaId: tasks.areaId,
-      subdivisionId: tasks.subdivisionId,
-      initialDate: tasks.initialDate,
-      estimatedCompletionDate: tasks.estimatedCompletionDate,
-      actualCompletionDate: tasks.actualCompletionDate,
-      assignedToId: tasks.assignedToId,
-      assignedVendorId: tasks.assignedVendorId,
-      taskType: tasks.taskType,
-      executorType: tasks.executorType,
-      assignedPool: tasks.assignedPool,
-      status: tasks.status,
-      onHoldReason: tasks.onHoldReason,
-      recurringFrequency: tasks.recurringFrequency,
-      recurringInterval: tasks.recurringInterval,
-      recurringEndDate: tasks.recurringEndDate,
-      contactType: tasks.contactType,
-      contactStaffId: tasks.contactStaffId,
-      contactName: tasks.contactName,
-      contactEmail: tasks.contactEmail,
-      contactPhone: tasks.contactPhone,
-      instructions: tasks.instructions,
-      requiresPhoto: tasks.requiresPhoto,
-      createdById: tasks.createdById,
-      createdAt: tasks.createdAt,
-      updatedAt: tasks.updatedAt,
-    }).from(tasks).where(eq(tasks.id, id)).limit(1);
-    return result[0] || null;
+    const [task] = await this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, id));
+    return task;
   }
 
   async createTask(taskData: InsertTask): Promise<Task> {
@@ -1188,42 +1206,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTasksByProperty(propertyId: string): Promise<Task[]> {
-    return await this.db.select({
-      id: tasks.id,
-      requestId: tasks.requestId,
-      propertyId: tasks.propertyId,
-      spaceId: tasks.spaceId,
-      equipmentId: tasks.equipmentId,
-      vehicleId: tasks.vehicleId,
-      name: tasks.name,
-      description: tasks.description,
-      urgency: tasks.urgency,
-      areaId: tasks.areaId,
-      subdivisionId: tasks.subdivisionId,
-      initialDate: tasks.initialDate,
-      estimatedCompletionDate: tasks.estimatedCompletionDate,
-      actualCompletionDate: tasks.actualCompletionDate,
-      assignedToId: tasks.assignedToId,
-      assignedVendorId: tasks.assignedVendorId,
-      taskType: tasks.taskType,
-      executorType: tasks.executorType,
-      assignedPool: tasks.assignedPool,
-      status: tasks.status,
-      onHoldReason: tasks.onHoldReason,
-      recurringFrequency: tasks.recurringFrequency,
-      recurringInterval: tasks.recurringInterval,
-      recurringEndDate: tasks.recurringEndDate,
-      contactType: tasks.contactType,
-      contactStaffId: tasks.contactStaffId,
-      contactName: tasks.contactName,
-      contactEmail: tasks.contactEmail,
-      contactPhone: tasks.contactPhone,
-      instructions: tasks.instructions,
-      requiresPhoto: tasks.requiresPhoto,
-      createdById: tasks.createdById,
-      createdAt: tasks.createdAt,
-      updatedAt: tasks.updatedAt,
-    }).from(tasks).where(eq(tasks.propertyId, propertyId)).orderBy(desc(tasks.initialDate));
+    return await this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.propertyId, propertyId))
+      .orderBy(desc(tasks.initialDate));
   }
 
   // Space operations (rooms within buildings)
@@ -1992,6 +1979,183 @@ export class DatabaseStorage implements IStorage {
     } else {
       await this.db.update(notifications).set({ isDismissed: true });
     }
+  }
+
+  // Project operations
+  async getProjects(filters?: { status?: string; createdById?: string }): Promise<Project[]> {
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(projects.status, filters.status as any));
+    }
+    if (filters?.createdById) {
+      conditions.push(eq(projects.createdById, filters.createdById));
+    }
+
+    const query = this.db.select().from(projects);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(projects.createdAt));
+    }
+    return await query.orderBy(desc(projects.createdAt));
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+    const [project] = await this.db.select().from(projects).where(eq(projects.id, id));
+    return project;
+  }
+
+  async createProject(projectData: InsertProject): Promise<Project> {
+    const [project] = await this.db.insert(projects).values(projectData).returning();
+    return project;
+  }
+
+  async updateProject(id: string, data: Partial<InsertProject>): Promise<Project | undefined> {
+    const [project] = await this.db
+      .update(projects)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return project;
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    await this.db.delete(projects).where(eq(projects.id, id));
+  }
+
+  async getTasksByProject(projectId: string): Promise<Task[]> {
+    return await this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId))
+      .orderBy(desc(tasks.initialDate));
+  }
+
+  // Project team member operations
+  async getProjectTeamMembers(projectId: string): Promise<ProjectTeamMember[]> {
+    return await this.db
+      .select()
+      .from(projectTeamMembers)
+      .where(eq(projectTeamMembers.projectId, projectId));
+  }
+
+  async addProjectTeamMember(member: InsertProjectTeamMember): Promise<ProjectTeamMember> {
+    const [result] = await this.db.insert(projectTeamMembers).values(member).returning();
+    return result;
+  }
+
+  async removeProjectTeamMember(id: string): Promise<void> {
+    await this.db.delete(projectTeamMembers).where(eq(projectTeamMembers.id, id));
+  }
+
+  async updateProjectTeamMember(id: string, data: Partial<InsertProjectTeamMember>): Promise<ProjectTeamMember | undefined> {
+    const [result] = await this.db
+      .update(projectTeamMembers)
+      .set(data)
+      .where(eq(projectTeamMembers.id, id))
+      .returning();
+    return result;
+  }
+
+  // Project vendor operations
+  async getProjectVendors(projectId: string): Promise<ProjectVendor[]> {
+    return await this.db
+      .select()
+      .from(projectVendors)
+      .where(eq(projectVendors.projectId, projectId));
+  }
+
+  async addProjectVendor(vendor: InsertProjectVendor): Promise<ProjectVendor> {
+    const [result] = await this.db.insert(projectVendors).values(vendor).returning();
+    return result;
+  }
+
+  async removeProjectVendor(id: string): Promise<void> {
+    await this.db.delete(projectVendors).where(eq(projectVendors.id, id));
+  }
+
+  async updateProjectVendor(id: string, data: Partial<InsertProjectVendor>): Promise<ProjectVendor | undefined> {
+    const [result] = await this.db
+      .update(projectVendors)
+      .set(data)
+      .where(eq(projectVendors.id, id))
+      .returning();
+    return result;
+  }
+
+  // Quote operations
+  async getQuotes(filters?: { projectId?: string; vendorId?: string; status?: string }): Promise<Quote[]> {
+    const conditions = [];
+    if (filters?.projectId) {
+      conditions.push(eq(quotes.projectId, filters.projectId));
+    }
+    if (filters?.vendorId) {
+      conditions.push(eq(quotes.vendorId, filters.vendorId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(quotes.status, filters.status as any));
+    }
+
+    const query = this.db.select().from(quotes);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(quotes.createdAt));
+    }
+    return await query.orderBy(desc(quotes.createdAt));
+  }
+
+  async getQuote(id: string): Promise<Quote | undefined> {
+    const [quote] = await this.db.select().from(quotes).where(eq(quotes.id, id));
+    return quote;
+  }
+
+  async createQuote(quoteData: InsertQuote): Promise<Quote> {
+    const [quote] = await this.db.insert(quotes).values(quoteData).returning();
+    return quote;
+  }
+
+  async updateQuote(id: string, data: Partial<InsertQuote>): Promise<Quote | undefined> {
+    const [quote] = await this.db
+      .update(quotes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(quotes.id, id))
+      .returning();
+    return quote;
+  }
+
+  async deleteQuote(id: string): Promise<void> {
+    await this.db.delete(quotes).where(eq(quotes.id, id));
+  }
+
+  // Quote item operations
+  async getQuoteItems(quoteId: string): Promise<QuoteItem[]> {
+    return await this.db
+      .select()
+      .from(quoteItems)
+      .where(eq(quoteItems.quoteId, quoteId));
+  }
+
+  async getQuoteItem(id: string): Promise<QuoteItem | undefined> {
+    const [item] = await this.db
+      .select()
+      .from(quoteItems)
+      .where(eq(quoteItems.id, id));
+    return item;
+  }
+
+  async createQuoteItem(item: InsertQuoteItem): Promise<QuoteItem> {
+    const [result] = await this.db.insert(quoteItems).values(item).returning();
+    return result;
+  }
+
+  async updateQuoteItem(id: string, data: Partial<InsertQuoteItem>): Promise<QuoteItem | undefined> {
+    const [result] = await this.db
+      .update(quoteItems)
+      .set(data)
+      .where(eq(quoteItems.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteQuoteItem(id: string): Promise<void> {
+    await this.db.delete(quoteItems).where(eq(quoteItems.id, id));
   }
 }
 

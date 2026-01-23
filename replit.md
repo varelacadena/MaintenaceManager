@@ -37,6 +37,14 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
   - Notifications stored per-user with unread count badge
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
+- **Project Management:** Comprehensive project oversight for multi-task maintenance projects:
+  - Projects group related tasks under a single umbrella with budget tracking and timelines
+  - Team member assignment with roles (manager, lead, technician, support) and hour allocation
+  - Vendor assignment with roles (primary, subcontractor, consultant, supplier)
+  - Quote management with status workflow (requested, submitted, under_review, approved, rejected, expired)
+  - Quote items with line-by-line cost breakdown and automatic total calculation
+  - Project analytics dashboard showing task progress, budget overview, time tracking, and quote summary
+  - Status tracking (planning, in_progress, on_hold, completed, cancelled) with priority levels
 
 ### Hierarchical Property Structure
 
