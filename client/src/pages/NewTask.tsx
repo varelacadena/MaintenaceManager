@@ -780,8 +780,8 @@ export default function NewTask() {
                   <FormItem>
                     <FormLabel>Project (Optional)</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
+                      onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
+                      value={field.value || "none"}
                     >
                       <FormControl>
                         <SelectTrigger data-testid="select-project">
@@ -789,7 +789,7 @@ export default function NewTask() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No Project</SelectItem>
+                        <SelectItem value="none">No Project</SelectItem>
                         {projects.filter(p => p.status === "active" || p.status === "planning").map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name}
