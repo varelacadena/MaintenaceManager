@@ -316,20 +316,20 @@ export default function Projects() {
                     />
                   )}
                 </div>
-                <FormField
-                  control={form.control}
-                  name="budgetAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Budget Amount</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-project-budget" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="budgetAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Budget Amount</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-project-budget" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="startDate"
