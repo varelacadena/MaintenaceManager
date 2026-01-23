@@ -59,6 +59,29 @@ export function DatePicker({
           selected={value}
           onSelect={handleSelect}
           initialFocus
+          className="p-2"
+          classNames={{
+            months: "flex flex-col",
+            month: "space-y-2",
+            caption: "flex justify-center pt-1 relative items-center mb-1",
+            caption_label: "text-xs font-medium",
+            nav: "space-x-1 flex items-center",
+            nav_button: "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100",
+            nav_button_previous: "absolute left-0",
+            nav_button_next: "absolute right-0",
+            table: "w-full border-collapse",
+            head_row: "flex",
+            head_cell: "text-muted-foreground rounded-md w-7 font-medium text-[10px]",
+            row: "flex w-full mt-1",
+            cell: "h-7 w-7 text-center text-xs p-0 relative",
+            day: "h-7 w-7 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground text-xs",
+            day_range_end: "day-range-end",
+            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+            day_today: "bg-accent text-accent-foreground",
+            day_outside: "text-muted-foreground/40",
+            day_disabled: "text-muted-foreground/30",
+            day_hidden: "invisible",
+          }}
         />
       </PopoverContent>
     </Popover>
