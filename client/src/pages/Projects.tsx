@@ -92,6 +92,8 @@ export default function Projects() {
       spaceId: null,
       budgetAmount: 0,
       notes: "",
+      startDate: "",
+      targetEndDate: "",
     },
   });
 
@@ -316,20 +318,27 @@ export default function Projects() {
                     />
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="budgetAmount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Budget Amount</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-project-budget" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="budgetAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Budget Amount</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="0.00" 
+                          value={field.value ?? 0}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          data-testid="input-project-budget" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="startDate"
@@ -337,7 +346,12 @@ export default function Projects() {
                       <FormItem>
                         <FormLabel>Start Date</FormLabel>
                         <FormControl>
-                          <Input {...field} type="date" data-testid="input-project-start-date" />
+                          <Input 
+                            type="date" 
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            data-testid="input-project-start-date" 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -350,7 +364,12 @@ export default function Projects() {
                       <FormItem>
                         <FormLabel>Target End Date</FormLabel>
                         <FormControl>
-                          <Input {...field} type="date" data-testid="input-project-end-date" />
+                          <Input 
+                            type="date" 
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            data-testid="input-project-end-date" 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
