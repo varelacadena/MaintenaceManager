@@ -43,31 +43,36 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
       const data = await response.json();
 
       if (data.downloadUrl) {
-        // On mobile, use a more reliable method to open files
-        // Create an anchor element and programmatically click it
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        
-        // For images and PDFs, just open in new tab
-        // For other files, try to trigger download
         const isViewable = attachment.fileType.startsWith('image/') || attachment.fileType === 'application/pdf';
         
-        if (!isViewable && isMobile) {
-          // For non-viewable files on mobile, set download attribute
-          link.download = data.fileName || attachment.fileName;
+        if (isMobile) {
+          // On mobile, use window.location for more reliable file opening
+          // This bypasses popup blockers that block window.open after async operations
+          window.location.href = data.downloadUrl;
+          toast({
+            title: isViewable ? "Opening file" : "Downloading file",
+            description: isViewable ? "File should open shortly..." : "Download should start shortly...",
+          });
+        } else {
+          // Desktop: use standard new tab approach
+          const link = document.createElement('a');
+          link.href = data.downloadUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          
+          if (!isViewable) {
+            link.download = data.fileName || attachment.fileName;
+          }
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Opening file",
+            description: isViewable ? "Opening in new tab..." : "Starting download...",
+          });
         }
-        
-        // Append to body, click, and remove
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        toast({
-          title: "Opening file",
-          description: isViewable ? "Opening in new tab..." : "Starting download...",
-        });
       } else if (data.isMock) {
         toast({
           title: "File unavailable",

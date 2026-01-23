@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DownloadResult {
   downloadUrl: string;
@@ -10,6 +11,7 @@ interface DownloadResult {
 export function useFileDownload() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const downloadFile = useCallback(async (uploadId: string, objectUrl: string): Promise<boolean> => {
     const isMockFile = objectUrl.includes("mock-storage.local");
@@ -30,7 +32,18 @@ export function useFileDownload() {
       const data: DownloadResult & { isMock?: boolean; message?: string } = await response.json();
 
       if (data.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
+        if (isMobile) {
+          // On mobile, use window.location for more reliable file opening
+          // This bypasses popup blockers that block window.open after async operations
+          window.location.href = data.downloadUrl;
+          toast({
+            title: "Opening file",
+            description: "File should open shortly...",
+          });
+        } else {
+          // Desktop: use standard new tab approach
+          window.open(data.downloadUrl, "_blank");
+        }
         return true;
       } else if (data.isMock) {
         toast({
@@ -54,7 +67,7 @@ export function useFileDownload() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, isMobile]);
 
   const getSignedUrl = useCallback(async (uploadId: string, objectUrl: string): Promise<string | null> => {
     const isMockFile = objectUrl.includes("mock-storage.local");
