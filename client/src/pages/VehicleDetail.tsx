@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -331,6 +333,8 @@ export default function VehicleDetail() {
 
   const canManageVehicles = user?.role === "admin" || user?.role === "technician";
 
+  const [addDocumentDate, setAddDocumentDate] = useState<Date | undefined>(undefined);
+
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
       return await apiRequest("PATCH", `/api/vehicles/${id}/status`, { status });
@@ -582,14 +586,19 @@ export default function VehicleDetail() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
+                    if (!addDocumentDate) {
+                      toast({ title: "Please select an expiration date", variant: "destructive" });
+                      return;
+                    }
                     const data = {
                       documentType: formData.get("documentType"),
                       documentName: formData.get("documentName") || null,
-                      expirationDate: formData.get("expirationDate"),
+                      expirationDate: format(addDocumentDate, "yyyy-MM-dd"),
                       notes: formData.get("notes") || null,
                     };
                     addDocumentMutation.mutate(data);
                     (e.target as HTMLFormElement).reset();
+                    setAddDocumentDate(undefined);
                   }}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -605,15 +614,20 @@ export default function VehicleDetail() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Document Name (optional)</label>
-                      <input name="documentName" className="w-full border rounded p-2 text-sm" placeholder="e.g., State Farm Policy" data-testid="input-document-name" />
+                      <input name="documentName" className="w-full border rounded p-2 text-sm bg-background" placeholder="e.g., State Farm Policy" data-testid="input-document-name" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Expiration Date</label>
-                      <input name="expirationDate" type="date" required className="w-full border rounded p-2 text-sm" data-testid="input-expiration-date" />
+                      <DatePicker 
+                        value={addDocumentDate}
+                        onChange={setAddDocumentDate}
+                        placeholder="Select expiration date"
+                        data-testid="input-expiration-date"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Notes (optional)</label>
-                      <input name="notes" className="w-full border rounded p-2 text-sm" placeholder="Additional details..." data-testid="input-document-notes" />
+                      <input name="notes" className="w-full border rounded p-2 text-sm bg-background" placeholder="Additional details..." data-testid="input-document-notes" />
                     </div>
                   </div>
                   <Button type="submit" disabled={addDocumentMutation.isPending} className="w-full sm:w-auto" data-testid="button-add-document">
