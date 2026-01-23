@@ -256,14 +256,17 @@ export default function Projects() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Property (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select 
+                          onValueChange={(val) => field.onChange(val === "__none__" ? undefined : val)} 
+                          value={field.value || "__none__"}
+                        >
                           <FormControl>
                             <SelectTrigger data-testid="select-project-property">
                               <SelectValue placeholder="Select property" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="__none__">None</SelectItem>
                             {properties?.map((property) => (
                               <SelectItem key={property.id} value={property.id}>
                                 {property.name}
@@ -281,14 +284,17 @@ export default function Projects() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Area (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select 
+                          onValueChange={(val) => field.onChange(val === "__none__" ? undefined : val)} 
+                          value={field.value || "__none__"}
+                        >
                           <FormControl>
                             <SelectTrigger data-testid="select-project-area">
                               <SelectValue placeholder="Select area" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="__none__">None</SelectItem>
                             {areas?.map((area) => (
                               <SelectItem key={area.id} value={area.id}>
                                 {area.name}

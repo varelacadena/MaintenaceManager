@@ -601,11 +601,12 @@ export default function EditTask() {
                     {spaces.length > 0 ? (
                       <Select 
                         onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedSpaceId(value);
-                          form.setValue("equipmentId", "");
+                          const actualValue = value === "__none__" ? undefined : value;
+                          field.onChange(actualValue);
+                          setSelectedSpaceId(actualValue || "");
+                          form.setValue("equipmentId", undefined);
                         }} 
-                        value={field.value || ""}
+                        value={field.value || "__none__"}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-space">
@@ -613,7 +614,7 @@ export default function EditTask() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">All Spaces</SelectItem>
+                          <SelectItem value="__none__">All Spaces</SelectItem>
                           {spaces.map((space) => (
                             <SelectItem key={space.id} value={space.id}>
                               {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
@@ -649,8 +650,8 @@ export default function EditTask() {
                 <FormItem>
                   <FormLabel>Equipment</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
+                    onValueChange={(val) => field.onChange(val === "__none__" ? undefined : val)} 
+                    value={field.value || "__none__"}
                     disabled={!selectedPropertyId}
                   >
                     <FormControl>
@@ -659,7 +660,7 @@ export default function EditTask() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {equipment.map((item) => (
                         <SelectItem key={item.id} value={item.id}>
                           {item.name}
