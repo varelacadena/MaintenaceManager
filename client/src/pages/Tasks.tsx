@@ -476,7 +476,7 @@ export default function Tasks() {
                               <div className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3 shrink-0" />
                                 <span className="truncate">
-                                  {new Date(task.initialDate).toLocaleDateString()}
+                                  Start: {new Date(task.initialDate).toLocaleDateString()}
                                 </span>
                               </div>
                               {task.estimatedCompletionDate && (
