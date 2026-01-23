@@ -3826,14 +3826,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create project
   app.post("/api/projects", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const user = await getAuthUser(req);
-      if (!user) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
+      const userId = (req as any).userId;
       
       const data = insertProjectSchema.parse({
         ...req.body,
-        createdById: user.id,
+        createdById: userId,
       });
       
       const project = await storage.createProject(data);
