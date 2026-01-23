@@ -365,8 +365,8 @@ export default function NewRequest() {
                   <FormItem>
                     <FormLabel>Space (Room/Area)</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || ""}
+                      onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)} 
+                      value={field.value || "__none__"}
                     >
                       <FormControl>
                         <SelectTrigger data-testid="select-space">
@@ -374,7 +374,7 @@ export default function NewRequest() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">All Spaces</SelectItem>
+                        <SelectItem value="__none__">All Spaces</SelectItem>
                         {spaces.map((space) => (
                           <SelectItem key={space.id} value={space.id}>
                             {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
