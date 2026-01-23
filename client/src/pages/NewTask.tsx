@@ -41,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
-import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate } from "@shared/schema";
+import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project } from "@shared/schema";
 import { z } from "zod";
 import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save, Upload, Paperclip, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -128,10 +128,16 @@ export default function NewTask() {
 
   const searchParams = new URLSearchParams(window.location.search);
   const requestId = searchParams.get('requestId');
+  const projectId = searchParams.get('projectId');
 
   const { data: request } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", requestId],
     enabled: !!requestId,
+  });
+
+  const { data: project } = useQuery<Project>({
+    queryKey: ["/api/projects", projectId],
+    enabled: !!projectId,
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
@@ -555,12 +561,18 @@ export default function NewTask() {
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
         checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
+        projectId: projectId || undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "analytics"] });
+      }
 
       if (requestId) {
         queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
@@ -616,6 +628,20 @@ export default function NewTask() {
           </p>
         </div>
       </div>
+
+      {project && (
+        <Card className="p-4 mb-6 border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <ClipboardList className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Creating task for project:</p>
+              <p className="text-foreground font-semibold" data-testid="text-project-name">{project.name}</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
