@@ -1245,30 +1245,36 @@ export default function NewTask() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="requiresEstimate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-requires-estimate"
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Requires estimate/quote approval before work begins
-                          </FormLabel>
-                          <FormDescription className="sr-only">
-                            When enabled, the task will start in "needs estimate" status and require quote approval
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
                   </div>
                 </>
               )}
+
+              {/* Estimate requirement - always visible */}
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <FormField
+                  control={form.control}
+                  name="requiresEstimate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-requires-estimate"
+                        />
+                      </FormControl>
+                      <div>
+                        <FormLabel className="font-normal">
+                          Requires estimate/quote approval before work begins
+                        </FormLabel>
+                        <FormDescription className="text-xs">
+                          When enabled, the task will start in "needs estimate" status and require quote approval
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {assignmentOption === "technician" && (
                 <FormField
