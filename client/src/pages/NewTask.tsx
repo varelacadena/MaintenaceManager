@@ -790,7 +790,7 @@ export default function NewTask() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">No Project</SelectItem>
-                        {projects.filter(p => p.status === "active" || p.status === "planning").map((p) => (
+                        {projects.filter(p => p.status === "in_progress" || p.status === "planning").map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name}
                           </SelectItem>
