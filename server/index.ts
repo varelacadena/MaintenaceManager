@@ -78,6 +78,16 @@ app.use(passport.session());
 // Setup authentication routes
 setupAuth(app);
 
+// Disable HTTP caching for API routes to ensure fresh data
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
