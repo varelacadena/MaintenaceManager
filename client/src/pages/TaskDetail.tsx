@@ -191,6 +191,12 @@ export default function TaskDetail() {
   const [newQuoteEstimatedCost, setNewQuoteEstimatedCost] = useState("");
   const [newQuoteNotes, setNewQuoteNotes] = useState("");
   const [pendingQuoteFiles, setPendingQuoteFiles] = useState<Array<{url: string, fileName: string, fileType: string, fileSize: number}>>([]);
+  const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
+  const [newVendorName, setNewVendorName] = useState("");
+  const [newVendorEmail, setNewVendorEmail] = useState("");
+  const [newVendorPhone, setNewVendorPhone] = useState("");
+  const [newVendorAddress, setNewVendorAddress] = useState("");
+  const [newVendorNotes, setNewVendorNotes] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -642,6 +648,25 @@ export default function TaskDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
       toast({ title: "Quote deleted" });
+    },
+  });
+
+  const createVendorMutation = useMutation({
+    mutationFn: async (vendorData: { name: string; email?: string; phone?: string; address?: string; notes?: string }) => {
+      const response = await apiRequest("POST", "/api/vendors", vendorData);
+      return response.json();
+    },
+    onSuccess: (newVendor) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
+      setNewQuoteVendorId(newVendor.id);
+      setNewQuoteVendorName(newVendor.name);
+      setNewVendorName("");
+      setNewVendorEmail("");
+      setNewVendorPhone("");
+      setNewVendorAddress("");
+      setNewVendorNotes("");
+      setIsAddVendorDialogOpen(false);
+      toast({ title: "Vendor created", description: `${newVendor.name} has been added.` });
     },
   });
 
@@ -1884,36 +1909,42 @@ export default function TaskDetail() {
             </div>
             <div className="space-y-2">
               <Label>Vendor/Source (Optional)</Label>
-              <Select
-                value={newQuoteVendorId}
-                onValueChange={(value) => {
-                  if (value === "add_new") {
-                    navigate("/vendors");
-                  } else {
-                    setNewQuoteVendorId(value);
-                    const selectedVendor = vendors.find(v => v.id === value);
-                    setNewQuoteVendorName(selectedVendor?.name || "");
-                  }
-                }}
-              >
-                <SelectTrigger data-testid="select-quote-vendor">
-                  <SelectValue placeholder="Select a vendor..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No vendor</SelectItem>
-                  {vendors.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="add_new" className="text-primary font-medium">
-                    <div className="flex items-center gap-2">
-                      <Plus className="w-4 h-4" />
-                      Add New Vendor
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={newQuoteVendorId}
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      setNewQuoteVendorId("");
+                      setNewQuoteVendorName("");
+                    } else {
+                      setNewQuoteVendorId(value);
+                      const selectedVendor = vendors.find(v => v.id === value);
+                      setNewQuoteVendorName(selectedVendor?.name || "");
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-quote-vendor" className="flex-1">
+                    <SelectValue placeholder="Select a vendor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No vendor</SelectItem>
+                    {vendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsAddVendorDialogOpen(true)}
+                  data-testid="button-add-new-vendor"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Notes (Optional)</Label>
@@ -2165,6 +2196,89 @@ export default function TaskDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Vendor Dialog */}
+      <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Vendor</DialogTitle>
+            <DialogDescription>Create a new vendor to associate with this estimate.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Vendor Name *</Label>
+              <Input
+                value={newVendorName}
+                onChange={(e) => setNewVendorName(e.target.value)}
+                placeholder="e.g., ABC Plumbing, Home Depot"
+                data-testid="input-new-vendor-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email (Optional)</Label>
+              <Input
+                type="email"
+                value={newVendorEmail}
+                onChange={(e) => setNewVendorEmail(e.target.value)}
+                placeholder="vendor@example.com"
+                data-testid="input-new-vendor-email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone (Optional)</Label>
+              <Input
+                value={newVendorPhone}
+                onChange={(e) => setNewVendorPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+                data-testid="input-new-vendor-phone"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Address (Optional)</Label>
+              <Input
+                value={newVendorAddress}
+                onChange={(e) => setNewVendorAddress(e.target.value)}
+                placeholder="123 Main St, City, State"
+                data-testid="input-new-vendor-address"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea
+                value={newVendorNotes}
+                onChange={(e) => setNewVendorNotes(e.target.value)}
+                placeholder="Any additional details about this vendor..."
+                data-testid="input-new-vendor-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsAddVendorDialogOpen(false);
+              setNewVendorName("");
+              setNewVendorEmail("");
+              setNewVendorPhone("");
+              setNewVendorAddress("");
+              setNewVendorNotes("");
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createVendorMutation.mutate({
+                name: newVendorName,
+                email: newVendorEmail || undefined,
+                phone: newVendorPhone || undefined,
+                address: newVendorAddress || undefined,
+                notes: newVendorNotes || undefined,
+              })}
+              disabled={!newVendorName.trim() || createVendorMutation.isPending}
+              data-testid="button-submit-new-vendor"
+            >
+              {createVendorMutation.isPending ? "Creating..." : "Add Vendor"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
