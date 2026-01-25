@@ -198,6 +198,9 @@ export default function Tasks() {
     return property?.name || null;
   };
 
+  // Debug: log tasks received from API
+  console.log("[DEBUG Tasks.tsx] Received tasks:", tasks?.length, tasks?.map(t => ({ id: t.id, name: t.name, status: t.status })));
+
   const groupedTasks = tasks?.reduce((acc, task) => {
     const status = task.status;
     if (!acc[status]) {
@@ -206,6 +209,8 @@ export default function Tasks() {
     acc[status].push(task);
     return acc;
   }, {} as Record<string, Task[]>) || {};
+  
+  console.log("[DEBUG Tasks.tsx] Grouped tasks:", Object.keys(groupedTasks).map(k => `${k}: ${groupedTasks[k]?.length}`));
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task;
