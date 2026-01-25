@@ -663,6 +663,9 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      if (task?.projectId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", task.projectId, "tasks"] });
+      }
       toast({ title: "Task deleted" });
       navigate("/tasks");
     },
