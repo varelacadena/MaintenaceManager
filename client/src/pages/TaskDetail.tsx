@@ -1962,14 +1962,17 @@ export default function TaskDetail() {
                   maxNumberOfFiles={5}
                   maxFileSize={10485760}
                   onGetUploadParameters={getUploadParameters}
-                  onComplete={(result: { url: string; file: File }) => {
-                    setPendingQuoteFiles(prev => [...prev, {
-                      url: result.url,
-                      fileName: result.file.name,
-                      fileType: result.file.type,
-                      fileSize: result.file.size,
-                    }]);
-                    toast({ title: "File uploaded", description: result.file.name });
+                  onComplete={(result: { successful: Array<{url: string, fileName: string, type: string, size: number}>, failed: Array<any> }) => {
+                    if (result.successful && result.successful.length > 0) {
+                      const newFiles = result.successful.map(file => ({
+                        url: file.url,
+                        fileName: file.fileName,
+                        fileType: file.type,
+                        fileSize: file.size,
+                      }));
+                      setPendingQuoteFiles(prev => [...prev, ...newFiles]);
+                      toast({ title: "File uploaded", description: `${result.successful.length} file(s) uploaded` });
+                    }
                   }}
                   onError={(error) => {
                     toast({ title: "Upload failed", description: error.message, variant: "destructive" });
