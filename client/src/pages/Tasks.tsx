@@ -113,6 +113,7 @@ export default function Tasks() {
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    staleTime: 0, // Always refetch on mount to ensure we have the latest tasks
   });
 
   const { data: areas } = useQuery<Area[]>({ queryKey: ["/api/areas"] });
