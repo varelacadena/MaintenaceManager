@@ -99,6 +99,7 @@ import type {
   TaskChecklistGroup,
   TaskChecklistItem,
   Quote,
+  Vendor,
 } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@radix-ui/react-label";
@@ -185,9 +186,11 @@ export default function TaskDetail() {
   const [partsExpanded, setPartsExpanded] = useState(false);
   const [quotesExpanded, setQuotesExpanded] = useState(true);
   const [isAddQuoteDialogOpen, setIsAddQuoteDialogOpen] = useState(false);
+  const [newQuoteVendorId, setNewQuoteVendorId] = useState<string>("");
   const [newQuoteVendorName, setNewQuoteVendorName] = useState("");
   const [newQuoteEstimatedCost, setNewQuoteEstimatedCost] = useState("");
   const [newQuoteNotes, setNewQuoteNotes] = useState("");
+  const [pendingQuoteFiles, setPendingQuoteFiles] = useState<Array<{url: string, fileName: string, fileType: string, fileSize: number}>>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -216,6 +219,10 @@ export default function TaskDetail() {
 
   const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
+  });
+
+  const { data: vendors = [] } = useQuery<Vendor[]>({
+    queryKey: ["/api/vendors"],
   });
 
   const { data: uploads = [] } = useQuery<Upload[]>({
@@ -581,21 +588,37 @@ export default function TaskDetail() {
   });
 
   const createQuoteMutation = useMutation({
-    mutationFn: async ({ vendorName, estimatedCost, notes }: { vendorName: string, estimatedCost: number, notes: string }) => {
-      return await apiRequest("POST", "/api/quotes", { 
+    mutationFn: async ({ vendorName, estimatedCost, notes, files }: { vendorName: string, estimatedCost: number, notes: string, files: Array<{url: string, fileName: string, fileType: string, fileSize: number}> }) => {
+      const response = await apiRequest("POST", "/api/quotes", { 
         taskId: id, 
         vendorName: vendorName || null, 
         estimatedCost, 
         notes: notes || null,
         status: "draft",
       });
+      const quote = await response.json();
+      
+      if (files.length > 0 && quote.id) {
+        for (const file of files) {
+          await apiRequest("POST", `/api/quotes/${quote.id}/attachments`, {
+            fileName: file.fileName,
+            fileType: file.fileType,
+            fileSize: file.fileSize,
+            storageUrl: file.url,
+          });
+        }
+      }
+      
+      return quote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      setNewQuoteVendorId("");
       setNewQuoteVendorName("");
       setNewQuoteEstimatedCost("");
       setNewQuoteNotes("");
+      setPendingQuoteFiles([]);
       setIsAddQuoteDialogOpen(false);
       toast({ title: "Quote added", description: "The estimate has been added for comparison." });
     },
@@ -1837,7 +1860,7 @@ export default function TaskDetail() {
 
       {/* Add Quote Dialog */}
       <Dialog open={isAddQuoteDialogOpen} onOpenChange={setIsAddQuoteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Estimate</DialogTitle>
             <DialogDescription>Add a new estimate for comparison. You can add multiple estimates to compare before approving one.</DialogDescription>
@@ -1861,12 +1884,36 @@ export default function TaskDetail() {
             </div>
             <div className="space-y-2">
               <Label>Vendor/Source (Optional)</Label>
-              <Input
-                placeholder="e.g., Home Depot, ABC Plumbing"
-                value={newQuoteVendorName}
-                onChange={(e) => setNewQuoteVendorName(e.target.value)}
-                data-testid="input-quote-vendor"
-              />
+              <Select
+                value={newQuoteVendorId}
+                onValueChange={(value) => {
+                  if (value === "add_new") {
+                    navigate("/vendors");
+                  } else {
+                    setNewQuoteVendorId(value);
+                    const selectedVendor = vendors.find(v => v.id === value);
+                    setNewQuoteVendorName(selectedVendor?.name || "");
+                  }
+                }}
+              >
+                <SelectTrigger data-testid="select-quote-vendor">
+                  <SelectValue placeholder="Select a vendor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No vendor</SelectItem>
+                  {vendors.map((vendor) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="add_new" className="text-primary font-medium">
+                    <div className="flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      Add New Vendor
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Notes (Optional)</Label>
@@ -1877,9 +1924,57 @@ export default function TaskDetail() {
                 data-testid="input-quote-notes"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Attachments (Optional)</Label>
+              <div className="border-2 border-dashed rounded-lg p-4">
+                <ObjectUploader
+                  maxNumberOfFiles={5}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={getUploadParameters}
+                  onComplete={(result: { url: string; file: File }) => {
+                    setPendingQuoteFiles(prev => [...prev, {
+                      url: result.url,
+                      fileName: result.file.name,
+                      fileType: result.file.type,
+                      fileSize: result.file.size,
+                    }]);
+                    toast({ title: "File uploaded", description: result.file.name });
+                  }}
+                  onError={(error) => {
+                    toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+                  }}
+                  buttonClassName="w-full"
+                >
+                  <Paperclip className="w-4 h-4 mr-2" />
+                  Browse Files
+                </ObjectUploader>
+                {pendingQuoteFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {pendingQuoteFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded">
+                        <span className="truncate flex-1">{file.fileName}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setPendingQuoteFiles(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddQuoteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsAddQuoteDialogOpen(false);
+              setNewQuoteVendorId("");
+              setNewQuoteVendorName("");
+              setPendingQuoteFiles([]);
+            }}>
               Cancel
             </Button>
             <Button
@@ -1887,6 +1982,7 @@ export default function TaskDetail() {
                 vendorName: newQuoteVendorName,
                 estimatedCost: parseFloat(newQuoteEstimatedCost) || 0,
                 notes: newQuoteNotes,
+                files: pendingQuoteFiles,
               })}
               disabled={!newQuoteEstimatedCost || createQuoteMutation.isPending}
               data-testid="button-submit-quote"
