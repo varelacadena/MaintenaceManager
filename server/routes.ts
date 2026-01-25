@@ -41,11 +41,12 @@ import { z } from "zod";
 
 // Helper function to get authenticated user
 async function getAuthUser(req: any) {
-  if (!req.isAuthenticated()) {
+  // Use req.userId which is set by isAuthenticated middleware
+  const userId = req.userId || (req.session as any)?.userId;
+  if (!userId) {
     return null;
   }
   try {
-    const userId = req.userId;
     const user = await storage.getUser(userId);
     return user;
   } catch (error) {
@@ -106,17 +107,18 @@ async function syncVehicleStatus(vehicleId: string): Promise<void> {
 
 // Placeholder for authenticateUser function (assuming it exists elsewhere)
 async function authenticateUser(req: any): Promise<any | null> {
-  // This is a placeholder. Replace with your actual authentication logic.
-  // It should verify the user's session and return user information if authenticated.
-  if (req.isAuthenticated()) {
-    try {
-      const user = await storage.getUser(req.userId);
-      if (user) {
-        return { ...user, role: user.role }; // Ensure role is included
-      }
-    } catch (error) {
-      console.error("Error during authenticateUser:", error);
+  // Use req.userId which is set by isAuthenticated middleware, or fall back to session
+  const userId = req.userId || (req.session as any)?.userId;
+  if (!userId) {
+    return null;
+  }
+  try {
+    const user = await storage.getUser(userId);
+    if (user) {
+      return { ...user, role: user.role }; // Ensure role is included
     }
+  } catch (error) {
+    console.error("Error during authenticateUser:", error);
   }
   return null;
 }

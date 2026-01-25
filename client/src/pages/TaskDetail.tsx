@@ -77,6 +77,7 @@ import {
   AlertTriangle,
   DollarSign,
   CircleDollarSign,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
@@ -100,6 +101,7 @@ import type {
   TaskChecklistItem,
   Quote,
   Vendor,
+  QuoteAttachment,
 } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@radix-ui/react-label";
@@ -136,6 +138,50 @@ const quoteStatusColors: Record<string, string> = {
   approved: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
   rejected: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
 };
+
+function QuoteAttachmentsList({ quoteId }: { quoteId: string }) {
+  const { data: attachments = [], isLoading } = useQuery<QuoteAttachment[]>({
+    queryKey: ["/api/quotes", quoteId, "attachments"],
+  });
+
+  if (isLoading) {
+    return <div className="text-xs text-muted-foreground">Loading attachments...</div>;
+  }
+
+  if (attachments.length === 0) {
+    return null;
+  }
+
+  const handleDownload = (attachment: QuoteAttachment) => {
+    window.open(attachment.storageUrl, "_blank");
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/50">
+      <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+        <Paperclip className="w-3 h-3" />
+        Attachments ({attachments.length})
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {attachments.map((attachment) => (
+          <Button
+            key={attachment.id}
+            variant="outline"
+            size="sm"
+            className="text-xs h-7 px-2 gap-1"
+            onClick={() => handleDownload(attachment)}
+            data-testid={`button-download-attachment-${attachment.id}`}
+          >
+            <Download className="w-3 h-3" />
+            {attachment.fileName.length > 20 
+              ? attachment.fileName.substring(0, 17) + "..." 
+              : attachment.fileName}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function getDateLabel(date: Date | string | null): { label: string; isOverdue: boolean } {
   if (!date) return { label: "No date", isOverdue: false };
@@ -1491,6 +1537,7 @@ export default function TaskDetail() {
                             {quote.notes && (
                               <p className="text-sm mt-2">{quote.notes}</p>
                             )}
+                            <QuoteAttachmentsList quoteId={quote.id} />
                           </div>
                           <div className="flex gap-2">
                             {quote.status === "draft" && task?.estimateStatus !== "approved" && (
