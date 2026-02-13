@@ -8,6 +8,9 @@ This web-based platform centralizes maintenance operations for college facilitie
 
 Preferred communication style: Simple, everyday language.
 
+### Testing Credentials
+- Admin account: username `admin`, password `123456`
+
 ## System Architecture
 
 ### Core System Design
