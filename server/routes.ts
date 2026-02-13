@@ -1109,6 +1109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updateData: any = { ...req.body };
 
+      if (updateData.status === "ready") {
+        updateData.status = "not_started";
+      }
+
       // Handle date conversions
       if (updateData.actualCompletionDate) {
         updateData.actualCompletionDate = new Date(updateData.actualCompletionDate);
@@ -1154,6 +1158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Status is required" });
       }
 
+      const normalizedStatus = status === "ready" ? "not_started" : status;
+
       // Get the task to check access
       const task = await storage.getTask(taskId);
       if (!task) {
@@ -1181,11 +1187,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const updateData: any = { status };
-      if (status === "completed") {
+      const updateData: any = { status: normalizedStatus };
+      if (normalizedStatus === "completed") {
         updateData.actualCompletionDate = new Date();
       }
-      if (status === "on_hold" && onHoldReason) {
+      if (normalizedStatus === "on_hold" && onHoldReason) {
         updateData.onHoldReason = onHoldReason;
       }
 
@@ -1196,7 +1202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create a task note if hold reason was provided
-      if (status === "on_hold" && onHoldReason) {
+      if (normalizedStatus === "on_hold" && onHoldReason) {
         await storage.createTaskNote({
           taskId,
           userId: (req as any).userId,
@@ -1212,7 +1218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             content: `Task "${updatedTask.name}" has been placed on hold. Reason: ${onHoldReason}`
           });
         }
-      } else if (status === "completed" && updatedTask.requestId) {
+      } else if (normalizedStatus === "completed" && updatedTask.requestId) {
         // Send completion message to requester
         await storage.createMessage({
           requestId: updatedTask.requestId,
