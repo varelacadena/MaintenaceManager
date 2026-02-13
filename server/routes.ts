@@ -4102,9 +4102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Update task status to 'ready' and set approved quote ID
+      // Update task status to 'not_started' and set approved quote ID
       await storage.updateTask(quote.taskId, {
-        status: "ready",
+        status: "not_started",
         estimateStatus: "approved",
         approvedQuoteId: req.params.id,
       });

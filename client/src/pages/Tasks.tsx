@@ -62,13 +62,12 @@ const statusConfig = [
   { key: "not_started", label: "Not Started", color: statusColors.not_started },
   { key: "needs_estimate", label: "Needs Estimate", color: statusColors.needs_estimate },
   { key: "waiting_approval", label: "Waiting Approval", color: statusColors.waiting_approval },
-  { key: "ready", label: "Ready", color: statusColors.ready },
   { key: "in_progress", label: "In Progress", color: statusColors.in_progress },
   { key: "on_hold", label: "On Hold", color: statusColors.on_hold },
   { key: "completed", label: "Completed", color: statusColors.completed },
 ];
 
-type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
+type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "in_progress" | "on_hold" | "completed";
 
 function EditableTextCell({
   value,
