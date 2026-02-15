@@ -1433,6 +1433,46 @@ export default function TaskDetail() {
                 )}
               </div>
             </div>
+
+            <Collapsible open={partsExpanded} onOpenChange={setPartsExpanded}>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-parts">
+                  <div className="flex items-center gap-3">
+                    <Package className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Parts Used</span>
+                    {parts.length > 0 && <Badge variant="secondary">{parts.length}</Badge>}
+                  </div>
+                  {partsExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                {parts.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-4">No parts used</p>
+                ) : (
+                  parts.map((part) => (
+                    <div key={part.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">{part.partName}</p>
+                        {part.notes && <p className="text-xs text-muted-foreground">{part.notes}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm">Qty: {part.quantity}</p>
+                        <p className="text-xs text-muted-foreground">${part.cost.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsAddPartDialogOpen(true)}
+                  data-testid="button-add-part"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Part
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </div>
 
@@ -1542,6 +1582,144 @@ export default function TaskDetail() {
                 Just Pause Timer
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Part</DialogTitle>
+              <DialogDescription>Select an inventory item to add to this task.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Search Inventory</Label>
+                <div className="relative">
+                  <Input
+                    placeholder="Type to search..."
+                    value={inventorySearchQuery}
+                    onChange={(e) => setInventorySearchQuery(e.target.value)}
+                    data-testid="input-search-inventory"
+                  />
+                  {inventorySearchQuery && !selectedInventoryItemId && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div
+                        className="px-3 py-2 cursor-pointer hover-elevate font-semibold text-primary border-b"
+                        onClick={() => {
+                          setIsQuickAddInventoryOpen(true);
+                          setInventorySearchQuery("");
+                        }}
+                      >
+                        + Create New Item
+                      </div>
+                      {inventoryItems
+                        ?.filter((item) => item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()))
+                        .map((item) => (
+                          <div
+                            key={item.id}
+                            className="px-3 py-2 cursor-pointer hover-elevate"
+                            onClick={() => {
+                              setSelectedInventoryItemId(item.id);
+                              setInventorySearchQuery(item.name);
+                            }}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{item.name}</span>
+                              <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                {selectedInventoryItemId && (
+                  <div className="flex items-center justify-between text-sm bg-muted p-2 rounded">
+                    <span>Selected: <span className="font-medium">{inventoryItems.find(i => i.id === selectedInventoryItemId)?.name}</span></span>
+                    <Button variant="ghost" size="sm" onClick={() => { setSelectedInventoryItemId(""); setInventorySearchQuery(""); }}>
+                      Change
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={partQuantity}
+                  onChange={(e) => setPartQuantity(e.target.value)}
+                  placeholder="Enter quantity"
+                  data-testid="input-part-quantity"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Notes (Optional)</Label>
+                <Textarea
+                  value={partNotes}
+                  onChange={(e) => setPartNotes(e.target.value)}
+                  placeholder="Additional notes"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => addPartMutation.mutate()}
+                disabled={!selectedInventoryItemId || !partQuantity || addPartMutation.isPending}
+              >
+                Add Part
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isQuickAddInventoryOpen} onOpenChange={setIsQuickAddInventoryOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Item</DialogTitle>
+              <DialogDescription>Quickly add a new inventory item.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Item Name</Label>
+                <Input
+                  value={quickInventoryName}
+                  onChange={(e) => setQuickInventoryName(e.target.value)}
+                  placeholder="Enter item name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={quickInventoryQuantity}
+                  onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
+                  placeholder="Enter quantity"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Unit (Optional)</Label>
+                <Input
+                  value={quickInventoryUnit}
+                  onChange={(e) => setQuickInventoryUnit(e.target.value)}
+                  placeholder="e.g., pieces, boxes"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setIsQuickAddInventoryOpen(false); setQuickInventoryName(""); setQuickInventoryQuantity(0); setQuickInventoryUnit(""); }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => quickAddInventoryMutation.mutate()}
+                disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickAddInventoryMutation.isPending}
+              >
+                Create Item
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

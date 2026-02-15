@@ -981,7 +981,6 @@ export default function Work() {
         const isAssignedToMe = t.assignedToId === user.id;
         const isTechPoolTask = t.assignedToId === "technician_pool" || t.assignedPool === "technician_pool";
         if (!isAssignedToMe && !isTechPoolTask) return false;
-        if (!showCompleted && t.status === "completed") return false;
         return true;
       }) || [];
 
@@ -1001,7 +1000,7 @@ export default function Work() {
           </p>
         </div>
 
-        {activeTasks.length === 0 ? (
+        {activeTasks.length === 0 && completedTasks.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <p className="text-xl font-semibold">All done!</p>
@@ -1060,46 +1059,44 @@ export default function Work() {
                 </div>
               );
             })}
-          </div>
-        )}
 
-        {completedTasks.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowCompleted(!showCompleted)}
-              className="text-sm text-muted-foreground flex items-center gap-1 mb-2"
-              data-testid="toggle-completed-tasks"
-            >
-              {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {showCompleted ? "Hide" : "Show"} {completedTasks.length} completed
-            </button>
-            {showCompleted && (
-              <div className="space-y-2">
-                {completedTasks.map((task) => {
-                  const property = getPropertyById(task.propertyId);
-                  return (
-                    <div
-                      key={task.id}
-                      className="rounded-lg border border-border/50 p-3 cursor-pointer opacity-60"
-                      data-testid={`tech-task-card-${task.id}`}
-                      onClick={() => navigate(`/tasks/${task.id}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm line-through truncate" data-testid={`text-task-name-${task.id}`}>
-                            {task.name}
-                          </h3>
-                          {property && (
-                            <p className="text-xs text-muted-foreground truncate">{property.name}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+            {completedTasks.length > 0 && activeTasks.length > 0 && (
+              <div className="pt-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Completed</p>
               </div>
             )}
+
+            {completedTasks.map((task) => {
+              const property = getPropertyById(task.propertyId);
+              return (
+                <div
+                  key={task.id}
+                  className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 cursor-pointer active-elevate-2 transition-colors"
+                  data-testid={`tech-task-card-${task.id}`}
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
+                      <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base leading-tight truncate text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
+                        {task.name}
+                      </h3>
+                      {property && (
+                        <p className="text-sm text-green-700 dark:text-green-400 mt-0.5 truncate flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          {property.name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400" data-testid={`badge-completed-${task.id}`}>
+                      Done
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
