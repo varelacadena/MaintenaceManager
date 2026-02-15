@@ -105,6 +105,47 @@ async function syncVehicleStatus(vehicleId: string): Promise<void> {
   }
 }
 
+async function syncProjectStatusFromTasks(projectId: string): Promise<void> {
+  try {
+    const project = await storage.getProject(projectId);
+    if (!project) return;
+    if (project.status === "cancelled") return;
+
+    const tasks = await storage.getTasksByProject(projectId);
+    if (tasks.length === 0) {
+      if (project.status !== "planning") {
+        await storage.updateProject(projectId, { status: "planning" });
+      }
+      return;
+    }
+
+    const allCompleted = tasks.every(t => t.status === "completed");
+    const someInProgressOrCompleted = tasks.some(
+      t => t.status === "in_progress" || t.status === "completed"
+    );
+
+    let newStatus: string | null = null;
+
+    if (allCompleted) {
+      newStatus = "completed";
+    } else if (someInProgressOrCompleted) {
+      if (project.status !== "on_hold") {
+        newStatus = "in_progress";
+      }
+    } else {
+      if (project.status !== "on_hold") {
+        newStatus = "planning";
+      }
+    }
+
+    if (newStatus && newStatus !== project.status) {
+      await storage.updateProject(projectId, { status: newStatus as any });
+    }
+  } catch (error) {
+    console.error(`Error syncing project status for ${projectId}:`, error);
+  }
+}
+
 // Placeholder for authenticateUser function (assuming it exists elsewhere)
 async function authenticateUser(req: any): Promise<any | null> {
   // Use req.userId which is set by isAuthenticated middleware, or fall back to session
@@ -993,6 +1034,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         task = await storage.createTask(taskData);
       }
 
+      if (task.projectId) {
+        await syncProjectStatusFromTasks(task.projectId);
+      }
+
       // If request was linked, update its status to converted_to_task
       if (task.requestId) {
         try {
@@ -1067,6 +1112,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const task = await storage.updateTask(req.params.id, updateData);
+
+      if (task?.projectId) {
+        await syncProjectStatusFromTasks(task.projectId);
+      }
+
       res.json(task);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -1076,7 +1126,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/tasks/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
+      const taskToDelete = await storage.getTask(req.params.id);
       await storage.deleteTask(req.params.id);
+
+      if (taskToDelete?.projectId) {
+        await syncProjectStatusFromTasks(taskToDelete.projectId);
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -1141,6 +1197,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!updatedTask) {
         return res.status(404).json({ message: "Task not found" });
+      }
+
+      if (updatedTask.projectId) {
+        await syncProjectStatusFromTasks(updatedTask.projectId);
       }
 
       // Create a task note if hold reason was provided
@@ -4051,11 +4111,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update task status to 'not_started' and set approved quote ID
-      await storage.updateTask(quote.taskId, {
+      const updatedQuoteTask = await storage.updateTask(quote.taskId, {
         status: "not_started",
         estimateStatus: "approved",
         approvedQuoteId: req.params.id,
       });
+
+      if (updatedQuoteTask?.projectId) {
+        await syncProjectStatusFromTasks(updatedQuoteTask.projectId);
+      }
 
       res.json(approvedQuote);
     } catch (error) {
