@@ -586,7 +586,7 @@ export default function ServiceRequestAnalytics() {
                   <p className="text-2xl font-bold text-center">{data?.conversionRate || 0}%</p>
                   <Progress value={data?.conversionRate || 0} className="mt-2" />
                 </div>
-                <Link href="/tasks">
+                <Link href="/work">
                   <Button className="w-full" data-testid="button-view-tasks">View Work Orders</Button>
                 </Link>
               </div>

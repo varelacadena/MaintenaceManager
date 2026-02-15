@@ -40,6 +40,16 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
   - Notifications stored per-user with unread count badge
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
+- **Unified Work Page:** Tasks and projects are consolidated into a single "Work" page (`/work`) replacing the separate Tasks and Projects pages:
+  - Combined list view with unified status groups (Not Started, Needs Estimate, Waiting Approval, In Progress, On Hold, Completed)
+  - Standalone tasks appear as regular rows with a wrench icon indicator
+  - Projects appear as expandable rows with indigo/purple visual accent, FolderKanban icon, "Project" badge, and task completion progress
+  - Project rows can be expanded to reveal nested child tasks with indented styling
+  - Tasks linked to projects only appear inside their parent project's expanded row, never as standalone
+  - Search filter works across both task and project names; type filter allows "All", "Tasks Only", "Projects Only"
+  - Both "New Task" and "New Project" creation accessible from the same page
+  - All inline editing capabilities preserved (name, description, status, urgency, dates, assignee, property, type)
+  - Old `/tasks` and `/projects` list routes redirect to `/work`; detail pages (`/tasks/:id`, `/projects/:id`) remain unchanged
 - **Project Management:** Comprehensive project oversight for multi-task maintenance projects:
   - Projects serve as READ-ONLY organizational containers grouping related tasks with budget tracking and timelines
   - Team member assignment with roles (manager, lead, technician, support) and hour allocation

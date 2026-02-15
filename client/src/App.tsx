@@ -13,7 +13,7 @@ import Dashboard from "@/pages/Dashboard";
 import Requests from "@/pages/Requests";
 import RequestDetail from "@/pages/RequestDetail";
 import NewRequest from "@/pages/NewRequest";
-import Tasks from "@/pages/Tasks";
+import Work from "@/pages/Work";
 import TaskDetail from "@/pages/TaskDetail";
 import NewTask from "@/pages/NewTask";
 import EditTask from "@/pages/EditTask";
@@ -41,7 +41,6 @@ import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
 import EmergencyContacts from "./pages/EmergencyContacts";
 import NotificationsWidget from "./components/NotificationsWidget";
-import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 
 function AuthenticatedApp() {
@@ -130,12 +129,16 @@ function AuthenticatedApp() {
                 {/* Routes accessible to all authenticated users */}
                 <Route path="/" component={() => {
                   if (user?.role === "student") {
-                    window.location.replace("/tasks");
+                    window.location.replace("/work");
                     return null;
                   }
                   return <Dashboard />;
                 }} />
-                <Route path="/tasks" component={Tasks} />
+                <Route path="/work" component={Work} />
+                <Route path="/tasks" component={() => {
+                  window.location.replace("/work");
+                  return null;
+                }} />
                 <Route path="/tasks/new" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
                 )} />
@@ -213,9 +216,10 @@ function AuthenticatedApp() {
                 <Route path="/emergency-contacts" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><EmergencyContacts /></RoleGuard>
                 )} />
-                <Route path="/projects" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><Projects /></RoleGuard>
-                )} />
+                <Route path="/projects" component={() => {
+                  window.location.replace("/work");
+                  return null;
+                }} />
                 <Route path="/projects/:id" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><ProjectDetail /></RoleGuard>
                 )} />

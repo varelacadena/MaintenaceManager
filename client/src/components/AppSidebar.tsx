@@ -43,8 +43,7 @@ const roleMenus = {
   admin: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
-    { title: "Tasks", url: "/tasks", icon: Wrench },
-    { title: "Projects", url: "/projects", icon: FolderKanban },
+    { title: "Work", url: "/work", icon: FolderKanban },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
@@ -60,7 +59,7 @@ const roleMenus = {
   ],
   technician: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    { title: "My Tasks", url: "/tasks", icon: Wrench },
+    { title: "My Tasks", url: "/work", icon: Wrench },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
@@ -74,7 +73,7 @@ const roleMenus = {
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   student: [
-    { title: "My Tasks", url: "/tasks", icon: ClipboardList },
+    { title: "My Tasks", url: "/work", icon: ClipboardList },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],

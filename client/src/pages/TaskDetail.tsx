@@ -761,7 +761,7 @@ export default function TaskDetail() {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", task.projectId, "tasks"] });
       }
       toast({ title: "Task deleted" });
-      navigate("/tasks");
+      navigate("/work");
     },
   });
 
@@ -806,7 +806,7 @@ export default function TaskDetail() {
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
           <p className="text-lg font-medium">Task not found</p>
-          <Button variant="outline" onClick={() => navigate("/tasks")} className="mt-4">
+          <Button variant="outline" onClick={() => navigate("/work")} className="mt-4">
             Back to Tasks
           </Button>
         </div>

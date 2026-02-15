@@ -849,7 +849,7 @@ export default function Dashboard() {
               <FolderKanban className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <CardTitle className="text-lg">Projects Overview</CardTitle>
             </div>
-            <Link href="/projects">
+            <Link href="/work">
               <Button variant="outline" size="sm" data-testid="button-view-projects">
                 View All
                 <ArrowUpRight className="w-4 h-4 ml-1" />

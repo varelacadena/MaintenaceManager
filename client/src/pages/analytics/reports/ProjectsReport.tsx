@@ -127,7 +127,7 @@ export default function ProjectsReport() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold" data-testid="text-projects-report-title">Projects Overview</h2>
-        <Link href="/projects">
+        <Link href="/work">
           <Button variant="outline" size="sm" data-testid="button-view-all-projects">
             View All Projects
             <ArrowUpRight className="w-4 h-4 ml-1" />

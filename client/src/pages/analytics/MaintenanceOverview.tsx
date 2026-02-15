@@ -518,7 +518,7 @@ export default function MaintenanceOverview() {
               {data?.detailedRecords?.length || 0} records found
             </p>
           </div>
-          <Link href="/tasks">
+          <Link href="/work">
             <Button variant="outline" size="sm" className="gap-1">
               View All
               <ArrowUpRight className="w-3 h-3" />

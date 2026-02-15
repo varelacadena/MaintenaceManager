@@ -337,7 +337,7 @@ export default function ProjectDetail() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <h2 className="text-xl font-semibold">Project not found</h2>
-        <Link href="/projects">
+        <Link href="/work">
           <Button variant="outline" className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Projects
@@ -351,7 +351,7 @@ export default function ProjectDetail() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/projects">
+          <Link href="/work">
             <Button variant="ghost" size="icon" data-testid="button-back">
               <ArrowLeft className="w-4 h-4" />
             </Button>
