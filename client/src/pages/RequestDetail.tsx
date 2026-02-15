@@ -29,7 +29,6 @@ import {
   Calendar,
   MapPin,
   FileText,
-  ArrowLeft,
   ChevronDown,
 } from "lucide-react";
 import { FileAttachmentList } from "@/components/FileAttachment";
@@ -232,100 +231,96 @@ export default function RequestDetail() {
   if (isMobile) {
     return (
       <div className="flex flex-col h-full bg-background -mx-8 -my-6">
-        {/* Ultra-Compact Mobile Header - Title and badges only */}
-        <div className="px-3 py-2 border-b bg-background">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-semibold truncate" data-testid="text-request-title">
-                {request.title}
-              </h1>
-              <div className="flex items-center gap-1 mt-0.5">
-                <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-status">
-                  {getStatusLabel(request.status)}
-                </Badge>
-                <Badge 
-                  variant="outline" 
-                  className={`text-[10px] px-1.5 py-0 h-4 capitalize ${getPriorityColor(request.urgency)}`}
-                  data-testid="badge-urgency"
-                >
-                  {request.urgency}
-                </Badge>
-              </div>
-            </div>
-            
-            {/* Mobile Action Buttons */}
-            {canTakeAction && (
-              <div className="flex items-center gap-1 shrink-0">
-                <Link href={`/tasks/new?requestId=${id}`}>
-                  <Button 
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    data-testid="button-approve-create-task-mobile"
-                  >
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Approve
-                  </Button>
-                </Link>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-destructive"
-                      data-testid="button-reject-request"
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-[90vw]">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reject Request</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Provide a reason for rejecting this request.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <Textarea
-                      placeholder="Enter rejection reason..."
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      className="min-h-[80px]"
-                      data-testid="textarea-rejection-reason"
-                    />
-                    <AlertDialogFooter className="flex-col gap-2">
-                      <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          if (!rejectionReason.trim()) {
-                            toast({
-                              title: "Please provide a rejection reason",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          rejectRequestMutation.mutate({
-                            requestId: id,
-                            reason: rejectionReason
-                          });
-                          setRejectionReason("");
-                        }}
-                        className="bg-destructive text-destructive-foreground w-full"
-                        data-testid="button-confirm-reject"
-                      >
-                        Reject Request
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Mobile Content */}
         <div className="flex-1 overflow-auto">
           <div className="p-3 space-y-3">
+            {/* Request Header */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-sm font-semibold truncate" data-testid="text-request-title">
+                  {request.title}
+                </h1>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-status">
+                    {getStatusLabel(request.status)}
+                  </Badge>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[10px] px-1.5 py-0 h-4 capitalize ${getPriorityColor(request.urgency)}`}
+                    data-testid="badge-urgency"
+                  >
+                    {request.urgency}
+                  </Badge>
+                </div>
+              </div>
+              
+              {canTakeAction && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Link href={`/tasks/new?requestId=${id}`}>
+                    <Button 
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      data-testid="button-approve-create-task-mobile"
+                    >
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Approve
+                    </Button>
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-destructive"
+                        data-testid="button-reject-request"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-[90vw]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Provide a reason for rejecting this request.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <Textarea
+                        placeholder="Enter rejection reason..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className="min-h-[80px]"
+                        data-testid="textarea-rejection-reason"
+                      />
+                      <AlertDialogFooter className="flex-col gap-2">
+                        <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            if (!rejectionReason.trim()) {
+                              toast({
+                                title: "Please provide a rejection reason",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            rejectRequestMutation.mutate({
+                              requestId: id,
+                              reason: rejectionReason
+                            });
+                            setRejectionReason("");
+                          }}
+                          className="bg-destructive text-destructive-foreground w-full"
+                          data-testid="button-confirm-reject"
+                        >
+                          Reject Request
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </div>
             {/* Description - Always visible */}
             <div className="bg-card rounded-lg border p-3">
               <p className="text-sm leading-relaxed" data-testid="text-description">
@@ -524,151 +519,130 @@ export default function RequestDetail() {
     );
   }
 
-  // Desktop layout (unchanged)
+  // Desktop layout
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Clean Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="p-3 md:p-4">
-          {/* Top Row: Back + Actions */}
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate("/requests")}
-              className="gap-1.5 -ml-2 text-muted-foreground"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-4 sm:p-6">
+          {/* Request Header */}
+          <div className="mb-6 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0 space-y-2">
+                <div>
+                  <h1 className="text-lg sm:text-xl font-semibold leading-tight" data-testid="text-request-title">
+                    {request.title}
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-request-id">
+                    Request #{request.id.substring(0, 8)}
+                  </p>
+                </div>
 
-            {/* Compact Action Buttons - Only for pending requests */}
-            {canTakeAction && (
-              <div className="flex items-center gap-2">
-                <Link href={`/tasks/new?requestId=${id}`}>
-                  <Button 
-                    size="sm" 
-                    className="gap-1.5"
-                    data-testid="button-approve-create-task"
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={getStatusVariant(request.status)} data-testid="badge-status">
+                    {getStatusLabel(request.status)}
+                  </Badge>
+                  <Badge 
+                    variant="outline" 
+                    className={`capitalize ${getPriorityColor(request.urgency)}`}
+                    data-testid="badge-urgency"
                   >
-                    <ClipboardList className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Create Task</span>
-                    <span className="sm:hidden">Approve</span>
-                  </Button>
-                </Link>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="gap-1.5 text-destructive"
-                      data-testid="button-reject-request"
+                    {request.urgency} priority
+                  </Badge>
+                </div>
+              </div>
+
+              {canTakeAction && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link href={`/tasks/new?requestId=${id}`}>
+                    <Button 
+                      size="sm" 
+                      className="gap-1.5"
+                      data-testid="button-approve-create-task"
                     >
-                      <XCircle className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Reject</span>
+                      <ClipboardList className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Create Task</span>
+                      <span className="sm:hidden">Approve</span>
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reject Request</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Please provide a reason for rejecting this request. The requester will be notified.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <Textarea
-                      placeholder="Enter rejection reason..."
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      className="min-h-[80px]"
-                      data-testid="textarea-rejection-reason"
-                    />
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                      <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full sm:w-auto">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          if (!rejectionReason.trim()) {
-                            toast({
-                              title: "Please provide a rejection reason",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          rejectRequestMutation.mutate({
-                            requestId: id,
-                            reason: rejectionReason
-                          });
-                          setRejectionReason("");
-                        }}
-                        className="bg-destructive text-destructive-foreground w-full sm:w-auto"
-                        data-testid="button-confirm-reject"
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5 text-destructive"
+                        data-testid="button-reject-request"
                       >
-                        Reject Request
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <XCircle className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Reject</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reject Request</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Please provide a reason for rejecting this request. The requester will be notified.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <Textarea
+                        placeholder="Enter rejection reason..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className="min-h-[80px]"
+                        data-testid="textarea-rejection-reason"
+                      />
+                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                        <AlertDialogCancel onClick={() => setRejectionReason("")} className="w-full sm:w-auto">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            if (!rejectionReason.trim()) {
+                              toast({
+                                title: "Please provide a rejection reason",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            rejectRequestMutation.mutate({
+                              requestId: id,
+                              reason: rejectionReason
+                            });
+                            setRejectionReason("");
+                          }}
+                          className="bg-destructive text-destructive-foreground w-full sm:w-auto"
+                          data-testid="button-confirm-reject"
+                        >
+                          Reject Request
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </div>
+
+            {request.status === "converted_to_task" && (
+              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                <CheckCircle className="h-4 w-4" />
+                <span>This request has been approved and a maintenance task was created.</span>
+              </div>
+            )}
+
+            {request.status === "rejected" && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                  <XCircle className="h-4 w-4" />
+                  <span>This request was rejected.</span>
+                </div>
+                {request.rejectionReason && (
+                  <p className="text-sm text-muted-foreground pl-6">
+                    Reason: {request.rejectionReason}
+                  </p>
+                )}
               </div>
             )}
           </div>
-
-          {/* Title + Meta Row */}
-          <div className="space-y-2">
-            <div className="flex items-start gap-3">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl font-semibold leading-tight" data-testid="text-request-title">
-                  {request.title}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-request-id">
-                  Request #{request.id.substring(0, 8)}
-                </p>
-              </div>
-            </div>
-
-            {/* Status Badges Row */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={getStatusVariant(request.status)} data-testid="badge-status">
-                {getStatusLabel(request.status)}
-              </Badge>
-              <Badge 
-                variant="outline" 
-                className={`capitalize ${getPriorityColor(request.urgency)}`}
-                data-testid="badge-urgency"
-              >
-                {request.urgency} priority
-              </Badge>
-            </div>
-          </div>
-
-          {/* Status Messages - Approved/Rejected */}
-          {request.status === "converted_to_task" && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-              <CheckCircle className="h-4 w-4" />
-              <span>This request has been approved and a maintenance task was created.</span>
-            </div>
-          )}
-
-          {request.status === "rejected" && (
-            <div className="mt-3 space-y-1">
-              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                <XCircle className="h-4 w-4" />
-                <span>This request was rejected.</span>
-              </div>
-              {request.rejectionReason && (
-                <p className="text-sm text-muted-foreground pl-6">
-                  Reason: {request.rejectionReason}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content - Two Column Layout on larger screens */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-4 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Left Column - Main Details */}
             <div className="lg:col-span-2 space-y-4">

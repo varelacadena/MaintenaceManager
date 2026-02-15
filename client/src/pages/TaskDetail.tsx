@@ -848,86 +848,81 @@ export default function TaskDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
-      {/* Header - Integrated with task info */}
-      <div className="bg-background border-b">
-        <div className="px-4 py-3 space-y-2">
-          {/* Top row: Title, Delete */}
-          <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold leading-tight line-clamp-2" data-testid="text-task-name">
-                {task.name}
-              </h1>
-            </div>
-
-            {isTechnicianOrAdmin && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-delete-task">
-                    <Trash2 className="w-5 h-5 text-destructive" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Task?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. All associated data will be permanently deleted.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => deleteTaskMutation.mutate()}
-                      className="bg-destructive text-destructive-foreground"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-
-          {/* Bottom row: Badges + Assignee/Date */}
-          <div className="flex items-center justify-between gap-2 pl-8">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge variant="outline" className={`text-xs ${statusColors[task.status]}`} data-testid="badge-status">
-                {statusLabels[task.status]}
-              </Badge>
-              <Badge variant="outline" className={`text-xs capitalize ${urgencyColors[task.urgency]}`} data-testid="badge-urgency">
-                {task.urgency}
-              </Badge>
-              <Badge variant="secondary" className="text-xs capitalize" data-testid="badge-task-type">
-                {task.taskType.replace("_", " ")}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-              <div className="flex items-center gap-1">
-                <User className="w-3.5 h-3.5" />
-                <span data-testid="text-assignee">
-                  {task.assignedToId === user?.id 
-                    ? "You"
-                    : assignedUser?.firstName && assignedUser?.lastName 
-                      ? `${assignedUser.firstName} ${assignedUser.lastName}` 
-                      : task.assignedPool === "student_pool" 
-                        ? "Student Pool"
-                        : task.assignedPool === "technician_pool"
-                          ? "Technician Pool"
-                          : "Unassigned"}
-                </span>
-              </div>
-              <div className={`flex items-center gap-1 ${isOverdue ? "text-red-500" : ""}`}>
-                <Calendar className="w-3.5 h-3.5" />
-                <span data-testid="text-due-date">{dateLabel}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
+          {/* Task Header */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-semibold leading-tight line-clamp-2" data-testid="text-task-name">
+                  {task.name}
+                </h1>
+              </div>
+
+              {isTechnicianOrAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-delete-task">
+                      <Trash2 className="w-5 h-5 text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. All associated data will be permanently deleted.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteTaskMutation.mutate()}
+                        className="bg-destructive text-destructive-foreground"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className={`text-xs ${statusColors[task.status]}`} data-testid="badge-status">
+                  {statusLabels[task.status]}
+                </Badge>
+                <Badge variant="outline" className={`text-xs capitalize ${urgencyColors[task.urgency]}`} data-testid="badge-urgency">
+                  {task.urgency}
+                </Badge>
+                <Badge variant="secondary" className="text-xs capitalize" data-testid="badge-task-type">
+                  {task.taskType.replace("_", " ")}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+                <div className="flex items-center gap-1">
+                  <User className="w-3.5 h-3.5" />
+                  <span data-testid="text-assignee">
+                    {task.assignedToId === user?.id 
+                      ? "You"
+                      : assignedUser?.firstName && assignedUser?.lastName 
+                        ? `${assignedUser.firstName} ${assignedUser.lastName}` 
+                        : task.assignedPool === "student_pool" 
+                          ? "Student Pool"
+                          : task.assignedPool === "technician_pool"
+                            ? "Technician Pool"
+                            : "Unassigned"}
+                  </span>
+                </div>
+                <div className={`flex items-center gap-1 ${isOverdue ? "text-red-500" : ""}`}>
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span data-testid="text-due-date">{dateLabel}</span>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Location - Clickable for admin/tech only */}
           {property && (
             isTechnicianOrAdmin ? (
