@@ -815,6 +815,7 @@ export default function TaskDetail() {
   }
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
+  const isStudent = user?.role === "student";
   const assignedUser = users.find(u => u.id === task.assignedToId);
   const technicianUsers = users.filter(u => u.role === "technician" || u.role === "admin");
 
@@ -845,6 +846,306 @@ export default function TaskDetail() {
       updateStatusMutation.mutate("completed");
     }
   };
+
+  if (isStudent) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background pb-28">
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold leading-tight" data-testid="text-task-name">
+                {task.name}
+              </h1>
+              {property && (
+                <p className="text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  {property.name}
+                  {space && ` - ${space.name}`}
+                </p>
+              )}
+            </div>
+
+            {task.instructions && (
+              <div className="p-4 bg-primary/5 border-2 border-primary/20 rounded-lg" data-testid="task-instructions">
+                <p className="font-semibold text-sm mb-1 text-primary">Instructions</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.instructions}</p>
+              </div>
+            )}
+
+            {task.description && !task.instructions && (
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <p className="text-sm leading-relaxed" data-testid="text-description">{task.description}</p>
+              </div>
+            )}
+
+            {checklistGroups.length > 0 && (
+              <div className="space-y-3">
+                <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                  Checklist ({completedChecklistItems}/{totalChecklistItems})
+                </p>
+                {checklistGroups.map((group) => (
+                  <div key={group.id} className="space-y-2">
+                    {checklistGroups.length > 1 && (
+                      <p className="text-sm font-medium">{group.name}</p>
+                    )}
+                    {group.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg cursor-pointer active-elevate-2 min-h-[56px]"
+                        onClick={() => toggleChecklistItemMutation.mutate({ itemId: item.id, isCompleted: !item.isCompleted })}
+                        data-testid={`checklist-item-${item.id}`}
+                      >
+                        <Checkbox checked={item.isCompleted} className="w-6 h-6" />
+                        <span className={`text-base flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                          {item.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="p-4 bg-muted/30 rounded-lg flex items-center justify-between" data-testid="time-logged-card">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${activeTimer ? "bg-primary text-primary-foreground animate-pulse" : "bg-muted"}`}>
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Time Logged</p>
+                  <p className="text-xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
+                </div>
+              </div>
+              {activeTimer && (
+                <Badge variant="default" className="animate-pulse">Running</Badge>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Notes</p>
+              <div className="flex gap-2">
+                <Textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Add a note about this task..."
+                  rows={3}
+                  className="text-base"
+                  data-testid="textarea-new-note"
+                />
+              </div>
+              {newNote.trim() && (
+                <Button
+                  className="w-full"
+                  onClick={() => addNoteMutation.mutate({ content: newNote, noteType: "job_note" })}
+                  disabled={addNoteMutation.isPending}
+                  data-testid="button-submit-note"
+                >
+                  Save Note
+                </Button>
+              )}
+              {notes.length > 0 && (
+                <div className="space-y-2">
+                  {notes.slice(0, 3).map((note) => (
+                    <div key={note.id} className="p-3 bg-muted/20 rounded-lg">
+                      <p className="text-sm">{note.content}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {note.createdAt && formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Photos</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="h-14 flex-col gap-1" data-testid="button-take-photo">
+                      <Camera className="w-6 h-6" />
+                      <span className="text-xs font-medium">Take Photo</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[50vh]">
+                    <SheetHeader>
+                      <SheetTitle>Upload Photos</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4 space-y-4">
+                      {pendingUploads.length > 0 && (
+                        <div className="space-y-2">
+                          {pendingUploads.map((upload, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                              <span className="text-sm truncate flex-1">{upload.name}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setPendingUploads(prev => prev.filter((_, i) => i !== index))}
+                                data-testid={`button-remove-photo-${index}`}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            className="w-full"
+                            onClick={async () => {
+                              for (const upload of pendingUploads) {
+                                await addUploadMutation.mutateAsync({
+                                  fileName: upload.name,
+                                  fileType: upload.type,
+                                  objectUrl: upload.url,
+                                });
+                              }
+                              setPendingUploads([]);
+                            }}
+                            disabled={addUploadMutation.isPending}
+                            data-testid="button-save-photos"
+                          >
+                            Save {pendingUploads.length} Photo{pendingUploads.length !== 1 ? "s" : ""}
+                          </Button>
+                        </div>
+                      )}
+                      <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center" data-testid="photo-upload-area">
+                        <ObjectUploader
+                          maxNumberOfFiles={5}
+                          maxFileSize={10485760}
+                          onGetUploadParameters={getUploadParameters}
+                          onComplete={handleFileUpload}
+                          onError={(error) => {
+                            toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+                          }}
+                          buttonClassName="bg-primary text-primary-foreground"
+                        >
+                          Browse Photos
+                        </ObjectUploader>
+                      </div>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                {uploads.length > 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg" data-testid="text-photo-count">
+                    <Paperclip className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">{uploads.length} photo{uploads.length !== 1 ? "s" : ""} attached</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
+          <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
+            {task.status === "completed" ? (
+              <Button
+                size="lg"
+                className="flex-1 font-bold bg-green-600 text-white border-green-600"
+                disabled
+                data-testid="bottom-button-done"
+              >
+                <CheckCircle2 className="w-5 h-5 mr-2" />
+                Task Completed
+              </Button>
+            ) : activeTimer ? (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleStartOrPause}
+                  disabled={stopTimerMutation.isPending}
+                  data-testid="bottom-button-pause"
+                >
+                  <Pause className="w-5 h-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  className="flex-1 font-bold bg-green-600 text-white border-green-600"
+                  onClick={handleComplete}
+                  disabled={stopTimerMutation.isPending}
+                  data-testid="bottom-button-complete"
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Mark as Completed
+                </Button>
+              </>
+            ) : task.status === "in_progress" ? (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleStartOrPause}
+                  disabled={startTimerMutation.isPending}
+                  data-testid="bottom-button-resume"
+                >
+                  <Play className="w-5 h-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  className="flex-1 font-bold bg-green-600 text-white border-green-600"
+                  onClick={handleComplete}
+                  disabled={updateStatusMutation.isPending}
+                  data-testid="bottom-button-complete"
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Mark as Completed
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="lg"
+                className="flex-1 font-bold"
+                onClick={handleStartOrPause}
+                disabled={startTimerMutation.isPending}
+                data-testid="bottom-button-start"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                Start Task
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <Dialog open={isStopTimerDialogOpen} onOpenChange={setIsStopTimerDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Stop Timer</DialogTitle>
+              <DialogDescription>What would you like to do?</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 py-4">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  if (activeTimer) {
+                    stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
+                  }
+                }}
+                disabled={stopTimerMutation.isPending}
+                data-testid="button-stop-complete"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Complete Task
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  if (activeTimer) {
+                    stopTimerMutation.mutate({ timerId: activeTimer });
+                  }
+                }}
+                disabled={stopTimerMutation.isPending}
+                data-testid="button-stop-pause"
+              >
+                Just Pause Timer
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
@@ -1010,34 +1311,34 @@ export default function TaskDetail() {
 
           {/* Quick Action Buttons - Admin/Technician Only */}
           {isTechnicianOrAdmin && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
-                className="h-14 flex-col gap-1"
+                size="sm"
                 onClick={() => setIsAssignDialogOpen(true)}
                 data-testid="button-assign"
               >
-                <UserPlus className="w-5 h-5" />
-                <span className="text-xs">{assignedUser ? "Reassign" : "Assign"}</span>
+                <UserPlus className="w-4 h-4 mr-1" />
+                {assignedUser ? "Reassign" : "Assign"}
               </Button>
 
               {task.requestId && (
                 <Button 
-                  variant="outline" 
-                  className="h-14 flex-col gap-1 w-full" 
+                  variant="outline"
+                  size="sm"
                   data-testid="link-original-request"
                   onClick={() => safeNavigate(`/requests/${task.requestId}`)}
                 >
-                  <ExternalLink className="w-5 h-5" />
-                  <span className="text-xs">Original Request</span>
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Request
                 </Button>
               )}
 
             <Sheet open={isHistorySheetOpen} onOpenChange={setIsHistorySheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" className="h-14 flex-col gap-1" data-testid="button-history">
-                  <History className="w-5 h-5" />
-                  <span className="text-xs">History</span>
+                <Button variant="outline" size="sm" data-testid="button-history">
+                  <History className="w-4 h-4 mr-1" />
+                  History
                 </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="h-[70vh]">

@@ -853,101 +853,138 @@ export default function Work() {
         return true;
       }) || [];
 
+    const activeTasks = studentTasks.filter((t) => t.status !== "completed");
+    const completedTasks = studentTasks.filter((t) => t.status === "completed");
+
     return (
-      <div className="p-3 md:p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
-              My Tasks
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              View and complete your assigned tasks
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowCompleted(!showCompleted)}
-            className="text-sm"
-            data-testid="toggle-completed-tasks"
-          >
-            {showCompleted ? (
-              <>
-                <EyeOff className="w-4 h-4 mr-2" /> Hide Completed
-              </>
-            ) : (
-              <>
-                <Eye className="w-4 h-4 mr-2" /> Show Completed
-              </>
-            )}
-          </Button>
+      <div className="p-4 pb-28 space-y-5 max-w-lg mx-auto">
+        <div className="pt-2">
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+            Your Tasks
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {activeTasks.length === 0
+              ? "Nothing assigned right now"
+              : `${activeTasks.length} task${activeTasks.length !== 1 ? "s" : ""} to do`}
+          </p>
         </div>
 
-        <Card>
-          <CardContent className="p-4">
-            {studentTasks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-500" />
-                <p className="font-medium">No tasks to show</p>
-                <p className="text-sm">You're all caught up!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {studentTasks.map((task) => {
-                  const property = getPropertyById(task.propertyId);
-                  const statusLabel = taskStatusConfig.find((s) => s.key === task.status)?.label || "Unknown";
-                  const statusColor = taskStatusColors[task.status] || taskStatusColors.not_started;
+        {activeTasks.length === 0 ? (
+          <div className="text-center py-12">
+            <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
+            <p className="text-xl font-semibold">All done!</p>
+            <p className="text-muted-foreground mt-1">No tasks assigned to you right now.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activeTasks.map((task, index) => {
+              const property = getPropertyById(task.propertyId);
+              const isInProgress = task.status === "in_progress";
+              const isHighUrgency = task.urgency === "high";
 
+              return (
+                <div
+                  key={task.id}
+                  className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
+                    isInProgress
+                      ? "border-primary bg-primary/5"
+                      : isHighUrgency
+                      ? "border-red-400 dark:border-red-600"
+                      : "border-border"
+                  }`}
+                  data-testid={`student-task-card-${task.id}`}
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
+                      isInProgress
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
+                        {task.name}
+                      </h3>
+                      {property && (
+                        <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          {property.name}
+                        </p>
+                      )}
+                    </div>
+                    {isInProgress && (
+                      <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
+                        In Progress
+                      </Badge>
+                    )}
+                    {isHighUrgency && !isInProgress && (
+                      <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
+                        Urgent
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {completedTasks.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="text-sm text-muted-foreground flex items-center gap-1 mb-2"
+              data-testid="toggle-completed-tasks"
+            >
+              {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showCompleted ? "Hide" : "Show"} {completedTasks.length} completed
+            </button>
+            {showCompleted && (
+              <div className="space-y-2">
+                {completedTasks.map((task) => {
+                  const property = getPropertyById(task.propertyId);
                   return (
-                    <Card
+                    <div
                       key={task.id}
-                      className="hover-elevate cursor-pointer"
+                      className="rounded-lg border border-border/50 p-3 cursor-pointer opacity-60"
                       data-testid={`student-task-card-${task.id}`}
                       onClick={() => navigate(`/tasks/${task.id}`)}
                     >
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0 space-y-2">
-                            <h3 className="font-medium text-base" data-testid={`text-task-name-${task.id}`}>
-                              {task.name}
-                            </h3>
-                            {property && (
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <MapPin className="w-3.5 h-3.5" />
-                                <span>{property.name}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className={`text-xs ${statusColor}`} data-testid={`badge-status-${task.id}`}>
-                                {statusLabel}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className={`text-xs capitalize ${urgencyColors[task.urgency]}`}
-                                data-testid={`badge-urgency-${task.id}`}
-                              >
-                                {task.urgency}
-                              </Badge>
-                            </div>
-                            {!task.assignedToId && (
-                              <div className="flex items-center gap-1.5 text-sm text-orange-500">
-                                <UserIcon className="w-3.5 h-3.5" />
-                                <span>Unassigned</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0">
-                            {task.status === "completed" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                          </div>
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-sm line-through truncate" data-testid={`text-task-name-${task.id}`}>
+                            {task.name}
+                          </h3>
+                          {property && (
+                            <p className="text-xs text-muted-foreground truncate">{property.name}</p>
+                          )}
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   );
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <Button
+            size="lg"
+            className="rounded-full shadow-lg bg-green-600 text-white border-green-600 font-bold"
+            onClick={async () => {
+              await fetch("/api/logout", { method: "POST" });
+              window.location.href = "/";
+            }}
+            data-testid="button-done-for-day"
+          >
+            <CheckCircle2 className="w-5 h-5 mr-2" />
+            I'm Done for Day!
+          </Button>
+        </div>
       </div>
     );
   }

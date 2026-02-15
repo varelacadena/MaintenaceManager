@@ -19,7 +19,24 @@ The platform uses a 4-role model (Admin, Technician, Staff, Student) with role-b
 
 ### UI/UX Decisions
 
-The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui for components, styled with Tailwind CSS. Design prioritizes a mobile-first, action-focused approach, especially for task detail pages, featuring simplified headers, quick action buttons, editable details, and collapsible sections to reduce information overload. The dashboard is interactive, with clickable filter cards, a central task panel with quick actions, and a quick view drawer for task details. Analytics are consolidated into a single dynamic page with tab-based navigation, lazy loading, and consistent filtering and export options.
+The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui for components, styled with Tailwind CSS. Design prioritizes a mobile-first, action-focused approach, especially for task detail pages.
+
+**Student Experience (simplified, "dummy-proof"):**
+- Student Work page shows numbered task cards with large tap targets, minimal badges (only "In Progress" or "Urgent"), and a floating "I'm Done for Day" button that logs them out
+- Student TaskDetail shows only: task name, location, instructions box, checklist with big checkboxes, time logged, notes field, photo upload, and a large "Mark as Completed" button at the bottom — no admin complexity (no quotes, parts, assignments, vendors, etc.)
+- Students have a minimal header (just their name, sidebar toggle, theme toggle — no Sign Out button, notifications, or back button)
+- Student main content area has no padding for full-width mobile experience
+
+**Technician Experience:**
+- Quick action buttons are compact horizontal row (not 3-column grid) for better mobile use
+- Full access to collapsible sections (quotes, parts, notes, etc.) but streamlined layout
+
+**PWA Support:**
+- manifest.json, service worker (sw.js), and meta tags configured for installable PWA
+- 30-day session persistence for "stay logged in" experience on mobile
+- Optimized for iPhone/Android home screen installation
+
+The dashboard is interactive, with clickable filter cards, a central task panel with quick actions, and a quick view drawer for task details. Analytics are consolidated into a single dynamic page with tab-based navigation, lazy loading, and consistent filtering and export options.
 
 ### Technical Implementations
 

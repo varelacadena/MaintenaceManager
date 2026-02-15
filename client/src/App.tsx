@@ -81,7 +81,7 @@ function AuthenticatedApp() {
             userInitials={userInitials}
           />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background">
+            <header className={`flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${user?.role === "student" ? "py-1.5" : ""}`}>
               <div className="flex items-center gap-1 sm:gap-3">
                 <SidebarTrigger className="md:hidden h-8 w-8 text-muted-foreground" data-testid="button-sidebar-toggle" />
                 {user?.role !== "student" && (
@@ -107,23 +107,30 @@ function AuthenticatedApp() {
                     <span className="hidden sm:inline">Back</span>
                   </button>
                 )}
+                {user?.role === "student" && (
+                  <span className="text-sm font-medium text-muted-foreground" data-testid="text-student-name">
+                    {userName}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
-                <NotificationsWidget />
+                {user?.role !== "student" && <NotificationsWidget />}
                 <ThemeToggle />
-                <button
-                  onClick={async () => {
-                    await fetch("/api/logout", { method: "POST" });
-                    window.location.href = "/";
-                  }}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="button-logout"
-                >
-                  Sign Out
-                </button>
+                {user?.role !== "student" && (
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/logout", { method: "POST" });
+                      window.location.href = "/";
+                    }}
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid="button-logout"
+                  >
+                    Sign Out
+                  </button>
+                )}
               </div>
             </header>
-            <main className="flex-1 overflow-auto px-8 py-6 bg-muted/20">
+            <main className={`flex-1 overflow-auto bg-muted/20 ${user?.role === "student" ? "px-0 py-0" : "px-8 py-6"}`}>
               <ScrollToTop />
               <Switch>
                 {/* Routes accessible to all authenticated users */}
