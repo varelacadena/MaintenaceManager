@@ -209,11 +209,11 @@ export default function Requests() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-4 md:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-4xl font-semibold tracking-tight">Service Requests</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage and review all maintenance requests</p>
+    <div className="p-3 md:p-4 space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="space-y-0.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Service Requests</h1>
+          <p className="text-sm text-muted-foreground">Manage and review all maintenance requests</p>
         </div>
       </div>
 

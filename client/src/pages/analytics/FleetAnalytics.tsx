@@ -123,7 +123,7 @@ export default function FleetAnalytics() {
 
   if (isLoading) {
     return (
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-3 md:p-4 space-y-3">
         <h1 className="text-xl sm:text-2xl font-bold">Fleet Analytics</h1>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(4)].map((_, i) => (
@@ -151,7 +151,7 @@ export default function FleetAnalytics() {
   })) || [];
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-3 md:p-4 space-y-3">
       <div className="flex items-center gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Fleet Analytics</h1>
@@ -542,7 +542,7 @@ export default function FleetAnalytics() {
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-muted text-center">
                   <p className="text-sm text-muted-foreground">Total Maintenance Cost</p>
-                  <p className="text-3xl font-bold">${(data?.totalMaintenanceCost || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold">${(data?.totalMaintenanceCost || 0).toLocaleString()}</p>
                 </div>
                 <Table>
                   <TableHeader>

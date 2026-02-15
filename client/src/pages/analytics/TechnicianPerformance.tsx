@@ -110,7 +110,7 @@ export default function TechnicianPerformance() {
 
   if (isLoading) {
     return (
-      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="p-3 md:p-4 space-y-3">
         <h1 className="text-xl sm:text-2xl font-bold">{getTitle()}</h1>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
@@ -122,7 +122,7 @@ export default function TechnicianPerformance() {
   }
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="p-3 md:p-4 space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-4">
           <div>

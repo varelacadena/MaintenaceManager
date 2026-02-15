@@ -209,7 +209,7 @@ export default function MaintenanceOverview() {
 
   if (isLoading) {
     return (
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-3 md:p-4 space-y-3">
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 text-primary" />
           <h1 className="text-xl sm:text-2xl font-bold">Reports & Analytics</h1>
@@ -224,7 +224,7 @@ export default function MaintenanceOverview() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-3 md:p-4 space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">

@@ -250,10 +250,10 @@ export default function Inventory() {
   }
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-6">
+    <div className="h-full flex flex-col p-3 md:p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Inventory Management</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Inventory Management</h1>
           <p className="text-sm md:text-base text-muted-foreground">Track and manage maintenance supplies and equipment</p>
         </div>
         <Button

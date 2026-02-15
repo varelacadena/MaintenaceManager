@@ -64,10 +64,10 @@ export default function EquipmentWorkHistory() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-4 space-y-3">
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Work History: {equipment.name}</h1>
+          <h1 className="text-2xl font-bold">Work History: {equipment.name}</h1>
           <p className="text-muted-foreground">
             {equipment.category && <span className="capitalize">{equipment.category}</span>}
             {equipment.serialNumber && <span> • Serial: {equipment.serialNumber}</span>}

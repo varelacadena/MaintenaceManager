@@ -206,8 +206,8 @@ export default function VehicleCheckIn() {
     <div className="flex-1 space-y-4 p-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Check-In</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Check-In</h2>
+          <p className="text-muted-foreground mt-0.5">
             {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
           </p>
         </div>

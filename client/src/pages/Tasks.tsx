@@ -409,7 +409,7 @@ export default function Tasks() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-3 md:p-4 space-y-3">
         <div className="flex justify-between items-center">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-10 w-32" />
@@ -435,13 +435,13 @@ export default function Tasks() {
       }) || [];
 
     return (
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div className="p-3 md:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
               My Tasks
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               View and complete your assigned tasks
             </p>
           </div>
@@ -537,13 +537,13 @@ export default function Tasks() {
 
   return (
     <>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div className="p-3 md:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
               {user?.role === "admin" ? "All Tasks" : "My Tasks"}
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               {user?.role === "admin"
                 ? "Manage tasks by status group. Click cells to edit inline."
                 : "View and manage your assigned tasks"}
@@ -557,7 +557,7 @@ export default function Tasks() {
           </Link>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {statusConfig.map((status) => {
             const tasksInGroup = groupedTasks[status.key] || [];
             const isCollapsed = collapsedGroups[status.key] ?? false;

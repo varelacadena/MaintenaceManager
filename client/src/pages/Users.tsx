@@ -128,10 +128,10 @@ export default function Users() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+    <div className="space-y-3 p-3 md:p-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold mb-2">User Management</h1>
+          <h1 className="text-xl md:text-2xl font-semibold mb-1">User Management</h1>
           <p className="text-sm md:text-base text-muted-foreground">Manage user roles and permissions</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -220,21 +220,21 @@ export default function Users() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
             <CardTitle className="text-xs md:text-sm font-medium">Total</CardTitle>
             <UsersIcon className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
+          <CardContent className="p-3 md:p-4 pt-0">
             <div className="text-xl md:text-2xl font-semibold">{users.length}</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
             <CardTitle className="text-xs md:text-sm font-medium">Admin</CardTitle>
             <Shield className="w-4 h-4 text-purple-500" />
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
+          <CardContent className="p-3 md:p-4 pt-0">
             <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "admin").length}
             </div>
@@ -242,11 +242,11 @@ export default function Users() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
             <CardTitle className="text-xs md:text-sm font-medium">Technician</CardTitle>
             <UsersIcon className="w-4 h-4 text-blue-500" />
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
+          <CardContent className="p-3 md:p-4 pt-0">
             <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "technician").length}
             </div>
@@ -254,11 +254,11 @@ export default function Users() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
             <CardTitle className="text-xs md:text-sm font-medium">Staff</CardTitle>
             <UsersIcon className="w-4 h-4 text-green-500" />
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
+          <CardContent className="p-3 md:p-4 pt-0">
             <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "staff").length}
             </div>
@@ -266,11 +266,11 @@ export default function Users() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
             <CardTitle className="text-xs md:text-sm font-medium">Student</CardTitle>
             <UsersIcon className="w-4 h-4 text-amber-500" />
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
+          <CardContent className="p-3 md:p-4 pt-0">
             <div className="text-xl md:text-2xl font-semibold">
               {users.filter((u) => u.role === "student").length}
             </div>
@@ -279,10 +279,10 @@ export default function Users() {
       </div>
 
       <Card>
-        <CardHeader className="p-4 md:p-6">
+        <CardHeader className="p-3 md:p-4">
           <CardTitle className="text-base md:text-lg">All Users</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 md:p-6 pt-0">
+        <CardContent className="p-3 md:p-4 pt-0">
           <div className="space-y-3">
             {users.map((user) => {
               const initials =

@@ -140,8 +140,8 @@ export default function VehicleCheckInVerification() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Check-In Verification</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Check-In Verification</h2>
+            <p className="text-muted-foreground mt-0.5">
               {vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})` : "Loading..."}
             </p>
           </div>

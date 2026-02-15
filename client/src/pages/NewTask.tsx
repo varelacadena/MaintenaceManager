@@ -578,13 +578,13 @@ export default function NewTask() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 md:p-6 pb-40">
+    <div className="max-w-2xl mx-auto p-3 md:p-4 pb-40">
       <div className="flex items-center gap-3 mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
             {requestId ? "Convert to Task" : "New Task"}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {requestId ? "Create a task from this service request" : "Fill in the details below"}
           </p>
         </div>
@@ -605,7 +605,7 @@ export default function NewTask() {
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           
           {/* Section 1: Task Details */}
           <Card className="p-5">

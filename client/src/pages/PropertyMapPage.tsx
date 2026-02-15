@@ -225,7 +225,7 @@ export default function PropertyMapPage() {
       <div className="h-full flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="heading-property-map">Property Map</h1>
+            <h1 className="text-2xl font-bold" data-testid="heading-property-map">Property Map</h1>
             <p className="text-muted-foreground mt-1">
               Interactive map of all facility properties and buildings
             </p>

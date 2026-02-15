@@ -275,10 +275,10 @@ export default function VehicleReservationDetails() {
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <h2 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
+          <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
             Reservation Details
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-0.5">
             {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
           </p>
         </div>

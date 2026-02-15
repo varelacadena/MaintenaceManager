@@ -548,13 +548,13 @@ export default function Calendar() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="space-y-3 p-3 md:p-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
               Task Calendar
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               {isTechnicianOrAdmin
                 ? "Drag tasks to reschedule them"
                 : "View scheduled maintenance tasks"}

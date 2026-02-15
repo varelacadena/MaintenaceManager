@@ -363,12 +363,12 @@ export default function Dashboard() {
 
   if (user?.role === "staff") {
     return (
-      <div className="space-y-6 pb-8">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+      <div className="space-y-3 md:space-y-4 pb-6">
+        <div className="space-y-0.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">
             Welcome back, {user?.firstName || "User"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
         </div>
@@ -556,12 +556,12 @@ export default function Dashboard() {
   // Student Dashboard - shows only student tasks
   if (user?.role === "student") {
     return (
-      <div className="space-y-6 pb-8">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+      <div className="space-y-3 md:space-y-4 pb-6">
+        <div className="space-y-0.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">
             Welcome, {user?.firstName || "Student"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
         </div>
@@ -666,12 +666,12 @@ export default function Dashboard() {
   // Technician Dashboard - shows only technician tasks
   if (user?.role === "technician") {
     return (
-      <div className="space-y-6 pb-8">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+      <div className="space-y-3 md:space-y-4 pb-6">
+        <div className="space-y-0.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">
             Welcome, {user?.firstName || "Technician"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
         </div>
@@ -774,13 +774,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+    <div className="space-y-3 md:space-y-4 pb-6">
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="space-y-0.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">
             Welcome back, {user?.firstName || "User"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
         </div>

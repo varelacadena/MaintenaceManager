@@ -114,7 +114,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+    <div className="space-y-3 p-3 md:p-0">
       <div className="flex items-center gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold">Settings</h1>

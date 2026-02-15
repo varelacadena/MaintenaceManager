@@ -479,9 +479,9 @@ export default function PropertyDetail() {
 
       {/* Property Details */}
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0 p-4 md:p-6">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0 p-3 md:p-4">
           <div className="space-y-1">
-            <CardTitle className="text-2xl md:text-3xl font-bold" data-testid="heading-property-name">{property.name}</CardTitle>
+            <CardTitle className="text-xl md:text-2xl font-bold" data-testid="heading-property-name">{property.name}</CardTitle>
             <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground flex-wrap">
               <Badge variant="secondary">{property.type}</Badge>
               {property.address && (

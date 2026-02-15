@@ -124,7 +124,7 @@ export default function ProjectsReport() {
   const activeProjects = projectList.filter(p => p.status === "in_progress" || p.status === "planning");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold" data-testid="text-projects-report-title">Projects Overview</h2>
         <Link href="/work">

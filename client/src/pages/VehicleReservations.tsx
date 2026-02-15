@@ -280,10 +280,10 @@ export default function VehicleReservations() {
     <div className="flex-1 space-y-4 p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-page-title">
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">
             All Vehicle Reservations
           </h2>
-          <p className="text-sm md:text-base text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-0.5">
             View and manage all vehicle reservations
           </p>
         </div>

@@ -94,8 +94,8 @@ export default function VehicleEdit() {
     <div className="flex-1 space-y-4 p-4">
       <div className="flex items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Edit Vehicle</h2>
-          <p className="text-muted-foreground">{vehicle.make} {vehicle.model}</p>
+          <h2 className="text-2xl font-bold tracking-tight">Edit Vehicle</h2>
+          <p className="text-muted-foreground mt-0.5">{vehicle.make} {vehicle.model}</p>
         </div>
       </div>
 

@@ -271,10 +271,10 @@ export default function Credentials() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold" data-testid="text-credentials-title">
+          <h1 className="text-2xl font-semibold" data-testid="text-credentials-title">
             Credential Management
           </h1>
           <p className="text-muted-foreground">Manage user accounts and permissions</p>

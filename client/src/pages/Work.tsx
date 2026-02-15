@@ -833,7 +833,7 @@ export default function Work() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-3 md:p-4 space-y-3">
         <div className="flex justify-between items-center">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-10 w-32" />
@@ -854,13 +854,13 @@ export default function Work() {
       }) || [];
 
     return (
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div className="p-3 md:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
               My Tasks
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               View and complete your assigned tasks
             </p>
           </div>
@@ -958,13 +958,13 @@ export default function Work() {
 
   return (
     <>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div className="p-3 md:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
               {user?.role === "admin" ? "Work" : "My Tasks"}
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               {user?.role === "admin"
                 ? "Manage tasks and projects in one place. Click cells to edit inline."
                 : "View and manage your assigned tasks"}
@@ -1023,7 +1023,7 @@ export default function Work() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {unifiedStatusConfig.map((status) => {
             const itemsInGroup = unifiedGroups[status.key] || [];
             const isCollapsed = collapsedGroups[status.key] ?? false;
@@ -1031,7 +1031,7 @@ export default function Work() {
             return (
               <Card key={status.key} data-testid={`group-${status.key}`}>
                 <div
-                  className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                  className="flex items-center gap-3 p-2.5 cursor-pointer select-none"
                   onClick={() => toggleGroup(status.key)}
                   data-testid={`toggle-group-${status.key}`}
                 >
@@ -1051,7 +1051,7 @@ export default function Work() {
                 {!isCollapsed && (
                   <div className="border-t">
                     {itemsInGroup.length === 0 ? (
-                      <div className="py-6 text-center text-sm text-muted-foreground">
+                      <div className="py-3 text-center text-sm text-muted-foreground">
                         No items
                       </div>
                     ) : (

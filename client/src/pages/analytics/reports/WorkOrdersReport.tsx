@@ -144,7 +144,7 @@ export default function WorkOrdersReport() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 md:space-y-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-28" />
@@ -155,7 +155,7 @@ export default function WorkOrdersReport() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-4">
       <AnalyticsFilters
         filters={filters}
         onFilterChange={setFilters}

@@ -310,21 +310,21 @@ export default function EditTask() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 p-6">
+    <div className="max-w-3xl mx-auto space-y-3 md:space-y-4 p-3 md:p-4">
       <div className="flex items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">
             Edit Task
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-0.5">
             Update task details and assignments
           </p>
         </div>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-3 md:p-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
             <FormField
               control={form.control}
               name="name"

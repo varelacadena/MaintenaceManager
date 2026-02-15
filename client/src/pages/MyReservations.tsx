@@ -194,11 +194,11 @@ export default function MyReservations() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-3 md:space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold">My Reservations</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage your vehicle reservations</p>
+            <h1 className="text-xl md:text-2xl font-semibold">My Reservations</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Manage your vehicle reservations</p>
           </div>
         </div>
         <div className="text-center py-8 sm:py-12">Loading...</div>
@@ -207,11 +207,11 @@ export default function MyReservations() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-6">
+    <div className="space-y-3 md:space-y-4 pb-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-semibold truncate">My Reservations</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your vehicle reservations</p>
+          <h1 className="text-xl md:text-2xl font-semibold truncate">My Reservations</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage your vehicle reservations</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <Button

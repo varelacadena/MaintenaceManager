@@ -529,7 +529,7 @@ export default function RequestDetail() {
     <div className="flex flex-col h-full bg-background">
       {/* Clean Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-4 sm:px-6 py-4">
+        <div className="p-3 md:p-4">
           {/* Top Row: Back + Actions */}
           <div className="flex items-center justify-between gap-4 mb-3">
             <Button 

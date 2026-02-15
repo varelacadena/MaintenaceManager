@@ -403,7 +403,7 @@ export default function VehicleDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 sm:space-y-6 pb-6">
+      <div className="space-y-3 pb-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-3/4" />
           <div className="h-64 bg-muted rounded" />
@@ -414,7 +414,7 @@ export default function VehicleDetail() {
 
   if (!vehicle) {
     return (
-      <div className="space-y-4 sm:space-y-6 pb-6">
+      <div className="space-y-3 pb-6">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Car className="h-12 w-12 text-muted-foreground mb-4" />
@@ -428,12 +428,12 @@ export default function VehicleDetail() {
   const qrCodeUrl = `${window.location.origin}/vehicles/${vehicle.id}`;
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-6">
+    <div className="space-y-3 pb-6">
       {/* Header Section - Mobile Optimized */}
       <div className="space-y-3 sm:space-y-0">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate" data-testid="text-vehicle-name">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight truncate" data-testid="text-vehicle-name">
               {vehicle.make} {vehicle.model}
             </h2>
             <p className="text-sm text-muted-foreground truncate">{vehicle.year} • {vehicle.vehicleId}</p>
@@ -833,8 +833,8 @@ export default function VehicleDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="logbook" className="space-y-4 sm:space-y-6">
-          <div className="space-y-4 sm:space-y-6">
+        <TabsContent value="logbook" className="space-y-3">
+          <div className="space-y-3">
             <div>
               <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Check-Out Logs</h3>
               {checkOutLogs && checkOutLogs.length > 0 ? (

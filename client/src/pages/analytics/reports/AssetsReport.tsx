@@ -190,7 +190,7 @@ export default function AssetsReport() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 md:space-y-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-24 sm:h-32" />
@@ -201,7 +201,7 @@ export default function AssetsReport() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-4">
       <AnalyticsFilters
         filters={filters}
         onFilterChange={setFilters}
