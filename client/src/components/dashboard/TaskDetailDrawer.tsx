@@ -119,9 +119,9 @@ export default function TaskDetailDrawer({
     enabled: isAdmin && reassignOpen,
   });
 
-  const technicianUsers = users.filter(
-    (u) => u.role === "technician" || u.role === "admin"
-  );
+  const adminUsers = users.filter((u) => u.role === "admin");
+  const technicianUsers = users.filter((u) => u.role === "technician");
+  const studentUsers = users.filter((u) => u.role === "student");
 
   const reassignMutation = useMutation({
     mutationFn: async ({
@@ -336,7 +336,7 @@ export default function TaskDetailDrawer({
                         <div className="p-3 border-b">
                           <p className="text-sm font-medium">Reassign Task</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Pick a technician or vendor
+                            Pick a team member or vendor
                           </p>
                         </div>
                         <ScrollArea className="max-h-64">
@@ -353,12 +353,16 @@ export default function TaskDetailDrawer({
                               </button>
                             </div>
                           )}
-                          {technicianUsers.length > 0 && (
-                            <div className="p-1">
+                          {[
+                            { label: "Admins", items: adminUsers },
+                            { label: "Technicians", items: technicianUsers },
+                            { label: "Students", items: studentUsers },
+                          ].filter(group => group.items.length > 0).map((group) => (
+                            <div key={group.label} className="p-1">
                               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                                Technicians
+                                {group.label}
                               </p>
-                              {technicianUsers.map((u) => (
+                              {group.items.map((u) => (
                                 <button
                                   key={u.id}
                                   className={cn(
@@ -385,7 +389,7 @@ export default function TaskDetailDrawer({
                                 </button>
                               ))}
                             </div>
-                          )}
+                          ))}
                           {vendors.length > 0 && (
                             <div className="p-1 border-t">
                               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -417,9 +421,9 @@ export default function TaskDetailDrawer({
                               ))}
                             </div>
                           )}
-                          {technicianUsers.length === 0 && vendors.length === 0 && (
+                          {adminUsers.length === 0 && technicianUsers.length === 0 && studentUsers.length === 0 && vendors.length === 0 && (
                             <div className="p-4 text-center text-sm text-muted-foreground">
-                              No technicians or vendors available
+                              No team members or vendors available
                             </div>
                           )}
                         </ScrollArea>

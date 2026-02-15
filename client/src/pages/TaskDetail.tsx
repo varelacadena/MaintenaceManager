@@ -841,7 +841,9 @@ export default function TaskDetail() {
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const isStudent = user?.role === "student";
   const assignedUser = users.find(u => u.id === task.assignedToId);
-  const technicianUsers = users.filter(u => u.role === "technician" || u.role === "admin");
+  const adminUsers = users.filter(u => u.role === "admin");
+  const technicianUsers = users.filter(u => u.role === "technician");
+  const studentUsers = users.filter(u => u.role === "student");
 
   const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
   const totalHours = Math.floor(totalMinutes / 60);
@@ -2635,29 +2637,42 @@ export default function TaskDetail() {
             <DialogTitle>{assignedUser ? "Reassign Task" : "Assign Task"}</DialogTitle>
             <DialogDescription>Select a team member to assign this task to.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4 max-h-[300px] overflow-y-auto">
-            {technicianUsers.map((u) => (
-              <div
-                key={u.id}
-                className={`flex items-center justify-between p-3 rounded-md cursor-pointer hover-elevate ${
-                  u.id === task.assignedToId ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
-                }`}
-                onClick={() => {
-                  updateTaskMutation.mutate({ assignedToId: u.id });
-                  setIsAssignDialogOpen(false);
-                }}
-                data-testid={`assign-user-${u.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{u.firstName} {u.lastName}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{u.role}</p>
-                  </div>
+          <div className="space-y-1 py-4 max-h-[400px] overflow-y-auto">
+            {[
+              { label: "Admins", users: adminUsers },
+              { label: "Technicians", users: technicianUsers },
+              { label: "Students", users: studentUsers },
+            ].filter(group => group.users.length > 0).map((group) => (
+              <div key={group.label}>
+                <p className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {group.label}
+                </p>
+                <div className="space-y-1 px-1">
+                  {group.users.map((u) => (
+                    <div
+                      key={u.id}
+                      className={`flex items-center justify-between p-3 rounded-md cursor-pointer hover-elevate ${
+                        u.id === task.assignedToId ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
+                      }`}
+                      onClick={() => {
+                        updateTaskMutation.mutate({ assignedToId: u.id });
+                        setIsAssignDialogOpen(false);
+                      }}
+                      data-testid={`assign-user-${u.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{u.firstName} {u.lastName}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{u.role}</p>
+                        </div>
+                      </div>
+                      {u.id === task.assignedToId && <Check className="w-5 h-5 text-primary" />}
+                    </div>
+                  ))}
                 </div>
-                {u.id === task.assignedToId && <Check className="w-5 h-5 text-primary" />}
               </div>
             ))}
           </div>
