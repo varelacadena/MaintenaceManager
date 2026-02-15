@@ -46,7 +46,6 @@ import {
   User as UserIcon,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
   Wrench,
   FolderKanban,
   Search,
@@ -155,15 +154,19 @@ function EditableTextCell({
   taskId,
   field,
   onSave,
+  linkTo,
 }: {
   value: string;
   taskId: string;
   field: string;
   onSave: (taskId: string, field: string, value: string) => void;
+  linkTo?: string;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useLocation()[1];
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -209,9 +212,26 @@ function EditableTextCell({
 
   return (
     <span
-      className="cursor-pointer hover:underline decoration-dashed underline-offset-2"
+      className={`cursor-pointer hover:underline underline-offset-2 ${linkTo ? "font-medium" : "decoration-dashed"}`}
       onClick={(e) => {
         e.stopPropagation();
+        if (linkTo) {
+          if (clickTimerRef.current) return;
+          clickTimerRef.current = setTimeout(() => {
+            clickTimerRef.current = null;
+            navigate(linkTo);
+          }, 250);
+        } else {
+          setIsEditing(true);
+        }
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (clickTimerRef.current) {
+          clearTimeout(clickTimerRef.current);
+          clickTimerRef.current = null;
+        }
         setIsEditing(true);
       }}
       data-testid={`text-${field}-${taskId}`}
@@ -334,6 +354,7 @@ function TaskTableRow({
             taskId={task.id}
             field="name"
             onSave={handleInlineEdit}
+            linkTo={`/tasks/${task.id}`}
           />
         </div>
       </TableCell>
@@ -476,17 +497,6 @@ function TaskTableRow({
             <SelectItem value="project">Project</SelectItem>
           </SelectContent>
         </Select>
-      </TableCell>
-      <TableCell>
-        <Link href={`/tasks/${task.id}`}>
-          <Button
-            size="icon"
-            variant="ghost"
-            data-testid={`button-view-task-${task.id}`}
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
-        </Link>
       </TableCell>
     </TableRow>
   );
@@ -1218,7 +1228,6 @@ export default function Work() {
                             <TableHead className="w-[140px] hidden md:table-cell">Assigned To</TableHead>
                             <TableHead className="w-[140px] hidden md:table-cell">Property</TableHead>
                             <TableHead className="w-[100px] hidden lg:table-cell">Type</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1680,17 +1689,6 @@ function ProjectRowGroup({
               <span>{project.budgetAmount.toLocaleString()}</span>
             </div>
           )}
-        </TableCell>
-        <TableCell>
-          <Link href={`/projects/${project.id}`}>
-            <Button
-              size="icon"
-              variant="ghost"
-              data-testid={`button-view-project-${project.id}`}
-            >
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-          </Link>
         </TableCell>
       </TableRow>
 
