@@ -45,11 +45,11 @@ import {
 import type {
   ServiceRequest,
   Message,
-  Area,
-  Subdivision,
   User as UserType,
   Task,
   Upload,
+  Property,
+  Space,
 } from "@shared/schema";
 
 export default function RequestDetail() {
@@ -131,12 +131,17 @@ export default function RequestDetail() {
     }
   }, [id, messages, user?.id]);
 
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
   });
 
-  const { data: subdivisions = [] } = useQuery<Subdivision[]>({
-    queryKey: ["/api/subdivisions"],
+  const { data: allSpaces = [] } = useQuery<Space[]>({
+    queryKey: ["/api/spaces", request?.propertyId],
+    enabled: !!request?.propertyId,
+    queryFn: async () => {
+      const response = await fetch(`/api/spaces?propertyId=${request?.propertyId}`, { credentials: "include" });
+      return response.json();
+    },
   });
 
   const { data: users = [] } = useQuery<UserType[]>({
@@ -174,8 +179,8 @@ export default function RequestDetail() {
   }
 
   const requester = users.find(u => u.id === request.requesterId);
-  const area = areas.find(a => a.id === request.areaId);
-  const subdivision = subdivisions.find(s => s.id === request.subdivisionId);
+  const property = properties.find(p => p.id === request.propertyId);
+  const space = allSpaces.find(s => s.id === request.spaceId);
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const canTakeAction = isTechnicianOrAdmin && request.status === "pending";
@@ -255,7 +260,7 @@ export default function RequestDetail() {
                   <Button 
                     size="sm"
                     className="h-7 px-2 text-xs"
-                    data-testid="button-approve-create-task"
+                    data-testid="button-approve-create-task-mobile"
                   >
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Approve
@@ -357,12 +362,12 @@ export default function RequestDetail() {
                   </div>
                   
                   {/* Location */}
-                  {(area || subdivision) && (
+                  {property && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Location</span>
-                      <span data-testid="text-area">
-                        {area?.name}
-                        {subdivision && <span className="text-muted-foreground" data-testid="text-subdivision"> / {subdivision.name}</span>}
+                      <span data-testid="text-property">
+                        {property.name}
+                        {space && <span className="text-muted-foreground" data-testid="text-space"> / {space.name}</span>}
                       </span>
                     </div>
                   )}
@@ -817,16 +822,16 @@ export default function RequestDetail() {
                   </div>
 
                   {/* Location */}
-                  {(area || subdivision) && (
+                  {property && (
                     <div className="flex items-start gap-3">
                       <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                       <div>
                         <p className="text-xs text-muted-foreground">Location</p>
-                        <p className="text-sm font-medium" data-testid="text-area">
-                          {area?.name}
-                          {subdivision && (
-                            <span className="text-muted-foreground" data-testid="text-subdivision">
-                              {" "}/ {subdivision.name}
+                        <p className="text-sm font-medium" data-testid="text-property">
+                          {property.name}
+                          {space && (
+                            <span className="text-muted-foreground" data-testid="text-space">
+                              {" "}/ {space.name}
                             </span>
                           )}
                         </p>

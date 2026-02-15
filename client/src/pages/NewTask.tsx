@@ -40,17 +40,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertTaskSchema, insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
+import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project } from "@shared/schema";
 import { z } from "zod";
 import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save, Upload, Paperclip, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { TaskLocationFields } from "@/components/task-form/TaskLocationFields";
+import { TaskDateFields } from "@/components/task-form/TaskDateFields";
+import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
+import { SpaceDialog } from "@/components/task-form/SpaceDialog";
 
 const equipmentFormSchema = insertEquipmentSchema.omit({ propertyId: true }).extend({
   name: z.string().min(1, "Name is required"),
@@ -59,11 +58,6 @@ const equipmentFormSchema = insertEquipmentSchema.omit({ propertyId: true }).ext
 
 type EquipmentFormData = z.infer<typeof equipmentFormSchema>;
 
-const spaceFormSchema = insertSpaceSchema.omit({ propertyId: true }).extend({
-  name: z.string().min(1, "Name is required"),
-});
-
-type SpaceFormData = z.infer<typeof spaceFormSchema>;
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
@@ -408,49 +402,6 @@ export default function NewTask() {
     },
   });
 
-  const spaceForm = useForm<SpaceFormData>({
-    resolver: zodResolver(spaceFormSchema),
-    defaultValues: {
-      name: "",
-      floor: "",
-      description: "",
-    },
-  });
-
-  const createSpaceMutation = useMutation({
-    mutationFn: async (data: SpaceFormData) => {
-      const res = await fetch("/api/spaces", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, propertyId: selectedPropertyId }),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: (newSpace: Space) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/spaces", selectedPropertyId] });
-      form.setValue("spaceId", newSpace.id);
-      setSelectedSpaceId(newSpace.id);
-      setIsSpaceDialogOpen(false);
-      spaceForm.reset({
-        name: "",
-        floor: "",
-        description: "",
-      });
-      toast({
-        title: "Room/Space Created",
-        description: "The new room/space has been added and selected.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create room/space",
-        variant: "destructive",
-      });
-    },
-  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -816,143 +767,33 @@ export default function NewTask() {
               description="Where is this task?"
             />
             
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="propertyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Property *</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedPropertyId(value);
-                        setSelectedSpaceId("");
-                        form.setValue("spaceId", "");
-                        form.setValue("equipmentId", "");
-                      }}
-                      value={field.value || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-property">
-                          <SelectValue placeholder="Select a property" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {properties.map((property) => (
-                          <SelectItem key={property.id} value={property.id}>
-                            {property.name}
-                            <span className="text-muted-foreground ml-1">({property.type})</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {isBuilding && (
-                <FormField
-                  control={form.control}
-                  name="spaceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Room / Space</FormLabel>
-                      {spaces.length > 0 ? (
-                        <Select
-                          onValueChange={(value) => {
-                            const actualValue = value === "__none__" ? "" : value;
-                            field.onChange(actualValue);
-                            setSelectedSpaceId(actualValue);
-                            form.setValue("equipmentId", "");
-                          }}
-                          value={field.value || "__none__"}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-space">
-                              <SelectValue placeholder="Select room (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="__none__">All spaces</SelectItem>
-                            {spaces.map((space) => (
-                              <SelectItem key={space.id} value={space.id}>
-                                {space.name}{space.floor ? ` (${space.floor})` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
-                          <span className="text-sm text-muted-foreground">No rooms defined.</span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsSpaceDialogOpen(true)}
-                            data-testid="button-add-space-inline"
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add Room
-                          </Button>
-                        </div>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <FormField
-                control={form.control}
-                name="equipmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Equipment</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        if (value === "create_new") {
-                          equipmentForm.reset({
-                            name: "",
-                            category: "other",
-                            description: "",
-                            serialNumber: "",
-                            condition: "",
-                            notes: "",
-                            imageUrl: "",
-                          });
-                          setPendingEquipmentFiles([]);
-                          setIsEquipmentDialogOpen(true);
-                        } else {
-                          field.onChange(value);
-                        }
-                      }}
-                      value={field.value || ""}
-                      disabled={!selectedPropertyId}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-equipment">
-                          <SelectValue placeholder={selectedPropertyId ? "Select equipment (optional)" : "Select property first"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="create_new" className="font-medium text-primary">
-                          <Plus className="w-3 h-3 inline mr-1" />
-                          Add New Equipment
-                        </SelectItem>
-                        {equipment.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <TaskLocationFields
+              form={form}
+              properties={properties}
+              spaces={spaces}
+              equipment={equipment}
+              selectedPropertyId={selectedPropertyId}
+              setSelectedPropertyId={setSelectedPropertyId}
+              selectedSpaceId={selectedSpaceId}
+              setSelectedSpaceId={setSelectedSpaceId}
+              isBuilding={isBuilding}
+              selectedProperty={selectedProperty}
+              onAddSpace={() => setIsSpaceDialogOpen(true)}
+              showEquipmentCreate
+              onAddEquipment={() => {
+                equipmentForm.reset({
+                  name: "",
+                  category: "other",
+                  description: "",
+                  serialNumber: "",
+                  condition: "",
+                  notes: "",
+                  imageUrl: "",
+                });
+                setPendingEquipmentFiles([]);
+                setIsEquipmentDialogOpen(true);
+              }}
+            />
           </Card>
 
           {/* Section 3: Schedule */}
@@ -965,171 +806,8 @@ export default function NewTask() {
             />
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="initialDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              type="button"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "Pick date"}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                field.onChange(`${year}-${month}-${day}`);
-                              } else {
-                                field.onChange(undefined);
-                              }
-                            }}
-                            initialFocus
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="estimatedCompletionDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Due Date *</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              type="button"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "Pick date"}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                field.onChange(`${year}-${month}-${day}`);
-                              } else {
-                                field.onChange(undefined);
-                              }
-                            }}
-                            initialFocus
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {taskType === "recurring" && (
-                <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
-                  <p className="text-sm font-medium">Recurring Settings</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="recurringFrequency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Repeat</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-recurring-frequency">
-                                <SelectValue placeholder="Select..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="daily">Daily</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="yearly">Yearly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="recurringInterval"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Every</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              placeholder="1"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                              value={field.value || ""}
-                              data-testid="input-recurring-interval"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="recurringEndDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date (optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            value={field.value || ""}
-                            data-testid="input-recurring-end-date"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+              <TaskDateFields form={form} />
+              <TaskRecurringFields form={form} taskType={taskType} />
             </div>
           </Card>
 
@@ -1828,80 +1506,16 @@ export default function NewTask() {
         </DialogContent>
       </Dialog>
 
-      {/* Space Dialog */}
-      <Dialog open={isSpaceDialogOpen} onOpenChange={setIsSpaceDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Room/Space</DialogTitle>
-            <DialogDescription>
-              Add a room to {selectedProperty?.name || "the building"}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...spaceForm}>
-            <form
-              onSubmit={spaceForm.handleSubmit((data) => createSpaceMutation.mutate(data))}
-              className="space-y-4"
-            >
-              <FormField
-                control={spaceForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., Room 101" data-testid="input-new-space-name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={spaceForm.control}
-                name="floor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Floor</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ""} placeholder="e.g., 1st Floor" data-testid="input-new-space-floor" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={spaceForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Brief description"
-                        className="resize-none"
-                        data-testid="textarea-new-space-description"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsSpaceDialogOpen(false)} data-testid="button-cancel-space">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createSpaceMutation.isPending} data-testid="button-submit-space">
-                  {createSpaceMutation.isPending ? "Adding..." : "Add"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <SpaceDialog
+        open={isSpaceDialogOpen}
+        onOpenChange={setIsSpaceDialogOpen}
+        propertyName={selectedProperty?.name || "the building"}
+        propertyId={selectedPropertyId}
+        onSuccess={(newSpace) => {
+          form.setValue("spaceId", newSpace.id);
+          setSelectedSpaceId(newSpace.id);
+        }}
+      />
 
       {/* Checklist Dialog */}
       <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
@@ -1953,7 +1567,7 @@ export default function NewTask() {
                         />
                       ) : (
                         <span
-                          className="flex-1 cursor-pointer hover:bg-muted px-2 py-1 rounded"
+                          className="flex-1 cursor-pointer hover-elevate px-2 py-1 rounded"
                           onClick={() => setEditingItemIndex(idx)}
                           data-testid={`text-checklist-item-${idx}`}
                         >

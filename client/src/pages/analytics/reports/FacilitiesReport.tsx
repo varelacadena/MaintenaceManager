@@ -225,7 +225,7 @@ export default function FacilitiesReport() {
                       <TableCell className="py-2 hidden sm:table-cell">{getTypeBadge(facility.propertyType)}</TableCell>
                       <TableCell className="text-xs sm:text-sm text-right py-2">{facility.totalWorkOrders}</TableCell>
                       <TableCell className="text-xs sm:text-sm text-right py-2">
-                        <span className={facility.openWorkOrders > 0 ? "text-yellow-600 font-medium" : ""}>
+                        <span className={facility.openWorkOrders > 0 ? "text-yellow-600 dark:text-yellow-400 font-medium" : ""}>
                           {facility.openWorkOrders}
                         </span>
                       </TableCell>
@@ -282,7 +282,7 @@ export default function FacilitiesReport() {
                         <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell">{space.floor || "—"}</TableCell>
                         <TableCell className="text-xs sm:text-sm text-right py-2">{space.workOrderCount}</TableCell>
                         <TableCell className="text-xs sm:text-sm text-right py-2">
-                          <span className={space.openWorkOrders > 0 ? "text-yellow-600 font-medium" : ""}>
+                          <span className={space.openWorkOrders > 0 ? "text-yellow-600 dark:text-yellow-400 font-medium" : ""}>
                             {space.openWorkOrders}
                           </span>
                         </TableCell>

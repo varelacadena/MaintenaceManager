@@ -286,7 +286,7 @@ export default function Requests() {
                     return (
                       <tr 
                         key={request.id} 
-                        className="border-b border-border/40 hover:bg-muted/20 transition-all duration-150"
+                        className="border-b border-border/40 hover-elevate transition-all duration-150"
                         data-testid={`card-request-${request.id}`}
                       >
                         <td className="px-6 py-5">

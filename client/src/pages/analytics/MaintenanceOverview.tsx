@@ -101,7 +101,7 @@ const reportCategories = [
     description: "Task status and trends",
     icon: ClipboardList,
     href: "/analytics",
-    color: "bg-blue-100 dark:bg-blue-900/30 text-blue-600",
+    color: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
     active: true,
   },
   {
@@ -110,7 +110,7 @@ const reportCategories = [
     description: "Team performance",
     icon: Users,
     href: "/analytics/technicians",
-    color: "bg-purple-100 dark:bg-purple-900/30 text-purple-600",
+    color: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
   },
   {
     id: "assets",
@@ -118,7 +118,7 @@ const reportCategories = [
     description: "Equipment health",
     icon: Settings,
     href: "/analytics/assets",
-    color: "bg-orange-100 dark:bg-orange-900/30 text-orange-600",
+    color: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
   },
   {
     id: "facilities",
@@ -126,7 +126,7 @@ const reportCategories = [
     description: "Building analytics",
     icon: Building2,
     href: "/analytics/facilities",
-    color: "bg-green-100 dark:bg-green-900/30 text-green-600",
+    color: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
   },
   {
     id: "fleet",
@@ -134,7 +134,7 @@ const reportCategories = [
     description: "Vehicle usage",
     icon: Car,
     href: "/analytics/fleet",
-    color: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600",
+    color: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
   },
   {
     id: "requests",
@@ -142,7 +142,7 @@ const reportCategories = [
     description: "Service requests",
     icon: FileText,
     href: "/analytics/requests",
-    color: "bg-pink-100 dark:bg-pink-900/30 text-pink-600",
+    color: "bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400",
   },
   {
     id: "alerts",
@@ -150,7 +150,7 @@ const reportCategories = [
     description: "Issues & overdue",
     icon: Bell,
     href: "/analytics/alerts",
-    color: "bg-red-100 dark:bg-red-900/30 text-red-600",
+    color: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
   },
 ];
 
@@ -268,7 +268,7 @@ export default function MaintenanceOverview() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <ClipboardList className="w-5 h-5 text-blue-600" />
+                <ClipboardList className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.totalWorkOrders || 0}</p>
@@ -282,7 +282,7 @@ export default function MaintenanceOverview() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.completedWorkOrders || 0}</p>
@@ -296,7 +296,7 @@ export default function MaintenanceOverview() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Clock className="w-5 h-5 text-blue-600" />
+                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.inProgressWorkOrders || 0}</p>
@@ -310,7 +310,7 @@ export default function MaintenanceOverview() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${(data?.overdueWorkOrders || 0) > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                <AlertTriangle className={`w-5 h-5 ${(data?.overdueWorkOrders || 0) > 0 ? 'text-red-600' : 'text-gray-500'}`} />
+                <AlertTriangle className={`w-5 h-5 ${(data?.overdueWorkOrders || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.overdueWorkOrders || 0}</p>
@@ -325,7 +325,7 @@ export default function MaintenanceOverview() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">Completion Rate</p>
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
               <p className="text-2xl font-bold">{data?.completionRate || 0}%</p>
               <Progress value={data?.completionRate || 0} className="h-2" />

@@ -171,7 +171,7 @@ export default function WorkOrdersReport() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <ClipboardList className="w-5 h-5 text-blue-600" />
+                <ClipboardList className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.totalWorkOrders || 0}</p>
@@ -185,7 +185,7 @@ export default function WorkOrdersReport() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.completedWorkOrders || 0}</p>
@@ -199,7 +199,7 @@ export default function WorkOrdersReport() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Clock className="w-5 h-5 text-blue-600" />
+                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.inProgressWorkOrders || 0}</p>
@@ -213,7 +213,7 @@ export default function WorkOrdersReport() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${(data?.overdueWorkOrders || 0) > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                <AlertTriangle className={`w-5 h-5 ${(data?.overdueWorkOrders || 0) > 0 ? 'text-red-600' : 'text-gray-500'}`} />
+                <AlertTriangle className={`w-5 h-5 ${(data?.overdueWorkOrders || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold">{data?.overdueWorkOrders || 0}</p>
@@ -228,7 +228,7 @@ export default function WorkOrdersReport() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">Completion Rate</p>
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
               <p className="text-2xl font-bold">{data?.completionRate || 0}%</p>
               <Progress value={data?.completionRate || 0} className="h-2" />

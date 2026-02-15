@@ -126,7 +126,7 @@ export default function TechniciansReport() {
         <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-800">
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-600 flex-shrink-0" />
+              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground">Top Performer</p>
                 <p className="text-base sm:text-xl font-bold truncate">{topPerformer.technicianName}</p>

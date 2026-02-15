@@ -395,7 +395,7 @@ export default function VehicleReservations() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+                          className="border-blue-500/20 text-blue-700 dark:text-blue-300"
                           data-testid={`button-assign-vehicle-${reservation.id}`}
                         >
                           Assign Vehicle
@@ -444,7 +444,7 @@ export default function VehicleReservations() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20"
+                          className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20"
                           data-testid={`button-cancel-${reservation.id}`}
                         >
                           Cancel
@@ -461,7 +461,7 @@ export default function VehicleReservations() {
                           <AlertDialogCancel>Go Back</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => cancelMutation.mutate(reservation.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="bg-destructive text-destructive-foreground"
                           >
                             Cancel Reservation
                           </AlertDialogAction>
@@ -509,7 +509,7 @@ export default function VehicleReservations() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-green-500/20 text-green-700 dark:text-green-300 hover:bg-green-500/10"
+                          className="border-green-500/20 text-green-700 dark:text-green-300"
                           data-testid={`button-verify-checkin-${reservation.id}`}
                         >
                           <ClipboardCheck className="h-4 w-4 mr-1" />
@@ -542,7 +542,7 @@ export default function VehicleReservations() {
                       <AlertDialogCancel>Go Back</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => deleteMutation.mutate(reservation.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        className="bg-destructive text-destructive-foreground"
                       >
                         Delete Reservation
                       </AlertDialogAction>

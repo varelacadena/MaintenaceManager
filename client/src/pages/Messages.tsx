@@ -422,7 +422,7 @@ export default function Messages() {
                   <div
                     key={conv.user.id}
                     onClick={() => setSelectedUserId(conv.user.id)}
-                    className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+                    className={`p-4 cursor-pointer transition-colors hover-elevate ${
                       selectedUserId === conv.user.id
                         ? "bg-primary/10 border-l-2 border-l-primary"
                         : ""

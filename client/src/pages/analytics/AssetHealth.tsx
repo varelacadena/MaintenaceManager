@@ -284,7 +284,7 @@ export default function AssetHealth() {
                 {data.slice(0, 15).map(asset => (
                   <TableRow 
                     key={asset.equipmentId} 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover-elevate"
                     onClick={() => setSelectedAsset(asset)}
                     data-testid={`asset-row-${asset.equipmentId}`}
                   >
@@ -354,7 +354,7 @@ export default function AssetHealth() {
                   {data.filter(a => a.failureFrequency >= 5).map(asset => (
                     <TableRow 
                       key={asset.equipmentId}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="cursor-pointer hover-elevate"
                       onClick={() => setSelectedAsset(asset)}
                     >
                       <TableCell className="text-xs sm:text-sm font-medium py-2 max-w-[120px] truncate">{asset.equipmentName}</TableCell>

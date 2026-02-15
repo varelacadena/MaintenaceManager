@@ -91,13 +91,13 @@ export default function AlertsExceptions() {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case "overdue":
-        return <Badge variant="outline" className="border-red-500 text-red-600 text-[10px] sm:text-xs">Overdue</Badge>;
+        return <Badge variant="outline" className="border-red-500 text-red-600 dark:text-red-400 text-[10px] sm:text-xs">Overdue</Badge>;
       case "sla_breach":
-        return <Badge variant="outline" className="border-orange-500 text-orange-600 text-[10px] sm:text-xs">SLA</Badge>;
+        return <Badge variant="outline" className="border-orange-500 text-orange-600 dark:text-orange-400 text-[10px] sm:text-xs">SLA</Badge>;
       case "high_failure":
-        return <Badge variant="outline" className="border-purple-500 text-purple-600 text-[10px] sm:text-xs">Failure</Badge>;
+        return <Badge variant="outline" className="border-purple-500 text-purple-600 dark:text-purple-400 text-[10px] sm:text-xs">Failure</Badge>;
       case "recurring_issue":
-        return <Badge variant="outline" className="border-blue-500 text-blue-600 text-[10px] sm:text-xs">Recurring</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs">Recurring</Badge>;
       default:
         return <Badge variant="outline" className="text-[10px] sm:text-xs">{type}</Badge>;
     }
@@ -165,7 +165,7 @@ export default function AlertsExceptions() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Bell className="w-5 h-5 text-blue-600" />
+                <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{alerts.length}</p>
@@ -179,7 +179,7 @@ export default function AlertsExceptions() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${highSeverityAlerts.length > 0 ? "bg-red-100 dark:bg-red-900/30" : "bg-muted"}`}>
-                <AlertTriangle className={`w-5 h-5 ${highSeverityAlerts.length > 0 ? "text-red-600" : "text-muted-foreground"}`} />
+                <AlertTriangle className={`w-5 h-5 ${highSeverityAlerts.length > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold">{highSeverityAlerts.length}</p>
@@ -193,7 +193,7 @@ export default function AlertsExceptions() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${overdueAlerts.length > 0 ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-muted"}`}>
-                <Clock className={`w-5 h-5 ${overdueAlerts.length > 0 ? "text-yellow-600" : "text-muted-foreground"}`} />
+                <Clock className={`w-5 h-5 ${overdueAlerts.length > 0 ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground"}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold">{overdueAlerts.length}</p>
@@ -207,7 +207,7 @@ export default function AlertsExceptions() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${slaBreaches.length > 0 ? "bg-red-100 dark:bg-red-900/30" : "bg-muted"}`}>
-                <Shield className={`w-5 h-5 ${slaBreaches.length > 0 ? "text-red-600" : "text-muted-foreground"}`} />
+                <Shield className={`w-5 h-5 ${slaBreaches.length > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold">{slaBreaches.length}</p>
@@ -238,7 +238,7 @@ export default function AlertsExceptions() {
               </div>
               <div className="p-2 sm:p-4 rounded-lg bg-muted/50 text-center">
                 <p className="text-[10px] sm:text-sm text-muted-foreground">High Priority</p>
-                <p className="text-lg sm:text-2xl font-bold text-red-600">{trends.reduce((sum, t) => sum + t.high, 0)}</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-600 dark:text-red-400">{trends.reduce((sum, t) => sum + t.high, 0)}</p>
               </div>
             </div>
           </CardContent>

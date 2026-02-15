@@ -97,7 +97,7 @@ export default function EquipmentWorkHistory() {
             <div className="space-y-3">
               {equipmentTasks.map((task) => (
                 <Link key={task.id} href={`/tasks/${task.id}`}>
-                  <Card className="hover:bg-accent/50 transition-colors cursor-pointer" data-testid={`task-${task.id}`}>
+                  <Card className="hover-elevate transition-colors cursor-pointer" data-testid={`task-${task.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">

@@ -877,7 +877,7 @@ export default function TaskDetail() {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => deleteTaskMutation.mutate()}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="bg-destructive text-destructive-foreground"
                     >
                       Delete
                     </AlertDialogAction>
@@ -1629,7 +1629,7 @@ export default function TaskDetail() {
             <Button
               variant="ghost"
               size="sm"
-              className="flex-1 h-14 flex-col gap-0.5 text-green-600"
+              className="flex-1 h-14 flex-col gap-0.5 text-green-600 dark:text-green-400"
               disabled
               data-testid="bottom-button-done"
             >
@@ -1664,7 +1664,7 @@ export default function TaskDetail() {
               <Button
                 variant="default"
                 size="sm"
-                className="flex-1 h-14 flex-col gap-0.5 bg-green-600 hover:bg-green-700"
+                className="flex-1 h-14 flex-col gap-0.5 bg-green-600"
                 onClick={handleComplete}
                 disabled={updateStatusMutation.isPending}
                 data-testid="bottom-button-complete"
@@ -1741,7 +1741,7 @@ export default function TaskDetail() {
                     onError={(error) => {
                       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
                     }}
-                    buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+                    buttonClassName="bg-primary text-primary-foreground"
                   >
                     Browse Photos
                   </ObjectUploader>
@@ -2094,7 +2094,7 @@ export default function TaskDetail() {
                 {inventorySearchQuery && !selectedInventoryItemId && (
                   <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
                     <div
-                      className="px-3 py-2 cursor-pointer hover:bg-accent font-semibold text-primary border-b"
+                      className="px-3 py-2 cursor-pointer hover-elevate font-semibold text-primary border-b"
                       onClick={() => {
                         setIsQuickAddInventoryOpen(true);
                         setInventorySearchQuery("");
@@ -2107,7 +2107,7 @@ export default function TaskDetail() {
                       .map((item) => (
                         <div
                           key={item.id}
-                          className="px-3 py-2 cursor-pointer hover:bg-accent"
+                          className="px-3 py-2 cursor-pointer hover-elevate"
                           onClick={() => {
                             setSelectedInventoryItemId(item.id);
                             setInventorySearchQuery(item.name);
@@ -2240,7 +2240,7 @@ export default function TaskDetail() {
             >
               Stop Timer First
             </Button>
-            <AlertDialogAction onClick={confirmLeave} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmLeave} className="bg-destructive text-destructive-foreground">
               Leave Anyway
             </AlertDialogAction>
           </AlertDialogFooter>

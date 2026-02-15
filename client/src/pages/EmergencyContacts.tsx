@@ -540,7 +540,7 @@ export default function EmergencyContacts() {
             <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteContactId && deleteMutation.mutate(deleteContactId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground"
               data-testid="button-confirm-delete"
             >
               Delete

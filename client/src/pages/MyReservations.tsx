@@ -423,7 +423,7 @@ export default function MyReservations() {
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
                   {canCheckOut(reservation) && (
                     <Button
-                      onClick={() => setLocation(`/vehicles/${reservation.vehicleId}/check-out?reservationId=${reservation.id}`)}
+                      onClick={() => setLocation(`/vehicle-checkout/${reservation.id}`)}
                       className="w-full sm:w-auto"
                     >
                       Check Out
@@ -435,7 +435,7 @@ export default function MyReservations() {
                       return (
                         <Button
                           onClick={() => setLocation(`/vehicle-checkin/${checkOutLog.id}`)}
-                          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
+                          className="w-full sm:w-auto bg-green-600 text-white"
                         >
                           End Trip
                         </Button>

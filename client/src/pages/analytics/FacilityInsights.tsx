@@ -206,14 +206,14 @@ export default function FacilityInsights() {
                       <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">{facility.completedWorkOrders}</TableCell>
                       <TableCell className="text-xs sm:text-sm text-right py-2">
                         {facility.openWorkOrders > 0 ? (
-                          <span className="text-orange-600 font-medium">{facility.openWorkOrders}</span>
+                          <span className="text-orange-600 dark:text-orange-400 font-medium">{facility.openWorkOrders}</span>
                         ) : (
                           <span className="text-muted-foreground">0</span>
                         )}
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm text-right py-2 hidden md:table-cell">
                         {facility.emergencyWorkOrders >= 3 ? (
-                          <span className="text-red-600 font-medium flex items-center justify-end gap-1">
+                          <span className="text-red-600 dark:text-red-400 font-medium flex items-center justify-end gap-1">
                             <AlertTriangle className="w-3 h-3" />
                             {facility.emergencyWorkOrders}
                           </span>

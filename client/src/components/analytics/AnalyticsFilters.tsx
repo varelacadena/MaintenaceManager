@@ -422,7 +422,7 @@ export default function AnalyticsFilters({
                   onClick={() => onExport("xlsx")}
                   data-testid="button-export-xlsx"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  <FileSpreadsheet className="w-4 h-4 text-green-600 dark:text-green-400" />
                   Excel Spreadsheet (.xlsx)
                 </Button>
               )}
@@ -434,7 +434,7 @@ export default function AnalyticsFilters({
                   onClick={() => onExport("pdf")}
                   data-testid="button-export-pdf"
                 >
-                  <FileText className="w-4 h-4 text-red-600" />
+                  <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
                   PDF Document (.pdf)
                 </Button>
               )}

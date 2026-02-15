@@ -31,7 +31,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertServiceRequestSchema } from "@shared/schema";
-import type { Area, Subdivision, Property, Space } from "@shared/schema";
+import type { Property, Space } from "@shared/schema";
 import { z } from "zod";
 import { Upload, X, Check, CalendarIcon, Paperclip } from "lucide-react";
 import { format } from "date-fns";
@@ -68,7 +68,9 @@ export default function NewRequest() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [pendingAttachments, setPendingAttachments] = useState<Array<{
     name: string;
+    fileName: string;
     url: string;
+    objectUrl: string;
     type: string;
     size: number;
   }>>([]);
@@ -100,10 +102,6 @@ export default function NewRequest() {
       urgency: "medium",
       requestedDate: new Date().toISOString().split("T")[0],
       requesterId: "",
-      areaId: null,
-      subdivisionId: null,
-      assignedToId: null,
-      onHoldReason: null,
       spaceId: "",
     },
   });
@@ -425,9 +423,7 @@ export default function NewRequest() {
                         disabled={(date) => {
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
-                          const checkDate = new Date(date);
-                          checkDate.setHours(0, 0, 0, 0);
-                          return checkDate.getTime() !== today.getTime();
+                          return date < today;
                         }}
                         initialFocus
                       />
@@ -486,7 +482,7 @@ export default function NewRequest() {
                                 {formatFileSize(attachment.size)}
                               </p>
                             </div>
-                            <Check className="w-4 h-4 text-green-600 shrink-0" />
+                            <Check className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                           </div>
                           <Button
                             type="button"

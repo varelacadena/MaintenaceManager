@@ -373,7 +373,7 @@ export default function VehicleCheckOut() {
                           variant: "destructive"
                         });
                       }}
-                      buttonClassName="bg-amber-600 text-white hover:bg-amber-700"
+                      buttonClassName="bg-amber-600 text-white"
                     >
                       <Upload className="mr-2 h-4 w-4" />
                       Upload Dash Photo
@@ -408,7 +408,7 @@ export default function VehicleCheckOut() {
                           variant: "destructive"
                         });
                       }}
-                      buttonClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+                      buttonClassName="bg-primary text-primary-foreground"
                     >
                       <Upload className="mr-2 h-4 w-4" />
                       Upload Photos

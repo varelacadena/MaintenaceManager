@@ -49,7 +49,7 @@ export default function KpiCard({
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">{subtitle}</p>
         )}
         {trend && (
-          <p className={`text-[10px] sm:text-xs mt-0.5 sm:mt-1 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
+          <p className={`text-[10px] sm:text-xs mt-0.5 sm:mt-1 ${trend.isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
             {trend.isPositive ? "+" : ""}{trend.value}% from last period
           </p>
         )}

@@ -846,7 +846,7 @@ export default function Dashboard() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
-              <FolderKanban className="w-5 h-5 text-indigo-600" />
+              <FolderKanban className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <CardTitle className="text-lg">Projects Overview</CardTitle>
             </div>
             <Link href="/projects">
@@ -860,19 +860,19 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-indigo-600">{projectStats.total}</p>
+              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{projectStats.total}</p>
               <p className="text-xs text-muted-foreground">Total Projects</p>
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-blue-600">{projectStats.inProgress}</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{projectStats.inProgress}</p>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-orange-600">{projectStats.highPriority}</p>
+              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{projectStats.highPriority}</p>
               <p className="text-xs text-muted-foreground">High Priority</p>
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 ${projectStats.totalBudget.toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">Total Budget</p>

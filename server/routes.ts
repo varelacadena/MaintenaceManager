@@ -220,64 +220,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Forgot username endpoint
-  app.post("/api/auth/forgot-username", async (req, res) => {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const user = await storage.getUserByEmail(email);
-
-      // Always return success to prevent email enumeration
-      if (user && user.email) {
-        await notificationService.sendEmail(
-          user.email,
-          "Username Recovery",
-          `Your username is: ${user.username}\n\nIf you didn't request this, please contact support.`
-        );
-      }
-
-      res.json({ success: true, message: "If an account exists with this email, the username has been sent." });
-    } catch (error) {
-      console.error("Forgot username error:", error);
-      res.status(500).json({ message: "Failed to process request" });
-    }
-  });
-
-  // Forgot password endpoint
-  app.post("/api/auth/forgot-password", async (req, res) => {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const user = await storage.getUserByEmail(email);
-
-      // Always return success to prevent email enumeration
-      if (user && user.email) {
-        // Generate a temporary reset token (in production, store this in DB with expiry)
-        const resetToken = Math.random().toString(36).substring(2, 15);
-        const resetLink = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
-
-        await notificationService.sendEmail(
-          user.email,
-          "Password Reset Request",
-          `You have requested to reset your password.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 24 hours.\n\nIf you didn't request this, please ignore this email and your password will remain unchanged.`
-        );
-      }
-
-      res.json({ success: true, message: "If an account exists with this email, a reset link has been sent." });
-    } catch (error) {
-      console.error("Forgot password error:", error);
-      res.status(500).json({ message: "Failed to process request" });
-    }
-  });
-
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {

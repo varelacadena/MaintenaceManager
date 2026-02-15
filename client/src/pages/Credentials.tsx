@@ -254,13 +254,13 @@ export default function Credentials() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-purple-500 hover:bg-purple-600";
+        return "bg-purple-500";
       case "technician":
-        return "bg-blue-500 hover:bg-blue-600";
+        return "bg-blue-500";
       case "staff":
-        return "bg-green-500 hover:bg-green-600";
+        return "bg-green-500";
       case "student":
-        return "bg-amber-500 hover:bg-amber-600";
+        return "bg-amber-500";
       default:
         return "bg-muted";
     }

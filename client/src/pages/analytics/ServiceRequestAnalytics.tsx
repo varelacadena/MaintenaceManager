@@ -221,7 +221,7 @@ export default function ServiceRequestAnalytics() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Clock className="w-5 h-5 text-blue-600" />
+                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Avg Response Time</p>
@@ -234,7 +234,7 @@ export default function ServiceRequestAnalytics() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                <TrendingUp className="w-5 h-5 text-green-600" />
+                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Conversion Rate</p>
@@ -247,7 +247,7 @@ export default function ServiceRequestAnalytics() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Under Review</p>
@@ -260,7 +260,7 @@ export default function ServiceRequestAnalytics() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                <Users className="w-5 h-5 text-purple-600" />
+                <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Unique Requesters</p>
@@ -523,19 +523,19 @@ export default function ServiceRequestAnalytics() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
                     <p className="text-sm text-muted-foreground">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-600">{data?.pendingRequests || 0}</p>
+                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{data?.pendingRequests || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                     <p className="text-sm text-muted-foreground">Under Review</p>
-                    <p className="text-2xl font-bold text-blue-600">{data?.underReviewRequests || 0}</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data?.underReviewRequests || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                     <p className="text-sm text-muted-foreground">Converted</p>
-                    <p className="text-2xl font-bold text-green-600">{data?.convertedRequests || 0}</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{data?.convertedRequests || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
                     <p className="text-sm text-muted-foreground">Rejected</p>
-                    <p className="text-2xl font-bold text-red-600">{data?.rejectedRequests || 0}</p>
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{data?.rejectedRequests || 0}</p>
                   </div>
                 </div>
                 <div className="p-4 rounded-lg bg-muted text-center">
@@ -576,7 +576,7 @@ export default function ServiceRequestAnalytics() {
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-center">
                   <p className="text-sm text-muted-foreground">Successfully Converted</p>
-                  <p className="text-3xl font-bold text-green-600">{data?.convertedRequests || 0}</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{data?.convertedRequests || 0}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     out of {data?.totalRequests || 0} total requests
                   </p>

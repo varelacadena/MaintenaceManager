@@ -493,15 +493,15 @@ export default function FleetAnalytics() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                     <p className="text-sm text-muted-foreground">Available</p>
-                    <p className="text-2xl font-bold text-green-600">{data?.availableVehicles || 0}</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{data?.availableVehicles || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                     <p className="text-sm text-muted-foreground">In Use</p>
-                    <p className="text-2xl font-bold text-blue-600">{data?.inUseVehicles || 0}</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data?.inUseVehicles || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
                     <p className="text-sm text-muted-foreground">Out of Service</p>
-                    <p className="text-2xl font-bold text-red-600">{data?.outOfServiceVehicles || 0}</p>
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{data?.outOfServiceVehicles || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-muted">
                     <p className="text-sm text-muted-foreground">Utilization Rate</p>
@@ -518,15 +518,15 @@ export default function FleetAnalytics() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
                     <p className="text-sm text-muted-foreground">Active</p>
-                    <p className="text-2xl font-bold text-yellow-600">{data?.activeReservations || 0}</p>
+                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{data?.activeReservations || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                     <p className="text-sm text-muted-foreground">Completed</p>
-                    <p className="text-2xl font-bold text-green-600">{data?.completedReservations || 0}</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{data?.completedReservations || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
                     <p className="text-sm text-muted-foreground">Cancelled</p>
-                    <p className="text-2xl font-bold text-red-600">{data?.cancelledReservations || 0}</p>
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{data?.cancelledReservations || 0}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-muted">
                     <p className="text-sm text-muted-foreground">Total</p>

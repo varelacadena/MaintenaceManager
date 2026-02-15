@@ -85,8 +85,8 @@ function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[
             <div className="flex items-center gap-2">
               {log.cleanlinessConfirmed ? (
                 <>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-600">Cleanliness Confirmed</span>
+                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm text-green-600 dark:text-green-400">Cleanliness Confirmed</span>
                 </>
               ) : (
                 <>
@@ -685,7 +685,7 @@ export default function VehicleDetail() {
                         )}
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Expires:</span>
-                          <span className={isExpired ? "text-destructive font-medium" : isExpiringSoon ? "text-yellow-600 font-medium" : ""}>
+                          <span className={isExpired ? "text-destructive font-medium" : isExpiringSoon ? "text-yellow-600 dark:text-yellow-400 font-medium" : ""}>
                             {format(expirationDate, "MMM d, yyyy")}
                           </span>
                         </div>

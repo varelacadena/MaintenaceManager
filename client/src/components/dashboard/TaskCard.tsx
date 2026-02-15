@@ -208,8 +208,8 @@ export default function TaskCard({
                   className={cn(
                     "text-[10px] px-1.5 py-0",
                     isOverdue
-                      ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border-red-200"
-                      : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border-red-200 dark:border-red-700"
+                      : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200 dark:border-blue-700"
                   )}
                 >
                   <Clock className="w-3 h-3 mr-1" />
@@ -260,7 +260,7 @@ export default function TaskCard({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-xs text-green-600"
+                      className="h-7 text-xs text-green-600 dark:text-green-400"
                       onClick={(e) => {
                         e.stopPropagation();
                         onStatusChange(task.id, "completed");
