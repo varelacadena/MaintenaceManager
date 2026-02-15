@@ -55,6 +55,10 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
   - Task overdue notifications
   - Mark as read/dismiss individual or all notifications
   - Notifications stored per-user with unread count badge
+- **Email Notifications (via Resend):** Transactional emails sent for:
+  - New service request submitted → email to all admin users
+  - New vehicle reservation submitted → email to all admin users
+  - Vehicle reservation approved → confirmation email to the requestor with online pickup instructions
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
 - **Unified Work Page:** Tasks and projects are consolidated into a single "Work" page (`/work`) replacing the separate Tasks and Projects pages:

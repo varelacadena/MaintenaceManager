@@ -6,7 +6,7 @@ import { requireRole, getCurrentUser, requireAdmin, requireStaffOrHigher, requir
 import bcrypt from "bcryptjs";
 
 import { seedDatabase } from "./seed";
-import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "./notifications";
+import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned, notifyNewServiceRequest, notifyNewVehicleReservation, notifyVehicleReservationApproved } from "./notifications";
 import {
   insertServiceRequestSchema,
   insertTaskSchema,
@@ -812,6 +812,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requesterId: userId,
       });
       const request = await storage.createServiceRequest(requestData);
+
+      const requester = await storage.getUser(userId);
+      if (requester) {
+        const admins = await storage.getUsersByRoles(["admin"]);
+        notifyNewServiceRequest(request, requester, admins, notificationService).catch(err =>
+          console.error("Failed to send service request notification emails:", err)
+        );
+      }
+
       res.json(request);
     } catch (error) {
       console.error("Error creating service request:", error);
@@ -2536,6 +2545,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await syncVehicleStatus(reservationData.vehicleId);
       }
 
+      const requester = await storage.getUser(userId);
+      if (requester) {
+        const admins = await storage.getUsersByRoles(["admin"]);
+        let vehicleName = "Unassigned";
+        if (reservationData.vehicleId) {
+          const vehicle = await storage.getVehicle(reservationData.vehicleId);
+          if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+        }
+        notifyNewVehicleReservation(reservation, requester, admins, vehicleName, notificationService).catch(err =>
+          console.error("Failed to send vehicle reservation notification emails:", err)
+        );
+      }
+
       res.json(reservation);
     } catch (error) {
       console.error("Error creating vehicle reservation:", error);
@@ -2608,6 +2630,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also sync current vehicle if status changed
       if (updates.status && updatedReservation?.vehicleId && !updates.vehicleId) {
         await syncVehicleStatus(updatedReservation.vehicleId);
+      }
+
+      if (updates.status === "approved" && reservation.status !== "approved" && updatedReservation) {
+        const reservationUser = await storage.getUser(reservation.userId);
+        if (reservationUser) {
+          let vehicleName = "Unassigned";
+          const vId = updatedReservation.vehicleId || reservation.vehicleId;
+          if (vId) {
+            const vehicle = await storage.getVehicle(vId);
+            if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+          }
+          notifyVehicleReservationApproved(updatedReservation, reservationUser, vehicleName, notificationService).catch(err =>
+            console.error("Failed to send reservation approval email:", err)
+          );
+        }
       }
 
       res.json(updatedReservation);
