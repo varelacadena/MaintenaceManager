@@ -1307,21 +1307,6 @@ export default function TaskDetail() {
               </div>
             )}
 
-            <div className="p-4 bg-muted/30 rounded-lg flex items-center justify-between" data-testid="time-logged-card">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${activeTimer ? "bg-primary text-primary-foreground animate-pulse" : "bg-muted"}`}>
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Time Logged</p>
-                  <p className="text-xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
-                </div>
-              </div>
-              {activeTimer && (
-                <Badge variant="default" className="animate-pulse">Running</Badge>
-              )}
-            </div>
-
             <div className="space-y-3">
               <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Notes</p>
               <div className="flex gap-2">
