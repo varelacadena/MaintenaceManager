@@ -66,7 +66,7 @@ class ProductionNotificationService implements NotificationService {
   async sendEmail(to: string, subject: string, body: string): Promise<void> {
     try {
       const { client, fromEmail } = await getUncachableResendClient();
-      const senderEmail = fromEmail || 'noreply@maintenance.edu';
+      const senderEmail = fromEmail || 'onboarding@resend.dev';
 
       const { error } = await client.emails.send({
         from: senderEmail,
