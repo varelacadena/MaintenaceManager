@@ -1603,15 +1603,6 @@ export default function TaskDetail() {
                   />
                   {inventorySearchQuery && !selectedInventoryItemId && (
                     <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      <div
-                        className="px-3 py-2 cursor-pointer hover-elevate font-semibold text-primary border-b"
-                        onClick={() => {
-                          setIsQuickAddInventoryOpen(true);
-                          setInventorySearchQuery("");
-                        }}
-                      >
-                        + Create New Item
-                      </div>
                       {inventoryItems
                         ?.filter((item) => item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()))
                         .map((item) => (
@@ -1629,6 +1620,9 @@ export default function TaskDetail() {
                             </div>
                           </div>
                         ))}
+                      {inventoryItems?.filter((item) => item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())).length === 0 && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">No items found</div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1670,54 +1664,6 @@ export default function TaskDetail() {
                 disabled={!selectedInventoryItemId || !partQuantity || addPartMutation.isPending}
               >
                 Add Part
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isQuickAddInventoryOpen} onOpenChange={setIsQuickAddInventoryOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Item</DialogTitle>
-              <DialogDescription>Quickly add a new inventory item.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Item Name</Label>
-                <Input
-                  value={quickInventoryName}
-                  onChange={(e) => setQuickInventoryName(e.target.value)}
-                  placeholder="Enter item name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={quickInventoryQuantity}
-                  onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
-                  placeholder="Enter quantity"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Unit (Optional)</Label>
-                <Input
-                  value={quickInventoryUnit}
-                  onChange={(e) => setQuickInventoryUnit(e.target.value)}
-                  placeholder="e.g., pieces, boxes"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setIsQuickAddInventoryOpen(false); setQuickInventoryName(""); setQuickInventoryQuantity(0); setQuickInventoryUnit(""); }}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => quickAddInventoryMutation.mutate()}
-                disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickAddInventoryMutation.isPending}
-              >
-                Create Item
               </Button>
             </DialogFooter>
           </DialogContent>
