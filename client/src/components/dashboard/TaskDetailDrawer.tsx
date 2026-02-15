@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -9,6 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   MapPin,
   Clock,
   User,
@@ -19,11 +26,18 @@ import {
   Calendar,
   ArrowRight,
   FileText,
+  UserPlus,
+  Building2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Task, User as UserType, Property } from "@shared/schema";
-import { format, parseISO, isPast, isToday } from "date-fns";
+import type { Task, User as UserType, Property, Vendor } from "@shared/schema";
+import { format, parseISO, isPast } from "date-fns";
 import { Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -50,10 +64,22 @@ const urgencyConfig = {
   },
 };
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string }> = {
   not_started: {
     label: "Not Started",
     color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  },
+  needs_estimate: {
+    label: "Needs Estimate",
+    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  },
+  waiting_approval: {
+    label: "Waiting Approval",
+    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  },
+  ready: {
+    label: "Ready",
+    color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400",
   },
   in_progress: {
     label: "In Progress",
@@ -78,6 +104,57 @@ export default function TaskDetailDrawer({
   onStatusChange,
   isPending,
 }: TaskDetailDrawerProps) {
+  const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const isAdmin = currentUser?.role === "admin";
+
+  const { data: users = [] } = useQuery<UserType[]>({
+    queryKey: ["/api/users"],
+    enabled: isAdmin && reassignOpen,
+  });
+
+  const { data: vendors = [] } = useQuery<Vendor[]>({
+    queryKey: ["/api/vendors"],
+    enabled: isAdmin && reassignOpen,
+  });
+
+  const technicianUsers = users.filter(
+    (u) => u.role === "technician" || u.role === "admin"
+  );
+
+  const reassignMutation = useMutation({
+    mutationFn: async ({
+      taskId,
+      assignedToId,
+      assignedVendorId,
+    }: {
+      taskId: string;
+      assignedToId: string | null;
+      assignedVendorId: string | null;
+    }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}`, {
+        assignedToId,
+        assignedVendorId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task reassigned",
+        description: "The task has been reassigned successfully.",
+      });
+      setReassignOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reassign task.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!task) return null;
 
   const urgency = urgencyConfig[task.urgency] || urgencyConfig.low;
@@ -96,10 +173,44 @@ export default function TaskDetailDrawer({
     return user.username?.[0]?.toUpperCase() || "?";
   };
 
+  const getUserDisplayName = (user: UserType) => {
+    if (user.firstName) {
+      return `${user.firstName} ${user.lastName || ""}`.trim();
+    }
+    return user.username;
+  };
+
   const formatDate = (date: Date | string | null) => {
     if (!date) return "Not set";
     const d = typeof date === "string" ? parseISO(date) : date;
     return format(d, "MMM d, yyyy");
+  };
+
+  const handleReassignToUser = (userId: string) => {
+    if (!task) return;
+    reassignMutation.mutate({
+      taskId: task.id,
+      assignedToId: userId,
+      assignedVendorId: null,
+    });
+  };
+
+  const handleReassignToVendor = (vendorId: string) => {
+    if (!task) return;
+    reassignMutation.mutate({
+      taskId: task.id,
+      assignedToId: null,
+      assignedVendorId: vendorId,
+    });
+  };
+
+  const handleUnassign = () => {
+    if (!task) return;
+    reassignMutation.mutate({
+      taskId: task.id,
+      assignedToId: null,
+      assignedVendorId: null,
+    });
   };
 
   return (
@@ -203,7 +314,119 @@ export default function TaskDetailDrawer({
             <div className="flex items-start gap-3">
               <User className="w-4 h-4 text-muted-foreground mt-0.5" />
               <div className="flex-1">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Assigned To</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Assigned To</p>
+                  {isAdmin && task.status !== "completed" && (
+                    <Popover open={reassignOpen} onOpenChange={setReassignOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid="button-reassign"
+                        >
+                          <UserPlus className="w-3.5 h-3.5 mr-1" />
+                          Reassign
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-72 p-0"
+                        align="end"
+                        side="bottom"
+                      >
+                        <div className="p-3 border-b">
+                          <p className="text-sm font-medium">Reassign Task</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Pick a technician or vendor
+                          </p>
+                        </div>
+                        <ScrollArea className="max-h-64">
+                          {(assignee || task.assignedVendorId) && (
+                            <div className="p-1 border-b">
+                              <button
+                                className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover-elevate"
+                                onClick={handleUnassign}
+                                disabled={reassignMutation.isPending}
+                                data-testid="button-unassign"
+                              >
+                                <X className="w-4 h-4 text-muted-foreground" />
+                                <span>Unassign</span>
+                              </button>
+                            </div>
+                          )}
+                          {technicianUsers.length > 0 && (
+                            <div className="p-1">
+                              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                                Technicians
+                              </p>
+                              {technicianUsers.map((u) => (
+                                <button
+                                  key={u.id}
+                                  className={cn(
+                                    "flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover-elevate",
+                                    task.assignedToId === u.id &&
+                                      "bg-accent"
+                                  )}
+                                  onClick={() => handleReassignToUser(u.id)}
+                                  disabled={
+                                    reassignMutation.isPending ||
+                                    task.assignedToId === u.id
+                                  }
+                                  data-testid={`button-assign-user-${u.id}`}
+                                >
+                                  <Avatar className="w-6 h-6">
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(u)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{getUserDisplayName(u)}</span>
+                                  {task.assignedToId === u.id && (
+                                    <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-green-600" />
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {vendors.length > 0 && (
+                            <div className="p-1 border-t">
+                              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                                Vendors
+                              </p>
+                              {vendors.map((v) => (
+                                <button
+                                  key={v.id}
+                                  className={cn(
+                                    "flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover-elevate",
+                                    task.assignedVendorId === v.id &&
+                                      "bg-accent"
+                                  )}
+                                  onClick={() => handleReassignToVendor(v.id)}
+                                  disabled={
+                                    reassignMutation.isPending ||
+                                    task.assignedVendorId === v.id
+                                  }
+                                  data-testid={`button-assign-vendor-${v.id}`}
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                                    <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                                  </div>
+                                  <span>{v.name}</span>
+                                  {task.assignedVendorId === v.id && (
+                                    <CheckCircle2 className="w-3.5 h-3.5 ml-auto text-green-600" />
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {technicianUsers.length === 0 && vendors.length === 0 && (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              No technicians or vendors available
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 {assignee ? (
                   <div className="flex items-center gap-2">
                     <Avatar className="w-6 h-6">
