@@ -831,14 +831,16 @@ export default function NewTask() {
                     setAssignmentOption(option);
                     form.setValue("assignedToId", undefined);
                     form.setValue("assignedVendorId", undefined);
-                    form.setValue("assignedPool", undefined);
                     
                     if (option === "student") {
                       form.setValue("executorType", "student");
+                      form.setValue("assignedPool", "student_pool");
                     } else if (option === "technician") {
                       form.setValue("executorType", "technician");
+                      form.setValue("assignedPool", "technician_pool");
                     } else {
                       form.setValue("executorType", undefined);
+                      form.setValue("assignedPool", undefined);
                     }
                   }}
                   value={assignmentOption}
