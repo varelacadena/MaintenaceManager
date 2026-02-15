@@ -56,7 +56,7 @@ export default function Requests() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [urgencyFilter, setUrgencyFilter] = useState("all");
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
 
