@@ -81,10 +81,10 @@ function AuthenticatedApp() {
             userInitials={userInitials}
           />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className={`flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${user?.role === "student" ? "py-1.5" : ""}`}>
+            <header className={`flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${(user?.role === "student" || user?.role === "technician") ? "py-1.5" : ""}`}>
               <div className="flex items-center gap-1 sm:gap-3">
                 <SidebarTrigger className="md:hidden h-8 w-8 text-muted-foreground" data-testid="button-sidebar-toggle" />
-                {user?.role !== "student" && (
+                {user?.role !== "student" && user?.role !== "technician" && (
                   <button
                     onClick={() => window.history.back()}
                     className="flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
@@ -107,16 +107,16 @@ function AuthenticatedApp() {
                     <span className="hidden sm:inline">Back</span>
                   </button>
                 )}
-                {user?.role === "student" && (
-                  <span className="text-sm font-medium text-muted-foreground" data-testid="text-student-name">
+                {(user?.role === "student" || user?.role === "technician") && (
+                  <span className="text-sm font-medium text-muted-foreground" data-testid="text-user-name">
                     {userName}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
-                {user?.role !== "student" && <NotificationsWidget />}
+                {user?.role !== "student" && user?.role !== "technician" && <NotificationsWidget />}
                 <ThemeToggle />
-                {user?.role !== "student" && (
+                {user?.role !== "student" && user?.role !== "technician" && (
                   <button
                     onClick={async () => {
                       await fetch("/api/logout", { method: "POST" });
@@ -130,12 +130,12 @@ function AuthenticatedApp() {
                 )}
               </div>
             </header>
-            <main className={`flex-1 overflow-auto bg-muted/20 ${user?.role === "student" ? "px-0 py-0" : "px-8 py-6"}`}>
+            <main className={`flex-1 overflow-auto bg-muted/20 ${(user?.role === "student" || user?.role === "technician") ? "px-0 py-0" : "px-8 py-6"}`}>
               <ScrollToTop />
               <Switch>
                 {/* Routes accessible to all authenticated users */}
                 <Route path="/" component={() => {
-                  if (user?.role === "student") {
+                  if (user?.role === "student" || user?.role === "technician") {
                     window.location.replace("/work");
                     return null;
                   }

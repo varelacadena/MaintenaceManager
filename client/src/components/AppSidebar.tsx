@@ -58,9 +58,7 @@ const roleMenus = {
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   technician: [
-    { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "My Tasks", url: "/work", icon: Wrench },
-    { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
