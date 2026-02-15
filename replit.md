@@ -27,7 +27,13 @@ The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI an
 - Students have a minimal header (just their name, sidebar toggle, theme toggle — no Sign Out button, notifications, or back button)
 - Student main content area has no padding for full-width mobile experience
 
-**Technician Experience:**
+**Technician Experience (simplified, matches student PWA style):**
+- Technician Work page shows numbered task cards with large tap targets, minimal badges (only "In Progress" or "Urgent"), no "I'm Done for Day" button
+- Technicians have a minimal header (just their name, sidebar toggle, theme toggle — no Sign Out button, notifications, or back button)
+- Technician sidebar has only 3 items: My Tasks, Messages, Settings (no Dashboard or Calendar)
+- Technicians redirect from / to /work (skip Dashboard)
+- Technician main content area has no padding for full-width mobile experience
+- Task detail page includes "Previous Work Here" collapsible section showing completed tasks at the same property/equipment, with task name, description, assignee, date, and "Same Equipment" badge
 - Quick action buttons are compact horizontal row (not 3-column grid) for better mobile use
 - Full access to collapsible sections (quotes, parts, notes, etc.) but streamlined layout
 

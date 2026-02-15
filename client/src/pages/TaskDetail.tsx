@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -231,6 +231,7 @@ export default function TaskDetail() {
   const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [partsExpanded, setPartsExpanded] = useState(false);
   const [quotesExpanded, setQuotesExpanded] = useState(true);
+  const [previousWorkExpanded, setPreviousWorkExpanded] = useState(false);
   const [isAddQuoteDialogOpen, setIsAddQuoteDialogOpen] = useState(false);
   const [newQuoteVendorId, setNewQuoteVendorId] = useState<string>("");
   const [newQuoteVendorName, setNewQuoteVendorName] = useState("");
@@ -329,6 +330,29 @@ export default function TaskDetail() {
     queryKey: ["/api/tasks", id, "quotes"],
     enabled: !!id && !!task?.requiresEstimate,
   });
+
+  const { data: allTasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+    enabled: !!task?.propertyId && (user?.role === "technician" || user?.role === "admin"),
+  });
+
+  const previousWork = useMemo(() => {
+    if (!task || !allTasks.length) return [];
+    return allTasks
+      .filter((t) => {
+        if (t.id === task.id) return false;
+        if (t.status !== "completed") return false;
+        if (task.equipmentId && t.equipmentId === task.equipmentId) return true;
+        if (task.propertyId && t.propertyId === task.propertyId) return true;
+        return false;
+      })
+      .sort((a, b) => {
+        const dateA = a.updatedAt || "";
+        const dateB = b.updatedAt || "";
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      })
+      .slice(0, 10);
+  }, [task, allTasks]);
 
   useEffect(() => {
     const runningEntry = timeEntries.find((e) => e.startTime && !e.endTime);
@@ -1276,6 +1300,63 @@ export default function TaskDetail() {
                 <p className="text-sm text-muted-foreground capitalize">{equipment.category}</p>
               </div>
             </div>
+          )}
+
+          {/* Previous Work at this Property/Equipment - Technician & Admin */}
+          {isTechnicianOrAdmin && previousWork.length > 0 && (
+            <Collapsible open={previousWorkExpanded} onOpenChange={setPreviousWorkExpanded}>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-md text-left" data-testid="toggle-previous-work">
+                  <div className="flex items-center gap-2">
+                    <History className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-sm">Previous Work Here</span>
+                    <Badge variant="secondary" className="text-xs">{previousWork.length}</Badge>
+                  </div>
+                  {previousWorkExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                {previousWork.map((prevTask) => {
+                  const completedBy = users.find(u => u.id === prevTask.assignedToId);
+                  const isEquipmentMatch = task.equipmentId && prevTask.equipmentId === task.equipmentId;
+                  return (
+                    <div
+                      key={prevTask.id}
+                      className="p-3 rounded-md border border-border/50 cursor-pointer hover-elevate"
+                      onClick={() => navigate(`/tasks/${prevTask.id}`)}
+                      data-testid={`previous-work-item-${prevTask.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{prevTask.name}</p>
+                          {prevTask.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{prevTask.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {completedBy && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {completedBy.firstName} {completedBy.lastName}
+                              </span>
+                            )}
+                            {prevTask.updatedAt && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {format(new Date(prevTask.updatedAt), "MMM d, yyyy")}
+                              </span>
+                            )}
+                            {isEquipmentMatch && (
+                              <Badge variant="outline" className="text-xs">Same Equipment</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Instructions - Important for student tasks */}
