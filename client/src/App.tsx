@@ -116,7 +116,7 @@ function AuthenticatedApp() {
               <div className="flex items-center gap-2 sm:gap-3">
                 {user?.role !== "student" && user?.role !== "technician" && <NotificationsWidget />}
                 <ThemeToggle />
-                {user?.role !== "student" && user?.role !== "technician" && (
+                {user?.role !== "student" && (
                   <button
                     onClick={async () => {
                       await fetch("/api/logout", { method: "POST" });
