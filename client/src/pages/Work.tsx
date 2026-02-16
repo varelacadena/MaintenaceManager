@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { statusColors as projectStatusColors, priorityColors } from "@/lib/constants";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,8 +78,6 @@ const taskStatusColors: Record<string, string> = {
   on_hold: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
   completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
 };
-
-import { statusColors as projectStatusColors, priorityColors } from "@/lib/constants";
 
 const unifiedStatusConfig = [
   { key: "not_started", label: "Not Started" },

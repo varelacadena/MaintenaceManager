@@ -77,12 +77,12 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
   - Both "New Task" and "New Project" creation accessible from the same page
   - All inline editing capabilities preserved (name, description, status, urgency, dates, assignee, property, type)
   - Old `/tasks` and `/projects` list routes redirect to `/work`; detail pages (`/tasks/:id`, `/projects/:id`) remain unchanged
-- **Project Management:** Comprehensive project oversight for multi-task maintenance projects:
-  - Projects serve as READ-ONLY organizational containers grouping related tasks with budget tracking and timelines
-  - Team member assignment with roles (manager, lead, technician, support) and hour allocation
-  - Vendor assignment with roles (primary, subcontractor, consultant, supplier)
-  - Status tracking (planning, active, on_hold, completed, cancelled) with priority levels
-  - Project analytics dashboard showing task progress, budget overview, and time tracking
+- **Project Management:** Simplified project detail page for multi-task maintenance projects:
+  - Projects are read-only organizational containers grouping related tasks — not separate management areas
+  - Single-scroll project detail page with summary cards (task progress, budget, time logged, timeline) and task list
+  - No separate Team, Vendor, Quotes, or Analytics tabs — team/vendor info is derived from task assignments, quotes are managed at task level
+  - Status tracking (planning, in_progress, on_hold, completed, cancelled) with priority levels
+  - Shared status/priority color constants in `client/src/lib/constants.ts` used by Work.tsx and ProjectDetail.tsx
   
 - **Internal Estimates/Quotes Workflow:** Task-level quote management for work requiring approval:
   - Tasks can be marked as "requiresEstimate" during creation
