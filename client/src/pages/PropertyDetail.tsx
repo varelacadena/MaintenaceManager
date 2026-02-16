@@ -481,7 +481,7 @@ export default function PropertyDetail() {
         </TabsList>
 
         {isBuilding && (
-          <TabsContent value="spaces" className="flex-1 flex flex-col min-h-0 mt-2">
+          <TabsContent value="spaces" className="flex flex-col min-h-0 mt-2">
             <div className="flex items-center gap-2 mb-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -586,7 +586,7 @@ export default function PropertyDetail() {
           </TabsContent>
         )}
 
-        <TabsContent value="equipment" className="flex-1 flex flex-col min-h-0 mt-2">
+        <TabsContent value="equipment" className="flex flex-col min-h-0 mt-2">
           <div className="flex flex-col gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative flex-1 min-w-[140px]">
@@ -748,7 +748,7 @@ export default function PropertyDetail() {
           </div>
         </TabsContent>
 
-        <TabsContent value="work-history" className="flex-1 flex flex-col min-h-0 mt-2">
+        <TabsContent value="work-history" className="flex flex-col min-h-0 mt-2">
           <div className="flex items-center gap-2 mb-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -799,7 +799,7 @@ export default function PropertyDetail() {
           </div>
         </TabsContent>
 
-        <TabsContent value="location" className="flex-1 min-h-0 mt-3">
+        <TabsContent value="location" className="min-h-0 mt-2">
           <Card className="relative z-0 h-full" style={{ minHeight: "400px" }}>
             <CardContent className="p-0 h-full">
               <PropertyMap
