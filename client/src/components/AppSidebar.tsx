@@ -25,7 +25,6 @@ import {
   Map,
   Car,
   BarChart3,
-  Phone,
   FolderKanban,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -51,7 +50,6 @@ const roleMenus = {
     { title: "Users", url: "/users", icon: Users },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
-    { title: "Emergency Contacts", url: "/emergency-contacts", icon: Phone },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   technician: [

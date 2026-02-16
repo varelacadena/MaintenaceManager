@@ -228,13 +228,10 @@ export default function EmergencyContacts() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Emergency Contacts</h1>
-          <p className="text-muted-foreground">
-            Manage after-hours emergency contacts visible to staff
-          </p>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-sm text-muted-foreground">
+          Manage after-hours emergency contacts visible to staff
+        </p>
         <Button onClick={() => handleOpenDialog()} data-testid="button-add-contact">
           <Plus className="w-4 h-4 mr-2" />
           Add Contact

@@ -39,7 +39,6 @@ import VehicleReservationDetails from "./pages/VehicleReservationDetails";
 import { ScrollToTop } from "./components/ScrollToTop";
 import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
-import EmergencyContacts from "./pages/EmergencyContacts";
 import NotificationsWidget from "./components/NotificationsWidget";
 import ProjectDetail from "./pages/ProjectDetail";
 import PwaInstallBanner from "./components/PwaInstallBanner";
@@ -226,9 +225,10 @@ function AuthenticatedApp() {
                 <Route path="/analytics" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><AnalyticsDashboard /></RoleGuard>
                 )} />
-                <Route path="/emergency-contacts" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><EmergencyContacts /></RoleGuard>
-                )} />
+                <Route path="/emergency-contacts" component={() => {
+                  window.location.replace("/settings?tab=emergency");
+                  return null;
+                }} />
                 <Route path="/projects" component={() => {
                   window.location.replace("/work");
                   return null;

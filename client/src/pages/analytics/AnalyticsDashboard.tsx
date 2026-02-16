@@ -22,10 +22,18 @@ const FleetReport = lazy(() => import("./reports/FleetReport"));
 const ServiceRequestsReport = lazy(() => import("./reports/ServiceRequestsReport"));
 const AlertsReport = lazy(() => import("./reports/AlertsReport"));
 const ProjectsReport = lazy(() => import("./reports/ProjectsReport"));
+const KeyMetricsReport = lazy(() => import("./reports/KeyMetricsReport"));
 
-type ReportTab = "work-orders" | "technicians" | "assets" | "facilities" | "fleet" | "requests" | "alerts" | "projects";
+type ReportTab = "key-metrics" | "work-orders" | "technicians" | "assets" | "facilities" | "fleet" | "requests" | "alerts" | "projects";
 
 const reportTabs = [
+  {
+    id: "key-metrics" as ReportTab,
+    title: "Overview",
+    description: "Key metrics summary",
+    icon: BarChart3,
+    color: "bg-slate-100 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400",
+  },
   {
     id: "work-orders" as ReportTab,
     title: "Work Orders",
@@ -101,10 +109,12 @@ function LoadingSkeleton() {
 }
 
 export default function AnalyticsDashboard() {
-  const [activeTab, setActiveTab] = useState<ReportTab>("work-orders");
+  const [activeTab, setActiveTab] = useState<ReportTab>("key-metrics");
 
   const renderActiveReport = () => {
     switch (activeTab) {
+      case "key-metrics":
+        return <KeyMetricsReport />;
       case "work-orders":
         return <WorkOrdersReport />;
       case "technicians":
