@@ -42,7 +42,17 @@ The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI an
 - 30-day session persistence for "stay logged in" experience on mobile
 - Optimized for iPhone/Android home screen installation
 
-The dashboard is interactive, with clickable filter cards, a central task panel with quick actions, and a quick view drawer for task details. Analytics are consolidated into a single dynamic page with tab-based navigation, lazy loading, and consistent filtering and export options.
+The dashboard is interactive, with clickable filter cards, a central task panel with quick actions, and a quick view drawer for task details. Analytics are consolidated into a single dynamic page with tab-based navigation, lazy loading, and consistent filtering and export options. The default analytics landing tab is "Overview" (Key Metrics summary) showing open tasks, pending requests, overdue items, fleet availability, and completion rate.
+
+**Navigation Consolidation (UX Audit Feb 2026):**
+- Admin sidebar reduced from 15 to 12 items by merging related pages
+- Users + Credentials merged into single tabbed page at `/users` (URL param `?tab=credentials`)
+- Vehicle Fleet + Reservations merged into single tabbed page at `/vehicles` (URL param `?tab=reservations`)
+- Emergency Contacts moved under Settings as a tab (`/settings?tab=emergency`) — admin only
+- Settings page is tabbed: Account (profile + password) and Emergency Contacts (admin)
+- New Task form uses progressive disclosure: basic fields always visible, advanced fields in collapsible "Advanced Options" section
+- Status labels standardized using shared constants in `client/src/lib/constants.ts` (serviceRequestStatusLabels, taskStatusLabels)
+- Old routes redirect: `/credentials` → `/users`, `/vehicle-reservations` → `/vehicles?tab=reservations`, `/emergency-contacts` → `/settings?tab=emergency`
 
 ### Technical Implementations
 
