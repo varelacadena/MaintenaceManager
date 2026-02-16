@@ -32,6 +32,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { FileAttachmentList } from "@/components/FileAttachment";
+import { serviceRequestStatusLabels } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -200,18 +201,7 @@ export default function RequestDetail() {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Pending Review";
-      case "under_review":
-        return "Under Review";
-      case "converted_to_task":
-        return "Approved";
-      case "rejected":
-        return "Rejected";
-      default:
-        return status.replace("_", " ");
-    }
+    return serviceRequestStatusLabels[status] || status.replace("_", " ");
   };
 
   const getPriorityColor = (urgency: string) => {

@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Car, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import type { Vehicle } from "@shared/schema";
 import {
@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -32,6 +31,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VehicleReservationsContent } from "@/pages/VehicleReservations";
 
 const statusColors = {
   available: "default",
@@ -42,7 +43,7 @@ const statusColors = {
   out_of_service: "destructive",
 } as const;
 
-export default function Vehicles() {
+function FleetContent() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -137,14 +138,8 @@ export default function Vehicles() {
   const canManageVehicles = user?.role === "admin" || user?.role === "technician";
 
   return (
-    <div className="flex-1 space-y-4 p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Fleet</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your vehicle fleet and reservations
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <div className="flex gap-2 flex-wrap">
           {user?.role === "admin" && (
             <Button 
@@ -444,6 +439,36 @@ export default function Vehicles() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+export default function Vehicles() {
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const defaultTab = urlParams.get("tab") === "reservations" ? "reservations" : "fleet";
+
+  return (
+    <div className="flex-1 space-y-4 p-4">
+      <div>
+        <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Management</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Manage fleet and reservations
+        </p>
+      </div>
+
+      <Tabs defaultValue={defaultTab} data-testid="tabs-vehicles">
+        <TabsList>
+          <TabsTrigger value="fleet" data-testid="tab-fleet">Fleet</TabsTrigger>
+          <TabsTrigger value="reservations" data-testid="tab-reservations">Reservations</TabsTrigger>
+        </TabsList>
+        <TabsContent value="fleet">
+          <FleetContent />
+        </TabsContent>
+        <TabsContent value="reservations">
+          <VehicleReservationsContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

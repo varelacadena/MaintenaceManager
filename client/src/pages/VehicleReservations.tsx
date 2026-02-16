@@ -49,7 +49,7 @@ const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   cancelled: "destructive",
 };
 
-export default function VehicleReservations() {
+export function VehicleReservationsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
@@ -277,18 +277,7 @@ export default function VehicleReservations() {
   });
 
   return (
-    <div className="flex-1 space-y-4 p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">
-            All Vehicle Reservations
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            View and manage all vehicle reservations
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -776,6 +765,24 @@ export default function VehicleReservations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+export default function VehicleReservations() {
+  return (
+    <div className="flex-1 space-y-4 p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">
+            All Vehicle Reservations
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            View and manage all vehicle reservations
+          </p>
+        </div>
+      </div>
+      <VehicleReservationsContent />
     </div>
   );
 }

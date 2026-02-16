@@ -185,9 +185,10 @@ function AuthenticatedApp() {
                 <Route path="/users" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><Users /></RoleGuard>
                 )} />
-                <Route path="/credentials" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><Credentials /></RoleGuard>
-                )} />
+                <Route path="/credentials" component={() => {
+                  window.location.replace("/users");
+                  return null;
+                }} />
                 <Route path="/vendors" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><Vendors /></RoleGuard>
                 )} />
@@ -206,9 +207,10 @@ function AuthenticatedApp() {
                 <Route path="/my-reservations" component={() => (
                   <RoleGuard allowedRoles={["admin", "staff"]}><MyReservations /></RoleGuard>
                 )} />
-                <Route path="/vehicle-reservations" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><VehicleReservations /></RoleGuard>
-                )} />
+                <Route path="/vehicle-reservations" component={() => {
+                  window.location.replace("/vehicles?tab=reservations");
+                  return null;
+                }} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
                   <RoleGuard allowedRoles={["admin", "staff"]}><VehicleReservationDetails /></RoleGuard>
                 )} />

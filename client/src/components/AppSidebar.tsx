@@ -20,7 +20,6 @@ import {
   Users,
   MapPin,
   Wrench,
-  KeyRound,
   Building2,
   Package,
   Map,
@@ -46,12 +45,10 @@ const roleMenus = {
     { title: "Work", url: "/work", icon: FolderKanban },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
-    { title: "Vehicle Fleet", url: "/vehicles", icon: Car },
-    { title: "Vehicle Reservations", url: "/vehicle-reservations", icon: Calendar },
+    { title: "Vehicles", url: "/vehicles", icon: Car },
     { title: "Properties", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },
-    { title: "User Management", url: "/users", icon: Users },
-    { title: "Credentials", url: "/credentials", icon: KeyRound },
+    { title: "Users", url: "/users", icon: Users },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Emergency Contacts", url: "/emergency-contacts", icon: Phone },
@@ -120,7 +117,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                   badgeCount = notificationCounts.unreadMessages;
                 } else if (item.title === "Service Requests" && notificationCounts.pendingServiceRequests > 0) {
                   badgeCount = notificationCounts.pendingServiceRequests;
-                } else if (item.title === "Vehicle Reservations" && notificationCounts.pendingVehicleReservations > 0) {
+                } else if (item.title === "Vehicles" && notificationCounts.pendingVehicleReservations > 0) {
                   badgeCount = notificationCounts.pendingVehicleReservations;
                 }
 

@@ -30,19 +30,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ServiceRequest } from "@shared/schema";
+import { serviceRequestStatusLabels as statusLabels } from "@/lib/constants";
 
 const statusColors: Record<string, string> = {
   pending: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
   under_review: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
   converted_to_task: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
   rejected: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
-};
-
-const statusLabels: Record<string, string> = {
-  pending: "Awaiting Review",
-  under_review: "Under Review",
-  converted_to_task: "Approved",
-  rejected: "Rejected",
 };
 
 const urgencyColors = {

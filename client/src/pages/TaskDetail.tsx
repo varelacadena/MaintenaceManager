@@ -123,15 +123,7 @@ const statusColors: Record<string, string> = {
   completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
 };
 
-const statusLabels: Record<string, string> = {
-  not_started: "Not Started",
-  needs_estimate: "Needs Estimate",
-  waiting_approval: "Waiting Approval",
-  ready: "Ready to Start",
-  in_progress: "In Progress",
-  on_hold: "On Hold",
-  completed: "Completed",
-};
+import { taskStatusLabels as statusLabels } from "@/lib/constants";
 
 const quoteStatusColors: Record<string, string> = {
   draft: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",

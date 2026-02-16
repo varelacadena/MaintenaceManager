@@ -987,7 +987,7 @@ export default function Dashboard() {
 
         <Card 
           className="hover-elevate cursor-pointer" 
-          onClick={() => setLocation("/vehicle-reservations")}
+          onClick={() => setLocation("/vehicles?tab=reservations")}
           data-testid="card-vehicle-status"
         >
           <CardHeader className="pb-2">

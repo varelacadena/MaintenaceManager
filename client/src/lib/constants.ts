@@ -13,6 +13,23 @@ export const priorityColors: Record<string, string> = {
   critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
 };
 
+export const serviceRequestStatusLabels: Record<string, string> = {
+  pending: "Pending Review",
+  under_review: "Under Review",
+  converted_to_task: "Approved",
+  rejected: "Rejected",
+};
+
+export const taskStatusLabels: Record<string, string> = {
+  not_started: "Not Started",
+  needs_estimate: "Needs Estimate",
+  waiting_approval: "Waiting Approval",
+  ready: "Ready to Start",
+  in_progress: "In Progress",
+  on_hold: "On Hold",
+  completed: "Completed",
+};
+
 export const taskStatusColors: Record<string, string> = {
   not_started: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
   needs_estimate: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",

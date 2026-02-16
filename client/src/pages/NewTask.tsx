@@ -125,6 +125,7 @@ export default function NewTask() {
   const [pendingEquipmentFiles, setPendingEquipmentFiles] = useState<File[]>([]);
   const equipmentFileInputRef = useRef<HTMLInputElement>(null);
   const [isContactOpen, setIsContactOpen] = useState(true);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const searchParams = new URLSearchParams(window.location.search);
   const requestId = searchParams.get('requestId');
@@ -497,6 +498,12 @@ export default function NewTask() {
     }
   }, [selectedVendorId, vendors, form]);
 
+  useEffect(() => {
+    if (requestId || projectId) {
+      setAdvancedOpen(true);
+    }
+  }, [requestId, projectId]);
+
   const createTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const taskData = {
@@ -867,7 +874,21 @@ export default function NewTask() {
                   </SelectContent>
                 </Select>
               </FormItem>
+            </div>
+          </Card>
 
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" type="button" className="w-full justify-between py-3" data-testid="toggle-advanced-options">
+                <span className="font-medium">Advanced Options</span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", advancedOpen && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-4 pt-2" data-testid="section-advanced-options">
+
+          <Card className="p-5">
+            <div className="space-y-4">
               {assignmentOption === "student" && (
                 <>
                   <FormField
@@ -1300,6 +1321,10 @@ export default function NewTask() {
               </div>
             )}
           </Card>
+
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Spacer for fixed footer */}
           <div className="h-24" aria-hidden="true" />
