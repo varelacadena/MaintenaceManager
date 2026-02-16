@@ -420,26 +420,12 @@ export default function PropertyDetail() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-3 p-4 md:p-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-xl font-bold" data-testid="heading-property-name">{property.name}</h1>
-          <Badge variant="secondary">{property.type}</Badge>
-          {property.address && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="w-3 h-3" />
-              {property.address}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            <span>Last work: {property.lastWorkDate ? new Date(property.lastWorkDate).toLocaleDateString() : "None"}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <ClipboardList className="w-3 h-3" />
-            <span>{openTaskCount} open {openTaskCount === 1 ? "task" : "tasks"}</span>
+    <div className="h-full flex flex-col gap-2 p-3 md:p-0">
+      <div className="flex flex-col gap-1 border-b pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            <h1 className="text-lg md:text-xl font-bold" data-testid="heading-property-name">{property.name}</h1>
+            <Badge variant="secondary">{property.type}</Badge>
           </div>
           {canEdit && (
             <Button
@@ -447,39 +433,56 @@ export default function PropertyDetail() {
               size="sm"
               onClick={handleEditProperty}
               data-testid="button-edit-property"
+              className="flex-shrink-0"
             >
               <Edit className="w-3 h-3 mr-1" />
               Edit
             </Button>
           )}
         </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+          {property.address && (
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              {property.address}
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            Last work: {property.lastWorkDate ? new Date(property.lastWorkDate).toLocaleDateString() : "None"}
+          </span>
+          <span className="flex items-center gap-1">
+            <ClipboardList className="w-3 h-3 flex-shrink-0" />
+            {openTaskCount} open {openTaskCount === 1 ? "task" : "tasks"}
+          </span>
+        </div>
       </div>
 
       <Tabs defaultValue={isBuilding ? "spaces" : "equipment"} className="flex-1 flex flex-col min-h-0">
-        <TabsList>
+        <TabsList className="w-full overflow-x-auto flex-shrink-0">
           {isBuilding && (
-            <TabsTrigger value="spaces" data-testid="tab-spaces">
-              <DoorOpen className="w-4 h-4 mr-1" />
-              Rooms ({spaces.length})
+            <TabsTrigger value="spaces" data-testid="tab-spaces" className="text-xs md:text-sm">
+              <DoorOpen className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+              <span className="whitespace-nowrap">Rooms ({spaces.length})</span>
             </TabsTrigger>
           )}
-          <TabsTrigger value="equipment" data-testid="tab-equipment">
-            <Wrench className="w-4 h-4 mr-1" />
-            Equipment ({equipment.length})
+          <TabsTrigger value="equipment" data-testid="tab-equipment" className="text-xs md:text-sm">
+            <Wrench className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+            <span className="whitespace-nowrap">Equipment ({equipment.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="work-history" data-testid="tab-work-history">
-            <Calendar className="w-4 h-4 mr-1" />
-            History ({tasks.length})
+          <TabsTrigger value="work-history" data-testid="tab-work-history" className="text-xs md:text-sm">
+            <Calendar className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+            <span className="whitespace-nowrap">History ({tasks.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="location" data-testid="tab-location">
-            <Map className="w-4 h-4 mr-1" />
-            Location
+          <TabsTrigger value="location" data-testid="tab-location" className="text-xs md:text-sm">
+            <Map className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+            <span className="whitespace-nowrap">Location</span>
           </TabsTrigger>
         </TabsList>
 
         {isBuilding && (
-          <TabsContent value="spaces" className="flex-1 flex flex-col min-h-0 mt-3">
-            <div className="flex items-center gap-2 mb-3">
+          <TabsContent value="spaces" className="flex-1 flex flex-col min-h-0 mt-2">
+            <div className="flex items-center gap-2 mb-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -583,10 +586,10 @@ export default function PropertyDetail() {
           </TabsContent>
         )}
 
-        <TabsContent value="equipment" className="flex-1 flex flex-col min-h-0 mt-3">
-          <div className="flex flex-col gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
+        <TabsContent value="equipment" className="flex-1 flex flex-col min-h-0 mt-2">
+          <div className="flex flex-col gap-2 mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[140px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search equipment..."
@@ -596,36 +599,38 @@ export default function PropertyDetail() {
                   data-testid="input-search-equipment"
                 />
               </div>
-              {isBuilding && spaces.length > 0 && (
-                <Select value={selectedSpaceId || "__all__"} onValueChange={(v) => setSelectedSpaceId(v === "__all__" ? null : v)}>
-                  <SelectTrigger className="w-36" data-testid="select-space-filter">
-                    <SelectValue placeholder="All rooms" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">All rooms</SelectItem>
-                    {spaces.map((space) => (
-                      <SelectItem key={space.id} value={space.id}>{space.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {canEdit && (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditingEquipment(null);
-                    form.reset({
-                      propertyId: id || "", name: "", category: "other",
-                      description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
-                    });
-                    setIsCreateDialogOpen(true);
-                  }}
-                  data-testid="button-add-equipment"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {isBuilding && spaces.length > 0 && (
+                  <Select value={selectedSpaceId || "__all__"} onValueChange={(v) => setSelectedSpaceId(v === "__all__" ? null : v)}>
+                    <SelectTrigger className="w-28 md:w-36" data-testid="select-space-filter">
+                      <SelectValue placeholder="All rooms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All rooms</SelectItem>
+                      {spaces.map((space) => (
+                        <SelectItem key={space.id} value={space.id}>{space.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {canEdit && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingEquipment(null);
+                      form.reset({
+                        propertyId: id || "", name: "", category: "other",
+                        description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
+                      });
+                      setIsCreateDialogOpen(true);
+                    }}
+                    data-testid="button-add-equipment"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-1 overflow-x-auto pb-1 flex-wrap">
@@ -743,8 +748,8 @@ export default function PropertyDetail() {
           </div>
         </TabsContent>
 
-        <TabsContent value="work-history" className="flex-1 flex flex-col min-h-0 mt-3">
-          <div className="flex items-center gap-2 mb-3">
+        <TabsContent value="work-history" className="flex-1 flex flex-col min-h-0 mt-2">
+          <div className="flex items-center gap-2 mb-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -759,8 +764,8 @@ export default function PropertyDetail() {
 
           <div className="flex-1 overflow-y-auto">
             {filteredTasks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <div className="text-center py-6 text-muted-foreground">
+                <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">{taskSearch ? "No tasks match your search" : "No tasks assigned to this property yet"}</p>
               </div>
             ) : (
@@ -772,26 +777,21 @@ export default function PropertyDetail() {
                     onClick={() => navigate(`/tasks/${task.id}`)}
                     data-testid={`row-task-${task.id}`}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium text-sm truncate block">{task.name}</span>
-                        {task.description && (
-                          <p className="text-xs text-muted-foreground truncate">{task.description}</p>
-                        )}
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-sm block truncate">{task.name}</span>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                          {task.status}
+                        </Badge>
+                        <Badge variant="outline">
+                          {task.urgency}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(task.initialDate).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge variant={task.status === "completed" ? "default" : "secondary"}>
-                        {task.status}
-                      </Badge>
-                      <Badge variant="outline">
-                        {task.urgency}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(task.initialDate).toLocaleDateString()}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   </div>
                 ))}
               </div>
