@@ -64,7 +64,7 @@ export default function PropertyMapPage() {
   const [editMode, setEditMode] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
-  const [showMap, setShowMap] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   const propertyTypes = [
     { value: "building", label: "Buildings", icon: Building2 },
@@ -228,15 +228,6 @@ export default function PropertyMapPage() {
           <Badge variant="secondary">{filteredProperties.length}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={showMap ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowMap(!showMap)}
-            data-testid="button-toggle-map"
-            className="md:hidden"
-          >
-            {showMap ? <><List className="w-4 h-4 mr-1" /> List</> : <><Map className="w-4 h-4 mr-1" /> Map</>}
-          </Button>
           {canEdit && (
             <Button
               variant={editMode ? "default" : "outline"}
@@ -382,13 +373,22 @@ export default function PropertyMapPage() {
   return (
     <>
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between pb-3">
+        <div className="flex items-center justify-between gap-2 pb-3">
           <div>
             <h1 className="text-xl font-bold" data-testid="heading-property-map">Properties</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Manage all facility properties and buildings
             </p>
           </div>
+          <Button
+            variant={showMap ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowMap(!showMap)}
+            data-testid="button-toggle-map-header"
+            className="md:hidden"
+          >
+            {showMap ? <><List className="w-4 h-4 mr-1" /> List</> : <><Map className="w-4 h-4 mr-1" /> Map</>}
+          </Button>
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
