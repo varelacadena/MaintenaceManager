@@ -54,7 +54,7 @@ export default function VehicleCheckIn() {
     resolver: zodResolver(insertVehicleCheckInLogSchema.omit({ userId: true, vehicleId: true, checkOutLogId: true })),
     defaultValues: {
       endMileage: 0,
-      fuelLevel: "100",
+      fuelLevel: "full",
       cleanlinessStatus: "clean",
       issues: "",
       returnNotes: "",
@@ -244,17 +244,21 @@ export default function VehicleCheckIn() {
                 name="fuelLevel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ending Fuel Level (%)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value)}
-                        data-testid="input-end-fuel"
-                      />
-                    </FormControl>
+                    <FormLabel>Ending Fuel Level</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-fuel-level">
+                          <SelectValue placeholder="Select fuel level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="empty">Empty</SelectItem>
+                        <SelectItem value="1/4">1/4 Tank</SelectItem>
+                        <SelectItem value="1/2">1/2 Tank</SelectItem>
+                        <SelectItem value="3/4">3/4 Tank</SelectItem>
+                        <SelectItem value="full">Full</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

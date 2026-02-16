@@ -188,8 +188,9 @@ export default function MyReservations() {
     if (reservation.status.toLowerCase() !== "approved") return false;
     const now = new Date();
     const startTime = new Date(reservation.startDate);
+    const endTime = new Date(reservation.endDate);
     const hoursBefore = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return hoursBefore <= 2 && hoursBefore >= -1;
+    return hoursBefore <= 24 && now <= endTime;
   };
 
   if (isLoading) {

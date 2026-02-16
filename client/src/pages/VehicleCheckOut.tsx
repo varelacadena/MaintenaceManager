@@ -11,6 +11,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
@@ -79,18 +86,12 @@ export default function VehicleCheckOut() {
         payload.adminOverride = true;
       }
       
-      console.log("Submitting checkout with payload:", payload);
-      console.log("Form data:", data);
-      console.log("User ID:", user!.id);
-      console.log("Vehicle ID:", reservation!.vehicleId);
-      console.log("Reservation ID:", reservationId!);
       
       const response = await apiRequest("POST", "/api/vehicle-checkout-logs", payload);
       return await response.json();
     },
     onSuccess: async (checkOutLog) => {
       // Upload the files to the check-out log
-      console.log("Saving uploads for check-out log:", checkOutLog.id);
       
       const allFiles: Array<{ fileName: string; fileType: string; objectUrl: string; objectPath?: string; isDash: boolean }> = [];
       if (dashPhoto) allFiles.push({ ...dashPhoto, isDash: true });
@@ -105,8 +106,6 @@ export default function VehicleCheckOut() {
             objectPath: file.objectPath,
             vehicleCheckOutLogId: checkOutLog.id,
           };
-          console.log("Sending upload payload:", uploadPayload);
-          
           const uploadResponse = await fetch("/api/uploads", {
             method: "POST",
             headers: {
@@ -115,14 +114,6 @@ export default function VehicleCheckOut() {
             credentials: "include",
             body: JSON.stringify(uploadPayload),
           });
-          
-          console.log("Upload response status:", uploadResponse.status);
-          const uploadResult = await uploadResponse.json();
-          console.log("Upload response body:", uploadResult);
-          
-          if (!uploadResponse.ok) {
-            console.error("Upload save failed:", uploadResult);
-          }
         } catch (uploadError) {
           console.error("Error saving upload:", uploadError);
         }
@@ -144,12 +135,7 @@ export default function VehicleCheckOut() {
       setLocation("/my-reservations");
     },
     onError: (error: Error) => {
-      console.error("Checkout error:", error);
-      
-      // The error message should already be extracted by apiRequest, but let's ensure we show it
       let errorMessage = error.message;
-      
-      // Remove status code prefix if present (e.g., "500: message" -> "message")
       if (errorMessage.match(/^\d{3}:\s*/)) {
         errorMessage = errorMessage.replace(/^\d{3}:\s*/, "");
       }
@@ -223,7 +209,6 @@ export default function VehicleCheckOut() {
       damageNotes: data.damageNotes || "",
     };
     
-    console.log("Form submitted with data:", cleanedData);
     checkOutMutation.mutate(cleanedData);
   };
 
@@ -295,18 +280,20 @@ export default function VehicleCheckOut() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Fuel Level</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        <option value="empty">Empty</option>
-                        <option value="1/4">1/4 Tank</option>
-                        <option value="1/2">1/2 Tank</option>
-                        <option value="3/4">3/4 Tank</option>
-                        <option value="full">Full</option>
-                      </select>
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-fuel-level">
+                          <SelectValue placeholder="Select fuel level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="empty">Empty</SelectItem>
+                        <SelectItem value="1/4">1/4 Tank</SelectItem>
+                        <SelectItem value="1/2">1/2 Tank</SelectItem>
+                        <SelectItem value="3/4">3/4 Tank</SelectItem>
+                        <SelectItem value="full">Full</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -323,6 +310,7 @@ export default function VehicleCheckOut() {
                         checked={field.value}
                         onChange={field.onChange}
                         className="h-4 w-4"
+                        data-testid="checkbox-cleanliness"
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">

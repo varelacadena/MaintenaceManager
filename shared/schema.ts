@@ -744,6 +744,7 @@ export const vehicleReservations = pgTable("vehicle_reservations", {
   keyPickupMethod: varchar("key_pickup_method", { length: 50 }),
   adminNotes: text("admin_notes"),
   advisoryAccepted: boolean("advisory_accepted").default(false),
+  lastViewedStatus: varchar("last_viewed_status", { length: 20 }),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   status: reservationStatusEnum("status").notNull().default("pending"),

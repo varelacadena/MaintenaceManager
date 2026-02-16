@@ -224,13 +224,22 @@ export default function VehicleCheckInVerification() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fuelLevel">Fuel Level (%)</Label>
-                  <Input
-                    id="fuelLevel"
+                  <Label htmlFor="fuelLevel">Fuel Level</Label>
+                  <Select
                     value={editedData.fuelLevel}
-                    onChange={(e) => setEditedData({ ...editedData, fuelLevel: e.target.value })}
-                    data-testid="input-edit-fuel"
-                  />
+                    onValueChange={(value) => setEditedData({ ...editedData, fuelLevel: value })}
+                  >
+                    <SelectTrigger data-testid="select-edit-fuel">
+                      <SelectValue placeholder="Select fuel level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="empty">Empty</SelectItem>
+                      <SelectItem value="1/4">1/4 Tank</SelectItem>
+                      <SelectItem value="1/2">1/2 Tank</SelectItem>
+                      <SelectItem value="3/4">3/4 Tank</SelectItem>
+                      <SelectItem value="full">Full</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="cleanlinessStatus">Cleanliness Status</Label>
@@ -273,7 +282,14 @@ export default function VehicleCheckInVerification() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Fuel Level</Label>
-                  <p className="font-medium" data-testid="text-fuel-level">{checkInLog.fuelLevel}%</p>
+                  <p className="font-medium" data-testid="text-fuel-level">
+                    {checkInLog.fuelLevel === "full" ? "Full" :
+                     checkInLog.fuelLevel === "3/4" ? "3/4 Tank" :
+                     checkInLog.fuelLevel === "1/2" ? "1/2 Tank" :
+                     checkInLog.fuelLevel === "1/4" ? "1/4 Tank" :
+                     checkInLog.fuelLevel === "empty" ? "Empty" :
+                     checkInLog.fuelLevel}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Cleanliness</Label>

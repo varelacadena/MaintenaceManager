@@ -63,6 +63,12 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 - **User Roles:** Admin, Technician, Staff, Student, each with specific permissions and dashboard views.
 - **Task Management:** Creation, assignment (to users or pools), tracking, status updates, time logging, parts tracking, and conditional fields for student tasks.
 - **Vehicle Fleet Management:** Automatic status updates (in_use, reserved, available) based on reservations and usage logs; manual status overrides.
+- **Vehicle Checkout/Checkin Flow:**
+  - Reservation → Admin approval (with key pickup method + admin notes) → Advisory acceptance → Safety acknowledgment → Checkout (dash photo, mileage, fuel level, cleanliness) → Active trip → Checkin (dash + interior photos, mileage, fuel, cleanliness, issues) → Admin verification
+  - Fuel level uses descriptive values (empty, 1/4, 1/2, 3/4, full) consistently across checkout, checkin, and verification pages via shadcn Select components
+  - Checkout window: users can check out up to 24 hours before reservation start through end of reservation
+  - Admin override available for early checkout outside reservation window
+  - `lastViewedStatus` field on vehicleReservations tracks notification state for status changes
 - **Service Request Management:** Staff can submit requests; students can complete assigned tasks.
 - **Inventory & Vendor Management:** Administrative functions for managing parts, equipment, and suppliers.
 - **In-App Notifications:** Bell icon widget in header displaying:
