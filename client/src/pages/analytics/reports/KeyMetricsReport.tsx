@@ -76,9 +76,10 @@ export default function KeyMetricsReport() {
     ? workOrders.monthlyTrend[workOrders.monthlyTrend.length - 1]?.completed ?? 0
     : 0;
 
-  const resolvedThisMonth = serviceRequests?.resolvedThisMonth ?? serviceRequests?.monthlyTrend?.length
-    ? serviceRequests.monthlyTrend?.[serviceRequests.monthlyTrend.length - 1]?.resolved ?? 0
-    : 0;
+  const resolvedThisMonth = serviceRequests?.resolvedThisMonth
+    ?? (serviceRequests?.monthlyTrend?.length
+      ? (serviceRequests.monthlyTrend[serviceRequests.monthlyTrend.length - 1]?.resolved ?? 0)
+      : 0);
 
   return (
     <div className="space-y-4">
