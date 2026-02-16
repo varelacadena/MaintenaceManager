@@ -42,6 +42,7 @@ import RoleGuard from "./components/RoleGuard";
 import EmergencyContacts from "./pages/EmergencyContacts";
 import NotificationsWidget from "./components/NotificationsWidget";
 import ProjectDetail from "./pages/ProjectDetail";
+import PwaInstallBanner from "./components/PwaInstallBanner";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -131,6 +132,9 @@ function AuthenticatedApp() {
               </div>
             </header>
             <main className={`flex-1 overflow-auto bg-muted/20 ${(user?.role === "student" || user?.role === "technician") ? "px-0 py-0" : "px-8 py-6"}`}>
+              {(user?.role === "student" || user?.role === "technician") && (
+                <PwaInstallBanner />
+              )}
               <ScrollToTop />
               <Switch>
                 {/* Routes accessible to all authenticated users */}
