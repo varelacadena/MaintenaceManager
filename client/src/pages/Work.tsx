@@ -18,7 +18,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -302,7 +304,7 @@ function EditableDateCell({
 
 function TaskTableRow({
   task,
-  technicianUsers,
+  userGroups,
   properties,
   handleStatusChange,
   handleUrgencyChange,
@@ -314,7 +316,7 @@ function TaskTableRow({
   rowIndex,
 }: {
   task: Task;
-  technicianUsers: User[];
+  userGroups: { label: string; items: User[] }[];
   properties: Property[] | undefined;
   handleStatusChange: (taskId: string, newStatus: StatusType) => void;
   handleUrgencyChange: (taskId: string, urgency: string) => void;
@@ -443,12 +445,17 @@ function TaskTableRow({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">Unassigned</SelectItem>
-            {technicianUsers.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName && u.lastName
-                  ? `${u.firstName} ${u.lastName}`
-                  : u.username}
-              </SelectItem>
+            {userGroups.map((group) => (
+              <SelectGroup key={group.label}>
+                <SelectLabel>{group.label}</SelectLabel>
+                {group.items.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.firstName && u.lastName
+                      ? `${u.firstName} ${u.lastName}`
+                      : u.username}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>
@@ -817,7 +824,16 @@ export default function Work() {
     return groups;
   }, [filteredStandaloneTasks, filteredProjects]);
 
-  const technicianUsers = allUsers?.filter((u) => u.role === "technician" || u.role === "admin") || [];
+  const adminUsers = allUsers?.filter((u) => u.role === "admin") || [];
+  const technicianUsers = allUsers?.filter((u) => u.role === "technician") || [];
+  const staffUsers = allUsers?.filter((u) => u.role === "staff") || [];
+  const studentUsers = allUsers?.filter((u) => u.role === "student") || [];
+  const userGroups = [
+    { label: "Admins", items: adminUsers },
+    { label: "Technicians", items: technicianUsers },
+    { label: "Staff", items: staffUsers },
+    { label: "Students", items: studentUsers },
+  ].filter(group => group.items.length > 0);
 
   const isLoading = tasksLoading || projectsLoading;
 
@@ -1213,7 +1229,7 @@ export default function Work() {
                               <TaskTableRow
                                 key={item.data.id}
                                 task={item.data as Task}
-                                technicianUsers={technicianUsers}
+                                userGroups={userGroups}
                                 properties={properties}
                                 handleStatusChange={handleStatusChange}
                                 handleUrgencyChange={handleUrgencyChange}
@@ -1239,7 +1255,7 @@ export default function Work() {
                               completedChildTasks={completedChildTasks}
                               isExpanded={isExpanded}
                               onToggleExpand={() => toggleProjectExpanded(project.id)}
-                              technicianUsers={technicianUsers}
+                              userGroups={userGroups}
                               properties={properties}
                               handleStatusChange={handleStatusChange}
                               handleUrgencyChange={handleUrgencyChange}
@@ -1536,7 +1552,7 @@ function ProjectRowGroup({
   completedChildTasks,
   isExpanded,
   onToggleExpand,
-  technicianUsers,
+  userGroups,
   properties,
   handleStatusChange,
   handleUrgencyChange,
@@ -1551,7 +1567,7 @@ function ProjectRowGroup({
   completedChildTasks: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  technicianUsers: User[];
+  userGroups: { label: string; items: User[] }[];
   properties: Property[] | undefined;
   handleStatusChange: (taskId: string, newStatus: StatusType) => void;
   handleUrgencyChange: (taskId: string, urgency: string) => void;
@@ -1649,7 +1665,7 @@ function ProjectRowGroup({
           <TaskTableRow
             key={task.id}
             task={task}
-            technicianUsers={technicianUsers}
+            userGroups={userGroups}
             properties={properties}
             handleStatusChange={handleStatusChange}
             handleUrgencyChange={handleUrgencyChange}

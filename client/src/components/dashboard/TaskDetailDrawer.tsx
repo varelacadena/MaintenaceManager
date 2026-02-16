@@ -121,6 +121,7 @@ export default function TaskDetailDrawer({
 
   const adminUsers = users.filter((u) => u.role === "admin");
   const technicianUsers = users.filter((u) => u.role === "technician");
+  const staffUsers = users.filter((u) => u.role === "staff");
   const studentUsers = users.filter((u) => u.role === "student");
 
   const reassignMutation = useMutation({
@@ -356,6 +357,7 @@ export default function TaskDetailDrawer({
                           {[
                             { label: "Admins", items: adminUsers },
                             { label: "Technicians", items: technicianUsers },
+                            { label: "Staff", items: staffUsers },
                             { label: "Students", items: studentUsers },
                           ].filter(group => group.items.length > 0).map((group) => (
                             <div key={group.label} className="p-1">
@@ -421,7 +423,7 @@ export default function TaskDetailDrawer({
                               ))}
                             </div>
                           )}
-                          {adminUsers.length === 0 && technicianUsers.length === 0 && studentUsers.length === 0 && vendors.length === 0 && (
+                          {adminUsers.length === 0 && technicianUsers.length === 0 && staffUsers.length === 0 && studentUsers.length === 0 && vendors.length === 0 && (
                             <div className="p-4 text-center text-sm text-muted-foreground">
                               No team members or vendors available
                             </div>

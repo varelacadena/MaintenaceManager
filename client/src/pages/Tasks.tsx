@@ -17,7 +17,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -533,7 +535,16 @@ export default function Tasks() {
     );
   }
 
-  const technicianUsers = users?.filter((u) => u.role === "technician" || u.role === "admin") || [];
+  const adminUsers = users?.filter((u) => u.role === "admin") || [];
+  const technicianUsers = users?.filter((u) => u.role === "technician") || [];
+  const staffUsers = users?.filter((u) => u.role === "staff") || [];
+  const studentUsers = users?.filter((u) => u.role === "student") || [];
+  const userGroups = [
+    { label: "Admins", items: adminUsers },
+    { label: "Technicians", items: technicianUsers },
+    { label: "Staff", items: staffUsers },
+    { label: "Students", items: studentUsers },
+  ].filter(group => group.items.length > 0);
 
   return (
     <>
@@ -703,12 +714,17 @@ export default function Tasks() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="__none__">Unassigned</SelectItem>
-                                    {technicianUsers.map((u) => (
-                                      <SelectItem key={u.id} value={u.id}>
-                                        {u.firstName && u.lastName
-                                          ? `${u.firstName} ${u.lastName}`
-                                          : u.username}
-                                      </SelectItem>
+                                    {userGroups.map((group) => (
+                                      <SelectGroup key={group.label}>
+                                        <SelectLabel>{group.label}</SelectLabel>
+                                        {group.items.map((u) => (
+                                          <SelectItem key={u.id} value={u.id}>
+                                            {u.firstName && u.lastName
+                                              ? `${u.firstName} ${u.lastName}`
+                                              : u.username}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
                                     ))}
                                   </SelectContent>
                                 </Select>

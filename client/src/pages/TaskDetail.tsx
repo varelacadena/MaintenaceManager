@@ -843,6 +843,7 @@ export default function TaskDetail() {
   const assignedUser = users.find(u => u.id === task.assignedToId);
   const adminUsers = users.filter(u => u.role === "admin");
   const technicianUsers = users.filter(u => u.role === "technician");
+  const staffUsers = users.filter(u => u.role === "staff");
   const studentUsers = users.filter(u => u.role === "student");
 
   const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
@@ -2641,6 +2642,7 @@ export default function TaskDetail() {
             {[
               { label: "Admins", users: adminUsers },
               { label: "Technicians", users: technicianUsers },
+              { label: "Staff", users: staffUsers },
               { label: "Students", users: studentUsers },
             ].filter(group => group.users.length > 0).map((group) => (
               <div key={group.label}>
