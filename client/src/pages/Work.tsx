@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { statusColors as projectStatusColors, priorityColors } from "@/lib/constants";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,14 +48,14 @@ import {
   User as UserIcon,
   ChevronDown,
   ChevronRight,
-  Wrench,
   FolderKanban,
   Search,
-  DollarSign,
   Calendar,
   AlertTriangle,
   Pencil,
+  Flag,
 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import type { Task, Area, User, Property, Vendor, Project, Space } from "@shared/schema";
@@ -68,19 +67,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 
-const urgencyColors: Record<string, string> = {
-  low: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  medium: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
-  high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
+const urgencyConfig: Record<string, { color: string; label: string }> = {
+  low: { color: "text-muted-foreground", label: "Low" },
+  medium: { color: "text-amber-500 dark:text-amber-400", label: "Medium" },
+  high: { color: "text-red-500 dark:text-red-400", label: "High" },
 };
 
 const taskStatusColors: Record<string, string> = {
-  not_started: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",
-  needs_estimate: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20",
-  waiting_approval: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
-  in_progress: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  on_hold: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
-  completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
+  not_started: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
+  needs_estimate: "bg-amber-500 dark:bg-amber-600 text-white border-transparent",
+  waiting_approval: "bg-purple-500 dark:bg-purple-600 text-white border-transparent",
+  in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
+  on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
+  completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
+};
+
+const statusDotColors: Record<string, string> = {
+  not_started: "bg-gray-400 dark:bg-gray-500",
+  needs_estimate: "bg-amber-500 dark:bg-amber-400",
+  waiting_approval: "bg-purple-500 dark:bg-purple-400",
+  in_progress: "bg-rose-500 dark:bg-rose-400",
+  on_hold: "bg-yellow-500 dark:bg-yellow-400",
+  completed: "bg-emerald-500 dark:bg-emerald-400",
 };
 
 const unifiedStatusConfig = [
@@ -117,6 +125,19 @@ const taskStatusConfig = [
   { key: "on_hold", label: "On Hold" },
   { key: "completed", label: "Completed" },
 ];
+
+const avatarColors = [
+  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-purple-500",
+  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-teal-500",
+];
+
+function getAvatarColor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
 
 type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "in_progress" | "on_hold" | "completed";
 
@@ -305,6 +326,7 @@ function EditableDateCell({
 function TaskTableRow({
   task,
   userGroups,
+  allUsers,
   properties,
   handleStatusChange,
   handleUrgencyChange,
@@ -317,6 +339,7 @@ function TaskTableRow({
 }: {
   task: Task;
   userGroups: { label: string; items: User[] }[];
+  allUsers: User[] | undefined;
   properties: Property[] | undefined;
   handleStatusChange: (taskId: string, newStatus: StatusType) => void;
   handleUrgencyChange: (taskId: string, urgency: string) => void;
@@ -331,26 +354,23 @@ function TaskTableRow({
     && task.status !== "completed"
     && new Date(task.estimatedCompletionDate) < new Date();
 
-  const stripeBg = isChildTask
-    ? "bg-muted/20"
-    : (rowIndex !== undefined && rowIndex % 2 === 1) ? "bg-muted/30" : "";
+  const assignee = task.assignedToId ? allUsers?.find(u => u.id === task.assignedToId) : null;
+  const assigneeInitials = assignee
+    ? (assignee.firstName && assignee.lastName
+        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
+        : (assignee.username?.[0] || "?")).toUpperCase()
+    : null;
+
+  const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
   return (
     <TableRow
       key={task.id}
       data-testid={`row-task-${task.id}`}
-      className={`${stripeBg} ${isOverdue ? "bg-destructive/[0.04] dark:bg-destructive/[0.06]" : ""}`}
     >
-      <TableCell className="py-3">
-        <div className={`flex items-center gap-2 ${isChildTask ? "pl-6" : ""}`}>
-          {!isChildTask && (
-            <span className="flex items-center gap-1 text-muted-foreground shrink-0">
-              <Wrench className="w-3.5 h-3.5" />
-            </span>
-          )}
-          {isChildTask && (
-            <span className="text-muted-foreground shrink-0 text-xs">└</span>
-          )}
+      <TableCell className="py-2.5">
+        <div className={`flex items-center gap-2 ${isChildTask ? "pl-8" : ""}`}>
+          <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColors[task.status] || "bg-gray-400"}`} />
           <EditableTextCell
             value={task.name}
             taskId={task.id}
@@ -365,83 +385,27 @@ function TaskTableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="py-3">
-        <Select
-          value={task.status}
-          onValueChange={(val) => handleStatusChange(task.id, val as StatusType)}
-        >
-          <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
-            data-testid={`select-status-${task.id}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Badge
-              variant="outline"
-              className={`${taskStatusColors[task.status] || ""} text-xs cursor-pointer`}
-            >
-              <SelectValue />
-            </Badge>
-          </SelectTrigger>
-          <SelectContent>
-            {taskStatusConfig.map((s) => (
-              <SelectItem key={s.key} value={s.key}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-3">
-        <Select
-          value={task.urgency}
-          onValueChange={(val) => handleUrgencyChange(task.id, val)}
-        >
-          <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
-            data-testid={`select-urgency-${task.id}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Badge
-              variant="outline"
-              className={`${urgencyColors[task.urgency] || ""} text-xs capitalize cursor-pointer`}
-            >
-              <SelectValue />
-            </Badge>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="low">Low</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-3">
-        <div className="flex items-center gap-1.5">
-          <EditableDateCell
-            value={task.estimatedCompletionDate}
-            taskId={task.id}
-            field="estimatedCompletionDate"
-            onSave={handleInlineEdit}
-          />
-          {isOverdue && (
-            <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
-          )}
-        </div>
-      </TableCell>
-      <TableCell className="py-3 hidden md:table-cell">
+      <TableCell className="py-2.5">
         <Select
           value={task.assignedToId || "__none__"}
           onValueChange={(val) => handleAssigneeChange(task.id, val)}
         >
           <SelectTrigger
-            className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
+            className="border-0 bg-transparent p-0 shadow-none h-auto"
             data-testid={`select-assignee-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="flex items-center gap-1.5">
-              <UserIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <SelectValue placeholder="Unassigned" />
-            </span>
+            {assignee ? (
+              <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
+                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-[10px] font-medium`}>
+                  {assigneeInitials}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <span className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center cursor-pointer" data-testid={`avatar-unassigned-${task.id}`}>
+                <UserIcon className="w-3 h-3 text-muted-foreground/40" />
+              </span>
+            )}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">Unassigned</SelectItem>
@@ -460,7 +424,69 @@ function TaskTableRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell className="py-3 hidden md:table-cell">
+      <TableCell className="py-2.5">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <EditableDateCell
+            value={task.estimatedCompletionDate}
+            taskId={task.id}
+            field="estimatedCompletionDate"
+            onSave={handleInlineEdit}
+          />
+          {isOverdue && (
+            <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="py-2.5">
+        <Select
+          value={task.status}
+          onValueChange={(val) => handleStatusChange(task.id, val as StatusType)}
+        >
+          <SelectTrigger
+            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
+            data-testid={`select-status-${task.id}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Badge
+              variant="outline"
+              className={`${taskStatusColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+            >
+              <SelectValue />
+            </Badge>
+          </SelectTrigger>
+          <SelectContent>
+            {taskStatusConfig.map((s) => (
+              <SelectItem key={s.key} value={s.key}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="py-2.5">
+        <Select
+          value={task.urgency}
+          onValueChange={(val) => handleUrgencyChange(task.id, val)}
+        >
+          <SelectTrigger
+            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
+            data-testid={`select-urgency-${task.id}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="flex items-center gap-1 cursor-pointer">
+              <Flag className={`w-3.5 h-3.5 ${urg.color} shrink-0`} />
+              <span className={`text-xs ${urg.color}`}>{urg.label}</span>
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="py-2.5 hidden md:table-cell">
         <Select
           value={task.propertyId || "__none__"}
           onValueChange={(val) => handlePropertyChange(task.id, val)}
@@ -470,8 +496,8 @@ function TaskTableRow({
             data-testid={`select-property-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
               <SelectValue placeholder="No property" />
             </span>
           </SelectTrigger>
@@ -496,7 +522,11 @@ export default function Work() {
   const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
   const [holdReason, setHoldReason] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    unifiedStatusConfig.forEach(s => { initial[s.key] = true; });
+    return initial;
+  });
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -1180,33 +1210,29 @@ export default function Work() {
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {unifiedStatusConfig.map((status) => {
             const itemsInGroup = unifiedGroups[status.key] || [];
             const isEmpty = itemsInGroup.length === 0;
-            const isCollapsed = collapsedGroups[status.key] ?? isEmpty;
+            const isCollapsed = collapsedGroups[status.key] ?? true;
 
             return (
               <Card key={status.key} data-testid={`group-${status.key}`}>
                 <div
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none ${isEmpty ? "opacity-50" : ""}`}
+                  className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer select-none ${isEmpty ? "opacity-40" : ""}`}
                   onClick={() => toggleGroup(status.key)}
                   data-testid={`toggle-group-${status.key}`}
                 >
                   {isCollapsed ? (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   )}
-                  <Badge variant="outline" className={`${unifiedStatusColors[status.key]} text-xs`}>
-                    {status.label}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground font-medium tabular-nums">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColors[status.key]}`} />
+                  <span className="text-sm font-medium">{status.label}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">
                     {itemsInGroup.length}
                   </span>
-                  {isEmpty && (
-                    <span className="text-xs text-muted-foreground italic">No items</span>
-                  )}
                 </div>
 
                 {!isCollapsed && !isEmpty && (
@@ -1214,12 +1240,12 @@ export default function Work() {
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="min-w-[220px]">Name</TableHead>
-                          <TableHead className="w-[130px]">Status</TableHead>
-                          <TableHead className="w-[110px]">Urgency</TableHead>
-                          <TableHead className="w-[140px]">Due Date</TableHead>
-                          <TableHead className="w-[160px] hidden md:table-cell">Assigned To</TableHead>
-                          <TableHead className="w-[160px] hidden md:table-cell">Property</TableHead>
+                          <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>
+                          <TableHead className="w-[60px] text-xs font-medium text-muted-foreground">Assignee</TableHead>
+                          <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Due Date</TableHead>
+                          <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Status</TableHead>
+                          <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
+                          <TableHead className="w-[150px] hidden md:table-cell text-xs font-medium text-muted-foreground">Property</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1230,6 +1256,7 @@ export default function Work() {
                                 key={item.data.id}
                                 task={item.data as Task}
                                 userGroups={userGroups}
+                                allUsers={allUsers}
                                 properties={properties}
                                 handleStatusChange={handleStatusChange}
                                 handleUrgencyChange={handleUrgencyChange}
@@ -1256,6 +1283,7 @@ export default function Work() {
                               isExpanded={isExpanded}
                               onToggleExpand={() => toggleProjectExpanded(project.id)}
                               userGroups={userGroups}
+                              allUsers={allUsers}
                               properties={properties}
                               handleStatusChange={handleStatusChange}
                               handleUrgencyChange={handleUrgencyChange}
@@ -1553,6 +1581,7 @@ function ProjectRowGroup({
   isExpanded,
   onToggleExpand,
   userGroups,
+  allUsers,
   properties,
   handleStatusChange,
   handleUrgencyChange,
@@ -1568,6 +1597,7 @@ function ProjectRowGroup({
   isExpanded: boolean;
   onToggleExpand: () => void;
   userGroups: { label: string; items: User[] }[];
+  allUsers: User[] | undefined;
   properties: Property[] | undefined;
   handleStatusChange: (taskId: string, newStatus: StatusType) => void;
   handleUrgencyChange: (taskId: string, urgency: string) => void;
@@ -1578,14 +1608,16 @@ function ProjectRowGroup({
   getPropertyName: (propertyId: string | null) => string | null;
 }) {
   const propertyName = getPropertyName(project.propertyId);
+  const projectStatusToUnified = projectStatusMapping[project.status] || "not_started";
+  const urg = urgencyConfig[project.priority] || urgencyConfig.low;
 
   return (
     <>
       <TableRow
         data-testid={`row-project-${project.id}`}
-        className={isExpanded ? "bg-primary/[0.03] dark:bg-primary/[0.05]" : ""}
+        className={isExpanded ? "bg-muted/20" : ""}
       >
-        <TableCell className="py-3">
+        <TableCell className="py-2.5">
           <div className="flex items-center gap-2">
             <Button
               size="icon"
@@ -1603,6 +1635,7 @@ function ProjectRowGroup({
                 <ChevronRight className="w-4 h-4" />
               )}
             </Button>
+            <FolderKanban className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <Link href={`/projects/${project.id}`}>
               <span
                 className="cursor-pointer hover:underline font-medium"
@@ -1611,48 +1644,40 @@ function ProjectRowGroup({
                 {project.name}
               </span>
             </Link>
-            <Badge
-              variant="secondary"
-              className="bg-primary/10 text-primary dark:text-primary text-xs shrink-0"
-              data-testid={`badge-project-type-${project.id}`}
-            >
-              <FolderKanban className="w-3 h-3 mr-1" />
-              Project
-            </Badge>
             <span className="text-xs text-muted-foreground" data-testid={`text-project-progress-${project.id}`}>
               {completedChildTasks}/{childTasks.length} tasks
             </span>
           </div>
         </TableCell>
-        <TableCell className="py-3">
+        <TableCell className="py-2.5">
+          <span className="text-sm text-muted-foreground">-</span>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="text-sm">
+              {project.targetEndDate
+                ? format(new Date(project.targetEndDate), "M/d/yyyy")
+                : "-"}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className="py-2.5">
           <Badge
             variant="outline"
-            className={`${projectStatusColors[project.status] || ""} text-xs`}
+            className={`${taskStatusColors[projectStatusToUnified] || taskStatusColors.not_started} text-[10px] font-semibold uppercase tracking-wider no-default-hover-elevate no-default-active-elevate`}
             data-testid={`badge-project-status-${project.id}`}
           >
             {project.status.replace("_", " ")}
           </Badge>
         </TableCell>
-        <TableCell className="py-3">
-          <Badge
-            variant="secondary"
-            className={`${priorityColors[project.priority] || ""} text-xs capitalize`}
-            data-testid={`badge-project-priority-${project.id}`}
-          >
-            {project.priority}
-          </Badge>
-        </TableCell>
-        <TableCell className="py-3">
-          <span className="text-sm">
-            {project.targetEndDate
-              ? format(new Date(project.targetEndDate), "M/d/yyyy")
-              : "-"}
+        <TableCell className="py-2.5">
+          <span className="flex items-center gap-1">
+            <Flag className={`w-3.5 h-3.5 ${urg.color} shrink-0`} />
+            <span className={`text-xs ${urg.color} capitalize`}>{project.priority}</span>
           </span>
         </TableCell>
-        <TableCell className="py-3 hidden md:table-cell">
-          <span className="text-sm text-muted-foreground">-</span>
-        </TableCell>
-        <TableCell className="py-3 hidden md:table-cell">
+        <TableCell className="py-2.5 hidden md:table-cell">
           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="w-3.5 h-3.5 shrink-0" />
             {propertyName || "-"}
@@ -1666,6 +1691,7 @@ function ProjectRowGroup({
             key={task.id}
             task={task}
             userGroups={userGroups}
+            allUsers={allUsers}
             properties={properties}
             handleStatusChange={handleStatusChange}
             handleUrgencyChange={handleUrgencyChange}
