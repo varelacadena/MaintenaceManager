@@ -52,6 +52,8 @@ import {
   Search,
   DollarSign,
   Calendar,
+  AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -198,7 +200,7 @@ function EditableTextCell({
 
   return (
     <span
-      className={`cursor-pointer hover:underline underline-offset-2 ${linkTo ? "font-medium" : "decoration-dashed"}`}
+      className={`group/editable cursor-pointer inline-flex items-center gap-1.5 ${linkTo ? "font-medium hover:underline underline-offset-2" : "hover:underline decoration-dashed underline-offset-2"}`}
       onClick={(e) => {
         e.stopPropagation();
         if (linkTo) {
@@ -223,6 +225,7 @@ function EditableTextCell({
       data-testid={`text-${field}-${taskId}`}
     >
       {value || "-"}
+      {!linkTo && <Pencil className="w-3 h-3 text-muted-foreground/0 group-hover/editable:text-muted-foreground/60 transition-colors shrink-0" />}
     </span>
   );
 }
@@ -284,7 +287,7 @@ function EditableDateCell({
 
   return (
     <span
-      className="cursor-pointer hover:underline decoration-dashed underline-offset-2 text-sm"
+      className="group/editable cursor-pointer hover:underline decoration-dashed underline-offset-2 text-sm inline-flex items-center gap-1.5"
       onClick={(e) => {
         e.stopPropagation();
         setIsEditing(true);
@@ -292,6 +295,7 @@ function EditableDateCell({
       data-testid={`text-${field}-${taskId}`}
     >
       {rawValue ? new Date(rawValue).toLocaleDateString() : "-"}
+      <Pencil className="w-3 h-3 text-muted-foreground/0 group-hover/editable:text-muted-foreground/60 transition-colors shrink-0" />
     </span>
   );
 }
@@ -307,6 +311,7 @@ function TaskTableRow({
   handleTaskTypeChange,
   handleInlineEdit,
   isChildTask,
+  rowIndex,
 }: {
   task: Task;
   technicianUsers: User[];
@@ -318,14 +323,23 @@ function TaskTableRow({
   handleTaskTypeChange: (taskId: string, taskType: string) => void;
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isChildTask?: boolean;
+  rowIndex?: number;
 }) {
+  const isOverdue = task.estimatedCompletionDate
+    && task.status !== "completed"
+    && new Date(task.estimatedCompletionDate) < new Date();
+
+  const stripeBg = isChildTask
+    ? "bg-muted/20"
+    : (rowIndex !== undefined && rowIndex % 2 === 1) ? "bg-muted/30" : "";
+
   return (
     <TableRow
       key={task.id}
       data-testid={`row-task-${task.id}`}
-      className={isChildTask ? "bg-muted/30" : ""}
+      className={`${stripeBg} ${isOverdue ? "bg-destructive/[0.04] dark:bg-destructive/[0.06]" : ""}`}
     >
-      <TableCell className="font-medium">
+      <TableCell className="py-3">
         <div className={`flex items-center gap-2 ${isChildTask ? "pl-6" : ""}`}>
           {!isChildTask && (
             <span className="flex items-center gap-1 text-muted-foreground shrink-0">
@@ -342,29 +356,26 @@ function TaskTableRow({
             onSave={handleInlineEdit}
             linkTo={`/tasks/${task.id}`}
           />
+          {isOverdue && (
+            <span className="shrink-0" title="Overdue">
+              <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+            </span>
+          )}
         </div>
       </TableCell>
-      <TableCell className="hidden lg:table-cell max-w-[200px]">
-        <EditableTextCell
-          value={task.description || ""}
-          taskId={task.id}
-          field="description"
-          onSave={handleInlineEdit}
-        />
-      </TableCell>
-      <TableCell>
+      <TableCell className="py-3">
         <Select
           value={task.status}
           onValueChange={(val) => handleStatusChange(task.id, val as StatusType)}
         >
           <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0"
+            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
             data-testid={`select-status-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
             <Badge
               variant="outline"
-              className={`${taskStatusColors[task.status] || ""} text-xs`}
+              className={`${taskStatusColors[task.status] || ""} text-xs cursor-pointer`}
             >
               <SelectValue />
             </Badge>
@@ -378,19 +389,19 @@ function TaskTableRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell>
+      <TableCell className="py-3">
         <Select
           value={task.urgency}
           onValueChange={(val) => handleUrgencyChange(task.id, val)}
         >
           <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0"
+            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
             data-testid={`select-urgency-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
             <Badge
               variant="outline"
-              className={`${urgencyColors[task.urgency] || ""} text-xs capitalize`}
+              className={`${urgencyColors[task.urgency] || ""} text-xs capitalize cursor-pointer`}
             >
               <SelectValue />
             </Badge>
@@ -402,33 +413,33 @@ function TaskTableRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell>
-        <EditableDateCell
-          value={task.initialDate}
-          taskId={task.id}
-          field="initialDate"
-          onSave={handleInlineEdit}
-        />
+      <TableCell className="py-3">
+        <div className="flex items-center gap-1.5">
+          <EditableDateCell
+            value={task.estimatedCompletionDate}
+            taskId={task.id}
+            field="estimatedCompletionDate"
+            onSave={handleInlineEdit}
+          />
+          {isOverdue && (
+            <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
+          )}
+        </div>
       </TableCell>
-      <TableCell>
-        <EditableDateCell
-          value={task.estimatedCompletionDate}
-          taskId={task.id}
-          field="estimatedCompletionDate"
-          onSave={handleInlineEdit}
-        />
-      </TableCell>
-      <TableCell className="hidden md:table-cell">
+      <TableCell className="py-3 hidden md:table-cell">
         <Select
           value={task.assignedToId || "__none__"}
           onValueChange={(val) => handleAssigneeChange(task.id, val)}
         >
           <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0"
+            className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
             data-testid={`select-assignee-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <SelectValue placeholder="Unassigned" />
+            <span className="flex items-center gap-1.5">
+              <UserIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <SelectValue placeholder="Unassigned" />
+            </span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">Unassigned</SelectItem>
@@ -442,17 +453,20 @@ function TaskTableRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell className="hidden md:table-cell">
+      <TableCell className="py-3 hidden md:table-cell">
         <Select
           value={task.propertyId || "__none__"}
           onValueChange={(val) => handlePropertyChange(task.id, val)}
         >
           <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0"
+            className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
             data-testid={`select-property-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <SelectValue placeholder="No property" />
+            <span className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <SelectValue placeholder="No property" />
+            </span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">No property</SelectItem>
@@ -461,26 +475,6 @@ function TaskTableRow({
                 {p.name}
               </SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="hidden lg:table-cell">
-        <Select
-          value={task.taskType}
-          onValueChange={(val) => handleTaskTypeChange(task.id, val)}
-        >
-          <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0"
-            data-testid={`select-type-${task.id}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="one_time">One Time</SelectItem>
-            <SelectItem value="recurring">Recurring</SelectItem>
-            <SelectItem value="reminder">Reminder</SelectItem>
-            <SelectItem value="project">Project</SelectItem>
           </SelectContent>
         </Select>
       </TableCell>
@@ -1105,15 +1099,15 @@ export default function Work() {
 
   return (
     <>
-      <div className="p-3 md:p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+      <div className="p-4 md:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
             <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
               {user?.role === "admin" ? "Work" : "My Tasks"}
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-sm text-muted-foreground mt-1">
               {user?.role === "admin"
-                ? "Manage tasks and projects in one place. Click cells to edit inline."
+                ? "Manage tasks and projects in one place"
                 : "View and manage your assigned tasks"}
             </p>
           </div>
@@ -1170,15 +1164,16 @@ export default function Work() {
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {unifiedStatusConfig.map((status) => {
             const itemsInGroup = unifiedGroups[status.key] || [];
-            const isCollapsed = collapsedGroups[status.key] ?? false;
+            const isEmpty = itemsInGroup.length === 0;
+            const isCollapsed = collapsedGroups[status.key] ?? isEmpty;
 
             return (
               <Card key={status.key} data-testid={`group-${status.key}`}>
                 <div
-                  className="flex items-center gap-3 p-2.5 cursor-pointer select-none"
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none ${isEmpty ? "opacity-50" : ""}`}
                   onClick={() => toggleGroup(status.key)}
                   data-testid={`toggle-group-${status.key}`}
                 >
@@ -1190,64 +1185,34 @@ export default function Work() {
                   <Badge variant="outline" className={`${unifiedStatusColors[status.key]} text-xs`}>
                     {status.label}
                   </Badge>
-                  <Badge variant="secondary" className="rounded-full text-xs">
+                  <span className="text-xs text-muted-foreground font-medium tabular-nums">
                     {itemsInGroup.length}
-                  </Badge>
+                  </span>
+                  {isEmpty && (
+                    <span className="text-xs text-muted-foreground italic">No items</span>
+                  )}
                 </div>
 
-                {!isCollapsed && (
+                {!isCollapsed && !isEmpty && (
                   <div className="border-t">
-                    {itemsInGroup.length === 0 ? (
-                      <div className="py-3 text-center text-sm text-muted-foreground">
-                        No items
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[200px]">Name</TableHead>
-                            <TableHead className="w-[200px] hidden lg:table-cell">Description</TableHead>
-                            <TableHead className="w-[120px]">Status</TableHead>
-                            <TableHead className="w-[100px]">Urgency / Priority</TableHead>
-                            <TableHead className="w-[110px]">Start Date</TableHead>
-                            <TableHead className="w-[110px]">Due Date</TableHead>
-                            <TableHead className="w-[140px] hidden md:table-cell">Assigned To</TableHead>
-                            <TableHead className="w-[140px] hidden md:table-cell">Property</TableHead>
-                            <TableHead className="w-[100px] hidden lg:table-cell">Type</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {itemsInGroup.map((item) => {
-                            if (item.type === "task") {
-                              return (
-                                <TaskTableRow
-                                  key={item.data.id}
-                                  task={item.data as Task}
-                                  technicianUsers={technicianUsers}
-                                  properties={properties}
-                                  handleStatusChange={handleStatusChange}
-                                  handleUrgencyChange={handleUrgencyChange}
-                                  handleAssigneeChange={handleAssigneeChange}
-                                  handlePropertyChange={handlePropertyChange}
-                                  handleTaskTypeChange={handleTaskTypeChange}
-                                  handleInlineEdit={handleInlineEdit}
-                                />
-                              );
-                            }
-
-                            const project = item.data as Project;
-                            const childTasks = projectTasksMap[project.id] || [];
-                            const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
-                            const isExpanded = expandedProjects.has(project.id);
-
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="min-w-[220px]">Name</TableHead>
+                          <TableHead className="w-[130px]">Status</TableHead>
+                          <TableHead className="w-[110px]">Urgency</TableHead>
+                          <TableHead className="w-[140px]">Due Date</TableHead>
+                          <TableHead className="w-[160px] hidden md:table-cell">Assigned To</TableHead>
+                          <TableHead className="w-[160px] hidden md:table-cell">Property</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itemsInGroup.map((item, idx) => {
+                          if (item.type === "task") {
                             return (
-                              <ProjectRowGroup
-                                key={project.id}
-                                project={project}
-                                childTasks={childTasks}
-                                completedChildTasks={completedChildTasks}
-                                isExpanded={isExpanded}
-                                onToggleExpand={() => toggleProjectExpanded(project.id)}
+                              <TaskTableRow
+                                key={item.data.id}
+                                task={item.data as Task}
                                 technicianUsers={technicianUsers}
                                 properties={properties}
                                 handleStatusChange={handleStatusChange}
@@ -1256,13 +1221,38 @@ export default function Work() {
                                 handlePropertyChange={handlePropertyChange}
                                 handleTaskTypeChange={handleTaskTypeChange}
                                 handleInlineEdit={handleInlineEdit}
-                                getPropertyName={getPropertyName}
+                                rowIndex={idx}
                               />
                             );
-                          })}
-                        </TableBody>
-                      </Table>
-                    )}
+                          }
+
+                          const project = item.data as Project;
+                          const childTasks = projectTasksMap[project.id] || [];
+                          const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
+                          const isExpanded = expandedProjects.has(project.id);
+
+                          return (
+                            <ProjectRowGroup
+                              key={project.id}
+                              project={project}
+                              childTasks={childTasks}
+                              completedChildTasks={completedChildTasks}
+                              isExpanded={isExpanded}
+                              onToggleExpand={() => toggleProjectExpanded(project.id)}
+                              technicianUsers={technicianUsers}
+                              properties={properties}
+                              handleStatusChange={handleStatusChange}
+                              handleUrgencyChange={handleUrgencyChange}
+                              handleAssigneeChange={handleAssigneeChange}
+                              handlePropertyChange={handlePropertyChange}
+                              handleTaskTypeChange={handleTaskTypeChange}
+                              handleInlineEdit={handleInlineEdit}
+                              getPropertyName={getPropertyName}
+                            />
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </Card>
@@ -1577,54 +1567,48 @@ function ProjectRowGroup({
     <>
       <TableRow
         data-testid={`row-project-${project.id}`}
-        className={isExpanded ? "bg-indigo-500/5" : ""}
+        className={isExpanded ? "bg-primary/[0.03] dark:bg-primary/[0.05]" : ""}
       >
-        <TableCell className="font-medium">
-          <div className="pl-1">
-            <div className="border-l-4 border-l-indigo-500 pl-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleExpand();
-                  }}
-                  data-testid={`button-expand-project-${project.id}`}
-                  className="shrink-0"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
-                </Button>
-                <Link href={`/projects/${project.id}`}>
-                  <span
-                    className="cursor-pointer hover:underline font-medium"
-                    data-testid={`text-project-name-${project.id}`}
-                  >
-                    {project.name}
-                  </span>
-                </Link>
-                <Badge
-                  variant="secondary"
-                  className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-xs shrink-0"
-                  data-testid={`badge-project-type-${project.id}`}
-                >
-                  <FolderKanban className="w-3 h-3 mr-1" />
-                  Project
-                </Badge>
-              </div>
-            </div>
+        <TableCell className="py-3">
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              data-testid={`button-expand-project-${project.id}`}
+              className="shrink-0"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </Button>
+            <Link href={`/projects/${project.id}`}>
+              <span
+                className="cursor-pointer hover:underline font-medium"
+                data-testid={`text-project-name-${project.id}`}
+              >
+                {project.name}
+              </span>
+            </Link>
+            <Badge
+              variant="secondary"
+              className="bg-primary/10 text-primary dark:text-primary text-xs shrink-0"
+              data-testid={`badge-project-type-${project.id}`}
+            >
+              <FolderKanban className="w-3 h-3 mr-1" />
+              Project
+            </Badge>
+            <span className="text-xs text-muted-foreground" data-testid={`text-project-progress-${project.id}`}>
+              {completedChildTasks}/{childTasks.length} tasks
+            </span>
           </div>
         </TableCell>
-        <TableCell className="hidden lg:table-cell max-w-[200px]">
-          <span className="text-sm text-muted-foreground line-clamp-1">
-            {project.description || "-"}
-          </span>
-        </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <Badge
             variant="outline"
             className={`${projectStatusColors[project.status] || ""} text-xs`}
@@ -1633,7 +1617,7 @@ function ProjectRowGroup({
             {project.status.replace("_", " ")}
           </Badge>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <Badge
             variant="secondary"
             className={`${priorityColors[project.priority] || ""} text-xs capitalize`}
@@ -1642,44 +1626,26 @@ function ProjectRowGroup({
             {project.priority}
           </Badge>
         </TableCell>
-        <TableCell>
-          <span className="text-sm">
-            {project.startDate
-              ? format(new Date(project.startDate), "M/d/yyyy")
-              : "-"}
-          </span>
-        </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <span className="text-sm">
             {project.targetEndDate
               ? format(new Date(project.targetEndDate), "M/d/yyyy")
               : "-"}
           </span>
         </TableCell>
-        <TableCell className="hidden md:table-cell">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <span data-testid={`text-project-progress-${project.id}`}>
-              {completedChildTasks}/{childTasks.length} tasks
-            </span>
-          </div>
+        <TableCell className="py-3 hidden md:table-cell">
+          <span className="text-sm text-muted-foreground">-</span>
         </TableCell>
-        <TableCell className="hidden md:table-cell">
-          <span className="text-sm text-muted-foreground">
+        <TableCell className="py-3 hidden md:table-cell">
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
             {propertyName || "-"}
           </span>
-        </TableCell>
-        <TableCell className="hidden lg:table-cell">
-          {project.budgetAmount !== null && project.budgetAmount > 0 && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>{project.budgetAmount.toLocaleString()}</span>
-            </div>
-          )}
         </TableCell>
       </TableRow>
 
       {isExpanded &&
-        childTasks.map((task) => (
+        childTasks.map((task, idx) => (
           <TaskTableRow
             key={task.id}
             task={task}
@@ -1692,6 +1658,7 @@ function ProjectRowGroup({
             handleTaskTypeChange={handleTaskTypeChange}
             handleInlineEdit={handleInlineEdit}
             isChildTask
+            rowIndex={idx}
           />
         ))}
     </>
