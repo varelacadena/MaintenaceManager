@@ -29,7 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, Building2, MapPin, Edit, Trash2, ChevronDown, Trees, Car, Gamepad2, Wrench, Route, HelpCircle } from "lucide-react";
+import { Building2, MapPin, Edit, Trash2, ChevronDown, Trees, Car, Gamepad2, Wrench, Route, HelpCircle, Search, Map, List, ChevronRight } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,9 +45,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+const propertyTypeValues = ["building", "lawn", "parking", "recreation", "utility", "road", "other"] as const;
+
 const formSchema = insertPropertySchema.extend({
   name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
+  type: z.enum(propertyTypeValues),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -61,6 +63,8 @@ export default function PropertyMapPage() {
   const [pendingCoordinates, setPendingCoordinates] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showMap, setShowMap] = useState(true);
 
   const propertyTypes = [
     { value: "building", label: "Buildings", icon: Building2 },
@@ -83,20 +87,16 @@ export default function PropertyMapPage() {
     queryKey: ["/api/properties"],
   });
 
+  const filteredProperties = properties.filter(p => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.address && p.address.toLowerCase().includes(q));
+  });
+
   const groupedProperties = propertyTypes.reduce((acc, type) => {
-    acc[type.value] = properties.filter(p => p.type === type.value);
+    acc[type.value] = filteredProperties.filter(p => p.type === type.value);
     return acc;
   }, {} as Record<string, Property[]>);
-
-  const scrollToSection = (type: string) => {
-    const element = document.getElementById(`section-${type}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-      if (collapsedSections[type]) {
-        toggleSection(type);
-      }
-    }
-  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -220,190 +220,204 @@ export default function PropertyMapPage() {
     );
   }
 
-  return (
-    <>
-      <div className="h-full flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="heading-property-map">Property Map</h1>
-            <p className="text-muted-foreground mt-1">
-              Interactive map of all facility properties and buildings
-            </p>
-          </div>
+  const propertyListContent = (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between gap-2 pb-3 border-b">
+        <div className="flex items-center gap-2 flex-1">
+          <h2 className="text-lg font-semibold whitespace-nowrap" data-testid="heading-properties">Properties</h2>
+          <Badge variant="secondary">{filteredProperties.length}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showMap ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowMap(!showMap)}
+            data-testid="button-toggle-map"
+            className="md:hidden"
+          >
+            {showMap ? <><List className="w-4 h-4 mr-1" /> List</> : <><Map className="w-4 h-4 mr-1" /> Map</>}
+          </Button>
           {canEdit && (
-            <div className="flex gap-2">
-              <Button
-                variant={editMode ? "default" : "outline"}
-                onClick={() => setEditMode(!editMode)}
-                data-testid="button-toggle-edit"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Add new
-              </Button>
-            </div>
+            <Button
+              variant={editMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setEditMode(!editMode)}
+              data-testid="button-toggle-edit"
+            >
+              <Edit className="w-4 h-4 mr-1" />
+              Add new
+            </Button>
           )}
         </div>
+      </div>
 
-        <div className="flex-1 flex flex-col gap-6">
-          <Card className="relative z-0 flex-1">
-            <CardContent className="p-0 h-full">
-              <PropertyMap
-                properties={properties}
-                onPropertySelect={handlePropertySelect}
-                onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
-                onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
-                selectedPropertyId={selectedPropertyId}
-                editable={canEdit && editMode}
-              />
-            </CardContent>
-          </Card>
+      <div className="relative mt-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search properties..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+          data-testid="input-search-properties"
+        />
+      </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
-              <CardTitle className="text-lg">Properties</CardTitle>
-              <Badge variant="secondary">{properties.length}</Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {properties.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No properties yet</p>
-                  {canEdit && editMode && (
-                    <p className="text-xs mt-1">Draw shapes on the map to add properties</p>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap gap-2 pb-2 border-b">
-                    {propertyTypes.map((type) => {
-                      const count = groupedProperties[type.value]?.length || 0;
-                      if (count === 0) return null;
-                      const Icon = type.icon;
-                      return (
-                        <Button
-                          key={type.value}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => scrollToSection(type.value)}
-                          className="gap-2"
-                          data-testid={`button-nav-${type.value}`}
+      <div className="flex flex-wrap gap-2 mt-3 pb-2">
+        {propertyTypes.map((type) => {
+          const count = groupedProperties[type.value]?.length || 0;
+          if (count === 0) return null;
+          const Icon = type.icon;
+          return (
+            <Badge
+              key={type.value}
+              variant="secondary"
+              className="cursor-pointer gap-1"
+              onClick={() => {
+                const element = document.getElementById(`section-${type.value}`);
+                if (element) {
+                  element.scrollIntoView({ behavior: "smooth", block: "start" });
+                  if (collapsedSections[type.value]) {
+                    toggleSection(type.value);
+                  }
+                }
+              }}
+              data-testid={`button-nav-${type.value}`}
+            >
+              <Icon className="w-3 h-3" />
+              {type.label} ({count})
+            </Badge>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 overflow-y-auto mt-2 space-y-2">
+        {filteredProperties.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <MapPin className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">{searchQuery ? "No properties match your search" : "No properties yet"}</p>
+            {canEdit && editMode && !searchQuery && (
+              <p className="text-xs mt-1">Draw shapes on the map to add properties</p>
+            )}
+          </div>
+        ) : (
+          propertyTypes.map((type) => {
+            const typeProperties = groupedProperties[type.value] || [];
+            if (typeProperties.length === 0) return null;
+            const Icon = type.icon;
+            const isCollapsed = collapsedSections[type.value];
+
+            return (
+              <Collapsible
+                key={type.value}
+                open={!isCollapsed}
+                onOpenChange={() => toggleSection(type.value)}
+              >
+                <div id={`section-${type.value}`} className="scroll-mt-4">
+                  <CollapsibleTrigger asChild>
+                    <div
+                      className="flex items-center justify-between p-2 rounded-md bg-muted/50 cursor-pointer hover-elevate"
+                      data-testid={`section-header-${type.value}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-primary" />
+                        <span className="font-medium text-sm">{type.label}</span>
+                        <Badge variant="secondary">{typeProperties.length}</Badge>
+                      </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-muted-foreground transition-transform ${
+                          !isCollapsed ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <div className="mt-1 space-y-1">
+                      {typeProperties.map((property) => (
+                        <div
+                          key={property.id}
+                          className={`flex items-center justify-between gap-2 p-2 rounded-md border cursor-pointer hover-elevate ${
+                            selectedPropertyId === property.id ? "border-primary bg-primary/5" : ""
+                          }`}
+                          onClick={() => navigate(`/properties/${property.id}`)}
+                          data-testid={`card-property-${property.id}`}
                         >
-                          <Icon className="w-4 h-4" />
-                          {type.label}
-                          <Badge variant="secondary" className="ml-1">{count}</Badge>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {propertyTypes.map((type) => {
-                      const typeProperties = groupedProperties[type.value] || [];
-                      if (typeProperties.length === 0) return null;
-                      const Icon = type.icon;
-                      const isCollapsed = collapsedSections[type.value];
-                      
-                      return (
-                        <Collapsible
-                          key={type.value}
-                          open={!isCollapsed}
-                          onOpenChange={() => toggleSection(type.value)}
-                        >
-                          <div
-                            id={`section-${type.value}`}
-                            className="scroll-mt-4"
-                          >
-                            <CollapsibleTrigger asChild>
-                              <div
-                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 cursor-pointer hover-elevate"
-                                data-testid={`section-header-${type.value}`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-primary/10">
-                                    <Icon className="w-5 h-5 text-primary" />
-                                  </div>
-                                  <div>
-                                    <h3 className="font-semibold">{type.label}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                      {typeProperties.length} {typeProperties.length === 1 ? 'property' : 'properties'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <ChevronDown
-                                  className={`w-5 h-5 text-muted-foreground transition-transform ${
-                                    !isCollapsed ? "rotate-180" : ""
-                                  }`}
-                                />
-                              </div>
-                            </CollapsibleTrigger>
-                            
-                            <CollapsibleContent>
-                              <div className="mt-3 space-y-2">
-                                {typeProperties.map((property) => (
-                                  <div
-                                    key={property.id}
-                                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover-elevate ${
-                                      selectedPropertyId === property.id ? "border-primary bg-primary/5" : ""
-                                    }`}
-                                    onClick={() => setSelectedPropertyId(property.id)}
-                                    data-testid={`card-property-${property.id}`}
-                                  >
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                      <div className="p-2 rounded-md bg-muted flex-shrink-0">
-                                        <Icon className="w-4 h-4 text-muted-foreground" />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <h4 className="font-medium truncate">{property.name}</h4>
-                                        {property.address && (
-                                          <p className="text-sm text-muted-foreground truncate">
-                                            {property.address}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigate(`/properties/${property.id}`);
-                                        }}
-                                        data-testid={`button-view-${property.id}`}
-                                      >
-                                        View
-                                      </Button>
-                                      {canEdit && (
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handlePropertyDelete(property.id);
-                                          }}
-                                          data-testid={`button-delete-${property.id}`}
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </CollapsibleContent>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium text-sm truncate">{property.name}</h4>
+                            {property.address && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {property.address}
+                              </p>
+                            )}
                           </div>
-                        </Collapsible>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {canEdit && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePropertyDelete(property.id);
+                                }}
+                                data-testid={`button-delete-${property.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between pb-3">
+          <div>
+            <h1 className="text-xl font-bold" data-testid="heading-property-map">Properties</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Manage all facility properties and buildings
+            </p>
           </div>
         </div>
 
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
+          <div className={`${showMap ? 'hidden' : 'flex'} md:flex w-full md:w-[360px] lg:w-[400px] flex-shrink-0 overflow-hidden flex-col flex-1 md:flex-initial`}>
+            <Card className="flex-1 overflow-hidden">
+              <CardContent className="p-3 h-full">
+                {propertyListContent}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className={`${showMap ? 'flex' : 'hidden'} md:flex flex-1 min-w-0 min-h-[300px]`}>
+            <Card className="relative z-0 w-full">
+              <CardContent className="p-0 h-full">
+                <PropertyMap
+                  properties={properties}
+                  onPropertySelect={handlePropertySelect}
+                  onShapeCreated={canEdit && editMode ? handleShapeCreated : undefined}
+                  onPropertyDelete={canEdit && editMode ? handlePropertyDelete : undefined}
+                  selectedPropertyId={selectedPropertyId}
+                  editable={canEdit && editMode}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Property</DialogTitle>

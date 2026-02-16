@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +49,10 @@ import {
   Calendar,
   MapPin,
   DoorOpen,
+  Search,
+  ChevronRight,
+  ClipboardList,
+  Map,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -104,6 +108,9 @@ export default function PropertyDetail() {
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [equipmentSearch, setEquipmentSearch] = useState("");
+  const [spaceSearch, setSpaceSearch] = useState("");
+  const [taskSearch, setTaskSearch] = useState("");
 
   const { data: property, isLoading } = useQuery<Property>({
     queryKey: ["/api/properties", id],
@@ -119,9 +126,8 @@ export default function PropertyDetail() {
     enabled: !!id,
   });
 
-  // Only fetch spaces for building properties
   const isBuilding = property?.type === "building";
-  
+
   const { data: spaces = [] } = useQuery<Space[]>({
     queryKey: ["/api/spaces", id],
     enabled: !!id && isBuilding,
@@ -180,17 +186,10 @@ export default function PropertyDetail() {
       setIsSpaceDialogOpen(false);
       setEditingSpace(null);
       spaceForm.reset({ propertyId: id || "" });
-      toast({
-        title: "Success",
-        description: "Room/space added successfully",
-      });
+      toast({ title: "Success", description: "Room/space added successfully" });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create room/space",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to create room/space", variant: "destructive" });
     },
   });
 
@@ -200,20 +199,13 @@ export default function PropertyDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
-      toast({
-        title: "Success",
-        description: "Room/space updated successfully",
-      });
+      toast({ title: "Success", description: "Room/space updated successfully" });
       setEditingSpace(null);
       setIsSpaceDialogOpen(false);
       spaceForm.reset({ propertyId: id || "" });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update room/space",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to update room/space", variant: "destructive" });
     },
   });
 
@@ -225,17 +217,10 @@ export default function PropertyDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
       if (selectedSpaceId) setSelectedSpaceId(null);
-      toast({
-        title: "Success",
-        description: "Room/space deleted successfully",
-      });
+      toast({ title: "Success", description: "Room/space deleted successfully" });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete room/space",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to delete room/space", variant: "destructive" });
     },
   });
 
@@ -251,22 +236,14 @@ export default function PropertyDetail() {
       return res.json();
     },
     onSuccess: () => {
-      // Invalidate both equipment queries to ensure the list refreshes
       queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
       setIsCreateDialogOpen(false);
       setEditingEquipment(null);
-      toast({
-        title: "Success",
-        description: "Equipment added successfully",
-      });
+      toast({ title: "Success", description: "Equipment added successfully" });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create equipment",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to create equipment", variant: "destructive" });
     },
   });
 
@@ -276,19 +253,12 @@ export default function PropertyDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      toast({
-        title: "Success",
-        description: "Equipment updated successfully",
-      });
+      toast({ title: "Success", description: "Equipment updated successfully" });
       setEditingEquipment(null);
       form.reset({ propertyId: id });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update equipment",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to update equipment", variant: "destructive" });
     },
   });
 
@@ -298,17 +268,10 @@ export default function PropertyDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      toast({
-        title: "Success",
-        description: "Equipment deleted successfully",
-      });
+      toast({ title: "Success", description: "Equipment deleted successfully" });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete equipment",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to delete equipment", variant: "destructive" });
     },
   });
 
@@ -319,45 +282,29 @@ export default function PropertyDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
-      toast({
-        title: "Success",
-        description: "Property updated successfully",
-      });
+      toast({ title: "Success", description: "Property updated successfully" });
       setIsEditPropertyDialogOpen(false);
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update property",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to update property", variant: "destructive" });
     },
   });
 
   const onSubmit = (data: FormData) => {
     if (editingEquipment) {
-      updateEquipmentMutation.mutate({
-        id: editingEquipment.id,
-        data,
-      });
+      updateEquipmentMutation.mutate({ id: editingEquipment.id, data });
     } else {
       createEquipmentMutation.mutate(data);
     }
   };
 
   const onPropertySubmit = (data: PropertyFormData) => {
-    updatePropertyMutation.mutate({
-      id: id!,
-      data,
-    });
+    updatePropertyMutation.mutate({ id: id!, data });
   };
 
   const onSpaceSubmit = (data: SpaceFormData) => {
     if (editingSpace) {
-      updateSpaceMutation.mutate({
-        id: editingSpace.id,
-        data,
-      });
+      updateSpaceMutation.mutate({ id: editingSpace.id, data });
     } else {
       createSpaceMutation.mutate(data);
     }
@@ -413,34 +360,48 @@ export default function PropertyDetail() {
   };
 
   const categories = [
-    "appliances",
-    "hvac",
-    "structure",
-    "plumbing",
-    "electric",
-    "landscaping",
-    "diagrams",
-    "other",
+    "appliances", "hvac", "structure", "plumbing", "electric", "landscaping", "diagrams", "other",
   ];
 
-  // Filter equipment by space first (if building), then by category
-  const spaceFilteredEquipment = selectedSpaceId 
+  const spaceFilteredEquipment = selectedSpaceId
     ? equipment.filter(e => e.spaceId === selectedSpaceId)
     : equipment;
-  
-  const filteredEquipment = selectedCategory
+
+  const categoryFilteredEquipment = selectedCategory
     ? spaceFilteredEquipment.filter((e) => e.category === selectedCategory)
     : spaceFilteredEquipment;
 
+  const filteredEquipment = equipmentSearch.trim()
+    ? categoryFilteredEquipment.filter(e =>
+        e.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+        (e.serialNumber && e.serialNumber.toLowerCase().includes(equipmentSearch.toLowerCase())) ||
+        (e.description && e.description.toLowerCase().includes(equipmentSearch.toLowerCase()))
+      )
+    : categoryFilteredEquipment;
+
   const groupedEquipment = spaceFilteredEquipment.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
+    if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, Equipment[]>);
 
+  const filteredSpaces = spaceSearch.trim()
+    ? spaces.filter(s =>
+        s.name.toLowerCase().includes(spaceSearch.toLowerCase()) ||
+        (s.floor && s.floor.toLowerCase().includes(spaceSearch.toLowerCase())) ||
+        (s.description && s.description.toLowerCase().includes(spaceSearch.toLowerCase()))
+      )
+    : spaces;
+
+  const filteredTasks = taskSearch.trim()
+    ? tasks.filter(t =>
+        t.name.toLowerCase().includes(taskSearch.toLowerCase()) ||
+        (t.description && t.description.toLowerCase().includes(taskSearch.toLowerCase()))
+      )
+    : tasks;
+
   const canEdit = user?.role === "admin" || user?.role === "technician";
+  const openTaskCount = tasks.filter((t) => t.status !== "completed").length;
 
   if (isLoading) {
     return (
@@ -459,70 +420,42 @@ export default function PropertyDetail() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 md:gap-6 p-4 md:p-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {canEdit && (
-          <div className="flex gap-2 w-full sm:w-auto">
+    <div className="h-full flex flex-col gap-3 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-xl font-bold" data-testid="heading-property-name">{property.name}</h1>
+          <Badge variant="secondary">{property.type}</Badge>
+          {property.address && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="w-3 h-3" />
+              {property.address}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            <span>Last work: {property.lastWorkDate ? new Date(property.lastWorkDate).toLocaleDateString() : "None"}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <ClipboardList className="w-3 h-3" />
+            <span>{openTaskCount} open {openTaskCount === 1 ? "task" : "tasks"}</span>
+          </div>
+          {canEdit && (
             <Button
               variant="outline"
+              size="sm"
               onClick={handleEditProperty}
               data-testid="button-edit-property"
-              className="flex-1 sm:flex-none h-9 text-xs md:text-sm"
             >
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Property
+              <Edit className="w-3 h-3 mr-1" />
+              Edit
             </Button>
-            {/* The delete property button is removed as it's not in scope of this change */}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Property Details */}
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0 p-3 md:p-4">
-          <div className="space-y-1">
-            <CardTitle className="text-xl md:text-2xl font-bold" data-testid="heading-property-name">{property.name}</CardTitle>
-            <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground flex-wrap">
-              <Badge variant="secondary">{property.type}</Badge>
-              {property.address && (
-                <>
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {property.address}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Last Work Date</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {property.lastWorkDate
-                ? new Date(property.lastWorkDate).toLocaleDateString()
-                : "No work recorded"}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Open Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter((t) => t.status !== "completed").length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue={isBuilding ? "spaces" : "equipment"} className="flex-1">
+      <Tabs defaultValue={isBuilding ? "spaces" : "equipment"} className="flex-1 flex flex-col min-h-0">
         <TabsList>
           {isBuilding && (
             <TabsTrigger value="spaces" data-testid="tab-spaces">
@@ -530,19 +463,36 @@ export default function PropertyDetail() {
               Rooms ({spaces.length})
             </TabsTrigger>
           )}
-          <TabsTrigger value="equipment" data-testid="tab-equipment">Equipment</TabsTrigger>
-          <TabsTrigger value="work-history" data-testid="tab-work-history">Work History</TabsTrigger>
+          <TabsTrigger value="equipment" data-testid="tab-equipment">
+            <Wrench className="w-4 h-4 mr-1" />
+            Equipment ({equipment.length})
+          </TabsTrigger>
+          <TabsTrigger value="work-history" data-testid="tab-work-history">
+            <Calendar className="w-4 h-4 mr-1" />
+            History ({tasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="location" data-testid="tab-location">
+            <Map className="w-4 h-4 mr-1" />
+            Location
+          </TabsTrigger>
         </TabsList>
 
-        {/* Spaces Tab for Buildings */}
         {isBuilding && (
-          <TabsContent value="spaces" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-sm">
-                Manage rooms, offices, bathrooms and other spaces within this building
-              </p>
+          <TabsContent value="spaces" className="flex-1 flex flex-col min-h-0 mt-3">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search rooms..."
+                  value={spaceSearch}
+                  onChange={(e) => setSpaceSearch(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-spaces"
+                />
+              </div>
               {canEdit && (
                 <Button
+                  size="sm"
                   onClick={() => {
                     setEditingSpace(null);
                     spaceForm.reset({ propertyId: id || "", name: "", description: "", floor: "" });
@@ -550,20 +500,21 @@ export default function PropertyDetail() {
                   }}
                   data-testid="button-add-space"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Room/Space
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Room
                 </Button>
               )}
             </div>
-            
-            {spaces.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <DoorOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No rooms or spaces defined yet</p>
-                  {canEdit && (
+
+            <div className="flex-1 overflow-y-auto">
+              {filteredSpaces.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <DoorOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">{spaceSearch ? "No rooms match your search" : "No rooms or spaces defined yet"}</p>
+                  {canEdit && !spaceSearch && (
                     <Button
                       variant="ghost"
+                      size="sm"
                       onClick={() => {
                         setEditingSpace(null);
                         spaceForm.reset({ propertyId: id || "" });
@@ -574,317 +525,298 @@ export default function PropertyDetail() {
                       Add your first room or space
                     </Button>
                   )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {spaces.map((space) => (
-                  <Card key={space.id} data-testid={`card-space-${space.id}`} className="hover-elevate cursor-pointer" onClick={() => setSelectedSpaceId(space.id)}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <DoorOpen className="w-5 h-5 text-primary" />
-                          <CardTitle className="text-base">{space.name}</CardTitle>
-                        </div>
-                        {canEdit && (
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSpace(space);
-                              }}
-                              data-testid={`button-edit-space-${space.id}`}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSpace(space.id);
-                              }}
-                              data-testid={`button-delete-space-${space.id}`}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredSpaces.map((space) => {
+                    const spaceEquipCount = equipment.filter(e => e.spaceId === space.id).length;
+                    return (
+                      <div
+                        key={space.id}
+                        className="flex items-center justify-between gap-2 p-2 rounded-md border hover-elevate cursor-pointer"
+                        onClick={() => {
+                          setSelectedSpaceId(space.id);
+                        }}
+                        data-testid={`card-space-${space.id}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <DoorOpen className="w-4 h-4 text-primary flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm truncate">{space.name}</span>
+                              {space.floor && <Badge variant="outline">{space.floor}</Badge>}
+                            </div>
+                            {space.description && (
+                              <p className="text-xs text-muted-foreground truncate">{space.description}</p>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {space.floor && (
-                        <Badge variant="outline" className="mb-2">{space.floor}</Badge>
-                      )}
-                      {space.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{space.description}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {equipment.filter(e => e.spaceId === space.id).length} equipment items
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        )}
-
-        <TabsContent value="equipment" className="space-y-4">
-          {/* Space filter for buildings */}
-          {isBuilding && spaces.length > 0 && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm text-muted-foreground">Filter by room:</span>
-              <Select value={selectedSpaceId || "__all__"} onValueChange={(v) => setSelectedSpaceId(v === "__all__" ? null : v)}>
-                <SelectTrigger className="w-48" data-testid="select-space-filter">
-                  <SelectValue placeholder="All rooms" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All rooms</SelectItem>
-                  {spaces.map((space) => (
-                    <SelectItem key={space.id} value={space.id}>
-                      {space.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap">
-              <Button
-                variant={selectedCategory === null ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(null)}
-                data-testid="filter-all"
-                className="whitespace-nowrap h-8 text-xs md:text-sm"
-              >
-                All ({equipment.length})
-              </Button>
-              {categories.map((cat) => {
-                const count = groupedEquipment[cat]?.length || 0;
-                const Icon = categoryIcons[cat];
-                return (
-                  <Button
-                    key={cat}
-                    variant={selectedCategory === cat ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(cat)}
-                    data-testid={`filter-${cat}`}
-                    className="whitespace-nowrap h-8 text-xs md:text-sm"
-                  >
-                    <Icon className="w-4 h-4 mr-1 shrink-0" />
-                    <span className="hidden sm:inline">{cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})</span>
-                    <span className="sm:hidden">{cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
-                  </Button>
-                );
-              })}
-            </div>
-            {canEdit && (
-              <Button
-                onClick={() => {
-                  setEditingEquipment(null);
-                  form.reset({
-                    propertyId: id || "",
-                    name: "",
-                    category: "other",
-                    description: "",
-                    serialNumber: "",
-                    condition: "",
-                    notes: "",
-                    imageUrl: "",
-                  });
-                  setIsCreateDialogOpen(true);
-                }}
-                data-testid="button-add-equipment"
-                className="w-full sm:w-auto h-9 text-xs md:text-sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Equipment
-              </Button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            {filteredEquipment.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="py-8 md:py-12 text-center text-muted-foreground">
-                  <Wrench className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm md:text-base">No equipment in this category</p>
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingEquipment(null);
-                        form.reset({
-                          propertyId: id || "",
-                          name: "",
-                          category: (selectedCategory as FormData["category"]) || "other",
-                          description: "",
-                          serialNumber: "",
-                          condition: "",
-                          notes: "",
-                          imageUrl: "",
-                        });
-                        setIsCreateDialogOpen(true);
-                      }}
-                      data-testid="button-add-first-equipment"
-                      className="text-xs md:text-sm"
-                    >
-                      Add your first equipment
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              filteredEquipment.map((item) => {
-                const Icon = categoryIcons[item.category];
-                return (
-                  <Card key={item.id} data-testid={`card-equipment-${item.id}`}>
-                    <CardContent className="p-3 md:p-4">
-                      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                        <div className="flex sm:flex-col gap-2 order-2 sm:order-1 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/equipment/${item.id}/work-history`)}
-                            data-testid={`button-work-history-${item.id}`}
-                            className="text-xs whitespace-nowrap flex-1 sm:flex-none h-8"
-                          >
-                            Work History
-                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">{spaceEquipCount} items</span>
                           {canEdit && (
                             <>
                               <Button
-                                size="sm"
                                 variant="ghost"
-                                onClick={() => handleEditEquipment(item)}
-                                data-testid={`button-edit-${item.id}`}
-                                className="justify-start flex-1 sm:flex-none h-8"
+                                size="icon"
+                                onClick={(e) => { e.stopPropagation(); handleEditSpace(space); }}
+                                data-testid={`button-edit-space-${space.id}`}
                               >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
+                                <Edit className="w-3 h-3" />
                               </Button>
                               <Button
-                                size="sm"
                                 variant="ghost"
-                                onClick={() => handleDeleteEquipment(item.id)}
-                                data-testid={`button-delete-${item.id}`}
-                                className="justify-start text-destructive hover:text-destructive flex-1 sm:flex-none h-8"
+                                size="icon"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteSpace(space.id); }}
+                                data-testid={`button-delete-space-${space.id}`}
                               >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
+                                <Trash2 className="w-3 h-3 text-destructive" />
                               </Button>
                             </>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0 order-1 sm:order-2">
-                          <h3 className="text-xl md:text-2xl font-bold mb-2">{item.name}</h3>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Icon className="w-4 h-4" />
-                              <Badge variant="secondary" className="text-xs">
-                                {item.category}
-                              </Badge>
-                            </div>
-                            {item.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {item.description}
-                              </p>
-                            )}
-                            {item.serialNumber && (
-                              <div className="text-xs">
-                                <span className="font-semibold">Serial:</span> {item.serialNumber}
-                              </div>
-                            )}
-                            {item.condition && (
-                              <div className="text-xs">
-                                <span className="font-semibold">Condition:</span> {item.condition}
-                              </div>
-                            )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
+
+        <TabsContent value="equipment" className="flex-1 flex flex-col min-h-0 mt-3">
+          <div className="flex flex-col gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search equipment..."
+                  value={equipmentSearch}
+                  onChange={(e) => setEquipmentSearch(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-equipment"
+                />
+              </div>
+              {isBuilding && spaces.length > 0 && (
+                <Select value={selectedSpaceId || "__all__"} onValueChange={(v) => setSelectedSpaceId(v === "__all__" ? null : v)}>
+                  <SelectTrigger className="w-36" data-testid="select-space-filter">
+                    <SelectValue placeholder="All rooms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All rooms</SelectItem>
+                    {spaces.map((space) => (
+                      <SelectItem key={space.id} value={space.id}>{space.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {canEdit && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingEquipment(null);
+                    form.reset({
+                      propertyId: id || "", name: "", category: "other",
+                      description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
+                    });
+                    setIsCreateDialogOpen(true);
+                  }}
+                  data-testid="button-add-equipment"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-1 overflow-x-auto pb-1 flex-wrap">
+              <Badge
+                variant={selectedCategory === null ? "default" : "secondary"}
+                className="cursor-pointer whitespace-nowrap"
+                onClick={() => setSelectedCategory(null)}
+                data-testid="filter-all"
+              >
+                All ({spaceFilteredEquipment.length})
+              </Badge>
+              {categories.map((cat) => {
+                const count = groupedEquipment[cat]?.length || 0;
+                if (count === 0) return null;
+                const Icon = categoryIcons[cat];
+                return (
+                  <Badge
+                    key={cat}
+                    variant={selectedCategory === cat ? "default" : "secondary"}
+                    className="cursor-pointer whitespace-nowrap gap-1"
+                    onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                    data-testid={`filter-${cat}`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {filteredEquipment.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Wrench className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{equipmentSearch ? "No equipment matches your search" : "No equipment in this category"}</p>
+                {canEdit && !equipmentSearch && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingEquipment(null);
+                      form.reset({
+                        propertyId: id || "", name: "",
+                        category: (selectedCategory as FormData["category"]) || "other",
+                        description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
+                      });
+                      setIsCreateDialogOpen(true);
+                    }}
+                    data-testid="button-add-first-equipment"
+                  >
+                    Add your first equipment
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {filteredEquipment.map((item) => {
+                  const Icon = categoryIcons[item.category];
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 p-2 rounded-md border hover-elevate"
+                      data-testid={`card-equipment-${item.id}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">{item.name}</span>
+                            <Badge variant="secondary">{item.category}</Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {item.serialNumber && <span>SN: {item.serialNumber}</span>}
+                            {item.condition && <span>Condition: {item.condition}</span>}
+                            {item.description && <span className="truncate">{item.description}</span>}
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => navigate(`/equipment/${item.id}/work-history`)}
+                          data-testid={`button-work-history-${item.id}`}
+                        >
+                          <Calendar className="w-3 h-3" />
+                        </Button>
+                        {canEdit && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEditEquipment(item)}
+                              data-testid={`button-edit-${item.id}`}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteEquipment(item.id)}
+                              data-testid={`button-delete-${item.id}`}
+                            >
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="work-history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Task History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No tasks assigned to this property yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {tasks.map((task) => (
-                    <Card key={task.id} className="hover-elevate cursor-pointer" onClick={() => navigate(`/tasks/${task.id}`)}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-sm">{task.name}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              {task.description}
-                            </p>
-                            <div className="flex gap-2 mt-2">
-                              <Badge variant={task.status === "completed" ? "default" : "secondary"} className="text-xs">
-                                {task.status}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {task.urgency}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(task.initialDate).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+        <TabsContent value="work-history" className="flex-1 flex flex-col min-h-0 mt-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={taskSearch}
+                onChange={(e) => setTaskSearch(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-tasks"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {filteredTasks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{taskSearch ? "No tasks match your search" : "No tasks assigned to this property yet"}</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {filteredTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between gap-2 p-2 rounded-md border hover-elevate cursor-pointer"
+                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    data-testid={`row-task-${task.id}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-sm truncate block">{task.name}</span>
+                        {task.description && (
+                          <p className="text-xs text-muted-foreground truncate">{task.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                        {task.status}
+                      </Badge>
+                      <Badge variant="outline">
+                        {task.urgency}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(task.initialDate).toLocaleDateString()}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="location" className="flex-1 min-h-0 mt-3">
+          <Card className="relative z-0 h-full" style={{ minHeight: "400px" }}>
+            <CardContent className="p-0 h-full">
+              <PropertyMap
+                properties={[property]}
+                selectedPropertyId={property.id}
+                editable={false}
+              />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Map - Now at the bottom */}
-      <Card className="relative z-0" style={{ height: "400px" }}>
-        <CardHeader>
-          <CardTitle className="text-lg">Location</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 h-[calc(100%-4rem)]">
-          <PropertyMap
-            properties={[property]}
-            selectedPropertyId={property.id}
-            editable={false}
-          />
-        </CardContent>
-      </Card>
-
       <Dialog open={isEditPropertyDialogOpen} onOpenChange={setIsEditPropertyDialogOpen}>
         <DialogContent className="z-50">
           <DialogHeader>
             <DialogTitle>Edit Property</DialogTitle>
-            <DialogDescription>
-              Update property information
-            </DialogDescription>
+            <DialogDescription>Update property information</DialogDescription>
           </DialogHeader>
           <Form {...propertyForm}>
             <form onSubmit={propertyForm.handleSubmit(onPropertySubmit)} className="space-y-4">
@@ -901,7 +833,6 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={propertyForm.control}
                 name="type"
@@ -928,7 +859,6 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={propertyForm.control}
                 name="address"
@@ -936,35 +866,15 @@ export default function PropertyDetail() {
                   <FormItem>
                     <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="123 Main St"
-                        data-testid="input-property-address"
-                      />
+                      <Textarea {...field} value={field.value || ""} placeholder="123 Main St" data-testid="input-property-address" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditPropertyDialogOpen(false);
-                    propertyForm.reset();
-                  }}
-                  data-testid="button-cancel-property"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updatePropertyMutation.isPending}
-                  data-testid="button-submit-property"
-                >
+                <Button type="button" variant="outline" onClick={() => { setIsEditPropertyDialogOpen(false); propertyForm.reset(); }} data-testid="button-cancel-property">Cancel</Button>
+                <Button type="submit" disabled={updatePropertyMutation.isPending} data-testid="button-submit-property">
                   {updatePropertyMutation.isPending ? "Updating..." : "Update Property"}
                 </Button>
               </DialogFooter>
@@ -976,13 +886,9 @@ export default function PropertyDetail() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingEquipment ? "Edit Equipment" : "Add Equipment"}
-            </DialogTitle>
+            <DialogTitle>{editingEquipment ? "Edit Equipment" : "Add Equipment"}</DialogTitle>
             <DialogDescription>
-              {editingEquipment
-                ? "Update equipment information"
-                : "Add new equipment to this property"}
+              {editingEquipment ? "Update equipment information" : "Add new equipment to this property"}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -1000,7 +906,6 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="category"
@@ -1028,7 +933,6 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="description"
@@ -1036,18 +940,12 @@ export default function PropertyDetail() {
                   <FormItem>
                     <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Detailed description of the equipment"
-                        data-testid="input-equipment-description"
-                      />
+                      <Textarea {...field} value={field.value || ""} placeholder="Detailed description of the equipment" data-testid="input-equipment-description" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -1056,18 +954,12 @@ export default function PropertyDetail() {
                     <FormItem>
                       <FormLabel>Serial Number (Optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value || ""}
-                          placeholder="SN-12345"
-                          data-testid="input-serial-number"
-                        />
+                        <Input {...field} value={field.value || ""} placeholder="SN-12345" data-testid="input-serial-number" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="condition"
@@ -1075,19 +967,13 @@ export default function PropertyDetail() {
                     <FormItem>
                       <FormLabel>Condition (Optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value || ""}
-                          placeholder="Good, Fair, Poor"
-                          data-testid="input-condition"
-                        />
+                        <Input {...field} value={field.value || ""} placeholder="Good, Fair, Poor" data-testid="input-condition" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-
               <FormField
                 control={form.control}
                 name="notes"
@@ -1095,18 +981,12 @@ export default function PropertyDetail() {
                   <FormItem>
                     <FormLabel>Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Additional notes"
-                        data-testid="input-notes"
-                      />
+                      <Textarea {...field} value={field.value || ""} placeholder="Additional notes" data-testid="input-notes" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <DialogFooter>
                 <Button
                   type="button"
@@ -1115,25 +995,13 @@ export default function PropertyDetail() {
                     setIsCreateDialogOpen(false);
                     setEditingEquipment(null);
                     form.reset({
-                      propertyId: id || "",
-                      name: "",
-                      category: "other",
-                      description: "",
-                      serialNumber: "",
-                      condition: "",
-                      notes: "",
-                      imageUrl: "",
+                      propertyId: id || "", name: "", category: "other",
+                      description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
                     });
                   }}
                   data-testid="button-cancel-equipment"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createEquipmentMutation.isPending || updateEquipmentMutation.isPending}
-                  data-testid="button-submit-equipment"
-                >
+                >Cancel</Button>
+                <Button type="submit" disabled={createEquipmentMutation.isPending || updateEquipmentMutation.isPending} data-testid="button-submit-equipment">
                   {editingEquipment ? "Update Equipment" : "Add Equipment"}
                 </Button>
               </DialogFooter>
@@ -1142,7 +1010,6 @@ export default function PropertyDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Space Dialog for Buildings */}
       <Dialog open={isSpaceDialogOpen} onOpenChange={(open) => {
         setIsSpaceDialogOpen(open);
         if (!open) {
@@ -1153,9 +1020,7 @@ export default function PropertyDetail() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingSpace ? "Edit Room/Space" : "Add Room/Space"}</DialogTitle>
-            <DialogDescription>
-              Add rooms, offices, classrooms, or other spaces within this building.
-            </DialogDescription>
+            <DialogDescription>Add rooms, offices, classrooms, or other spaces within this building.</DialogDescription>
           </DialogHeader>
           <Form {...spaceForm}>
             <form onSubmit={spaceForm.handleSubmit(onSpaceSubmit)} className="space-y-4">
@@ -1172,7 +1037,6 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={spaceForm.control}
                 name="floor"
@@ -1186,7 +1050,6 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={spaceForm.control}
                 name="description"
@@ -1200,25 +1063,9 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
-
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsSpaceDialogOpen(false);
-                    setEditingSpace(null);
-                    spaceForm.reset({ propertyId: id || "" });
-                  }}
-                  data-testid="button-cancel-space"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createSpaceMutation.isPending || updateSpaceMutation.isPending}
-                  data-testid="button-submit-space"
-                >
+                <Button type="button" variant="outline" onClick={() => { setIsSpaceDialogOpen(false); setEditingSpace(null); spaceForm.reset({ propertyId: id || "" }); }} data-testid="button-cancel-space">Cancel</Button>
+                <Button type="submit" disabled={createSpaceMutation.isPending || updateSpaceMutation.isPending} data-testid="button-submit-space">
                   {editingSpace ? "Update" : "Add Space"}
                 </Button>
               </DialogFooter>
