@@ -68,15 +68,13 @@ async function isEmailEnabled(type: string): Promise<boolean> {
   }
 }
 
-async function getTemplateForType(type: string): Promise<{ subject: string; body: string } | null> {
+async function getTemplatesForTrigger(trigger: string): Promise<{ subject: string; body: string }[]> {
   try {
-    const template = await storage.getEmailTemplateByType(type);
-    if (template) {
-      return { subject: template.subject, body: template.body };
-    }
+    const templates = await storage.getEmailTemplatesByTrigger(trigger);
+    return templates.map(t => ({ subject: t.subject, body: t.body }));
   } catch {
+    return [];
   }
-  return null;
 }
 
 async function logEmail(
@@ -176,34 +174,35 @@ class ProductionNotificationService implements NotificationService {
 
 async function sendTrackedEmail(
   ns: NotificationService,
-  templateType: string,
+  trigger: string,
   to: string,
   recipientName: string | null,
-  subject: string,
-  body: string,
+  fallbackSubject: string,
+  fallbackBody: string,
   variables: Record<string, string>
 ): Promise<void> {
-  const enabled = await isEmailEnabled(templateType);
+  const enabled = await isEmailEnabled(trigger);
   if (!enabled) {
-    await logEmail(templateType, to, recipientName, subject, body, "skipped");
-    console.log(`[EMAIL] Skipped (disabled): ${templateType} to ${to}`);
+    await logEmail(trigger, to, recipientName, fallbackSubject, fallbackBody, "skipped");
+    console.log(`[EMAIL] Skipped (disabled): ${trigger} to ${to}`);
     return;
   }
 
-  const template = await getTemplateForType(templateType);
-  let finalSubject = subject;
-  let finalBody = body;
+  const dbTemplates = await getTemplatesForTrigger(trigger);
+  const templatesToSend = dbTemplates.length > 0
+    ? dbTemplates.map(t => ({
+        subject: substituteVariables(t.subject, variables),
+        body: substituteVariables(t.body, variables),
+      }))
+    : [{ subject: substituteVariables(fallbackSubject, variables), body: substituteVariables(fallbackBody, variables) }];
 
-  if (template) {
-    finalSubject = substituteVariables(template.subject, variables);
-    finalBody = substituteVariables(template.body, variables);
-  }
-
-  try {
-    await ns.sendEmail(to, finalSubject, finalBody);
-    await logEmail(templateType, to, recipientName, finalSubject, finalBody, "sent");
-  } catch (error: any) {
-    await logEmail(templateType, to, recipientName, finalSubject, finalBody, "failed", error?.message || "Unknown error");
+  for (const tmpl of templatesToSend) {
+    try {
+      await ns.sendEmail(to, tmpl.subject, tmpl.body);
+      await logEmail(trigger, to, recipientName, tmpl.subject, tmpl.body, "sent");
+    } catch (error: any) {
+      await logEmail(trigger, to, recipientName, tmpl.subject, tmpl.body, "failed", error?.message || "Unknown error");
+    }
   }
 }
 

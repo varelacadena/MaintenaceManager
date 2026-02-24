@@ -1030,24 +1030,15 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 // EMAIL MANAGEMENT SYSTEM
 // ============================================================================
 
-export const emailTemplateTypeEnum = pgEnum("email_template_type", [
-  "new_service_request",
-  "new_vehicle_reservation",
-  "vehicle_reservation_approved",
-  "task_created",
-  "task_assigned",
-  "status_change",
-  "task_reminder",
-  "document_expiration",
-]);
-
 export const emailTemplates = pgTable("email_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: emailTemplateTypeEnum("email_template_type").notNull().unique(),
+  type: varchar("type", { length: 100 }).notNull(),
+  trigger: varchar("trigger", { length: 100 }),
   name: varchar("name", { length: 200 }).notNull(),
   subject: varchar("subject", { length: 500 }).notNull(),
   body: text("body").notNull(),
   availableVariables: text("available_variables").array(),
+  isCustom: boolean("is_custom").notNull().default(false),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
