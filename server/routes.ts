@@ -782,10 +782,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filters: any = {};
 
       // Role-based filtering
-      if (currentUser?.role === "staff") {
+      if (currentUser?.role === "staff" || currentUser?.role === "technician" || currentUser?.role === "student") {
         filters.userId = userId; // Only see own requests
       }
-      // Admin and maintenance see all requests
+      // Admin sees all requests
 
       // Optional status filter
       if (req.query.status) {
@@ -813,8 +813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Request not found" });
         }
 
-        // Staff can only view their own requests, admin and maintenance can view all
-        if (currentUser?.role === "staff" && request.requesterId !== userId) {
+        // Non-admin roles can only view their own requests
+        if (["staff", "technician", "student"].includes(currentUser?.role ?? "") && request.requesterId !== userId) {
           return res.status(403).json({ message: "Forbidden: Cannot view this request" });
         }
 

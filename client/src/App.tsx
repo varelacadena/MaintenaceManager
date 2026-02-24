@@ -162,13 +162,13 @@ function AuthenticatedApp() {
 
                 {/* Protected routes - check user role and redirect students */}
                 <Route path="/requests" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff"]}><Requests /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><Requests /></RoleGuard>
                 )} />
                 <Route path="/requests/:id" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician"]}><RequestDetail /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><RequestDetail /></RoleGuard>
                 )} />
                 <Route path="/new-request" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff"]}><NewRequest /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><NewRequest /></RoleGuard>
                 )} />
                 <Route path="/calendar" component={() => (
                   <RoleGuard allowedRoles={["admin", "technician"]}><Calendar /></RoleGuard>
@@ -205,20 +205,20 @@ function AuthenticatedApp() {
                   <RoleGuard allowedRoles={["admin"]}><VehicleEdit /></RoleGuard>
                 )} />
                 <Route path="/my-reservations" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff"]}><MyReservations /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><MyReservations /></RoleGuard>
                 )} />
                 <Route path="/vehicle-reservations" component={() => {
                   window.location.replace("/vehicles?tab=reservations");
                   return null;
                 }} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff"]}><VehicleReservationDetails /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleReservationDetails /></RoleGuard>
                 )} />
                 <Route path="/vehicle-checkout/:reservationId" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff"]}><VehicleCheckOut /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckOut /></RoleGuard>
                 )} />
                 <Route path="/vehicle-checkin/:checkOutLogId" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff"]}><VehicleCheckIn /></RoleGuard>
+                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckIn /></RoleGuard>
                 )} />
                 <Route path="/vehicle-checkin-verify/:checkInLogId" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><VehicleCheckInVerification /></RoleGuard>

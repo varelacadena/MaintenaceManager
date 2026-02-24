@@ -56,6 +56,9 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
+    { title: "My Requests", url: "/requests", icon: ClipboardList },
+    { title: "New Request", url: "/new-request", icon: Wrench },
+    { title: "My Reservations", url: "/my-reservations", icon: Car },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
@@ -69,6 +72,9 @@ const roleMenus = {
   ],
   student: [
     { title: "My Tasks", url: "/work", icon: ClipboardList },
+    { title: "My Requests", url: "/requests", icon: ClipboardList },
+    { title: "New Request", url: "/new-request", icon: Wrench },
+    { title: "My Reservations", url: "/my-reservations", icon: Car },
     { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
