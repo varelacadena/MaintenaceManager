@@ -1104,18 +1104,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Task not found" });
         }
         
-        // Technicians can only update technician tasks assigned to them
+        // Technicians can only update tasks directly assigned to them, or technician-type tasks in the technician pool
         if (currentUser.role === "technician") {
-          if (task.executorType !== "technician" || 
-              (task.assignedToId !== userId && task.assignedPool !== "technician_pool")) {
+          const directlyAssigned = task.assignedToId === userId;
+          const inPool = task.executorType === "technician" && task.assignedPool === "technician_pool";
+          if (!directlyAssigned && !inPool) {
             return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
           }
         }
         
-        // Students can only update student tasks assigned to them
+        // Students can only update tasks directly assigned to them, or student-type tasks in the student pool
         if (currentUser.role === "student") {
-          if (task.executorType !== "student" || 
-              (task.assignedToId !== userId && task.assignedPool !== "student_pool")) {
+          const directlyAssigned = task.assignedToId === userId;
+          const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
+          if (!directlyAssigned && !inPool) {
             return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
           }
           // Students cannot reassign tasks
