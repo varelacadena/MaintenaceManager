@@ -41,6 +41,7 @@ import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
 import NotificationsWidget from "./components/NotificationsWidget";
 import ProjectDetail from "./pages/ProjectDetail";
+import EmailManagement from "./pages/EmailManagement";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 
 function AuthenticatedApp() {
@@ -235,6 +236,9 @@ function AuthenticatedApp() {
                 }} />
                 <Route path="/projects/:id" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><ProjectDetail /></RoleGuard>
+                )} />
+                <Route path="/email-management" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><EmailManagement /></RoleGuard>
                 )} />
                 <Route component={NotFound} />
               </Switch>

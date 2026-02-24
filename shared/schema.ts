@@ -1027,6 +1027,79 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 }));
 
 // ============================================================================
+// EMAIL MANAGEMENT SYSTEM
+// ============================================================================
+
+export const emailTemplateTypeEnum = pgEnum("email_template_type", [
+  "new_service_request",
+  "new_vehicle_reservation",
+  "vehicle_reservation_approved",
+  "task_created",
+  "task_assigned",
+  "status_change",
+  "task_reminder",
+  "document_expiration",
+]);
+
+export const emailTemplates = pgTable("email_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: emailTemplateTypeEnum("email_template_type").notNull().unique(),
+  name: varchar("name", { length: 200 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body").notNull(),
+  availableVariables: text("available_variables").array(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+
+export const emailLogStatusEnum = pgEnum("email_log_status", [
+  "sent",
+  "failed",
+  "skipped",
+]);
+
+export const emailLogs = pgTable("email_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateType: varchar("template_type", { length: 100 }).notNull(),
+  recipientEmail: varchar("recipient_email", { length: 300 }).notNull(),
+  recipientName: varchar("recipient_name", { length: 200 }),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body").notNull(),
+  status: emailLogStatusEnum("email_log_status").notNull().default("sent"),
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at").defaultNow(),
+});
+
+export const insertEmailLogSchema = createInsertSchema(emailLogs).omit({
+  id: true,
+  sentAt: true,
+});
+export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
+export type EmailLog = typeof emailLogs.$inferSelect;
+
+export const notificationSettings = pgTable("notification_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 100 }).notNull().unique(),
+  label: varchar("label", { length: 200 }).notNull(),
+  emailEnabled: boolean("email_enabled").notNull().default(true),
+  inAppEnabled: boolean("in_app_enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertNotificationSettingSchema = createInsertSchema(notificationSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertNotificationSetting = z.infer<typeof insertNotificationSettingSchema>;
+export type NotificationSetting = typeof notificationSettings.$inferSelect;
+
+// ============================================================================
 // PROJECT MANAGEMENT SYSTEM
 // ============================================================================
 

@@ -81,6 +81,13 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
   - New service request submitted → email to all admin users
   - New vehicle reservation submitted → email to all admin users
   - Vehicle reservation approved → confirmation email to the requestor with online pickup instructions
+- **Email Management (`/email-management`, admin only):** Three-tab interface:
+  - Templates tab: View and edit plain text email templates with {{variable}} placeholders (8 template types)
+  - Settings tab: Toggle email and in-app notifications per notification type
+  - Logs tab: Searchable email history with status indicators (sent/failed/skipped), filterable by type and status
+  - Database tables: `email_templates`, `email_logs`, `notification_settings`
+  - All email sends check notification settings before sending; disabled emails are logged as "skipped"
+  - Templates use variable substitution (e.g., {{requester_name}}, {{request_title}})
 - **Property Mapping:** Tools for mapping and managing campus properties.
 - **Reporting & Analytics:** Consolidated analytics module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
 - **Unified Work Page:** Tasks and projects are consolidated into a single "Work" page (`/work`) replacing the separate Tasks and Projects pages:

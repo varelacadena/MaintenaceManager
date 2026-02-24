@@ -32,6 +32,9 @@ import {
   projectVendors,
   quotes,
   quoteAttachments,
+  emailTemplates,
+  emailLogs,
+  notificationSettings,
   type User,
   type UpsertUser,
   type Vendor,
@@ -98,6 +101,12 @@ import {
   type InsertQuote,
   type QuoteAttachment,
   type InsertQuoteAttachment,
+  type EmailTemplate,
+  type InsertEmailTemplate,
+  type EmailLog,
+  type InsertEmailLog,
+  type NotificationSetting,
+  type InsertNotificationSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -393,6 +402,23 @@ export interface IStorage {
   getQuoteAttachments(quoteId: string): Promise<QuoteAttachment[]>;
   createQuoteAttachment(attachment: InsertQuoteAttachment): Promise<QuoteAttachment>;
   deleteQuoteAttachment(id: string): Promise<void>;
+
+  // Email template operations
+  getEmailTemplates(): Promise<EmailTemplate[]>;
+  getEmailTemplate(id: string): Promise<EmailTemplate | undefined>;
+  getEmailTemplateByType(type: string): Promise<EmailTemplate | undefined>;
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  updateEmailTemplate(id: string, data: { subject?: string; body?: string }): Promise<EmailTemplate | undefined>;
+
+  // Email log operations
+  getEmailLogs(filters?: { templateType?: string; status?: string; search?: string }): Promise<EmailLog[]>;
+  createEmailLog(log: InsertEmailLog): Promise<EmailLog>;
+
+  // Notification settings operations
+  getNotificationSettings(): Promise<NotificationSetting[]>;
+  getNotificationSetting(type: string): Promise<NotificationSetting | undefined>;
+  upsertNotificationSetting(setting: InsertNotificationSetting): Promise<NotificationSetting>;
+  updateNotificationSetting(id: string, data: { emailEnabled?: boolean; inAppEnabled?: boolean }): Promise<NotificationSetting | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2146,6 +2172,104 @@ export class DatabaseStorage implements IStorage {
 
   async deleteQuoteAttachment(id: string): Promise<void> {
     await this.db.delete(quoteAttachments).where(eq(quoteAttachments.id, id));
+  }
+
+  // Email template operations
+  async getEmailTemplates(): Promise<EmailTemplate[]> {
+    return await this.db.select().from(emailTemplates).orderBy(emailTemplates.name);
+  }
+
+  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> {
+    const [template] = await this.db.select().from(emailTemplates).where(eq(emailTemplates.id, id));
+    return template;
+  }
+
+  async getEmailTemplateByType(type: string): Promise<EmailTemplate | undefined> {
+    const [template] = await this.db.select().from(emailTemplates).where(eq(emailTemplates.type, type as any));
+    return template;
+  }
+
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [created] = await this.db
+      .insert(emailTemplates)
+      .values(template)
+      .onConflictDoUpdate({
+        target: emailTemplates.type,
+        set: { ...template, updatedAt: new Date() },
+      })
+      .returning();
+    return created;
+  }
+
+  async updateEmailTemplate(id: string, data: { subject?: string; body?: string }): Promise<EmailTemplate | undefined> {
+    const [updated] = await this.db
+      .update(emailTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(emailTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Email log operations
+  async getEmailLogs(filters?: { templateType?: string; status?: string; search?: string }): Promise<EmailLog[]> {
+    const conditions = [];
+    if (filters?.templateType) {
+      conditions.push(eq(emailLogs.templateType, filters.templateType));
+    }
+    if (filters?.status) {
+      conditions.push(eq(emailLogs.status, filters.status as any));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          sql`${emailLogs.recipientEmail} ILIKE ${'%' + filters.search + '%'}`,
+          sql`${emailLogs.recipientName} ILIKE ${'%' + filters.search + '%'}`,
+          sql`${emailLogs.subject} ILIKE ${'%' + filters.search + '%'}`
+        )
+      );
+    }
+
+    const query = this.db.select().from(emailLogs);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(emailLogs.sentAt)).limit(200);
+    }
+    return await query.orderBy(desc(emailLogs.sentAt)).limit(200);
+  }
+
+  async createEmailLog(log: InsertEmailLog): Promise<EmailLog> {
+    const [created] = await this.db.insert(emailLogs).values(log).returning();
+    return created;
+  }
+
+  // Notification settings operations
+  async getNotificationSettings(): Promise<NotificationSetting[]> {
+    return await this.db.select().from(notificationSettings).orderBy(notificationSettings.label);
+  }
+
+  async getNotificationSetting(type: string): Promise<NotificationSetting | undefined> {
+    const [setting] = await this.db.select().from(notificationSettings).where(eq(notificationSettings.type, type));
+    return setting;
+  }
+
+  async upsertNotificationSetting(setting: InsertNotificationSetting): Promise<NotificationSetting> {
+    const [created] = await this.db
+      .insert(notificationSettings)
+      .values(setting)
+      .onConflictDoUpdate({
+        target: notificationSettings.type,
+        set: { ...setting, updatedAt: new Date() },
+      })
+      .returning();
+    return created;
+  }
+
+  async updateNotificationSetting(id: string, data: { emailEnabled?: boolean; inAppEnabled?: boolean }): Promise<NotificationSetting | undefined> {
+    const [updated] = await this.db
+      .update(notificationSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(notificationSettings.id, id))
+      .returning();
+    return updated;
   }
 }
 

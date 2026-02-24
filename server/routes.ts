@@ -4307,6 +4307,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============== EMAIL MANAGEMENT ==============
+
+  app.get("/api/email-templates", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const templates = await storage.getEmailTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching email templates:", error);
+      res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
+  app.patch("/api/email-templates/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { subject, body } = req.body;
+      const template = await storage.updateEmailTemplate(req.params.id, { subject, body });
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating email template:", error);
+      res.status(500).json({ message: "Failed to update email template" });
+    }
+  });
+
+  app.get("/api/email-logs", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { templateType, status, search } = req.query;
+      const logs = await storage.getEmailLogs({
+        templateType: templateType as string | undefined,
+        status: status as string | undefined,
+        search: search as string | undefined,
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching email logs:", error);
+      res.status(500).json({ message: "Failed to fetch email logs" });
+    }
+  });
+
+  app.get("/api/notification-settings", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getNotificationSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+      res.status(500).json({ message: "Failed to fetch notification settings" });
+    }
+  });
+
+  app.patch("/api/notification-settings/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { emailEnabled, inAppEnabled } = req.body;
+      const setting = await storage.updateNotificationSetting(req.params.id, { emailEnabled, inAppEnabled });
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      console.error("Error updating notification setting:", error);
+      res.status(500).json({ message: "Failed to update notification setting" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

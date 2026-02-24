@@ -26,6 +26,7 @@ import {
   Car,
   BarChart3,
   FolderKanban,
+  Mail,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -50,6 +51,7 @@ const roleMenus = {
     { title: "Users", url: "/users", icon: Users },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
+    { title: "Email", url: "/email-management", icon: Mail },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   technician: [

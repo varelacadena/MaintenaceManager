@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { storage } from './storage';
 import type { User, ServiceRequest, VehicleReservation } from "@shared/schema";
 
 function formatDate(d: Date | string | null | undefined): string {
@@ -8,7 +9,6 @@ function formatDate(d: Date | string | null | undefined): string {
   return date.toLocaleString();
 }
 
-// Resend integration via Replit connector
 let connectionSettings: any;
 
 async function getCredentials() {
@@ -51,6 +51,58 @@ async function getUncachableResendClient() {
   };
 }
 
+function substituteVariables(template: string, variables: Record<string, string>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+  }
+  return result;
+}
+
+async function isEmailEnabled(type: string): Promise<boolean> {
+  try {
+    const setting = await storage.getNotificationSetting(type);
+    return setting ? setting.emailEnabled : true;
+  } catch {
+    return true;
+  }
+}
+
+async function getTemplateForType(type: string): Promise<{ subject: string; body: string } | null> {
+  try {
+    const template = await storage.getEmailTemplateByType(type);
+    if (template) {
+      return { subject: template.subject, body: template.body };
+    }
+  } catch {
+  }
+  return null;
+}
+
+async function logEmail(
+  templateType: string,
+  recipientEmail: string,
+  recipientName: string | null,
+  subject: string,
+  body: string,
+  status: "sent" | "failed" | "skipped",
+  errorMessage?: string
+): Promise<void> {
+  try {
+    await storage.createEmailLog({
+      templateType,
+      recipientEmail,
+      recipientName,
+      subject,
+      body,
+      status,
+      errorMessage: errorMessage || null,
+    });
+  } catch (err) {
+    console.error("[EMAIL LOG] Failed to log email:", err);
+  }
+}
+
 export interface NotificationService {
   sendEmail(to: string, subject: string, body: string): Promise<void>;
   sendSMS(to: string, message: string): Promise<void>;
@@ -82,6 +134,7 @@ class ProductionNotificationService implements NotificationService {
     } catch (error) {
       console.error(`[EMAIL] Failed to send email to ${to} (subject: "${subject}"):`, error);
       console.log(`[EMAIL FALLBACK] To: ${to}, Subject: ${subject}, Body: ${body}`);
+      throw error;
     }
   }
 
@@ -121,22 +174,61 @@ class ProductionNotificationService implements NotificationService {
   }
 }
 
+async function sendTrackedEmail(
+  ns: NotificationService,
+  templateType: string,
+  to: string,
+  recipientName: string | null,
+  subject: string,
+  body: string,
+  variables: Record<string, string>
+): Promise<void> {
+  const enabled = await isEmailEnabled(templateType);
+  if (!enabled) {
+    await logEmail(templateType, to, recipientName, subject, body, "skipped");
+    console.log(`[EMAIL] Skipped (disabled): ${templateType} to ${to}`);
+    return;
+  }
+
+  const template = await getTemplateForType(templateType);
+  let finalSubject = subject;
+  let finalBody = body;
+
+  if (template) {
+    finalSubject = substituteVariables(template.subject, variables);
+    finalBody = substituteVariables(template.body, variables);
+  }
+
+  try {
+    await ns.sendEmail(to, finalSubject, finalBody);
+    await logEmail(templateType, to, recipientName, finalSubject, finalBody, "sent");
+  } catch (error: any) {
+    await logEmail(templateType, to, recipientName, finalSubject, finalBody, "failed", error?.message || "Unknown error");
+  }
+}
+
 export async function notifyTaskCreated(
   request: ServiceRequest,
   requester: User,
   assignees: User[],
   notificationService: NotificationService
 ): Promise<void> {
+  const variables: Record<string, string> = {
+    '{{requester_name}}': `${requester.firstName} ${requester.lastName}`,
+    '{{request_title}}': request.title,
+    '{{request_description}}': request.description,
+    '{{urgency}}': request.urgency,
+  };
+
+  const fallbackSubject = `New Maintenance Request: ${request.title}`;
+  const fallbackBody = `A new maintenance request has been submitted by ${requester.firstName} ${requester.lastName}.\n\nTitle: ${request.title}\nDescription: ${request.description}\nUrgency: ${request.urgency}\n\nPlease review and assign this request.`;
+
   for (const assignee of assignees) {
     if (assignee.email) {
-      await notificationService.sendEmail(
-        assignee.email,
-        `New Maintenance Request: ${request.title}`,
-        `A new maintenance request has been submitted by ${requester.firstName} ${requester.lastName}.\n\n` +
-        `Title: ${request.title}\n` +
-        `Description: ${request.description}\n` +
-        `Urgency: ${request.urgency}\n\n` +
-        `Please review and assign this request.`
+      await sendTrackedEmail(
+        notificationService, "task_created", assignee.email,
+        `${assignee.firstName} ${assignee.lastName}`,
+        fallbackSubject, fallbackBody, variables
       );
     }
 
@@ -165,14 +257,21 @@ export async function notifyStatusChange(
 
   const message = statusMessages[newStatus] || `status has changed to ${newStatus}`;
 
+  const variables: Record<string, string> = {
+    '{{request_title}}': request.title,
+    '{{status_message}}': message,
+    '{{old_status}}': oldStatus,
+    '{{new_status}}': newStatus,
+  };
+
+  const fallbackSubject = `Status Update: ${request.title}`;
+  const fallbackBody = `Your maintenance request "${request.title}" ${message}.\n\nPrevious Status: ${oldStatus}\nNew Status: ${newStatus}\n\nYou can view the details and updates in the maintenance portal.`;
+
   if (requester.email) {
-    await notificationService.sendEmail(
-      requester.email,
-      `Status Update: ${request.title}`,
-      `Your maintenance request "${request.title}" ${message}.\n\n` +
-      `Previous Status: ${oldStatus}\n` +
-      `New Status: ${newStatus}\n\n` +
-      `You can view the details and updates in the maintenance portal.`
+    await sendTrackedEmail(
+      notificationService, "status_change", requester.email,
+      `${requester.firstName} ${requester.lastName}`,
+      fallbackSubject, fallbackBody, variables
     );
   }
 
@@ -189,15 +288,20 @@ export async function notifyTaskAssigned(
   assignedTo: User,
   notificationService: NotificationService
 ): Promise<void> {
+  const variables: Record<string, string> = {
+    '{{request_title}}': request.title,
+    '{{request_description}}': request.description,
+    '{{urgency}}': request.urgency,
+  };
+
+  const fallbackSubject = `Task Assigned: ${request.title}`;
+  const fallbackBody = `You have been assigned to work on a maintenance request.\n\nTitle: ${request.title}\nDescription: ${request.description}\nUrgency: ${request.urgency}\n\nPlease review the task details and update the status as you progress.`;
+
   if (assignedTo.email) {
-    await notificationService.sendEmail(
-      assignedTo.email,
-      `Task Assigned: ${request.title}`,
-      `You have been assigned to work on a maintenance request.\n\n` +
-      `Title: ${request.title}\n` +
-      `Description: ${request.description}\n` +
-      `Urgency: ${request.urgency}\n\n` +
-      `Please review the task details and update the status as you progress.`
+    await sendTrackedEmail(
+      notificationService, "task_assigned", assignedTo.email,
+      `${assignedTo.firstName} ${assignedTo.lastName}`,
+      fallbackSubject, fallbackBody, variables
     );
   }
 
@@ -215,17 +319,22 @@ export async function notifyNewServiceRequest(
   admins: User[],
   ns: NotificationService
 ): Promise<void> {
+  const variables: Record<string, string> = {
+    '{{requester_name}}': `${requester.firstName} ${requester.lastName}`,
+    '{{request_title}}': request.title,
+    '{{request_description}}': request.description,
+    '{{urgency}}': request.urgency,
+  };
+
+  const fallbackSubject = `New Service Request: ${request.title}`;
+  const fallbackBody = `A new service request has been submitted.\n\nSubmitted by: ${requester.firstName} ${requester.lastName}\nTitle: ${request.title}\nDescription: ${request.description}\nUrgency: ${request.urgency}\n\nPlease review and take action on this request in the maintenance portal.`;
+
   for (const admin of admins) {
     if (admin.email) {
-      await ns.sendEmail(
-        admin.email,
-        `New Service Request: ${request.title}`,
-        `A new service request has been submitted.\n\n` +
-        `Submitted by: ${requester.firstName} ${requester.lastName}\n` +
-        `Title: ${request.title}\n` +
-        `Description: ${request.description}\n` +
-        `Urgency: ${request.urgency}\n\n` +
-        `Please review and take action on this request in the maintenance portal.`
+      await sendTrackedEmail(
+        ns, "new_service_request", admin.email,
+        `${admin.firstName} ${admin.lastName}`,
+        fallbackSubject, fallbackBody, variables
       );
     }
   }
@@ -241,18 +350,23 @@ export async function notifyNewVehicleReservation(
   const startDate = formatDate(reservation.startDate);
   const endDate = formatDate(reservation.endDate);
 
+  const variables: Record<string, string> = {
+    '{{requester_name}}': `${requester.firstName} ${requester.lastName}`,
+    '{{vehicle_name}}': vehicleName,
+    '{{purpose}}': reservation.purpose,
+    '{{start_date}}': startDate,
+    '{{end_date}}': endDate,
+  };
+
+  const fallbackSubject = `New Vehicle Reservation Request`;
+  const fallbackBody = `A new vehicle reservation has been submitted.\n\nRequested by: ${requester.firstName} ${requester.lastName}\nVehicle: ${vehicleName}\nPurpose: ${reservation.purpose}\nStart: ${startDate}\nEnd: ${endDate}\n\nPlease review and approve or deny this reservation in the maintenance portal.`;
+
   for (const admin of admins) {
     if (admin.email) {
-      await ns.sendEmail(
-        admin.email,
-        `New Vehicle Reservation Request`,
-        `A new vehicle reservation has been submitted.\n\n` +
-        `Requested by: ${requester.firstName} ${requester.lastName}\n` +
-        `Vehicle: ${vehicleName}\n` +
-        `Purpose: ${reservation.purpose}\n` +
-        `Start: ${startDate}\n` +
-        `End: ${endDate}\n\n` +
-        `Please review and approve or deny this reservation in the maintenance portal.`
+      await sendTrackedEmail(
+        ns, "new_vehicle_reservation", admin.email,
+        `${admin.firstName} ${admin.lastName}`,
+        fallbackSubject, fallbackBody, variables
       );
     }
   }
@@ -269,21 +383,20 @@ export async function notifyVehicleReservationApproved(
   const startDate = formatDate(reservation.startDate);
   const endDate = formatDate(reservation.endDate);
 
-  await ns.sendEmail(
-    requester.email,
-    `Vehicle Reservation Approved - ${vehicleName}`,
-    `Your vehicle reservation has been approved!\n\n` +
-    `Vehicle: ${vehicleName}\n` +
-    `Start: ${startDate}\n` +
-    `End: ${endDate}\n` +
-    `Purpose: ${reservation.purpose}\n\n` +
-    `Next Steps:\n` +
-    `Please complete the pickup process online through the maintenance portal before your reservation start time.\n` +
-    `1. Log in to the maintenance portal\n` +
-    `2. Go to your Vehicle Reservations\n` +
-    `3. Review the reservation details and complete any required forms\n` +
-    `4. Confirm your pickup time\n\n` +
-    `If you have any questions, please contact the administration office.`
+  const variables: Record<string, string> = {
+    '{{vehicle_name}}': vehicleName,
+    '{{start_date}}': startDate,
+    '{{end_date}}': endDate,
+    '{{purpose}}': reservation.purpose,
+  };
+
+  const fallbackSubject = `Vehicle Reservation Approved - ${vehicleName}`;
+  const fallbackBody = `Your vehicle reservation has been approved!\n\nVehicle: ${vehicleName}\nStart: ${startDate}\nEnd: ${endDate}\nPurpose: ${reservation.purpose}\n\nNext Steps:\nPlease complete the pickup process online through the maintenance portal before your reservation start time.\n1. Log in to the maintenance portal\n2. Go to your Vehicle Reservations\n3. Review the reservation details and complete any required forms\n4. Confirm your pickup time\n\nIf you have any questions, please contact the administration office.`;
+
+  await sendTrackedEmail(
+    ns, "vehicle_reservation_approved", requester.email,
+    `${requester.firstName} ${requester.lastName}`,
+    fallbackSubject, fallbackBody, variables
   );
 }
 
