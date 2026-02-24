@@ -136,6 +136,13 @@ The platform uses Replit Object Storage for secure file uploads (photos, documen
 - **Mock File Handling:** Files uploaded before Object Storage was properly configured have mock URLs and display as "Unavailable" - these files cannot be recovered.
 - **Environment Variables:** Requires `DEFAULT_OBJECT_STORAGE_BUCKET_ID` and `PRIVATE_OBJECT_DIR` environment variables.
 
+### Security Hardening
+
+- **Login Rate Limiting:** `/api/login` limited to 5 failed attempts per 15 minutes per IP (via `express-rate-limit`). Successful logins don't count against the limit.
+- **General API Rate Limiting:** All `/api/*` routes limited to 100 requests per minute per IP.
+- **Session Secret:** Uses `SESSION_SECRET` environment variable. Falls back to a cryptographically random secret with a console warning if unset. Never uses a hardcoded default.
+- **Health Check:** `GET /api/health` endpoint (no auth) returns `{ status: "ok", timestamp }` and verifies database connectivity. Returns 503 if the database is unreachable.
+
 ## External Dependencies
 
 - **Replit Authentication:** OIDC provider for user identity.
@@ -146,3 +153,4 @@ The platform uses Replit Object Storage for secure file uploads (photos, documen
 - **React Hook Form:** For form management and validation.
 - **Uppy:** File upload UI library.
 - **TanStack Query:** For asynchronous state management.
+- **express-rate-limit:** Rate limiting middleware for login and API protection.

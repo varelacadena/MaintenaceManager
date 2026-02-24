@@ -12,6 +12,8 @@ import { storage } from "./storage";
 import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
 import { startDocumentExpirationScheduler } from "./documentExpirationScheduler";
 import { startTaskReminderScheduler } from "./taskReminderScheduler";
+import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 
@@ -27,6 +29,22 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// Trust proxy must be set before rate limiting so req.ip resolves correctly behind proxies
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests, please try again later" },
+});
+app.use("/api", apiLimiter);
+
 const PgSession = pgSession(session);
 const store = new PgSession({
   pool,
@@ -34,29 +52,26 @@ const store = new PgSession({
   tableName: 'sessions'
 });
 
-// Configure session management for express-session
-const isProduction = process.env.NODE_ENV === "production";
+const sessionSecret = process.env.SESSION_SECRET || (() => {
+  const generated = crypto.randomBytes(32).toString("hex");
+  console.warn("WARNING: SESSION_SECRET not set. Using a random secret. Sessions will not persist across restarts. Set SESSION_SECRET in your environment secrets.");
+  return generated;
+})();
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "default-secret",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     store,
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      // Enable secure cookies in production (requires HTTPS)
       secure: isProduction,
-      // Allow cookies to be sent with cross-site requests in production
       sameSite: isProduction ? "none" : "lax",
     },
   })
 );
-
-// Trust proxy in production (required for Replit deployments)
-if (isProduction) {
-  app.set("trust proxy", 1);
-}
 
 // Configure passport for local authentication
 passport.serializeUser((user: any, done) => {

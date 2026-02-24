@@ -4,6 +4,9 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireRole, getCurrentUser, requireAdmin, requireStaffOrHigher, requireRequestAccess, requireTaskExecutorOrAdmin, requireTaskAccess, canAccessTask } from "./middleware";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 import { seedDatabase } from "./seed";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned, notifyNewServiceRequest, notifyNewVehicleReservation, notifyVehicleReservationApproved } from "./notifications";
@@ -172,8 +175,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Seed database with default areas
   await seedDatabase();
 
+  // Health check endpoint (no auth required)
+  app.get("/api/health", async (_req, res) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      res.json({ status: "ok", timestamp: new Date().toISOString() });
+    } catch (error) {
+      console.error("Health check failed:", error);
+      res.status(503).json({ status: "error", timestamp: new Date().toISOString(), message: "Database connection failed" });
+    }
+  });
+
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many login attempts. Please try again in 15 minutes." },
+    skipSuccessfulRequests: true,
+  });
+
   // Login endpoint
-  app.post("/api/login", async (req, res) => {
+  app.post("/api/login", loginLimiter, async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -201,10 +224,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ First admin account created: ${username}`);
 
         // Log them in immediately
-        req.login(newAdmin, (err) => {
-          if (err) {
-            return res.status(500).json({ message: "Login failed" });
-          }
+        (req.session as any).userId = newAdmin.id;
+        req.session.save(() => {
           res.json({ 
             success: true, 
             firstTimeSetup: true,
@@ -235,10 +256,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Set user in session
-      req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Login failed" });
-        }
+      (req.session as any).userId = user.id;
+      req.session.save(() => {
         res.json({ success: true, user: {
           id: user.id,
           username: user.username,
@@ -255,8 +274,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Logout endpoint
-  app.post("/api/logout", isAuthenticated, (req, res) => {
-    req.logout(() => {
+  app.post("/api/logout", isAuthenticated, (req: any, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
       res.json({ success: true });
     });
   });
@@ -1402,19 +1424,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get messages for a request
-  app.get("/api/messages/request/:requestId", isAuthenticated, async (req, res) => {
-    try {
-      const messages = await storage.getMessagesByRequest(
-        req.params.requestId
-      );
-      res.json(messages);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      res.status(500).json({ message: "Failed to fetch messages" });
     }
   });
 
