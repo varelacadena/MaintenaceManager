@@ -318,65 +318,42 @@ export function VehicleReservationsContent() {
           ))}
         </div>
       ) : filteredReservations && filteredReservations.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredReservations.map((reservation) => (
             <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Car className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <CardTitle className="text-lg">
-                        {getVehicleName(reservation.vehicleId)}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                        <User className="h-3 w-3" />
-                        <span>{getUserName(reservation.userId)}</span>
-                      </div>
-                    </div>
+              <CardContent className="pt-4 pb-3 px-4 space-y-2">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Car className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-semibold text-sm truncate">{getVehicleName(reservation.vehicleId)}</span>
+                    <span className="text-muted-foreground text-xs">·</span>
+                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium truncate">{getUserName(reservation.userId)}</span>
                   </div>
                   <Badge variant={statusColors[reservation.status]} data-testid={`badge-status-${reservation.id}`}>
                     {reservation.status}
                   </Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Dates:</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3 shrink-0" />
                   <span>
-                    {format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")} -{" "}
-                    {format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}
+                    {format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")} &ndash; {format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}
                   </span>
                 </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Purpose: </span>
-                  <span>{reservation.purpose}</span>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <span><span className="text-muted-foreground">Purpose: </span>{reservation.purpose}</span>
+                  <span><span className="text-muted-foreground">Passengers: </span>{reservation.passengerCount}</span>
+                  {reservation.notes && (
+                    <span><span className="text-muted-foreground">Notes: </span>{reservation.notes}</span>
+                  )}
                 </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Passengers: </span>
-                  <span>{reservation.passengerCount}</span>
-                </div>
-                {reservation.notes && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Notes: </span>
-                    <span>{reservation.notes}</span>
-                  </div>
-                )}
-                {reservation.createdAt && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Created: </span>
-                    <span>{format(new Date(reservation.createdAt), "MMM d, yyyy h:mm a")}</span>
-                  </div>
-                )}
                 {reservation.status === "cancelled" && (
-                  <div className="text-sm mt-2 p-2 bg-destructive/10 rounded-md">
-                    <span className="text-destructive font-semibold">Status Update: </span>
-                    <span className="text-destructive">This reservation was cancelled by the user</span>
+                  <div className="text-xs p-2 bg-destructive/10 rounded-md">
+                    <span className="text-destructive font-semibold">Cancelled</span>
                   </div>
                 )}
-                </CardContent>
-              <CardFooter className="flex gap-2 flex-wrap">
+              </CardContent>
+              <CardFooter className="flex gap-2 flex-wrap pt-0 pb-3 px-4">
                 {reservation.status === "pending" && (
                   <>
                     <Dialog>
