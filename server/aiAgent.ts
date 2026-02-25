@@ -1,27 +1,27 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { storage } from "./storage";
 import type { ServiceRequest, Task, AiAgentLog } from "@shared/schema";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 // ─── Model tiers ──────────────────────────────────────────────────────────────
-// Haiku: fast + cheap, for routine triage/simple scheduling
-// Sonnet: smarter, for complex project scheduling and conflict resolution
-const HAIKU = "claude-haiku-4-5";
-const SONNET = "claude-sonnet-4-5";
+// Mini: fast + cost-effective, for routine triage/simple scheduling
+// Full: smarter, for complex project scheduling and conflict resolution
+const MINI = "gpt-5-mini";
+const FULL = "gpt-5";
 
 async function callAI(prompt: string, tier: "haiku" | "sonnet" = "haiku"): Promise<string> {
-  const model = tier === "sonnet" ? SONNET : HAIKU;
+  const model = tier === "sonnet" ? FULL : MINI;
   try {
-    const response = await anthropic.messages.create({
+    const response = await openai.chat.completions.create({
       model,
-      max_tokens: 1024,
+      max_completion_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     });
-    const block = response.content[0];
-    return block.type === "text" ? block.text : "";
+    return response.choices[0]?.message?.content ?? "";
   } catch (error: any) {
     console.error(`[aiAgent] ${model} call failed:`, error.message);
     throw error;
