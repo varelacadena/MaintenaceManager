@@ -40,14 +40,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { ObjectUploader } from "@/components/ObjectUploader";
 
 const categories = [
-  "Appliances",
+  "HVAC",
   "Electrical",
   "Plumbing",
-  "Heating, Ventilation, A/C",
-  "Lawn",
-  "Home Renovation",
-  "Pest Control",
-  "Other",
+  "Mechanical / Fleet",
+  "Appliances",
+  "Grounds / Landscaping",
+  "Janitorial",
+  "Structural",
+  "Water Treatment",
+  "General",
 ];
 
 const formSchema = insertServiceRequestSchema.extend({

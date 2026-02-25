@@ -391,22 +391,12 @@ export type InsertSpace = z.infer<typeof insertSpaceSchema>;
 export type Space = typeof spaces.$inferSelect;
 
 // Equipment (linked to spaces for buildings, or directly to properties for flat properties)
-export const equipmentCategoryEnum = pgEnum("equipment_category", [
-  "appliances",
-  "hvac",
-  "structure",
-  "plumbing",
-  "electric",
-  "landscaping",
-  "diagrams",
-  "other"
-]);
-
+// Category values: hvac, electrical, plumbing, mechanical, appliances, grounds, janitorial, structural, water_treatment, general
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
   spaceId: varchar("space_id").references(() => spaces.id, { onDelete: "cascade" }), // Optional - for equipment in building spaces
-  category: equipmentCategoryEnum("category").notNull(),
+  category: varchar("category", { length: 50 }).notNull().default("general"),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
   serialNumber: varchar("serial_number", { length: 200 }),

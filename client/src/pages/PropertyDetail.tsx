@@ -53,6 +53,11 @@ import {
   ChevronRight,
   ClipboardList,
   Map,
+  Building2,
+  Waves,
+  Sparkles,
+  HelpCircle,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -64,9 +69,24 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+const EQUIPMENT_CATEGORIES = [
+  { slug: "hvac", label: "HVAC" },
+  { slug: "electrical", label: "Electrical" },
+  { slug: "plumbing", label: "Plumbing" },
+  { slug: "mechanical", label: "Mechanical / Fleet" },
+  { slug: "appliances", label: "Appliances" },
+  { slug: "grounds", label: "Grounds / Landscaping" },
+  { slug: "janitorial", label: "Janitorial" },
+  { slug: "structural", label: "Structural" },
+  { slug: "water_treatment", label: "Water Treatment" },
+  { slug: "general", label: "General" },
+] as const;
+
+type EquipmentCategorySlug = typeof EQUIPMENT_CATEGORIES[number]["slug"];
+
 const formSchema = insertEquipmentSchema.extend({
   name: z.string().min(1, "Name is required"),
-  category: z.enum(["appliances", "hvac", "electric", "plumbing", "structure", "landscaping", "diagrams", "other"]),
+  category: z.string().min(1, "Category is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -86,14 +106,22 @@ const spaceFormSchema = insertSpaceSchema.extend({
 type SpaceFormData = z.infer<typeof spaceFormSchema>;
 
 const categoryIcons: Record<string, any> = {
-  appliances: Wrench,
   hvac: Wind,
-  electric: Zap,
+  electrical: Zap,
   plumbing: Droplets,
-  structure: Home,
+  mechanical: Settings,
+  appliances: Wrench,
+  grounds: Trees,
+  janitorial: Sparkles,
+  structural: Building2,
+  water_treatment: Waves,
+  general: HelpCircle,
+  // legacy aliases
+  electric: Zap,
+  structure: Building2,
   landscaping: Trees,
   diagrams: FileText,
-  other: Wrench,
+  other: HelpCircle,
 };
 
 export default function PropertyDetail() {
@@ -142,7 +170,7 @@ export default function PropertyDetail() {
     defaultValues: {
       propertyId: id || "",
       name: "",
-      category: "other",
+      category: "general",
       description: "",
       serialNumber: "",
       condition: "",
@@ -359,9 +387,7 @@ export default function PropertyDetail() {
     }
   };
 
-  const categories = [
-    "appliances", "hvac", "structure", "plumbing", "electric", "landscaping", "diagrams", "other",
-  ];
+  const categories = EQUIPMENT_CATEGORIES.map((c) => c.slug);
 
   const spaceFilteredEquipment = selectedSpaceId
     ? equipment.filter(e => e.spaceId === selectedSpaceId)
@@ -619,7 +645,7 @@ export default function PropertyDetail() {
                     onClick={() => {
                       setEditingEquipment(null);
                       form.reset({
-                        propertyId: id || "", name: "", category: "other",
+                        propertyId: id || "", name: "", category: "general",
                         description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
                       });
                       setIsCreateDialogOpen(true);
@@ -675,7 +701,7 @@ export default function PropertyDetail() {
                       setEditingEquipment(null);
                       form.reset({
                         propertyId: id || "", name: "",
-                        category: (selectedCategory as FormData["category"]) || "other",
+                        category: (selectedCategory as FormData["category"]) || "general",
                         description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
                       });
                       setIsCreateDialogOpen(true);
@@ -701,7 +727,7 @@ export default function PropertyDetail() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm truncate">{item.name}</span>
-                            <Badge variant="secondary">{item.category}</Badge>
+                            <Badge variant="secondary">{EQUIPMENT_CATEGORIES.find(c => c.slug === item.category)?.label ?? item.category}</Badge>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             {item.serialNumber && <span>SN: {item.serialNumber}</span>}
@@ -919,14 +945,9 @@ export default function PropertyDetail() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="appliances">Appliances</SelectItem>
-                        <SelectItem value="hvac">HVAC</SelectItem>
-                        <SelectItem value="structure">Structure</SelectItem>
-                        <SelectItem value="plumbing">Plumbing</SelectItem>
-                        <SelectItem value="electric">Electric</SelectItem>
-                        <SelectItem value="landscaping">Landscaping</SelectItem>
-                        <SelectItem value="diagrams">Diagrams</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {EQUIPMENT_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.slug} value={cat.slug}>{cat.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -995,7 +1016,7 @@ export default function PropertyDetail() {
                     setIsCreateDialogOpen(false);
                     setEditingEquipment(null);
                     form.reset({
-                      propertyId: id || "", name: "", category: "other",
+                      propertyId: id || "", name: "", category: "general",
                       description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
                     });
                   }}

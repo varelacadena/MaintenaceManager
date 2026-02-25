@@ -39,7 +39,18 @@ import {
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const SKILL_CATEGORIES = ["electrical", "plumbing", "hvac", "mechanical", "general"] as const;
+const SKILL_CATEGORIES = [
+  { slug: "hvac", label: "HVAC" },
+  { slug: "electrical", label: "Electrical" },
+  { slug: "plumbing", label: "Plumbing" },
+  { slug: "mechanical", label: "Mechanical / Fleet" },
+  { slug: "appliances", label: "Appliances" },
+  { slug: "grounds", label: "Grounds / Landscaping" },
+  { slug: "janitorial", label: "Janitorial" },
+  { slug: "structural", label: "Structural" },
+  { slug: "water_treatment", label: "Water Treatment" },
+  { slug: "general", label: "General" },
+] as const;
 const SKILL_LEVELS = ["basic", "intermediate", "advanced"] as const;
 
 const HOURS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
@@ -1072,7 +1083,7 @@ export default function Users() {
                         data-testid={`skill-${skill.id}`}
                       >
                         <span className="font-medium">{skill.skillName}</span>
-                        <Badge variant="outline" className="text-xs capitalize">{skill.skillCategory}</Badge>
+                        <Badge variant="outline" className="text-xs">{SKILL_CATEGORIES.find(c => c.slug === skill.skillCategory)?.label ?? skill.skillCategory}</Badge>
                         <Badge variant="secondary" className="text-xs capitalize">{skill.proficiencyLevel}</Badge>
                         <button
                           onClick={() => selectedUser && deleteSkillMutation.mutate({ userId: selectedUser.id, skillId: skill.id })}
@@ -1110,7 +1121,7 @@ export default function Users() {
                         </SelectTrigger>
                         <SelectContent>
                           {SKILL_CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                            <SelectItem key={c.slug} value={c.slug}>{c.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
