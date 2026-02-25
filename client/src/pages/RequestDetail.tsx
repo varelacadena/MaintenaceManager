@@ -30,6 +30,10 @@ import {
   MapPin,
   FileText,
   ChevronDown,
+  Bot,
+  ThumbsUp,
+  ThumbsDown,
+  Sparkles,
 } from "lucide-react";
 import { FileAttachmentList } from "@/components/FileAttachment";
 import { serviceRequestStatusLabels } from "@/lib/constants";
@@ -61,6 +65,8 @@ export default function RequestDetail() {
   const [rejectionReason, setRejectionReason] = useState("");
   const isMobile = useIsMobile();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [aiTriageLog, setAiTriageLog] = useState<any>(null);
+  const [aiTriageLoading, setAiTriageLoading] = useState(false);
 
   const { data: request, isLoading } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", id],
@@ -158,6 +164,33 @@ export default function RequestDetail() {
       toast({ title: "Message sent" });
     },
   });
+
+  const handleRunAiTriage = async () => {
+    if (!id) return;
+    setAiTriageLoading(true);
+    try {
+      const res = await apiRequest("POST", `/api/ai/triage/${id}`, {});
+      const log = await res.json();
+      setAiTriageLog(log);
+      toast({ title: "AI triage complete", description: "Review the suggestion below." });
+    } catch {
+      toast({ title: "AI triage failed", description: "Check that ANTHROPIC_API_KEY is configured.", variant: "destructive" });
+    } finally {
+      setAiTriageLoading(false);
+    }
+  };
+
+  const handleReviewAiLog = async (status: "approved" | "rejected") => {
+    if (!aiTriageLog) return;
+    try {
+      await apiRequest("PATCH", `/api/ai-logs/${aiTriageLog.id}`, { status });
+      setAiTriageLog({ ...aiTriageLog, status });
+      toast({ title: status === "approved" ? "Triage suggestion accepted" : "Triage suggestion rejected" });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-logs"] });
+    } catch {
+      toast({ title: "Failed to update suggestion", variant: "destructive" });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -633,6 +666,97 @@ export default function RequestDetail() {
               </div>
             )}
           </div>
+          {/* AI Triage Panel - admin only */}
+          {user?.role === "admin" && request.status === "pending" && (
+            <div className="mb-6">
+              <Card className="border-primary/20">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">AI Triage Assistant</span>
+                      {aiTriageLog && (
+                        <Badge variant={aiTriageLog.status === "approved" ? "default" : aiTriageLog.status === "rejected" ? "destructive" : "secondary"} className="text-xs">
+                          {aiTriageLog.status === "pending_review" ? "Pending Review" : aiTriageLog.status === "approved" ? "Accepted" : "Rejected"}
+                        </Badge>
+                      )}
+                    </div>
+                    {!aiTriageLog && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRunAiTriage}
+                        disabled={aiTriageLoading}
+                        data-testid="button-run-ai-triage"
+                        className="gap-1.5"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {aiTriageLoading ? "Analyzing..." : "Analyze with AI"}
+                      </Button>
+                    )}
+                  </div>
+                  {aiTriageLog?.proposedValue && (
+                    <div className="mt-3 pt-3 border-t space-y-3">
+                      <p className="text-xs text-muted-foreground italic">{aiTriageLog.reasoning}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Suggested Urgency</span>
+                          <p className="font-medium capitalize">{aiTriageLog.proposedValue.suggestedUrgency}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Category</span>
+                          <p className="font-medium capitalize">{aiTriageLog.proposedValue.suggestedCategory}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Assign To</span>
+                          <p className="font-medium capitalize">{aiTriageLog.proposedValue.suggestedExecutorType}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Required Skill</span>
+                          <p className="font-medium capitalize">{aiTriageLog.proposedValue.suggestedSkill}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Est. Hours</span>
+                          <p className="font-medium">{aiTriageLog.proposedValue.estimatedHours}h</p>
+                        </div>
+                        {aiTriageLog.proposedValue.draftTaskTitle && (
+                          <div className="col-span-2">
+                            <span className="text-xs text-muted-foreground">Draft Task Title</span>
+                            <p className="font-medium">{aiTriageLog.proposedValue.draftTaskTitle}</p>
+                          </div>
+                        )}
+                      </div>
+                      {aiTriageLog.status === "pending_review" && (
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReviewAiLog("approved")}
+                            className="gap-1.5 text-green-600"
+                            data-testid="button-accept-triage"
+                          >
+                            <ThumbsUp className="h-3.5 w-3.5" />
+                            Accept Suggestion
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleReviewAiLog("rejected")}
+                            className="gap-1.5 text-muted-foreground"
+                            data-testid="button-reject-triage"
+                          >
+                            <ThumbsDown className="h-3.5 w-3.5" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Left Column - Main Details */}
             <div className="lg:col-span-2 space-y-4">

@@ -70,7 +70,7 @@ export default function Requests() {
   // Fetch individual requesters for requests where we don't have user data
   const requesterIds = [...new Set(requests.map(r => r.requesterId))];
   const { data: requesters = {} } = useQuery<Record<string, any>>({
-    queryKey: ["/api/requesters", requesterIds],
+    queryKey: ["/api/users/requesters", requesterIds],
     queryFn: async () => {
       if (users.length > 0) return {}; // Use users list if available
       

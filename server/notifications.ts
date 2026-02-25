@@ -399,4 +399,33 @@ export async function notifyVehicleReservationApproved(
   );
 }
 
+export async function notifyVehicleReservationDenied(
+  reservation: VehicleReservation,
+  requester: User,
+  vehicleName: string,
+  ns: NotificationService
+): Promise<void> {
+  if (!requester.email) return;
+
+  const startDate = formatDate(reservation.startDate);
+  const endDate = formatDate(reservation.endDate);
+
+  const variables: Record<string, string> = {
+    '{{vehicle_name}}': vehicleName,
+    '{{start_date}}': startDate,
+    '{{end_date}}': endDate,
+    '{{requester_name}}': `${requester.firstName} ${requester.lastName}`,
+    '{{purpose}}': reservation.purpose,
+  };
+
+  const fallbackSubject = `Vehicle Reservation Cancelled`;
+  const fallbackBody = `Your vehicle reservation has been cancelled.\n\nVehicle: ${vehicleName}\nStart: ${startDate}\nEnd: ${endDate}\nPurpose: ${reservation.purpose}\n\nIf you believe this was a mistake or need to make a new reservation, please log in to the maintenance portal and submit a new request.`;
+
+  await sendTrackedEmail(
+    ns, "vehicle_reservation_denied", requester.email,
+    `${requester.firstName} ${requester.lastName}`,
+    fallbackSubject, fallbackBody, variables
+  );
+}
+
 export const notificationService = new ProductionNotificationService();

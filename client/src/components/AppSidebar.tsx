@@ -27,6 +27,7 @@ import {
   BarChart3,
   FolderKanban,
   Mail,
+  Bot,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -45,6 +46,7 @@ const roleMenus = {
     { title: "Work", url: "/work", icon: FolderKanban },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
+    { title: "AI Agent", url: "/ai-agent", icon: Bot },
     { title: "Vehicles", url: "/vehicles", icon: Car },
     { title: "Properties", url: "/properties", icon: Map },
     { title: "Messages", url: "/messages", icon: MessageSquare },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users as UsersIcon, Mail, Shield, Plus, Edit, Trash2, User as UserIcon, Lock, UserPlus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Users as UsersIcon, Mail, Plus, Edit, Trash2, User as UserIcon, Lock, Bot, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
@@ -36,6 +37,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const SKILL_CATEGORIES = ["electrical", "plumbing", "hvac", "mechanical", "general"] as const;
+const SKILL_LEVELS = ["basic", "intermediate", "advanced"] as const;
+
 export default function Users() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -44,7 +50,12 @@ export default function Users() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isAiProfileDialogOpen, setIsAiProfileDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const [newSkillName, setNewSkillName] = useState("");
+  const [newSkillCategory, setNewSkillCategory] = useState<string>("general");
+  const [newSkillLevel, setNewSkillLevel] = useState<string>("basic");
 
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -172,6 +183,101 @@ export default function Users() {
       });
     },
   });
+
+  const { data: userAvailability = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", selectedUser?.id, "availability"],
+    queryFn: () => apiRequest("GET", `/api/users/${selectedUser!.id}/availability`).then((r) => r.json()),
+    enabled: !!selectedUser && isAiProfileDialogOpen,
+  });
+
+  const { data: userSkills = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", selectedUser?.id, "skills"],
+    queryFn: () => apiRequest("GET", `/api/users/${selectedUser!.id}/skills`).then((r) => r.json()),
+    enabled: !!selectedUser && isAiProfileDialogOpen,
+  });
+
+  const saveAvailabilityMutation = useMutation({
+    mutationFn: async ({ userId, schedules }: { userId: string; schedules: any[] }) => {
+      const res = await apiRequest("PUT", `/api/users/${userId}/availability`, { schedules });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", selectedUser?.id, "availability"] });
+      toast({ title: "Availability saved" });
+    },
+    onError: () => toast({ title: "Failed to save availability", variant: "destructive" }),
+  });
+
+  const addSkillMutation = useMutation({
+    mutationFn: async ({ userId, skill }: { userId: string; skill: any }) => {
+      const res = await apiRequest("POST", `/api/users/${userId}/skills`, skill);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", selectedUser?.id, "skills"] });
+      setNewSkillName("");
+      setNewSkillCategory("general");
+      setNewSkillLevel("basic");
+      toast({ title: "Skill added" });
+    },
+    onError: () => toast({ title: "Failed to add skill", variant: "destructive" }),
+  });
+
+  const deleteSkillMutation = useMutation({
+    mutationFn: async ({ userId, skillId }: { userId: string; skillId: number }) => {
+      const res = await apiRequest("DELETE", `/api/users/${userId}/skills/${skillId}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", selectedUser?.id, "skills"] });
+      toast({ title: "Skill removed" });
+    },
+    onError: () => toast({ title: "Failed to remove skill", variant: "destructive" }),
+  });
+
+  const openAiProfileDialog = (user: User) => {
+    setSelectedUser(user);
+    setIsAiProfileDialogOpen(true);
+  };
+
+  const [localSchedule, setLocalSchedule] = useState<Record<number, { startTime: string; endTime: string; isAvailable: boolean }>>({});
+
+  const initSchedule = (availability: any[]) => {
+    const sched: Record<number, { startTime: string; endTime: string; isAvailable: boolean }> = {};
+    for (let d = 0; d < 7; d++) {
+      const existing = availability.find((a: any) => a.dayOfWeek === d);
+      sched[d] = existing
+        ? { startTime: existing.startTime, endTime: existing.endTime, isAvailable: existing.isAvailable }
+        : { startTime: "08:00", endTime: "17:00", isAvailable: d >= 1 && d <= 5 };
+    }
+    setLocalSchedule(sched);
+  };
+
+  useEffect(() => {
+    if (isAiProfileDialogOpen && userAvailability.length > 0 && Object.keys(localSchedule).length === 0) {
+      initSchedule(userAvailability);
+    }
+  }, [isAiProfileDialogOpen, userAvailability]);
+
+  const handleSaveAvailability = () => {
+    if (!selectedUser) return;
+    const schedules = Object.entries(localSchedule).map(([day, s]) => ({
+      dayOfWeek: parseInt(day),
+      startTime: s.startTime,
+      endTime: s.endTime,
+      isAvailable: s.isAvailable,
+    }));
+    saveAvailabilityMutation.mutate({ userId: selectedUser.id, schedules });
+  };
+
+  const handleAddSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !newSkillName.trim()) return;
+    addSkillMutation.mutate({
+      userId: selectedUser.id,
+      skill: { skillName: newSkillName.trim(), skillCategory: newSkillCategory, proficiencyLevel: newSkillLevel },
+    });
+  };
 
   const resetCreateForm = () => {
     setNewUsername("");
@@ -520,23 +626,38 @@ export default function Users() {
                         </div>
                       </div>
 
-                      <Select
-                        value={user.role}
-                        onValueChange={(role) =>
-                          updateRoleMutation.mutate({ userId: user.id, role })
-                        }
-                        disabled={updateRoleMutation.isPending}
-                      >
-                        <SelectTrigger className="w-full sm:w-[160px]" data-testid={`select-role-${user.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="staff">Staff</SelectItem>
-                          <SelectItem value="student">Student</SelectItem>
-                          <SelectItem value="technician">Technician</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Select
+                          value={user.role}
+                          onValueChange={(role) =>
+                            updateRoleMutation.mutate({ userId: user.id, role })
+                          }
+                          disabled={updateRoleMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[140px]" data-testid={`select-role-${user.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="staff">Staff</SelectItem>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="technician">Technician</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {(user.role === "technician" || user.role === "student") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAiProfileDialog(user)}
+                            data-testid={`button-ai-profile-${user.id}`}
+                            title="AI Profile (Availability & Skills)"
+                            className="gap-1.5"
+                          >
+                            <Bot className="w-3.5 h-3.5" />
+                            AI Profile
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -592,7 +713,7 @@ export default function Users() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="outline"
                             onClick={() => openProfileDialog(user)}
                             data-testid={`button-view-${user.id}`}
@@ -600,8 +721,19 @@ export default function Users() {
                           >
                             <UserIcon className="w-4 h-4" />
                           </Button>
+                          {(user.role === "technician" || user.role === "student") && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() => openAiProfileDialog(user)}
+                              data-testid={`button-ai-profile-cred-${user.id}`}
+                              title="AI Profile (Availability & Skills)"
+                            >
+                              <Bot className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="outline"
                             onClick={() => openEditDialog(user)}
                             data-testid={`button-edit-${user.id}`}
@@ -610,7 +742,7 @@ export default function Users() {
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="outline"
                             onClick={() => openPasswordDialog(user)}
                             data-testid={`button-password-${user.id}`}
@@ -619,7 +751,7 @@ export default function Users() {
                             <Lock className="w-4 h-4" />
                           </Button>
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="destructive"
                             onClick={() => handleDeleteUser(user.id)}
                             data-testid={`button-delete-${user.id}`}
@@ -801,6 +933,179 @@ export default function Users() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Profile Dialog — Availability & Skills */}
+      <Dialog
+        open={isAiProfileDialogOpen}
+        onOpenChange={(open) => {
+          setIsAiProfileDialogOpen(open);
+          if (!open) setLocalSchedule({});
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              AI Profile — {selectedUser?.firstName && selectedUser?.lastName ? `${selectedUser.firstName} ${selectedUser.lastName}` : selectedUser?.username}
+            </DialogTitle>
+            <DialogDescription>
+              Configure availability and skills used by the AI scheduling agent
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="availability">
+            <TabsList className="w-full">
+              <TabsTrigger value="availability" className="flex-1">Availability</TabsTrigger>
+              <TabsTrigger value="skills" className="flex-1">Skills</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="availability" className="space-y-4 mt-4">
+              {Object.keys(localSchedule).length === 0 && userAvailability !== undefined && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => initSchedule(userAvailability)}
+                  data-testid="button-init-schedule"
+                >
+                  Load Schedule
+                </Button>
+              )}
+              <div className="space-y-2">
+                {DAY_NAMES.map((day, idx) => {
+                  const slot = localSchedule[idx] || { startTime: "08:00", endTime: "17:00", isAvailable: idx >= 1 && idx <= 5 };
+                  return (
+                    <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/30">
+                      <Switch
+                        checked={slot.isAvailable}
+                        onCheckedChange={(checked) =>
+                          setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, isAvailable: checked } }))
+                        }
+                        data-testid={`switch-day-${idx}`}
+                      />
+                      <span className="w-24 text-sm font-medium">{day}</span>
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) =>
+                            setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, startTime: e.target.value } }))
+                          }
+                          disabled={!slot.isAvailable}
+                          className="w-32 text-sm"
+                          data-testid={`input-start-${idx}`}
+                        />
+                        <span className="text-muted-foreground text-sm">to</span>
+                        <Input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) =>
+                            setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, endTime: e.target.value } }))
+                          }
+                          disabled={!slot.isAvailable}
+                          className="w-32 text-sm"
+                          data-testid={`input-end-${idx}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <Button
+                onClick={handleSaveAvailability}
+                disabled={saveAvailabilityMutation.isPending || Object.keys(localSchedule).length === 0}
+                data-testid="button-save-availability"
+              >
+                {saveAvailabilityMutation.isPending ? "Saving..." : "Save Availability"}
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="skills" className="space-y-4 mt-4">
+              {/* Existing Skills */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Current Skills</p>
+                {userSkills.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No skills configured yet.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {userSkills.map((skill: any) => (
+                      <div
+                        key={skill.id}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border text-sm bg-muted/30"
+                        data-testid={`skill-${skill.id}`}
+                      >
+                        <span className="font-medium">{skill.skillName}</span>
+                        <Badge variant="outline" className="text-xs capitalize">{skill.skillCategory}</Badge>
+                        <Badge variant="secondary" className="text-xs capitalize">{skill.proficiencyLevel}</Badge>
+                        <button
+                          onClick={() => selectedUser && deleteSkillMutation.mutate({ userId: selectedUser.id, skillId: skill.id })}
+                          className="ml-1 text-muted-foreground hover:text-destructive"
+                          data-testid={`button-delete-skill-${skill.id}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Add Skill Form */}
+              <div className="border rounded-md p-3 space-y-3">
+                <p className="text-sm font-medium">Add Skill</p>
+                <form onSubmit={handleAddSkill} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="skillName">Skill Name</Label>
+                    <Input
+                      id="skillName"
+                      placeholder="e.g. HVAC repair, Electrical wiring"
+                      value={newSkillName}
+                      onChange={(e) => setNewSkillName(e.target.value)}
+                      data-testid="input-skill-name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Category</Label>
+                      <Select value={newSkillCategory} onValueChange={setNewSkillCategory}>
+                        <SelectTrigger data-testid="select-skill-category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SKILL_CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Level</Label>
+                      <Select value={newSkillLevel} onValueChange={setNewSkillLevel}>
+                        <SelectTrigger data-testid="select-skill-level">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SKILL_LEVELS.map((l) => (
+                            <SelectItem key={l} value={l} className="capitalize">{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!newSkillName.trim() || addSkillMutation.isPending}
+                    data-testid="button-add-skill"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    {addSkillMutation.isPending ? "Adding..." : "Add Skill"}
+                  </Button>
+                </form>
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>

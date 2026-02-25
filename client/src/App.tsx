@@ -42,6 +42,7 @@ import RoleGuard from "./components/RoleGuard";
 import NotificationsWidget from "./components/NotificationsWidget";
 import ProjectDetail from "./pages/ProjectDetail";
 import EmailManagement from "./pages/EmailManagement";
+import AiAgentDashboard from "./pages/AiAgentDashboard";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 
 function AuthenticatedApp() {
@@ -239,6 +240,9 @@ function AuthenticatedApp() {
                 )} />
                 <Route path="/email-management" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><EmailManagement /></RoleGuard>
+                )} />
+                <Route path="/ai-agent" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><AiAgentDashboard /></RoleGuard>
                 )} />
                 <Route component={NotFound} />
               </Switch>

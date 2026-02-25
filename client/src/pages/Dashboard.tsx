@@ -462,7 +462,7 @@ export default function Dashboard() {
               <div className="text-center py-4">
                 <div className="text-3xl font-bold">{vehicleReservations.length}</div>
                 <p className="text-sm text-muted-foreground">Active Reservations</p>
-                <Button variant="ghost" className="mt-2">View All</Button>
+                <Button variant="ghost" className="mt-2" onClick={() => setLocation("/my-reservations")} data-testid="button-view-all-reservations">View All</Button>
               </div>
             )}
           </CardContent>
@@ -1010,7 +1010,7 @@ export default function Dashboard() {
               <div className="text-center py-4">
                 <div className="text-3xl font-bold">{vehicleReservations.length}</div>
                 <p className="text-sm text-muted-foreground mb-2">Active Reservations</p>
-                <Button variant="ghost" size="sm">Manage Reservations</Button>
+                <Button variant="ghost" size="sm" onClick={() => setLocation("/vehicles?tab=reservations")} data-testid="button-manage-reservations">Manage Reservations</Button>
               </div>
             )}
           </CardContent>

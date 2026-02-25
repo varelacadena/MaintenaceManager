@@ -11,6 +11,7 @@ import {
   boolean,
   doublePrecision,
   uuid,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -69,7 +70,7 @@ export const inventoryItems = pgTable("inventory_items", {
   unit: varchar("unit", { length: 50 }), // e.g., "pcs", "boxes", "gallons"
   location: varchar("location", { length: 200 }), // storage location
   minQuantity: integer("min_quantity").default(0), // for low stock alerts
-  cost: varchar("cost", { length: 20 }), // cost per unit
+  cost: numeric("cost", { precision: 10, scale: 2 }), // cost per unit
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -117,9 +118,11 @@ export const serviceRequests = pgTable("service_requests", {
   status: requestStatusEnum("status").notNull().default("pending"),
   requesterId: varchar("requester_id").notNull().references(() => users.id),
   propertyId: varchar("property_id").references(() => properties.id),
-  spaceId: varchar("space_id").references(() => spaces.id), // For requests in building spaces
+  spaceId: varchar("space_id").references(() => spaces.id),
   areaId: varchar("area_id").references(() => areas.id),
   subdivisionId: varchar("subdivision_id").references(() => subdivisions.id),
+  category: varchar("category", { length: 100 }),
+  requestedDate: timestamp("requested_date"),
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -173,6 +176,9 @@ export const tasks = pgTable("tasks", {
   estimateStatus: estimateStatusEnum("estimate_status").default("none"), // Estimate workflow status
   approvedQuoteId: varchar("approved_quote_id"), // Reference to approved internal quote
   createdById: varchar("created_by_id").notNull().references(() => users.id),
+  estimatedHours: doublePrecision("estimated_hours"),
+  requiredSkill: varchar("required_skill", { length: 100 }),
+  aiGenerated: boolean("ai_generated").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1297,3 +1303,83 @@ export const quoteAttachmentsRelations = relations(quoteAttachments, ({ one }) =
     references: [quotes.id],
   }),
 }));
+
+// ─── AI Agent Infrastructure ────────────────────────────────────────────────
+
+// T011: Availability schedules
+export const availabilitySchedules = pgTable("availability_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime: varchar("start_time", { length: 5 }).notNull(), // "HH:MM" 24h format
+  endTime: varchar("end_time", { length: 5 }).notNull(),
+  isAvailable: boolean("is_available").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAvailabilityScheduleSchema = createInsertSchema(availabilitySchedules).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAvailabilitySchedule = z.infer<typeof insertAvailabilityScheduleSchema>;
+export type AvailabilitySchedule = typeof availabilitySchedules.$inferSelect;
+
+// T012: User skills and certifications
+export const userSkills = pgTable("user_skills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  skillName: varchar("skill_name", { length: 100 }).notNull(),
+  skillCategory: varchar("skill_category", { length: 50 }).notNull(), // electrical, plumbing, hvac, mechanical, general
+  proficiencyLevel: varchar("proficiency_level", { length: 20 }).notNull().default("basic"), // basic, intermediate, advanced
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserSkillSchema = createInsertSchema(userSkills).omit({ id: true, createdAt: true });
+export type InsertUserSkill = z.infer<typeof insertUserSkillSchema>;
+export type UserSkill = typeof userSkills.$inferSelect;
+
+// T013: Estimated effort hours added to tasks (column added via migration)
+// T014: Task dependencies
+export const taskDependencies = pgTable("task_dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  dependsOnTaskId: varchar("depends_on_task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  dependencyType: varchar("dependency_type", { length: 30 }).notNull().default("finish_to_start"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskDependencySchema = createInsertSchema(taskDependencies).omit({ id: true, createdAt: true });
+export type InsertTaskDependency = z.infer<typeof insertTaskDependencySchema>;
+export type TaskDependency = typeof taskDependencies.$inferSelect;
+
+// T015: SLA configurations
+export const slaConfigs = pgTable("sla_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  urgencyLevel: varchar("urgency_level", { length: 20 }).notNull(), // low, medium, high
+  responseHours: integer("response_hours").notNull().default(24),
+  resolutionHours: integer("resolution_hours").notNull().default(72),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSlaConfigSchema = createInsertSchema(slaConfigs).omit({ id: true, updatedAt: true });
+export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
+export type SlaConfig = typeof slaConfigs.$inferSelect;
+
+// T018: AI Agent audit log
+export const aiAgentActionEnum = pgEnum("ai_agent_action", ["triage", "schedule", "assign", "suggest_date", "pm_trigger", "fleet_maintenance", "dependency_check"]);
+export const aiAgentStatusEnum = pgEnum("ai_agent_status", ["pending_review", "approved", "rejected", "auto_applied"]);
+
+export const aiAgentLogs = pgTable("ai_agent_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  action: aiAgentActionEnum("action").notNull(),
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // task, service_request, vehicle, equipment
+  entityId: varchar("entity_id", { length: 100 }),
+  reasoning: text("reasoning"),
+  proposedValue: jsonb("proposed_value"),
+  status: aiAgentStatusEnum("status").notNull().default("pending_review"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAiAgentLogSchema = createInsertSchema(aiAgentLogs).omit({ id: true, createdAt: true, reviewedAt: true });
+export type InsertAiAgentLog = z.infer<typeof insertAiAgentLogSchema>;
+export type AiAgentLog = typeof aiAgentLogs.$inferSelect;

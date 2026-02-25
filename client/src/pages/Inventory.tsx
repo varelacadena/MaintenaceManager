@@ -488,7 +488,7 @@ export default function Inventory() {
                     <FormItem>
                       <FormLabel>Cost per Unit (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ""} placeholder="e.g., $5.99" data-testid="input-cost" />
+                        <Input {...field} type="number" step="0.01" min="0" value={field.value || ""} placeholder="e.g., 5.99" data-testid="input-cost" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -621,7 +621,7 @@ export default function Inventory() {
                     <FormItem>
                       <FormLabel>Cost per Unit (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ""} data-testid="input-edit-cost" />
+                        <Input {...field} type="number" step="0.01" min="0" value={field.value || ""} placeholder="e.g., 5.99" data-testid="input-edit-cost" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

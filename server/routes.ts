@@ -9,7 +9,7 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 
 import { seedDatabase } from "./seed";
-import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned, notifyNewServiceRequest, notifyNewVehicleReservation, notifyVehicleReservationApproved } from "./notifications";
+import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned, notifyNewServiceRequest, notifyNewVehicleReservation, notifyVehicleReservationApproved, notifyVehicleReservationDenied } from "./notifications";
 import {
   insertServiceRequestSchema,
   insertTaskSchema,
@@ -39,6 +39,10 @@ import {
   insertProjectTeamMemberSchema,
   insertProjectVendorSchema,
   insertQuoteSchema,
+  insertAvailabilityScheduleSchema,
+  insertUserSkillSchema,
+  insertTaskDependencySchema,
+  insertSlaConfigSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1078,6 +1082,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Fire task created + assignment notifications
+      try {
+        const admins = await storage.getUsersByRoles(["admin"]);
+        if (task.requestId) {
+          const linkedRequest = await storage.getServiceRequest(task.requestId);
+          const requester = task.createdById ? await storage.getUser(task.createdById) : null;
+          if (linkedRequest && requester) {
+            notifyTaskCreated(linkedRequest, requester, admins, notificationService).catch(err =>
+              console.error("Failed to send task created notification:", err)
+            );
+          }
+        }
+        if (task.assignedToId) {
+          const assignedUser = await storage.getUser(task.assignedToId);
+          if (assignedUser) {
+            const fakeRequest = {
+              title: task.name,
+              description: task.description,
+              urgency: task.urgency,
+            } as any;
+            notifyTaskAssigned(fakeRequest, assignedUser, notificationService).catch(err =>
+              console.error("Failed to send task assigned notification:", err)
+            );
+          }
+        }
+      } catch (notifyErr) {
+        console.error("Notification error after task creation:", notifyErr);
+      }
+
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -1236,6 +1269,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (updatedTask.projectId) {
         await syncProjectStatusFromTasks(updatedTask.projectId);
+      }
+
+      // Fire status change notification if task has a linked request
+      if (updatedTask.requestId) {
+        try {
+          const linkedRequest = await storage.getServiceRequest(updatedTask.requestId);
+          if (linkedRequest) {
+            const requester = await storage.getUser(linkedRequest.requesterId);
+            if (requester) {
+              notifyStatusChange(linkedRequest, requester, task.status, normalizedStatus, notificationService).catch(err =>
+                console.error("Failed to send status change notification:", err)
+              );
+            }
+          }
+        } catch (notifyErr) {
+          console.error("Notification error on status change:", notifyErr);
+        }
       }
 
       // Create a task note if hold reason was provided
@@ -2656,6 +2706,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           notifyVehicleReservationApproved(updatedReservation, reservationUser, vehicleName, notificationService).catch(err =>
             console.error("Failed to send reservation approval email:", err)
+          );
+        }
+      }
+
+      if (updates.status === "cancelled" && reservation.status !== "cancelled" && updatedReservation && reservation.userId !== userId) {
+        // Admin cancelled the reservation - notify the user
+        const reservationUser = await storage.getUser(reservation.userId);
+        if (reservationUser) {
+          let vehicleName = "Unassigned";
+          const vId = updatedReservation.vehicleId || reservation.vehicleId;
+          if (vId) {
+            const vehicle = await storage.getVehicle(vId);
+            if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+          }
+          notifyVehicleReservationDenied(updatedReservation, reservationUser, vehicleName, notificationService).catch(err =>
+            console.error("Failed to send reservation denied email:", err)
           );
         }
       }
@@ -4423,6 +4489,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating notification setting:", error);
       res.status(500).json({ message: "Failed to update notification setting" });
+    }
+  });
+
+  // ─── Availability Schedules ──────────────────────────────────────────────
+  app.get("/api/users/:id/availability", isAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getUserAvailability(req.params.id);
+      res.json(schedules);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch availability" });
+    }
+  });
+
+  app.put("/api/users/:id/availability", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { schedules } = req.body;
+      if (!Array.isArray(schedules)) return res.status(400).json({ message: "schedules must be an array" });
+      const parsed = schedules.map((s: any) => insertAvailabilityScheduleSchema.parse({ ...s, userId: req.params.id }));
+      const result = await storage.upsertUserAvailability(req.params.id, parsed);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to update availability" });
+    }
+  });
+
+  // ─── User Skills ──────────────────────────────────────────────────────────
+  app.get("/api/users/:id/skills", isAuthenticated, async (req, res) => {
+    try {
+      const skills = await storage.getUserSkills(req.params.id);
+      res.json(skills);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch skills" });
+    }
+  });
+
+  app.post("/api/users/:id/skills", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const data = insertUserSkillSchema.parse({ ...req.body, userId: req.params.id });
+      const skill = await storage.createUserSkill(data);
+      res.status(201).json(skill);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to create skill" });
+    }
+  });
+
+  app.delete("/api/users/:id/skills/:skillId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteUserSkill(req.params.skillId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete skill" });
+    }
+  });
+
+  // ─── Task Dependencies ────────────────────────────────────────────────────
+  app.get("/api/tasks/:id/dependencies", isAuthenticated, async (req, res) => {
+    try {
+      const deps = await storage.getTaskDependencies(req.params.id);
+      res.json(deps);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch dependencies" });
+    }
+  });
+
+  app.post("/api/tasks/:id/dependencies", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const data = insertTaskDependencySchema.parse({ ...req.body, taskId: req.params.id });
+      const dep = await storage.createTaskDependency(data);
+      res.status(201).json(dep);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to create dependency" });
+    }
+  });
+
+  app.delete("/api/tasks/:id/dependencies/:depId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteTaskDependency(req.params.depId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete dependency" });
+    }
+  });
+
+  // ─── SLA Configs ──────────────────────────────────────────────────────────
+  app.get("/api/sla-configs", isAuthenticated, async (req, res) => {
+    try {
+      const configs = await storage.getSlaConfigs();
+      res.json(configs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch SLA configs" });
+    }
+  });
+
+  app.put("/api/sla-configs/:urgencyLevel", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { responseHours, resolutionHours } = req.body;
+      if (typeof responseHours !== "number" || typeof resolutionHours !== "number") {
+        return res.status(400).json({ message: "responseHours and resolutionHours must be numbers" });
+      }
+      const config = await storage.upsertSlaConfig(req.params.urgencyLevel, { responseHours, resolutionHours });
+      res.json(config);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to update SLA config" });
+    }
+  });
+
+  // ─── AI Agent Logs ────────────────────────────────────────────────────────
+  app.get("/api/ai-logs", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { status, entityType, limit } = req.query;
+      const logs = await storage.getAiAgentLogs({
+        status: status as string,
+        entityType: entityType as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch AI logs" });
+    }
+  });
+
+  app.patch("/api/ai-logs/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+      const { status } = req.body;
+      if (!["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ message: "status must be 'approved' or 'rejected'" });
+      }
+      const log = await storage.updateAiAgentLog(req.params.id, { status, reviewedBy: user.id });
+      if (!log) return res.status(404).json({ message: "Log not found" });
+
+      if (status === "approved") {
+        const { aiAgent } = await import("./aiAgent");
+        await aiAgent.applyApprovedAction(log);
+      }
+
+      res.json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to update AI log" });
+    }
+  });
+
+  // ─── AI Triage trigger ────────────────────────────────────────────────────
+  app.post("/api/ai/triage/:requestId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const request = await storage.getServiceRequest(req.params.requestId);
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      const { aiAgent } = await import("./aiAgent");
+      const log = await aiAgent.triageServiceRequest(request);
+      res.json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to run AI triage" });
+    }
+  });
+
+  // ─── AI Schedule suggestion ───────────────────────────────────────────────
+  app.post("/api/ai/schedule/:taskId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.taskId);
+      if (!task) return res.status(404).json({ message: "Task not found" });
+      const { aiAgent } = await import("./aiAgent");
+      const log = await aiAgent.suggestTaskSchedule(task);
+      res.json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to generate schedule suggestion" });
+    }
+  });
+
+  // ─── AI Project schedule ──────────────────────────────────────────────────
+  app.post("/api/ai/project-schedule/:projectId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ message: "Project not found" });
+      const { aiAgent } = await import("./aiAgent");
+      const logs = await aiAgent.scheduleProject(req.params.projectId);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to generate project schedule" });
+    }
+  });
+
+  // ─── Equipment PM schedule ────────────────────────────────────────────────
+  app.get("/api/equipment/:id/pm-schedule", isAuthenticated, async (req, res) => {
+    try {
+      const eq = await storage.getEquipmentItem(req.params.id);
+      if (!eq) return res.status(404).json({ message: "Equipment not found" });
+      const allTasks = await storage.getTasks();
+      const tasks = allTasks.filter((t: any) => t.equipmentId === req.params.id);
+      const completedTasks = tasks.filter((t: any) => t.status === "completed" && t.completedAt);
+      completedTasks.sort((a: any, b: any) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      const lastCompleted = completedTasks[0];
+      const intervalDays = (eq as any).maintenanceIntervalDays || 90;
+      const projectedDates: string[] = [];
+      const baseDate = lastCompleted?.completedAt ? new Date(lastCompleted.completedAt) : new Date();
+      for (let i = 1; i <= 6; i++) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + intervalDays * i);
+        projectedDates.push(d.toISOString());
+      }
+      res.json({ equipmentId: req.params.id, intervalDays, lastCompleted: lastCompleted?.completedAt || null, projectedDates });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch PM schedule" });
+    }
+  });
+
+  // ─── AI Stats ─────────────────────────────────────────────────────────────
+  app.get("/api/ai-stats", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const allLogs = await storage.getAiAgentLogs({});
+      const pending = allLogs.filter((l: any) => l.status === "pending_review").length;
+      const approved = allLogs.filter((l: any) => l.status === "approved").length;
+      const rejected = allLogs.filter((l: any) => l.status === "rejected").length;
+      const autoApplied = allLogs.filter((l: any) => l.status === "auto_applied").length;
+      const total = allLogs.length;
+      const acceptanceRate = (approved + autoApplied) > 0 ? Math.round(((approved + autoApplied) / Math.max(total - pending, 1)) * 100) : 0;
+      res.json({ pending, approved, rejected, autoApplied, total, acceptanceRate });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch AI stats" });
     }
   });
 

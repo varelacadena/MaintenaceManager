@@ -107,6 +107,21 @@ import {
   type InsertEmailLog,
   type NotificationSetting,
   type InsertNotificationSetting,
+  availabilitySchedules,
+  userSkills,
+  taskDependencies,
+  slaConfigs,
+  aiAgentLogs,
+  type AvailabilitySchedule,
+  type InsertAvailabilitySchedule,
+  type UserSkill,
+  type InsertUserSkill,
+  type TaskDependency,
+  type InsertTaskDependency,
+  type SlaConfig,
+  type InsertSlaConfig,
+  type AiAgentLog,
+  type InsertAiAgentLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -420,6 +435,30 @@ export interface IStorage {
   getNotificationSetting(type: string): Promise<NotificationSetting | undefined>;
   upsertNotificationSetting(setting: InsertNotificationSetting): Promise<NotificationSetting>;
   updateNotificationSetting(id: string, data: { emailEnabled?: boolean; inAppEnabled?: boolean }): Promise<NotificationSetting | undefined>;
+
+  // Availability schedule operations
+  getUserAvailability(userId: string): Promise<AvailabilitySchedule[]>;
+  upsertUserAvailability(userId: string, schedules: InsertAvailabilitySchedule[]): Promise<AvailabilitySchedule[]>;
+
+  // User skills operations
+  getUserSkills(userId: string): Promise<UserSkill[]>;
+  createUserSkill(skill: InsertUserSkill): Promise<UserSkill>;
+  deleteUserSkill(id: string): Promise<void>;
+  getAllUserSkills(): Promise<UserSkill[]>;
+
+  // Task dependency operations
+  getTaskDependencies(taskId: string): Promise<TaskDependency[]>;
+  createTaskDependency(dep: InsertTaskDependency): Promise<TaskDependency>;
+  deleteTaskDependency(id: string): Promise<void>;
+
+  // SLA config operations
+  getSlaConfigs(): Promise<SlaConfig[]>;
+  upsertSlaConfig(urgencyLevel: string, data: { responseHours: number; resolutionHours: number }): Promise<SlaConfig>;
+
+  // AI agent log operations
+  createAiAgentLog(log: InsertAiAgentLog): Promise<AiAgentLog>;
+  getAiAgentLogs(filters?: { status?: string; entityType?: string; limit?: number }): Promise<AiAgentLog[]>;
+  updateAiAgentLog(id: string, data: { status: string; reviewedBy?: string }): Promise<AiAgentLog | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -742,6 +781,9 @@ export class DatabaseStorage implements IStorage {
         approvedQuoteId: tasks.approvedQuoteId,
         createdById: tasks.createdById,
         projectId: tasks.projectId,
+        estimatedHours: tasks.estimatedHours,
+        requiredSkill: tasks.requiredSkill,
+        aiGenerated: tasks.aiGenerated,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
       })
@@ -2268,6 +2310,95 @@ export class DatabaseStorage implements IStorage {
       .update(notificationSettings)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(notificationSettings.id, id))
+      .returning();
+    return updated;
+  }
+
+  // ─── Availability Schedule operations ────────────────────────────────────
+  async getUserAvailability(userId: string): Promise<AvailabilitySchedule[]> {
+    return await this.db.select().from(availabilitySchedules)
+      .where(eq(availabilitySchedules.userId, userId))
+      .orderBy(availabilitySchedules.dayOfWeek);
+  }
+
+  async upsertUserAvailability(userId: string, schedules: InsertAvailabilitySchedule[]): Promise<AvailabilitySchedule[]> {
+    await this.db.delete(availabilitySchedules).where(eq(availabilitySchedules.userId, userId));
+    if (schedules.length === 0) return [];
+    return await this.db.insert(availabilitySchedules).values(schedules).returning();
+  }
+
+  // ─── User Skills operations ──────────────────────────────────────────────
+  async getUserSkills(userId: string): Promise<UserSkill[]> {
+    return await this.db.select().from(userSkills).where(eq(userSkills.userId, userId));
+  }
+
+  async createUserSkill(skill: InsertUserSkill): Promise<UserSkill> {
+    const [created] = await this.db.insert(userSkills).values(skill).returning();
+    return created;
+  }
+
+  async deleteUserSkill(id: string): Promise<void> {
+    await this.db.delete(userSkills).where(eq(userSkills.id, id));
+  }
+
+  async getAllUserSkills(): Promise<UserSkill[]> {
+    return await this.db.select().from(userSkills);
+  }
+
+  // ─── Task Dependencies operations ────────────────────────────────────────
+  async getTaskDependencies(taskId: string): Promise<TaskDependency[]> {
+    return await this.db.select().from(taskDependencies).where(eq(taskDependencies.taskId, taskId));
+  }
+
+  async createTaskDependency(dep: InsertTaskDependency): Promise<TaskDependency> {
+    const [created] = await this.db.insert(taskDependencies).values(dep).returning();
+    return created;
+  }
+
+  async deleteTaskDependency(id: string): Promise<void> {
+    await this.db.delete(taskDependencies).where(eq(taskDependencies.id, id));
+  }
+
+  // ─── SLA Configs operations ──────────────────────────────────────────────
+  async getSlaConfigs(): Promise<SlaConfig[]> {
+    return await this.db.select().from(slaConfigs).orderBy(slaConfigs.urgencyLevel);
+  }
+
+  async upsertSlaConfig(urgencyLevel: string, data: { responseHours: number; resolutionHours: number }): Promise<SlaConfig> {
+    const existing = await this.db.select().from(slaConfigs).where(eq(slaConfigs.urgencyLevel, urgencyLevel));
+    if (existing.length > 0) {
+      const [updated] = await this.db.update(slaConfigs)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(slaConfigs.urgencyLevel, urgencyLevel))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await this.db.insert(slaConfigs).values({ urgencyLevel, ...data }).returning();
+      return created;
+    }
+  }
+
+  // ─── AI Agent Log operations ─────────────────────────────────────────────
+  async createAiAgentLog(log: InsertAiAgentLog): Promise<AiAgentLog> {
+    const [created] = await this.db.insert(aiAgentLogs).values(log).returning();
+    return created;
+  }
+
+  async getAiAgentLogs(filters?: { status?: string; entityType?: string; limit?: number }): Promise<AiAgentLog[]> {
+    let query = this.db.select().from(aiAgentLogs) as any;
+    const conditions = [];
+    if (filters?.status) conditions.push(eq(aiAgentLogs.status, filters.status as any));
+    if (filters?.entityType) conditions.push(eq(aiAgentLogs.entityType, filters.entityType));
+    if (conditions.length > 0) query = query.where(and(...conditions));
+    query = query.orderBy(desc(aiAgentLogs.createdAt));
+    if (filters?.limit) query = query.limit(filters.limit);
+    return await query;
+  }
+
+  async updateAiAgentLog(id: string, data: { status: string; reviewedBy?: string }): Promise<AiAgentLog | undefined> {
+    const [updated] = await this.db.update(aiAgentLogs)
+      .set({ ...data, reviewedAt: new Date() } as any)
+      .where(eq(aiAgentLogs.id, id))
       .returning();
     return updated;
   }

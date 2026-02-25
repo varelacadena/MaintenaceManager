@@ -78,6 +78,12 @@ import {
   DollarSign,
   CircleDollarSign,
   Download,
+  Bot,
+  Sparkles,
+  ThumbsUp,
+  ThumbsDown,
+  Link2,
+  GripVertical,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
@@ -195,6 +201,8 @@ export default function TaskDetail() {
   const [newNote, setNewNote] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
+  const [aiScheduleLog, setAiScheduleLog] = useState<any>(null);
+  const [aiScheduleLoading, setAiScheduleLoading] = useState(false);
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>("");
   const [partQuantity, setPartQuantity] = useState("");
   const [partNotes, setPartNotes] = useState("");
@@ -326,6 +334,12 @@ export default function TaskDetail() {
   const { data: allTasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
     enabled: !!task?.propertyId && (user?.role === "technician" || user?.role === "admin"),
+  });
+
+  const { data: taskDependencies = [] } = useQuery<any[]>({
+    queryKey: ["/api/tasks", id, "dependencies"],
+    queryFn: () => apiRequest("GET", `/api/tasks/${id}/dependencies`).then((r) => r.json()),
+    enabled: !!id && user?.role === "admin",
   });
 
   const previousWork = useMemo(() => {
@@ -529,6 +543,19 @@ export default function TaskDetail() {
           queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
         } catch (error) {
           console.error("Error updating task status:", error);
+        }
+      }
+      // If this is a pool task, claim it for the current user
+      if (task?.assignedPool && !task?.assignedToId && user?.id) {
+        try {
+          await apiRequest("PATCH", `/api/tasks/${id}`, {
+            assignedToId: user.id,
+            assignedPool: null,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        } catch (error) {
+          console.error("Error claiming pool task:", error);
         }
       }
       toast({ title: "Timer started" });
@@ -859,10 +886,47 @@ export default function TaskDetail() {
   };
 
   const handleComplete = () => {
+    if (task.requiresPhoto && uploads.length === 0) {
+      toast({
+        title: "Photo required",
+        description: "This task requires at least one photo before it can be marked as completed. Please upload a photo first.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (activeTimer) {
       stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
     } else {
       updateStatusMutation.mutate("completed");
+    }
+  };
+
+  const handleRunAiSchedule = async () => {
+    if (!id) return;
+    setAiScheduleLoading(true);
+    try {
+      const res = await apiRequest("POST", `/api/ai/schedule/${id}`, {});
+      const log = await res.json();
+      setAiScheduleLog(log);
+      toast({ title: "AI schedule suggestion ready", description: "Review and accept below." });
+    } catch {
+      toast({ title: "AI scheduling failed", description: "Check that ANTHROPIC_API_KEY is configured.", variant: "destructive" });
+    } finally {
+      setAiScheduleLoading(false);
+    }
+  };
+
+  const handleReviewAiSchedule = async (status: "approved" | "rejected") => {
+    if (!aiScheduleLog) return;
+    try {
+      await apiRequest("PATCH", `/api/ai-logs/${aiScheduleLog.id}`, { status });
+      setAiScheduleLog({ ...aiScheduleLog, status });
+      if (status === "approved") {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      }
+      toast({ title: status === "approved" ? "Schedule applied" : "Suggestion rejected" });
+    } catch {
+      toast({ title: "Failed to update suggestion", variant: "destructive" });
     }
   };
 
@@ -2015,6 +2079,87 @@ export default function TaskDetail() {
             )}
 
           </div>
+
+          {/* AI Schedule Suggestion - admin only, when no assignee or due date */}
+          {user?.role === "admin" && (!task.assignedToId || !task.estimatedCompletionDate) && (
+            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">AI Scheduling</span>
+                  {aiScheduleLog && (
+                    <Badge variant={aiScheduleLog.status === "approved" ? "default" : aiScheduleLog.status === "rejected" ? "destructive" : "secondary"} className="text-xs">
+                      {aiScheduleLog.status === "pending_review" ? "Pending Review" : aiScheduleLog.status === "approved" ? "Applied" : "Rejected"}
+                    </Badge>
+                  )}
+                </div>
+                {!aiScheduleLog && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRunAiSchedule}
+                    disabled={aiScheduleLoading}
+                    data-testid="button-ai-schedule"
+                    className="gap-1.5"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {aiScheduleLoading ? "Analyzing..." : "Suggest Schedule"}
+                  </Button>
+                )}
+              </div>
+              {aiScheduleLog?.proposedValue && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-muted-foreground italic">{aiScheduleLog.reasoning}</p>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <span className="text-xs text-muted-foreground">Assignee</span>
+                      <p className="font-medium">{aiScheduleLog.proposedValue.suggestedAssigneeName || aiScheduleLog.proposedValue.assigneeName || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Start Date</span>
+                      <p className="font-medium">{aiScheduleLog.proposedValue.suggestedStartDate || aiScheduleLog.proposedValue.startDate || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Due Date</span>
+                      <p className="font-medium">{aiScheduleLog.proposedValue.suggestedDueDate || aiScheduleLog.proposedValue.dueDate || "—"}</p>
+                    </div>
+                  </div>
+                  {aiScheduleLog.status === "pending_review" && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="outline" onClick={() => handleReviewAiSchedule("approved")} className="gap-1.5 text-green-600" data-testid="button-accept-schedule">
+                        <ThumbsUp className="h-3.5 w-3.5" /> Apply
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleReviewAiSchedule("rejected")} className="gap-1.5 text-muted-foreground" data-testid="button-reject-schedule">
+                        <ThumbsDown className="h-3.5 w-3.5" /> Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Dependencies - admin only */}
+          {user?.role === "admin" && taskDependencies.length > 0 && (
+            <div className="p-3 bg-muted/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Blocked By</span>
+              </div>
+              <div className="space-y-1.5">
+                {taskDependencies.map((dep: any) => {
+                  const depTask = allTasks.find((t: any) => t.id === dep.dependsOnTaskId);
+                  return (
+                    <div key={dep.id} className="flex items-center gap-2 text-sm">
+                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground truncate">{depTask?.name || dep.dependsOnTaskId}</span>
+                      <Badge variant="outline" className="text-xs capitalize ml-auto">{dep.dependencyType?.replace("_", " ") || "finish to start"}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Description Block */}
           {task.description && (
