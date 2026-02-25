@@ -21,6 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SecureImage } from "@/components/SecureImage";
+import { useFileDownload } from "@/hooks/use-download";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { VehicleCheckInLog, VehicleCheckOutLog, Vehicle, User, Upload } from "@shared/schema";
@@ -30,7 +32,8 @@ export default function VehicleCheckInVerification() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedUpload, setSelectedUpload] = useState<Upload | null>(null);
+  const { downloadFile } = useFileDownload();
   const [editedData, setEditedData] = useState<{
     endMileage: number;
     fuelLevel: string;
@@ -332,13 +335,14 @@ export default function VehicleCheckInVerification() {
                   <div
                     key={upload.id}
                     className="relative group cursor-pointer"
-                    onClick={() => setSelectedImage(upload.objectUrl)}
+                    onClick={() => setSelectedUpload(upload)}
                     data-testid={`image-${upload.id}`}
                   >
                     <div className="aspect-square rounded-lg overflow-hidden border bg-muted">
-                      <img
-                        src={upload.objectUrl}
-                        alt={upload.fileName}
+                      <SecureImage
+                        uploadId={upload.id}
+                        objectUrl={upload.objectUrl}
+                        fileName={upload.fileName}
                         className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
                     </div>
@@ -363,17 +367,29 @@ export default function VehicleCheckInVerification() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+      <Dialog open={!!selectedUpload} onOpenChange={() => setSelectedUpload(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Photo Preview</DialogTitle>
           </DialogHeader>
-          {selectedImage && (
-            <img
-              src={selectedImage}
-              alt="Full size preview"
-              className="w-full h-auto rounded-lg"
-            />
+          {selectedUpload && (
+            <div className="w-full">
+              <SecureImage
+                uploadId={selectedUpload.id}
+                objectUrl={selectedUpload.objectUrl}
+                fileName={selectedUpload.fileName}
+                className="w-full h-auto rounded-lg object-contain max-h-[70vh]"
+              />
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => downloadFile(selectedUpload.id, selectedUpload.objectUrl)}
+                  className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  data-testid="button-open-full"
+                >
+                  Open full size
+                </button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

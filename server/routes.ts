@@ -836,6 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestData = insertServiceRequestSchema.parse({
         ...req.body,
         requesterId: userId,
+        requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : undefined,
       });
       const request = await storage.createServiceRequest(requestData);
 

@@ -16,6 +16,7 @@ import QRCode from "react-qr-code";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
 import { AlertCircle } from "lucide-react";
+import { SecureImage } from "@/components/SecureImage";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -124,24 +125,18 @@ function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[
                 Documentation Photos
               </p>
               <div className="flex flex-wrap gap-4">
-                {uploads.map((upload) => {
-                  const isMockFile = upload.objectUrl.includes("mock-storage.local");
-                  return (
+                {uploads.map((upload) => (
                     <div key={upload.id} className="flex flex-col gap-1.5 w-[140px]">
                       <button
                         onClick={() => downloadFile(upload.id, upload.objectUrl)}
                         className="relative aspect-square overflow-hidden rounded-lg border bg-muted hover-elevate group transition-all text-left"
                         data-testid={`link-upload-${upload.id}`}
                       >
-                        {isMockFile ? (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-destructive/10">
-                            <AlertCircle className="w-8 h-8 text-destructive" />
-                            <span className="text-[10px] text-destructive mt-1">Unavailable</span>
-                          </div>
-                        ) : upload.fileType.startsWith('image/') ? (
-                          <img
-                            src={upload.objectUrl}
-                            alt={upload.fileName}
+                        {upload.fileType.startsWith('image/') ? (
+                          <SecureImage
+                            uploadId={upload.id}
+                            objectUrl={upload.objectUrl}
+                            fileName={upload.fileName}
                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           />
                         ) : (
@@ -149,18 +144,15 @@ function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[
                             <FileText className="w-8 h-8 text-muted-foreground" />
                           </div>
                         )}
-                        {!isMockFile && (
-                          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
-                          </div>
-                        )}
+                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
+                        </div>
                       </button>
                       <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
                         {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
                       </span>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             </div>
           </>
@@ -236,24 +228,18 @@ function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] 
                 Documentation Photos
               </p>
               <div className="flex flex-wrap gap-4">
-                {uploads.map((upload) => {
-                  const isMockFile = upload.objectUrl.includes("mock-storage.local");
-                  return (
+                {uploads.map((upload) => (
                     <div key={upload.id} className="flex flex-col gap-1.5 w-[140px]">
                       <button
                         onClick={() => downloadFile(upload.id, upload.objectUrl)}
                         className="relative aspect-square overflow-hidden rounded-lg border bg-muted hover-elevate group transition-all text-left"
                         data-testid={`link-upload-${upload.id}`}
                       >
-                        {isMockFile ? (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-destructive/10">
-                            <AlertCircle className="w-8 h-8 text-destructive" />
-                            <span className="text-[10px] text-destructive mt-1">Unavailable</span>
-                          </div>
-                        ) : upload.fileType.startsWith('image/') ? (
-                          <img
-                            src={upload.objectUrl}
-                            alt={upload.fileName}
+                        {upload.fileType.startsWith('image/') ? (
+                          <SecureImage
+                            uploadId={upload.id}
+                            objectUrl={upload.objectUrl}
+                            fileName={upload.fileName}
                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           />
                         ) : (
@@ -261,18 +247,15 @@ function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] 
                             <FileText className="w-8 h-8 text-muted-foreground" />
                           </div>
                         )}
-                        {!isMockFile && (
-                          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
-                          </div>
-                        )}
+                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
+                        </div>
                       </button>
                       <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
                         {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
                       </span>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             </div>
           </>
