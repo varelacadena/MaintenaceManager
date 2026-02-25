@@ -50,7 +50,7 @@ function getInitials(user: UserType): string {
   if (user.firstName && user.lastName) {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   }
-  return user.username.substring(0, 2).toUpperCase();
+  return (user.username?.substring(0, 2) ?? "?").toUpperCase();
 }
 
 function getDisplayName(user: UserType): string {
