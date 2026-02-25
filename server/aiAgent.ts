@@ -81,9 +81,14 @@ async function buildSlaContext(): Promise<string> {
 
 // ─── T020: Service Request Auto-Triage ───────────────────────────────────────
 async function triageServiceRequest(request: ServiceRequest): Promise<AiAgentLog> {
-  const slaContext = await buildSlaContext();
+  const [slaContext, teamContext] = await Promise.all([
+    buildSlaContext(),
+    buildTeamCapacityContext(),
+  ]);
 
-  const prompt = `You are a facility management AI assistant. Analyze this service request and provide structured triage.
+  const today = new Date().toISOString().split("T")[0];
+
+  const prompt = `You are a facility management AI assistant. Analyze this service request and provide structured triage including the best person to assign it to.
 
 SERVICE REQUEST:
 Title: ${(request as any).title || (request as any).name}
@@ -92,9 +97,13 @@ Category: ${(request as any).category || "Not specified"}
 Urgency: ${request.urgency}
 Property: ${(request as any).propertyId || "Unknown"}
 Requested Date: ${(request as any).requestedDate || "Not specified"}
+Today's Date: ${today}
 
 SLA TARGETS:
 ${slaContext}
+
+TEAM CAPACITY & SKILLS (use id, name, skills, availableToday, estimatedHoursLoaded to pick the best assignee):
+${teamContext}
 
 Analyze this request and return ONLY a JSON object with this exact structure:
 \`\`\`json
@@ -105,9 +114,14 @@ Analyze this request and return ONLY a JSON object with this exact structure:
   "suggestedSkill": "electrical|plumbing|hvac|mechanical|general",
   "draftTaskTitle": "brief action-oriented title",
   "estimatedHours": 2,
-  "reasoning": "One sentence explaining why"
+  "suggestedAssigneeId": "user-id from team context, or null if no good match",
+  "suggestedAssigneeName": "Full Name from team context, or null",
+  "suggestedStartDate": "YYYY-MM-DD suggested start date based on urgency and SLA, or null",
+  "suggestedStartDateReason": "One sentence explaining the timing choice, or null",
+  "reasoning": "One sentence explaining the overall triage decision"
 }
-\`\`\``;
+\`\`\`
+Pick the assignee whose skills best match the required skill, who is available today, and has the lowest current workload. If no one matches well, set suggestedAssigneeId and suggestedAssigneeName to null.`;
 
   const response = await callAI(prompt, "haiku");
   const parsed = parseJsonFromResponse(response);

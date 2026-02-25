@@ -709,7 +709,14 @@ export default function RequestDetail() {
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground">Assign To</span>
-                          <p className="font-medium capitalize">{aiTriageLog.proposedValue.suggestedExecutorType}</p>
+                          {aiTriageLog.proposedValue.suggestedAssigneeName ? (
+                            <>
+                              <p className="font-medium">{aiTriageLog.proposedValue.suggestedAssigneeName}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{aiTriageLog.proposedValue.suggestedExecutorType}</p>
+                            </>
+                          ) : (
+                            <p className="font-medium capitalize">{aiTriageLog.proposedValue.suggestedExecutorType}</p>
+                          )}
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground">Required Skill</span>
@@ -719,6 +726,17 @@ export default function RequestDetail() {
                           <span className="text-xs text-muted-foreground">Est. Hours</span>
                           <p className="font-medium">{aiTriageLog.proposedValue.estimatedHours}h</p>
                         </div>
+                        {aiTriageLog.proposedValue.suggestedStartDate && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Suggested Start</span>
+                            <p className="font-medium">
+                              {new Date(aiTriageLog.proposedValue.suggestedStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                            {aiTriageLog.proposedValue.suggestedStartDateReason && (
+                              <p className="text-xs text-muted-foreground">{aiTriageLog.proposedValue.suggestedStartDateReason}</p>
+                            )}
+                          </div>
+                        )}
                         {aiTriageLog.proposedValue.draftTaskTitle && (
                           <div className="col-span-2">
                             <span className="text-xs text-muted-foreground">Draft Task Title</span>
