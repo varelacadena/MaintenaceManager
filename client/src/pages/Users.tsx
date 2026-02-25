@@ -42,6 +42,61 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 const SKILL_CATEGORIES = ["electrical", "plumbing", "hvac", "mechanical", "general"] as const;
 const SKILL_LEVELS = ["basic", "intermediate", "advanced"] as const;
 
+const HOURS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+const MINUTES = ["00","15","30","45"];
+
+function hhmmToTimeParts(hhmm: string): { hour: string; minute: string; period: string } {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const minute = MINUTES.includes(mStr) ? mStr : "00";
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const hour = String(hour12).padStart(2, "0");
+  return { hour, minute, period };
+}
+
+function timePartsToHhmm(hour: string, minute: string, period: string): string {
+  let h = parseInt(hour, 10);
+  if (period === "AM" && h === 12) h = 0;
+  if (period === "PM" && h !== 12) h += 12;
+  return `${String(h).padStart(2, "0")}:${minute}`;
+}
+
+function TimeSelect({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const { hour, minute, period } = hhmmToTimeParts(value);
+  const update = (h: string, m: string, p: string) => onChange(timePartsToHhmm(h, m, p));
+  return (
+    <div className="flex items-center gap-1">
+      <Select value={hour} onValueChange={(h) => update(h, minute, period)} disabled={disabled}>
+        <SelectTrigger className="w-16 h-8 text-xs px-2">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <span className="text-muted-foreground text-xs">:</span>
+      <Select value={minute} onValueChange={(m) => update(hour, m, period)} disabled={disabled}>
+        <SelectTrigger className="w-16 h-8 text-xs px-2">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={period} onValueChange={(p) => update(hour, minute, p)} disabled={disabled}>
+        <SelectTrigger className="w-16 h-8 text-xs px-2">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="AM">AM</SelectItem>
+          <SelectItem value="PM">PM</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export default function Users() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -235,11 +290,6 @@ export default function Users() {
     onError: () => toast({ title: "Failed to remove skill", variant: "destructive" }),
   });
 
-  const openAiProfileDialog = (user: User) => {
-    setSelectedUser(user);
-    setIsAiProfileDialogOpen(true);
-  };
-
   const [localSchedule, setLocalSchedule] = useState<Record<number, { startTime: string; endTime: string; isAvailable: boolean }>>({});
 
   const initSchedule = (availability: any[]) => {
@@ -253,8 +303,14 @@ export default function Users() {
     setLocalSchedule(sched);
   };
 
+  const openAiProfileDialog = (user: User) => {
+    setSelectedUser(user);
+    initSchedule([]);
+    setIsAiProfileDialogOpen(true);
+  };
+
   useEffect(() => {
-    if (isAiProfileDialogOpen && userAvailability.length > 0 && Object.keys(localSchedule).length === 0) {
+    if (isAiProfileDialogOpen) {
       initSchedule(userAvailability);
     }
   }, [isAiProfileDialogOpen, userAvailability]);
@@ -962,21 +1018,11 @@ export default function Users() {
             </TabsList>
 
             <TabsContent value="availability" className="space-y-4 mt-4">
-              {Object.keys(localSchedule).length === 0 && userAvailability !== undefined && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => initSchedule(userAvailability)}
-                  data-testid="button-init-schedule"
-                >
-                  Load Schedule
-                </Button>
-              )}
               <div className="space-y-2">
                 {DAY_NAMES.map((day, idx) => {
                   const slot = localSchedule[idx] || { startTime: "08:00", endTime: "17:00", isAvailable: idx >= 1 && idx <= 5 };
                   return (
-                    <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/30">
+                    <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/30 flex-wrap">
                       <Switch
                         checked={slot.isAvailable}
                         onCheckedChange={(checked) =>
@@ -985,27 +1031,17 @@ export default function Users() {
                         data-testid={`switch-day-${idx}`}
                       />
                       <span className="w-24 text-sm font-medium">{day}</span>
-                      <div className="flex items-center gap-2 flex-1">
-                        <Input
-                          type="time"
+                      <div className="flex items-center gap-2 flex-1 flex-wrap">
+                        <TimeSelect
                           value={slot.startTime}
-                          onChange={(e) =>
-                            setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, startTime: e.target.value } }))
-                          }
+                          onChange={(v) => setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, startTime: v } }))}
                           disabled={!slot.isAvailable}
-                          className="w-32 text-sm"
-                          data-testid={`input-start-${idx}`}
                         />
                         <span className="text-muted-foreground text-sm">to</span>
-                        <Input
-                          type="time"
+                        <TimeSelect
                           value={slot.endTime}
-                          onChange={(e) =>
-                            setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, endTime: e.target.value } }))
-                          }
+                          onChange={(v) => setLocalSchedule((prev) => ({ ...prev, [idx]: { ...slot, endTime: v } }))}
                           disabled={!slot.isAvailable}
-                          className="w-32 text-sm"
-                          data-testid={`input-end-${idx}`}
                         />
                       </div>
                     </div>
@@ -1014,7 +1050,7 @@ export default function Users() {
               </div>
               <Button
                 onClick={handleSaveAvailability}
-                disabled={saveAvailabilityMutation.isPending || Object.keys(localSchedule).length === 0}
+                disabled={saveAvailabilityMutation.isPending}
                 data-testid="button-save-availability"
               >
                 {saveAvailabilityMutation.isPending ? "Saving..." : "Save Availability"}
