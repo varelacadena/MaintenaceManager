@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Users as UsersIcon, Mail, Plus, Edit, Trash2, User as UserIcon, Lock, Bot, X, UserPlus } from "lucide-react";
+import { Users as UsersIcon, Mail, Plus, Edit, Trash2, User as UserIcon, Lock, Bot, X, UserPlus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
