@@ -28,6 +28,7 @@ import {
   FolderKanban,
   Mail,
   Bot,
+  LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -158,7 +159,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
-        <div className="flex items-center gap-2 p-2 rounded-md hover-elevate group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center gap-2 p-2 rounded-md group-data-[collapsible=icon]:justify-center">
           <Avatar className="w-7 h-7 shrink-0">
             <AvatarImage />
             <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
@@ -167,6 +168,17 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
             <p className="text-xs font-medium truncate">{userName}</p>
             <p className="text-[10px] text-muted-foreground capitalize">{userRole}</p>
           </div>
+          <button
+            onClick={async () => {
+              await fetch("/api/logout", { method: "POST" });
+              window.location.href = "/";
+            }}
+            className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover-elevate"
+            title="Sign Out"
+            data-testid="button-sidebar-logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>
