@@ -173,8 +173,9 @@ export default function RequestDetail() {
       const log = await res.json();
       setAiTriageLog(log);
       toast({ title: "AI triage complete", description: "Review the suggestion below." });
-    } catch {
-      toast({ title: "AI triage failed", description: "Check that ANTHROPIC_API_KEY is configured.", variant: "destructive" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "AI analysis could not be completed. Please try again.";
+      toast({ title: "AI triage failed", description: message, variant: "destructive" });
     } finally {
       setAiTriageLoading(false);
     }

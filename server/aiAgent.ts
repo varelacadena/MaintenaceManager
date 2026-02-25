@@ -10,8 +10,8 @@ const openai = new OpenAI({
 // ─── Model tiers ──────────────────────────────────────────────────────────────
 // Mini: fast + cost-effective, for routine triage/simple scheduling
 // Full: smarter, for complex project scheduling and conflict resolution
-const MINI = "gpt-5-mini";
-const FULL = "gpt-5";
+const MINI = "gpt-4o-mini";
+const FULL = "gpt-4o";
 
 async function callAI(prompt: string, tier: "haiku" | "sonnet" = "haiku"): Promise<string> {
   const model = tier === "sonnet" ? FULL : MINI;
