@@ -47,7 +47,7 @@ async function buildTeamCapacityContext(targetDate?: Date): Promise<string> {
   const allWorkers = [...technicians, ...students];
 
   const activeTasks = await storage.getTasks({ status: "in_progress" });
-  const pendingTasks = await storage.getTasks({ status: "pending" });
+  const pendingTasks = await storage.getTasks({ status: "not_started" });
 
   const workerLoads = await Promise.all(
     allWorkers.map(async (worker) => {
@@ -330,7 +330,7 @@ async function checkVehicleCheckIn(checkInData: {
         name: `PM: ${schedule.maintenanceType} for ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
         description: `Preventive maintenance due. Current mileage: ${checkInData.currentMileage}. Last service: ${lastMileage} miles. Threshold: ${threshold} miles.`,
         urgency: "medium",
-        status: "pending",
+        status: "not_started",
         taskType: "maintenance",
         assignedPool: "technician_pool",
         aiGenerated: true,
@@ -354,7 +354,7 @@ async function checkVehicleCheckIn(checkInData: {
       name: `Damage Repair: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
       description: `Damage reported during check-in: ${checkInData.damageDescription}`,
       urgency: "high",
-      status: "pending",
+      status: "not_started",
       taskType: "repair",
       assignedPool: "technician_pool",
       aiGenerated: true,
@@ -401,7 +401,7 @@ async function runEquipmentPmCheck(): Promise<void> {
     const daysUntilDue = Math.floor((nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     if (daysUntilDue <= 14 && daysUntilDue > 0) {
-      const pending = await storage.getTasks({ status: "pending" });
+      const pending = await storage.getTasks({ status: "not_started" });
       const alreadyExists = pending.some((t: any) => t.equipmentId === eq.id && t.aiGenerated);
       if (alreadyExists) continue;
 
@@ -413,7 +413,7 @@ async function runEquipmentPmCheck(): Promise<void> {
         name: `PM: ${eq.name} scheduled maintenance`,
         description: `Preventive maintenance due on ${nextDue.toLocaleDateString()}. Equipment: ${eq.name} (${eq.category}).`,
         urgency: "medium",
-        status: "pending",
+        status: "not_started",
         taskType: "maintenance",
         estimatedCompletionDate: nextDue,
         assignedToId: matchedSkill?.userId || adminId,
