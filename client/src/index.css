@@ -357,3 +357,27 @@
     inset: -1px;
   }
 }
+
+@keyframes scan-line {
+  0%   { top: 6px; }
+  50%  { top: calc(100% - 6px); }
+  100% { top: 6px; }
+}
+
+.animate-scan-line {
+  animation: scan-line 2s ease-in-out infinite;
+  position: absolute;
+}
+
+/* Hide scrollbar but keep scrolling */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Hide html5-qrcode default UI chrome */
+#qr-reader-native > div:not(video):not(canvas) {
+  display: none !important;
+}
+#qr-reader-native {
+  border: none !important;
+  padding: 0 !important;
+}

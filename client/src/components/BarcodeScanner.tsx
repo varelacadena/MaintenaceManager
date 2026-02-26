@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Camera, X, Keyboard } from "lucide-react";
+import { Keyboard, FlipHorizontal, AlertCircle, ScanLine } from "lucide-react";
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -22,15 +21,74 @@ export function BarcodeScanner({
   open,
   onOpenChange,
   onScan,
-  title = "Scan Barcode",
-  description = "Point your camera at a barcode or QR code",
+  title = "Scan Code",
+  description,
 }: BarcodeScannerProps) {
-  const scannerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const html5QrcodeRef = useRef<any>(null);
   const [error, setError] = useState<string>("");
   const [manualEntry, setManualEntry] = useState(false);
   const [manualValue, setManualValue] = useState("");
-  const [isStarting, setIsStarting] = useState(false);
+  const [isFront, setIsFront] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const startedRef = useRef(false);
+
+  const stopScanner = useCallback(async () => {
+    startedRef.current = false;
+    if (html5QrcodeRef.current) {
+      try { await html5QrcodeRef.current.stop(); } catch {}
+      try { await html5QrcodeRef.current.clear(); } catch {}
+      html5QrcodeRef.current = null;
+    }
+    setIsRunning(false);
+  }, []);
+
+  const startScanner = useCallback(async (front: boolean) => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    setError("");
+
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+
+      if (html5QrcodeRef.current) {
+        try { await html5QrcodeRef.current.stop(); } catch {}
+        try { await html5QrcodeRef.current.clear(); } catch {}
+        html5QrcodeRef.current = null;
+      }
+
+      const el = document.getElementById("qr-reader-native");
+      if (!el) { startedRef.current = false; return; }
+
+      const qr = new Html5Qrcode("qr-reader-native");
+      html5QrcodeRef.current = qr;
+
+      await qr.start(
+        { facingMode: front ? "user" : "environment" },
+        {
+          fps: 12,
+          qrbox: { width: Math.min(250, window.innerWidth - 80), height: 150 },
+          aspectRatio: 1.5,
+        },
+        (decodedText: string) => {
+          onScan(decodedText);
+          onOpenChange(false);
+        },
+        () => {}
+      );
+      setIsRunning(true);
+    } catch (err: any) {
+      startedRef.current = false;
+      const msg = err?.message || "";
+      if (msg.includes("Permission") || msg.includes("NotAllowed")) {
+        setError("Camera access was denied. Please allow camera permissions and try again.");
+      } else if (msg.includes("NotFound") || msg.includes("no camera") || msg.includes("Requested device")) {
+        setError("No camera found on this device.");
+      } else {
+        setError("Could not start camera scanner.");
+      }
+      setManualEntry(true);
+    }
+  }, [onScan, onOpenChange]);
 
   useEffect(() => {
     if (!open) {
@@ -40,77 +98,21 @@ export function BarcodeScanner({
       setError("");
       return;
     }
-
-    if (manualEntry) return;
-
-    startScanner();
-
-    return () => {
-      stopScanner();
-    };
+    if (!manualEntry) {
+      const timer = setTimeout(() => startScanner(isFront), 150);
+      return () => clearTimeout(timer);
+    }
   }, [open, manualEntry]);
 
-  async function startScanner() {
-    if (isStarting) return;
-    setIsStarting(true);
-    setError("");
-
-    try {
-      const { Html5QrcodeScanner, Html5QrcodeScanType } = await import("html5-qrcode");
-
-      if (scannerRef.current) {
-        try { await scannerRef.current.clear(); } catch {}
-        scannerRef.current = null;
-      }
-
-      const scanner = new Html5QrcodeScanner(
-        "barcode-scanner-container",
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 180 },
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-          rememberLastUsedCamera: true,
-          showTorchButtonIfSupported: true,
-        },
-        false
-      );
-
-      scanner.render(
-        (decodedText: string) => {
-          onScan(decodedText);
-          onOpenChange(false);
-        },
-        (errorMessage: string) => {
-          // Scan errors are expected (no code in frame) — only show persistent errors
-          if (errorMessage.includes("NotFoundException") || errorMessage.includes("No MultiFormat Readers")) {
-            return;
-          }
-        }
-      );
-
-      scannerRef.current = scanner;
-    } catch (err: any) {
-      if (err?.message?.includes("Permission") || err?.message?.includes("NotAllowed")) {
-        setError("Camera permission denied. Please allow camera access or use manual entry below.");
-      } else if (err?.message?.includes("NotFound") || err?.message?.includes("no camera")) {
-        setError("No camera found on this device. Please use manual entry below.");
-      } else {
-        setError("Could not start camera scanner. Please use manual entry below.");
-      }
-      setManualEntry(true);
-    } finally {
-      setIsStarting(false);
-    }
-  }
-
-  async function stopScanner() {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.clear();
-      } catch {}
-      scannerRef.current = null;
-    }
-  }
+  const handleFlipCamera = async () => {
+    const next = !isFront;
+    setIsFront(next);
+    await stopScanner();
+    setTimeout(() => {
+      startedRef.current = false;
+      startScanner(next);
+    }, 150);
+  };
 
   function handleManualSubmit() {
     const value = manualValue.trim();
@@ -119,54 +121,71 @@ export function BarcodeScanner({
     onOpenChange(false);
   }
 
+  const boxW = Math.min(250, window.innerWidth - 80);
+  const boxH = 150;
+
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) stopScanner(); onOpenChange(val); }}>
-      <DialogContent className="sm:max-w-md" data-testid="dialog-barcode-scanner">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
+      <DialogContent
+        className="p-0 gap-0 overflow-hidden w-full max-w-sm rounded-2xl"
+        data-testid="dialog-barcode-scanner"
+      >
+        <DialogHeader className="px-4 pt-4 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <ScanLine className="h-4 w-4 text-muted-foreground" />
             {title}
           </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {!manualEntry && (
-            <div
-              ref={containerRef}
-              className="rounded-md overflow-hidden border"
-            >
-              <div id="barcode-scanner-container" />
-              {isStarting && (
-                <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-                  Starting camera...
-                </div>
-              )}
+        {/* Camera viewport */}
+        {!manualEntry && (
+          <div className="relative bg-black" style={{ height: 220 }}>
+            <div id="qr-reader-native" className="w-full h-full" />
+
+            {/* Custom scanning frame */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="relative" style={{ width: boxW, height: boxH }}>
+                {/* Corner brackets */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white rounded-tr" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white rounded-br" />
+                {/* Animated scan line */}
+                <div className="animate-scan-line left-2 right-2 h-0.5 bg-primary/90 rounded-full shadow-[0_0_8px_2px_hsl(var(--primary)/0.5)]" />
+              </div>
             </div>
-          )}
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-
-          <div className="flex flex-col gap-2">
+            {/* Flip camera */}
             <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setManualEntry(!manualEntry)}
-              data-testid="button-toggle-manual-entry"
+              size="icon"
+              variant="ghost"
+              className="absolute bottom-2 right-2 bg-black/40 text-white hover:bg-black/60 rounded-full"
+              onClick={handleFlipCamera}
+              data-testid="button-flip-camera"
             >
-              <Keyboard className="h-4 w-4 mr-2" />
-              {manualEntry ? "Use Camera Instead" : "Enter Code Manually"}
+              <FlipHorizontal className="h-4 w-4" />
             </Button>
+          </div>
+        )}
 
-            {manualEntry && (
+        {/* Error */}
+        {error && (
+          <div className="flex items-start gap-2 mx-4 mt-3 p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Bottom controls */}
+        <div className="px-4 py-4 space-y-3">
+          {manualEntry ? (
+            <>
+              <p className="text-sm text-muted-foreground">Enter the code value below:</p>
               <div className="flex gap-2">
                 <Input
                   value={manualValue}
                   onChange={(e) => setManualValue(e.target.value)}
-                  placeholder="Enter barcode or QR code value"
+                  placeholder="Barcode or QR code value"
                   onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
                   data-testid="input-manual-barcode"
                   autoFocus
@@ -179,8 +198,37 @@ export function BarcodeScanner({
                   Find
                 </Button>
               </div>
-            )}
-          </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground text-xs"
+                onClick={() => {
+                  setManualEntry(false);
+                  setError("");
+                  startedRef.current = false;
+                  setTimeout(() => startScanner(isFront), 150);
+                }}
+              >
+                Try camera again
+              </Button>
+            </>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {description || "Point at a barcode — it scans automatically"}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-muted-foreground"
+                onClick={() => { stopScanner(); setManualEntry(true); }}
+                data-testid="button-toggle-manual-entry"
+              >
+                <Keyboard className="h-3.5 w-3.5 mr-1" />
+                Manual
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
