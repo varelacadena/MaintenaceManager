@@ -344,10 +344,17 @@ export default function Inventory() {
     w.document.close();
   };
 
+  const lookupScannedCode = async (code: string): Promise<InventoryItem | null> => {
+    const byBarcode = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(code)}`, { credentials: "include" });
+    if (byBarcode.ok) return byBarcode.json();
+    const byId = await fetch(`/api/inventory/${encodeURIComponent(code)}`, { credentials: "include" });
+    if (byId.ok) return byId.json();
+    return null;
+  };
+
   const handleScanFind = async (barcode: string) => {
-    const res = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(barcode)}`, { credentials: "include" });
-    if (res.ok) {
-      const item: InventoryItem = await res.json();
+    const item = await lookupScannedCode(barcode);
+    if (item) {
       setActiveCategory("all");
       setSearch("");
       setHighlightedId(item.id);
@@ -363,9 +370,8 @@ export default function Inventory() {
   };
 
   const handleScanReceive = async (barcode: string) => {
-    const res = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(barcode)}`, { credentials: "include" });
-    if (res.ok) {
-      const item: InventoryItem = await res.json();
+    const item = await lookupScannedCode(barcode);
+    if (item) {
       setReceiveItem(item);
       setSelectedItem(item);
       setQuantityChange("");
