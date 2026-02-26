@@ -132,7 +132,15 @@ export default function Landing() {
             <Button type="submit" size="lg" className="w-full mt-6" disabled={isLoading} data-testid="button-login">
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-
+            <div className="text-center mt-3">
+              <a
+                href="/forgot-password"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-forgot-password"
+              >
+                Forgot your password?
+              </a>
+            </div>
           </form>
         </CardContent>
       </Card>

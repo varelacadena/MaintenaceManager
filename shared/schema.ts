@@ -1383,3 +1383,15 @@ export const aiAgentLogs = pgTable("ai_agent_logs", {
 export const insertAiAgentLogSchema = createInsertSchema(aiAgentLogs).omit({ id: true, createdAt: true, reviewedAt: true });
 export type InsertAiAgentLog = z.infer<typeof insertAiAgentLogSchema>;
 export type AiAgentLog = typeof aiAgentLogs.$inferSelect;
+
+// Password reset tokens
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;

@@ -51,6 +51,7 @@ export async function applyMigrations() {
     { file: "035_add_notifications_table.sql", name: "035_add_notifications_table" },
     { file: "037_add_project_management.sql", name: "037_add_project_management" },
     { file: "039_add_scheduled_start_time.sql", name: "039_add_scheduled_start_time" },
+    { file: "040_add_password_reset_tokens.sql", name: "040_add_password_reset_tokens" },
   ];
 
   try {

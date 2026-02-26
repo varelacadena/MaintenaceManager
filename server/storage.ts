@@ -122,6 +122,8 @@ import {
   type InsertSlaConfig,
   type AiAgentLog,
   type InsertAiAgentLog,
+  passwordResetTokens,
+  type PasswordResetToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -459,6 +461,11 @@ export interface IStorage {
   createAiAgentLog(log: InsertAiAgentLog): Promise<AiAgentLog>;
   getAiAgentLogs(filters?: { status?: string; entityType?: string; limit?: number }): Promise<AiAgentLog[]>;
   updateAiAgentLog(id: string, data: { status: string; reviewedBy?: string }): Promise<AiAgentLog | undefined>;
+
+  // Password reset token operations
+  createResetToken(userId: string, token: string, expiresAt: Date): Promise<void>;
+  getResetTokenByToken(token: string): Promise<import("@shared/schema").PasswordResetToken | undefined>;
+  markResetTokenUsed(token: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2435,6 +2442,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aiAgentLogs.id, id))
       .returning();
     return updated;
+  }
+
+  // ─── Password reset token operations ─────────────────────────────────────
+  async createResetToken(userId: string, token: string, expiresAt: Date): Promise<void> {
+    await this.db.insert(passwordResetTokens).values({ userId, token, expiresAt });
+  }
+
+  async getResetTokenByToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [row] = await this.db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+    return row;
+  }
+
+  async markResetTokenUsed(token: string): Promise<void> {
+    await this.db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.token, token));
   }
 }
 

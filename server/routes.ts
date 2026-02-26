@@ -287,6 +287,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // ─── Password recovery endpoints ──────────────────────────────────────────
+
+  const passwordRecoveryLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: "Too many requests. Please try again in 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.post("/api/auth/forgot-password", passwordRecoveryLimiter, async (req, res) => {
+    const { username } = req.body;
+    const genericResponse = { message: "If an account with that username exists and has an email address, a recovery email has been sent." };
+
+    if (!username || typeof username !== "string") {
+      return res.json(genericResponse);
+    }
+
+    try {
+      const user = await storage.getUserByUsername(username.trim());
+      if (!user || !user.email) {
+        return res.json(genericResponse);
+      }
+
+      // Generate a secure random token
+      const crypto = await import("crypto");
+      const token = crypto.randomBytes(48).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.createResetToken(user.id, token, expiresAt);
+
+      // Determine the app base URL
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:5000";
+      const resetUrl = `${protocol}://${host}/reset-password?token=${token}`;
+
+      // Send email via Resend
+      try {
+        const { Resend } = await import("resend");
+        const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+        if (!hostname) throw new Error("REPLIT_CONNECTORS_HOSTNAME not set");
+        const xReplitToken = process.env.REPL_IDENTITY
+          ? "repl " + process.env.REPL_IDENTITY
+          : process.env.WEB_REPL_RENEWAL
+          ? "depl " + process.env.WEB_REPL_RENEWAL
+          : null;
+        if (!xReplitToken) throw new Error("Replit identity token not found");
+        const connectionSettings = await fetch(
+          "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
+          { headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken } }
+        ).then((r) => r.json()).then((d) => d.items?.[0]);
+        if (!connectionSettings?.settings?.api_key) throw new Error("Resend not configured");
+
+        const resend = new Resend(connectionSettings.settings.api_key);
+        const fromEmail = connectionSettings.settings.from_email || "onboarding@resend.dev";
+        const displayName = user.firstName ? user.firstName : user.username;
+
+        await resend.emails.send({
+          from: fromEmail,
+          to: user.email,
+          subject: "Password Reset Request – Hartland Maintenance",
+          html: `
+            <p>Hello ${displayName},</p>
+            <p>We received a request to reset your password for the Hartland Maintenance system.</p>
+            <p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Reset My Password</a></p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p>${resetUrl}</p>
+            <p>This link will expire in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+            <p>— Hartland Maintenance System</p>
+          `,
+        });
+
+        console.log(`[PASSWORD RESET] Email sent to ${user.email} for user ${user.username}`);
+      } catch (emailError) {
+        console.error("[PASSWORD RESET] Failed to send email:", emailError);
+      }
+
+      return res.json(genericResponse);
+    } catch (error) {
+      console.error("[PASSWORD RESET] forgot-password error:", error);
+      return res.json(genericResponse);
+    }
+  });
+
+  app.post("/api/auth/reset-password", passwordRecoveryLimiter, async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword || typeof token !== "string" || typeof newPassword !== "string") {
+      return res.status(400).json({ message: "Token and new password are required." });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters." });
+    }
+
+    try {
+      const resetToken = await storage.getResetTokenByToken(token.trim());
+
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired reset link. Please request a new one." });
+      }
+
+      if (resetToken.usedAt) {
+        return res.status(400).json({ message: "This reset link has already been used. Please request a new one." });
+      }
+
+      if (new Date() > new Date(resetToken.expiresAt)) {
+        return res.status(400).json({ message: "This reset link has expired. Please request a new one." });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUserPassword(resetToken.userId, hashedPassword);
+      await storage.markResetTokenUsed(token.trim());
+
+      console.log(`[PASSWORD RESET] Password successfully reset for userId ${resetToken.userId}`);
+      return res.json({ message: "Your password has been reset successfully. You can now log in." });
+    } catch (error) {
+      console.error("[PASSWORD RESET] reset-password error:", error);
+      return res.status(500).json({ message: "An error occurred. Please try again." });
+    }
+  });
+
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {

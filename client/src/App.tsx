@@ -8,6 +8,8 @@ import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Requests from "@/pages/Requests";
@@ -62,6 +64,9 @@ function AuthenticatedApp() {
   }
 
   if (!isAuthenticated) {
+    const path = window.location.pathname;
+    if (path === "/forgot-password") return <ForgotPassword />;
+    if (path === "/reset-password") return <ResetPassword />;
     return <Landing />;
   }
 
