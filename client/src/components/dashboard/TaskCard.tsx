@@ -48,7 +48,7 @@ const urgencyConfig = {
   },
 };
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string }> = {
   not_started: {
     label: "Not Started",
     color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
@@ -64,6 +64,18 @@ const statusConfig = {
   on_hold: {
     label: "On Hold",
     color: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+  },
+  needs_estimate: {
+    label: "Needs Estimate",
+    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  },
+  waiting_approval: {
+    label: "Waiting Approval",
+    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  },
+  ready: {
+    label: "Ready",
+    color: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400",
   },
 };
 

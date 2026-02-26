@@ -38,6 +38,7 @@ export default function AlertsReport() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const buildQueryString = () => {

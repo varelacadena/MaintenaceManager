@@ -49,6 +49,7 @@ export default function FacilityInsights() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const buildQueryString = () => {

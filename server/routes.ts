@@ -4967,18 +4967,18 @@ Be concise and practical. Do not use markdown formatting.`;
       if (!eq) return res.status(404).json({ message: "Equipment not found" });
       const allTasks = await storage.getTasks();
       const tasks = allTasks.filter((t: any) => t.equipmentId === req.params.id);
-      const completedTasks = tasks.filter((t: any) => t.status === "completed" && t.completedAt);
-      completedTasks.sort((a: any, b: any) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      const completedTasks = tasks.filter((t: any) => t.status === "completed");
+      completedTasks.sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
       const lastCompleted = completedTasks[0];
       const intervalDays = (eq as any).maintenanceIntervalDays || 90;
       const projectedDates: string[] = [];
-      const baseDate = lastCompleted?.completedAt ? new Date(lastCompleted.completedAt) : new Date();
+      const baseDate = lastCompleted?.updatedAt ? new Date(lastCompleted.updatedAt) : new Date();
       for (let i = 1; i <= 6; i++) {
         const d = new Date(baseDate);
         d.setDate(d.getDate() + intervalDays * i);
         projectedDates.push(d.toISOString());
       }
-      res.json({ equipmentId: req.params.id, intervalDays, lastCompleted: lastCompleted?.completedAt || null, projectedDates });
+      res.json({ equipmentId: req.params.id, intervalDays, lastCompleted: lastCompleted?.updatedAt || null, projectedDates });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch PM schedule" });
     }

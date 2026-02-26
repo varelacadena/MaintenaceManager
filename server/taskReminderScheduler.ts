@@ -100,7 +100,7 @@ async function processTaskReminders(): Promise<void> {
       }
       userIds.push(task.createdById);
       
-      const uniqueUserIds = [...new Set(userIds)];
+      const uniqueUserIds = Array.from(new Set(userIds));
       
       for (const userId of uniqueUserIds) {
         await storage.createNotification({
@@ -129,7 +129,7 @@ async function processTaskReminders(): Promise<void> {
       }
       userIds.push(task.createdById);
       
-      const uniqueUserIds = [...new Set(userIds)];
+      const uniqueUserIds = Array.from(new Set(userIds));
       
       for (const userId of uniqueUserIds) {
         await storage.createNotification({

@@ -51,6 +51,7 @@ export default function AssetHealth() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const [selectedAsset, setSelectedAsset] = useState<AssetData | null>(null);

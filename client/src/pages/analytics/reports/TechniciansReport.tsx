@@ -45,6 +45,7 @@ export default function TechniciansReport() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const buildQueryString = () => {

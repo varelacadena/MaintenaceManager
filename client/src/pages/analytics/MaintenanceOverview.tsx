@@ -163,6 +163,7 @@ export default function MaintenanceOverview() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const buildQueryString = () => {

@@ -38,7 +38,7 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
     const userId = req.userId;
     if (!userId) return null;
     const { storage } = await import("./storage");
-    return await storage.getUser(userId);
+    return (await storage.getUser(userId)) ?? null;
   } catch (error) {
     return null;
   }

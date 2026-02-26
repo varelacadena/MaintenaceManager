@@ -308,7 +308,8 @@ function FleetContent() {
                           <FormControl>
                             <Input 
                               type="number" 
-                              {...field} 
+                              {...field}
+                              value={field.value ?? ""} 
                               onChange={e => field.onChange(parseInt(e.target.value))}
                               data-testid="input-mileage" 
                             />
@@ -326,7 +327,8 @@ function FleetContent() {
                           <FormControl>
                             <Input 
                               type="number" 
-                              {...field} 
+                              {...field}
+                              value={field.value ?? ""} 
                               onChange={e => field.onChange(parseInt(e.target.value))}
                               data-testid="input-passenger-capacity" 
                             />

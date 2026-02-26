@@ -88,6 +88,7 @@ export default function FleetReport() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
   const [detailDialog, setDetailDialog] = useState<{ open: boolean; type: string; title: string }>({
     open: false,
@@ -133,14 +134,14 @@ export default function FleetReport() {
     );
   }
 
-  const statusData = data?.byStatus.map(s => ({
+  const statusData = data?.byStatus?.map(s => ({
     name: s.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
     value: s.count,
     color: STATUS_COLORS[s.status] || "#9ca3af",
   })) || [];
 
   const categoryData = data?.byCategory || [];
-  const trendData = data?.reservationsByMonth.map(m => ({
+  const trendData = data?.reservationsByMonth?.map(m => ({
     month: m.month.split('-')[1],
     Reservations: m.count,
   })) || [];

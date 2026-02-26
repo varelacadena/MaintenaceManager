@@ -84,6 +84,7 @@ export default function ServiceRequestAnalytics() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
   const [detailDialog, setDetailDialog] = useState<{ open: boolean; type: string; title: string }>({
     open: false,

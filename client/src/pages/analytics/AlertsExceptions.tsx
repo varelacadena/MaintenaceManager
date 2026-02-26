@@ -38,6 +38,7 @@ export default function AlertsExceptions() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const buildQueryString = () => {

@@ -209,15 +209,15 @@ Return ONLY a JSON object:
 async function checkDueDateFeasibility(
   task: Partial<Task> & { estimatedHours?: number; requiredSkill?: string }
 ): Promise<{ feasible: boolean; warning?: string; suggestedDate?: string; historicalAvgHours?: number }> {
-  if (!task.dueDate) return { feasible: true };
+  if (!(task as any).dueDate) return { feasible: true };
 
-  const teamContext = await buildTeamCapacityContext(new Date(task.dueDate));
+  const teamContext = await buildTeamCapacityContext(new Date((task as any).dueDate));
 
   const prompt = `You are a facility scheduling AI. Assess if this task's due date is realistic.
 
 TASK:
-Title: ${task.title}
-Due Date: ${task.dueDate}
+Title: ${(task as any).title || task.name}
+Due Date: ${(task as any).dueDate}
 Urgency: ${task.urgency}
 Estimated Hours: ${task.estimatedHours || 2}
 Required Skill: ${task.requiredSkill || "general"}
@@ -344,7 +344,7 @@ async function checkVehicleCheckIn(checkInData: {
   if (!adminId) return;
 
   for (const schedule of schedules) {
-    const threshold = schedule.mileageInterval || 5000;
+    const threshold = (schedule as any).mileageInterval || 5000;
     const lastMileage = (schedule as any).lastServiceMileage || 0;
     const milesUntilDue = threshold - (checkInData.currentMileage - lastMileage);
 
@@ -410,13 +410,13 @@ async function runEquipmentPmCheck(): Promise<void> {
     if (!eqAny.maintenanceIntervalDays) continue;
 
     const tasks = await storage.getTasks({ status: "completed" });
-    const eqTasks = tasks.filter((t: any) => t.equipmentId === eq.id && t.completedAt);
+    const eqTasks = tasks.filter((t: any) => t.equipmentId === eq.id);
     eqTasks.sort((a: any, b: any) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
 
     const lastCompleted = eqTasks[0];
-    if (!lastCompleted?.completedAt) continue;
+    if (!lastCompleted) continue;
 
-    const lastDate = new Date(lastCompleted.completedAt);
+    const lastDate = new Date(lastCompleted.updatedAt || lastCompleted.createdAt || new Date());
     const nextDue = new Date(lastDate);
     nextDue.setDate(nextDue.getDate() + eqAny.maintenanceIntervalDays);
 

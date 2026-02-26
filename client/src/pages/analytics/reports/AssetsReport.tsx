@@ -52,6 +52,7 @@ export default function AssetsReport() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
 
   const [selectedAsset, setSelectedAsset] = useState<AssetData | null>(null);

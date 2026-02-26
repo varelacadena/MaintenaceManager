@@ -84,6 +84,7 @@ export default function ServiceRequestsReport() {
     technicianId: "",
     status: "",
     urgency: "",
+    spaceId: "",
   });
   const [detailDialog, setDetailDialog] = useState<{ open: boolean; type: string; title: string }>({
     open: false,
@@ -129,19 +130,19 @@ export default function ServiceRequestsReport() {
     );
   }
 
-  const statusData = data?.byStatus.map(s => ({
+  const statusData = data?.byStatus?.map(s => ({
     name: s.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
     value: s.count,
     color: STATUS_COLORS[s.status] || "#9ca3af",
   })) || [];
 
-  const urgencyData = data?.byUrgency.map(u => ({
+  const urgencyData = data?.byUrgency?.map(u => ({
     name: u.urgency.charAt(0).toUpperCase() + u.urgency.slice(1),
     value: u.count,
     color: URGENCY_COLORS[u.urgency] || "#9ca3af",
   })) || [];
 
-  const trendData = data?.monthlyTrend.map(m => ({
+  const trendData = data?.monthlyTrend?.map(m => ({
     month: m.month.split('-')[1],
     Submitted: m.submitted,
     Converted: m.converted,

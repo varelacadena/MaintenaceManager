@@ -46,6 +46,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import EmailManagement from "./pages/EmailManagement";
 import AiAgentDashboard from "./pages/AiAgentDashboard";
 import PwaInstallBanner from "./components/PwaInstallBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -142,6 +143,7 @@ function AuthenticatedApp() {
                 <PwaInstallBanner />
               )}
               <ScrollToTop />
+              <ErrorBoundary>
               <Switch>
                 {/* Routes accessible to all authenticated users */}
                 <Route path="/" component={() => {
@@ -251,6 +253,7 @@ function AuthenticatedApp() {
                 )} />
                 <Route component={NotFound} />
               </Switch>
+              </ErrorBoundary>
             </main>
           </div>
         </div>

@@ -127,7 +127,7 @@ export default function VehicleEdit() {
                     <FormItem>
                       <FormLabel>License Plate</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -183,7 +183,7 @@ export default function VehicleEdit() {
                     <FormItem>
                       <FormLabel>VIN</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -270,7 +270,8 @@ export default function VehicleEdit() {
                       <FormControl>
                         <Input 
                           type="number" 
-                          {...field} 
+                          {...field}
+                          value={field.value ?? ""}
                           onChange={e => field.onChange(parseInt(e.target.value))}
                         />
                       </FormControl>
@@ -287,7 +288,8 @@ export default function VehicleEdit() {
                       <FormControl>
                         <Input 
                           type="number" 
-                          {...field} 
+                          {...field}
+                          value={field.value ?? ""}
                           onChange={e => field.onChange(parseInt(e.target.value))}
                         />
                       </FormControl>
@@ -302,7 +304,7 @@ export default function VehicleEdit() {
                     <FormItem>
                       <FormLabel>Color</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -315,7 +317,7 @@ export default function VehicleEdit() {
                     <FormItem className="col-span-2">
                       <FormLabel>Notes</FormLabel>
                       <FormControl>
-                        <Textarea {...field} rows={4} />
+                        <Textarea {...field} value={field.value ?? ""} rows={4} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
