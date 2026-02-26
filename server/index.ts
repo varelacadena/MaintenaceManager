@@ -200,4 +200,21 @@ app.use((req, res, next) => {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Prevent Object Storage WebSocket disconnects (ECONNRESET) from crashing the process
+  process.on('uncaughtException', (err: any) => {
+    if (err.code === 'ECONNRESET' || err.message?.includes('TLS') || err.message?.includes('socket')) {
+      console.warn('[server] Suppressed network error (Object Storage reconnect):', err.message);
+    } else {
+      console.error('[server] Uncaught exception:', err);
+    }
+  });
+
+  process.on('unhandledRejection', (reason: any) => {
+    if (reason?.code === 'ECONNRESET' || reason?.message?.includes('TLS') || reason?.message?.includes('socket')) {
+      console.warn('[server] Suppressed network rejection (Object Storage reconnect):', reason?.message);
+    } else {
+      console.error('[server] Unhandled rejection:', reason);
+    }
+  });
 })();
