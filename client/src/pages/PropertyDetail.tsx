@@ -214,10 +214,10 @@ export default function PropertyDetail() {
       setIsSpaceDialogOpen(false);
       setEditingSpace(null);
       spaceForm.reset({ propertyId: id || "" });
-      toast({ title: "Success", description: "Room/space added successfully" });
+      toast({ title: "Success", description: "Space added successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to create room/space", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to create space", variant: "destructive" });
     },
   });
 
@@ -227,13 +227,13 @@ export default function PropertyDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
-      toast({ title: "Success", description: "Room/space updated successfully" });
+      toast({ title: "Success", description: "Space updated successfully" });
       setEditingSpace(null);
       setIsSpaceDialogOpen(false);
       spaceForm.reset({ propertyId: id || "" });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to update room/space", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to update space", variant: "destructive" });
     },
   });
 
@@ -245,10 +245,10 @@ export default function PropertyDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
       if (selectedSpaceId) setSelectedSpaceId(null);
-      toast({ title: "Success", description: "Room/space deleted successfully" });
+      toast({ title: "Success", description: "Space deleted successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to delete room/space", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to delete space", variant: "destructive" });
     },
   });
 
@@ -350,7 +350,7 @@ export default function PropertyDetail() {
   };
 
   const handleDeleteSpace = (spaceId: string) => {
-    if (confirm("Are you sure you want to delete this room/space? This will also affect any equipment assigned to it.")) {
+    if (confirm("Are you sure you want to delete this space? This will also affect any equipment assigned to it.")) {
       deleteSpaceMutation.mutate(spaceId);
     }
   };
@@ -489,7 +489,7 @@ export default function PropertyDetail() {
           {isBuilding && (
             <TabsTrigger value="spaces" data-testid="tab-spaces" className="text-xs md:text-sm">
               <DoorOpen className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-              <span className="whitespace-nowrap">Rooms ({spaces.length})</span>
+              <span className="whitespace-nowrap">Spaces ({spaces.length})</span>
             </TabsTrigger>
           )}
           <TabsTrigger value="equipment" data-testid="tab-equipment" className="text-xs md:text-sm">
@@ -512,7 +512,7 @@ export default function PropertyDetail() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search rooms..."
+                  placeholder="Search spaces..."
                   value={spaceSearch}
                   onChange={(e) => setSpaceSearch(e.target.value)}
                   className="pl-9"
@@ -530,7 +530,7 @@ export default function PropertyDetail() {
                   data-testid="button-add-space"
                 >
                   <Plus className="w-4 h-4 mr-1" />
-                  Add Room
+                  Add Space
                 </Button>
               )}
             </div>
@@ -539,7 +539,7 @@ export default function PropertyDetail() {
               {filteredSpaces.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <DoorOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{spaceSearch ? "No rooms match your search" : "No rooms or spaces defined yet"}</p>
+                  <p className="text-sm">{spaceSearch ? "No spaces match your search" : "No spaces defined yet"}</p>
                   {canEdit && !spaceSearch && (
                     <Button
                       variant="ghost"
@@ -551,7 +551,7 @@ export default function PropertyDetail() {
                       }}
                       data-testid="button-add-first-space"
                     >
-                      Add your first room or space
+                      Add your first space
                     </Button>
                   )}
                 </div>
@@ -629,10 +629,10 @@ export default function PropertyDetail() {
                 {isBuilding && spaces.length > 0 && (
                   <Select value={selectedSpaceId || "__all__"} onValueChange={(v) => setSelectedSpaceId(v === "__all__" ? null : v)}>
                     <SelectTrigger className="w-28 md:w-36" data-testid="select-space-filter">
-                      <SelectValue placeholder="All rooms" />
+                      <SelectValue placeholder="All spaces" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all__">All rooms</SelectItem>
+                      <SelectItem value="__all__">All spaces</SelectItem>
                       {spaces.map((space) => (
                         <SelectItem key={space.id} value={space.id}>{space.name}</SelectItem>
                       ))}
@@ -1040,8 +1040,8 @@ export default function PropertyDetail() {
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingSpace ? "Edit Room/Space" : "Add Room/Space"}</DialogTitle>
-            <DialogDescription>Add rooms, offices, classrooms, or other spaces within this building.</DialogDescription>
+            <DialogTitle>{editingSpace ? "Edit Space" : "Add Space"}</DialogTitle>
+            <DialogDescription>Add offices, classrooms, grounds, or other spaces within this property.</DialogDescription>
           </DialogHeader>
           <Form {...spaceForm}>
             <form onSubmit={spaceForm.handleSubmit(onSpaceSubmit)} className="space-y-4">
@@ -1052,7 +1052,7 @@ export default function PropertyDetail() {
                   <FormItem>
                     <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Room 101, Men's Bathroom, Main Office" {...field} data-testid="input-space-name" />
+                      <Input placeholder="e.g., Main Office, Grounds, Classroom 101" {...field} data-testid="input-space-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -90,7 +90,7 @@ export function TaskLocationFields({
           name="spaceId"
           render={({ field }: { field: any }) => (
             <FormItem>
-              <FormLabel>Room / Space (Optional)</FormLabel>
+              <FormLabel>Space (Optional)</FormLabel>
               {spaces.length > 0 ? (
                 <Select
                   onValueChange={(value: string) => {
@@ -117,7 +117,7 @@ export function TaskLocationFields({
                 </Select>
               ) : (
                 <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30" data-testid="text-no-spaces">
-                  <span className="text-sm text-muted-foreground">No rooms/spaces defined yet.</span>
+                  <span className="text-sm text-muted-foreground">No spaces defined yet.</span>
                   <Button
                     type="button"
                     variant="outline"
@@ -126,7 +126,7 @@ export function TaskLocationFields({
                     data-testid="button-add-space-inline"
                   >
                     <Plus className="w-3 h-3 mr-1" />
-                    Add Room/Space
+                    Add Space
                   </Button>
                 </div>
               )}

@@ -363,7 +363,7 @@ export default function NewRequest() {
                 name="spaceId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Space (Room/Area)</FormLabel>
+                    <FormLabel>Space</FormLabel>
                     <Select 
                       onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)} 
                       value={field.value || "__none__"}

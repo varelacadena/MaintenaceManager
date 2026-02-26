@@ -72,15 +72,15 @@ export function SpaceDialog({
         description: "",
       });
       toast({
-        title: "Room/Space Created",
-        description: "The new room/space has been added and selected.",
+        title: "Space Created",
+        description: "The new space has been added and selected.",
       });
       onSuccess(newSpace);
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create room/space",
+        description: error.message || "Failed to create space",
         variant: "destructive",
       });
     },
@@ -90,9 +90,9 @@ export function SpaceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Room/Space</DialogTitle>
+          <DialogTitle>Add Space</DialogTitle>
           <DialogDescription>
-            Add a new room or space to {propertyName || "the building"}
+            Add a new space to {propertyName || "this property"}
           </DialogDescription>
         </DialogHeader>
         <Form {...spaceForm}>
@@ -107,7 +107,7 @@ export function SpaceDialog({
                 <FormItem>
                   <FormLabel>Name *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="e.g., Room 101, Main Bathroom" data-testid="input-new-space-name" />
+                    <Input {...field} placeholder="e.g., Main Office, Grounds, Classroom 101" data-testid="input-new-space-name" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -138,7 +138,7 @@ export function SpaceDialog({
                     <Textarea
                       {...field}
                       value={field.value || ""}
-                      placeholder="Optional description of this room/space"
+                      placeholder="Optional description of this space"
                       data-testid="textarea-new-space-description"
                     />
                   </FormControl>
@@ -161,7 +161,7 @@ export function SpaceDialog({
                 disabled={createSpaceMutation.isPending}
                 data-testid="button-submit-space"
               >
-                {createSpaceMutation.isPending ? "Adding..." : "Add Room/Space"}
+                {createSpaceMutation.isPending ? "Adding..." : "Add Space"}
               </Button>
             </DialogFooter>
           </form>

@@ -294,7 +294,7 @@ export default function AnalyticsFilters({
 
               {isBuilding && filteredSpaces.length > 0 && (
                 <div className="space-y-1">
-                  <Label htmlFor="space" className="text-xs">Space / Room</Label>
+                  <Label htmlFor="space" className="text-xs">Space</Label>
                   <Select value={filters.spaceId || "all"} onValueChange={v => updateFilter("spaceId", v === "all" ? "" : v)}>
                     <SelectTrigger id="space" data-testid="select-space" className="h-8 text-xs">
                       <SelectValue placeholder="All Spaces" />
