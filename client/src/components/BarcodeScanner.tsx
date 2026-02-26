@@ -29,23 +29,30 @@ export function BarcodeScanner({
   const [manualEntry, setManualEntry] = useState(false);
   const [manualValue, setManualValue] = useState("");
   const [isFront, setIsFront] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
   const startedRef = useRef(false);
+  const lastFrameRef = useRef<number>(Date.now());
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFrontRef = useRef(false);
 
   const stopScanner = useCallback(async () => {
     startedRef.current = false;
+    if (watchdogRef.current) {
+      clearInterval(watchdogRef.current);
+      watchdogRef.current = null;
+    }
     if (html5QrcodeRef.current) {
       try { await html5QrcodeRef.current.stop(); } catch {}
       try { await html5QrcodeRef.current.clear(); } catch {}
       html5QrcodeRef.current = null;
     }
-    setIsRunning(false);
   }, []);
 
   const startScanner = useCallback(async (front: boolean) => {
     if (startedRef.current) return;
     startedRef.current = true;
+    isFrontRef.current = front;
     setError("");
+    lastFrameRef.current = Date.now();
 
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
@@ -65,17 +72,34 @@ export function BarcodeScanner({
       await qr.start(
         { facingMode: front ? "user" : "environment" },
         {
-          fps: 12,
+          fps: 15,
           qrbox: { width: Math.min(250, window.innerWidth - 80), height: 150 },
           aspectRatio: 1.5,
         },
         (decodedText: string) => {
+          lastFrameRef.current = Date.now();
           onScan(decodedText);
           onOpenChange(false);
         },
-        () => {}
+        () => {
+          lastFrameRef.current = Date.now();
+        }
       );
-      setIsRunning(true);
+
+      if (watchdogRef.current) clearInterval(watchdogRef.current);
+      watchdogRef.current = setInterval(async () => {
+        const elapsed = Date.now() - lastFrameRef.current;
+        if (elapsed > 4000 && startedRef.current) {
+          startedRef.current = false;
+          if (html5QrcodeRef.current) {
+            try { await html5QrcodeRef.current.stop(); } catch {}
+            try { await html5QrcodeRef.current.clear(); } catch {}
+            html5QrcodeRef.current = null;
+          }
+          setTimeout(() => startScanner(isFrontRef.current), 100);
+        }
+      }, 2000);
+
     } catch (err: any) {
       startedRef.current = false;
       const msg = err?.message || "";
@@ -99,7 +123,7 @@ export function BarcodeScanner({
       return;
     }
     if (!manualEntry) {
-      const timer = setTimeout(() => startScanner(isFront), 150);
+      const timer = setTimeout(() => startScanner(isFront), 300);
       return () => clearTimeout(timer);
     }
   }, [open, manualEntry]);
@@ -107,11 +131,12 @@ export function BarcodeScanner({
   const handleFlipCamera = async () => {
     const next = !isFront;
     setIsFront(next);
+    isFrontRef.current = next;
     await stopScanner();
     setTimeout(() => {
       startedRef.current = false;
       startScanner(next);
-    }, 150);
+    }, 200);
   };
 
   function handleManualSubmit() {
@@ -137,25 +162,20 @@ export function BarcodeScanner({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Camera viewport */}
         {!manualEntry && (
           <div className="relative bg-black" style={{ height: 220 }}>
             <div id="qr-reader-native" className="w-full h-full" />
 
-            {/* Custom scanning frame */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative" style={{ width: boxW, height: boxH }}>
-                {/* Corner brackets */}
                 <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl" />
                 <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white rounded-tr" />
                 <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl" />
                 <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white rounded-br" />
-                {/* Animated scan line */}
                 <div className="animate-scan-line left-2 right-2 h-0.5 bg-primary/90 rounded-full shadow-[0_0_8px_2px_hsl(var(--primary)/0.5)]" />
               </div>
             </div>
 
-            {/* Flip camera */}
             <Button
               size="icon"
               variant="ghost"
@@ -168,7 +188,6 @@ export function BarcodeScanner({
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="flex items-start gap-2 mx-4 mt-3 p-3 text-sm text-destructive bg-destructive/10 rounded-md">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -176,7 +195,6 @@ export function BarcodeScanner({
           </div>
         )}
 
-        {/* Bottom controls */}
         <div className="px-4 py-4 space-y-3">
           {manualEntry ? (
             <>
@@ -206,7 +224,7 @@ export function BarcodeScanner({
                   setManualEntry(false);
                   setError("");
                   startedRef.current = false;
-                  setTimeout(() => startScanner(isFront), 150);
+                  setTimeout(() => startScanner(isFront), 300);
                 }}
               >
                 Try camera again
