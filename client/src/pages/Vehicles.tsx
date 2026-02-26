@@ -33,6 +33,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VehicleReservationsContent } from "@/pages/VehicleReservations";
+import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 
 const statusColors = {
   available: "default",
@@ -447,6 +448,11 @@ export default function Vehicles() {
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
   const defaultTab = urlParams.get("tab") === "reservations" ? "reservations" : "fleet";
+  const { user } = useAuth();
+  const notificationCounts = useNotificationCounts();
+
+  const isAdminOrTechnician = user?.role === "admin" || user?.role === "technician";
+  const pendingCount = isAdminOrTechnician ? notificationCounts.pendingVehicleReservations : 0;
 
   return (
     <div className="flex-1 space-y-4 p-4">
@@ -460,7 +466,14 @@ export default function Vehicles() {
       <Tabs defaultValue={defaultTab} data-testid="tabs-vehicles">
         <TabsList>
           <TabsTrigger value="fleet" data-testid="tab-fleet">Fleet</TabsTrigger>
-          <TabsTrigger value="reservations" data-testid="tab-reservations">Reservations</TabsTrigger>
+          <TabsTrigger value="reservations" data-testid="tab-reservations" className="flex items-center gap-2">
+            Reservations
+            {pendingCount > 0 && (
+              <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs flex items-center justify-center no-default-active-elevate" data-testid="badge-pending-reservations-count">
+                {pendingCount}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="fleet">
           <FleetContent />

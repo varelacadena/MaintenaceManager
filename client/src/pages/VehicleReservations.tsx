@@ -274,6 +274,10 @@ export function VehicleReservationsContent() {
     const matchesStatus = statusFilter === "all" || reservation.status === statusFilter;
 
     return matchesSearch && matchesStatus;
+  })?.sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (a.status !== "pending" && b.status === "pending") return 1;
+    return 0;
   });
 
   return (
@@ -320,7 +324,7 @@ export function VehicleReservationsContent() {
       ) : filteredReservations && filteredReservations.length > 0 ? (
         <div className="space-y-3">
           {filteredReservations.map((reservation) => (
-            <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
+            <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`} className={reservation.status === "pending" ? "ring-1 ring-primary/30 bg-primary/[0.03]" : ""}>
               <CardContent className="pt-4 pb-3 px-4 space-y-2">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
