@@ -23,6 +23,7 @@ import {
   Eye,
   ThumbsUp,
   ThumbsDown,
+  DollarSign,
 } from "lucide-react";
 
 type AiAgentLog = {
@@ -36,6 +37,9 @@ type AiAgentLog = {
   reviewedBy: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  modelUsed: string | null;
 };
 
 type AiStats = {
@@ -63,6 +67,29 @@ const STATUS_BADGE: Record<string, { label: string; variant: "default" | "second
   rejected: { label: "Rejected", variant: "destructive" },
   auto_applied: { label: "Auto-Applied", variant: "outline" },
 };
+
+const MODEL_PRICING: Record<string, { prompt: number; completion: number }> = {
+  "gpt-4o-mini": { prompt: 0.00000015, completion: 0.0000006 },
+  "gpt-4o":      { prompt: 0.0000025,  completion: 0.00001 },
+};
+
+function calcCost(log: AiAgentLog): number | null {
+  if (log.promptTokens == null || log.completionTokens == null || !log.modelUsed) return null;
+  const pricing = MODEL_PRICING[log.modelUsed];
+  if (!pricing) return null;
+  return log.promptTokens * pricing.prompt + log.completionTokens * pricing.completion;
+}
+
+function formatCost(cost: number | null): string {
+  if (cost === null) return "—";
+  if (cost === 0) return "$0.0000";
+  if (cost < 0.001) return `$${cost.toFixed(6)}`;
+  return `$${cost.toFixed(4)}`;
+}
+
+function calcTotalCost(logs: AiAgentLog[]): number {
+  return logs.reduce((sum, log) => sum + (calcCost(log) ?? 0), 0);
+}
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "—";
@@ -117,7 +144,7 @@ export default function AiAgentDashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2">
@@ -170,6 +197,17 @@ export default function AiAgentDashboard() {
             </div>
             <p className="text-2xl font-bold mt-1" data-testid="stat-ai-rate">
               {statsLoading ? "—" : `${stats?.acceptanceRate ?? 0}%`}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-emerald-500" />
+              <span className="text-sm text-muted-foreground">Total AI Cost</span>
+            </div>
+            <p className="text-2xl font-bold mt-1" data-testid="stat-ai-cost">
+              {allLoading ? "—" : formatCost(calcTotalCost(allLogs))}
             </p>
           </CardContent>
         </Card>
@@ -297,7 +335,14 @@ function AiLogCard({
             <p className="text-sm text-muted-foreground mt-1 truncate">
               {log.reasoning || "No reasoning provided"}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{formatDate(log.createdAt)}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-xs text-muted-foreground">{formatDate(log.createdAt)}</p>
+              {log.modelUsed && (
+                <span className="text-xs text-muted-foreground" data-testid={`text-cost-${log.id}`}>
+                  {log.modelUsed} &middot; {formatCost(calcCost(log))}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button

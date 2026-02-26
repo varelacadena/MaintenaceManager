@@ -1374,6 +1374,9 @@ export const aiAgentLogs = pgTable("ai_agent_logs", {
   reviewedBy: varchar("reviewed_by").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  promptTokens: integer("prompt_tokens"),
+  completionTokens: integer("completion_tokens"),
+  modelUsed: varchar("model_used", { length: 50 }),
 });
 
 export const insertAiAgentLogSchema = createInsertSchema(aiAgentLogs).omit({ id: true, createdAt: true, reviewedAt: true });

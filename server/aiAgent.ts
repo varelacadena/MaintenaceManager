@@ -13,7 +13,14 @@ const openai = new OpenAI({
 const MINI = "gpt-4o-mini";
 const FULL = "gpt-4o";
 
-async function callAI(prompt: string, tier: "haiku" | "sonnet" = "haiku"): Promise<string> {
+interface AiCallResult {
+  content: string;
+  promptTokens: number;
+  completionTokens: number;
+  model: string;
+}
+
+async function callAI(prompt: string, tier: "haiku" | "sonnet" = "haiku"): Promise<AiCallResult> {
   const model = tier === "sonnet" ? FULL : MINI;
   try {
     const response = await openai.chat.completions.create({
@@ -21,7 +28,12 @@ async function callAI(prompt: string, tier: "haiku" | "sonnet" = "haiku"): Promi
       max_completion_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     });
-    return response.choices[0]?.message?.content ?? "";
+    return {
+      content: response.choices[0]?.message?.content ?? "",
+      promptTokens: response.usage?.prompt_tokens ?? 0,
+      completionTokens: response.usage?.completion_tokens ?? 0,
+      model,
+    };
   } catch (error: any) {
     console.error(`[aiAgent] ${model} call failed:`, error.message);
     throw error;
@@ -123,8 +135,8 @@ Analyze this request and return ONLY a JSON object with this exact structure:
 \`\`\`
 Pick the assignee whose skills best match the required skill, who is available today, and has the lowest current workload. If no one matches well, set suggestedAssigneeId and suggestedAssigneeName to null.`;
 
-  const response = await callAI(prompt, "haiku");
-  const parsed = parseJsonFromResponse(response);
+  const aiResult = await callAI(prompt, "haiku");
+  const parsed = parseJsonFromResponse(aiResult.content);
 
   const log = await storage.createAiAgentLog({
     action: "triage",
@@ -133,6 +145,9 @@ Pick the assignee whose skills best match the required skill, who is available t
     reasoning: parsed.reasoning,
     proposedValue: parsed,
     status: "pending_review",
+    promptTokens: aiResult.promptTokens,
+    completionTokens: aiResult.completionTokens,
+    modelUsed: aiResult.model,
   });
 
   return log;
@@ -172,8 +187,8 @@ Return ONLY a JSON object:
 }
 \`\`\``;
 
-  const response = await callAI(prompt, "haiku");
-  const parsed = parseJsonFromResponse(response);
+  const aiResult = await callAI(prompt, "haiku");
+  const parsed = parseJsonFromResponse(aiResult.content);
 
   const log = await storage.createAiAgentLog({
     action: "schedule",
@@ -182,6 +197,9 @@ Return ONLY a JSON object:
     reasoning: parsed.reasoning,
     proposedValue: parsed,
     status: "pending_review",
+    promptTokens: aiResult.promptTokens,
+    completionTokens: aiResult.completionTokens,
+    modelUsed: aiResult.model,
   });
 
   return log;
@@ -219,8 +237,8 @@ Return ONLY a JSON object:
 If infeasible, set feasible to false, provide a warning message, and suggest a better date.`;
 
   try {
-    const response = await callAI(prompt, "haiku");
-    const parsed = parseJsonFromResponse(response);
+    const aiResult = await callAI(prompt, "haiku");
+    const parsed = parseJsonFromResponse(aiResult.content);
     return {
       feasible: parsed.feasible,
       warning: parsed.warning,
@@ -283,12 +301,14 @@ Return ONLY a JSON array of assignments:
 \`\`\`
 Respect dependencies (dependent tasks must start after their blockers are due). Spread work based on capacity.`;
 
-  const response = await callAI(prompt, "sonnet");
-  const parsed = parseJsonFromResponse(response);
+  const aiResult = await callAI(prompt, "sonnet");
+  const parsed = parseJsonFromResponse(aiResult.content);
 
   if (!Array.isArray(parsed)) return [];
 
   const logs: AiAgentLog[] = [];
+  const perTaskPromptTokens = Math.round(aiResult.promptTokens / Math.max(parsed.length, 1));
+  const perTaskCompletionTokens = Math.round(aiResult.completionTokens / Math.max(parsed.length, 1));
   for (const assignment of parsed) {
     const log = await storage.createAiAgentLog({
       action: "schedule",
@@ -297,6 +317,9 @@ Respect dependencies (dependent tasks must start after their blockers are due). 
       reasoning: assignment.reasoning,
       proposedValue: assignment,
       status: "pending_review",
+      promptTokens: perTaskPromptTokens,
+      completionTokens: perTaskCompletionTokens,
+      modelUsed: aiResult.model,
     });
     logs.push(log);
   }
@@ -481,8 +504,8 @@ Return ONLY a JSON object:
 \`\`\`
 Include up to 3 recommendations, ranked best to worst.`;
 
-  const response = await callAI(prompt, "haiku");
-  const parsed = parseJsonFromResponse(response);
+  const aiResult = await callAI(prompt, "haiku");
+  const parsed = parseJsonFromResponse(aiResult.content);
 
   const log = await storage.createAiAgentLog({
     action: "assign",
@@ -491,6 +514,9 @@ Include up to 3 recommendations, ranked best to worst.`;
     reasoning: parsed.overallReasoning,
     proposedValue: parsed,
     status: "pending_review",
+    promptTokens: aiResult.promptTokens,
+    completionTokens: aiResult.completionTokens,
+    modelUsed: aiResult.model,
   });
 
   return log;
