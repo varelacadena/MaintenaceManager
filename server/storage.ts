@@ -633,6 +633,39 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
+  async getInventoryItemByBarcode(barcode: string): Promise<InventoryItem | undefined> {
+    const [item] = await this.db
+      .select()
+      .from(inventoryItems)
+      .where(eq(inventoryItems.barcode, barcode));
+    return item;
+  }
+
+  async updateInventoryStatus(id: string, stockStatus: string): Promise<InventoryItem | undefined> {
+    const [item] = await this.db
+      .update(inventoryItems)
+      .set({ stockStatus, updatedAt: new Date() })
+      .where(eq(inventoryItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async useOneContainer(id: string): Promise<InventoryItem | undefined> {
+    const current = await this.getInventoryItem(id);
+    if (!current) return undefined;
+    const currentQty = parseFloat(current.quantity as unknown as string) || 0;
+    const newQty = Math.max(0, currentQty - 1);
+    const [item] = await this.db
+      .update(inventoryItems)
+      .set({ 
+        quantity: String(newQty),
+        updatedAt: new Date()
+      })
+      .where(eq(inventoryItems.id, id))
+      .returning();
+    return item;
+  }
+
   // Area operations
   async getAreas(): Promise<Area[]> {
     return await this.db.select().from(areas);

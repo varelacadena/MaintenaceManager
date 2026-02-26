@@ -66,11 +66,17 @@ export const inventoryItems = pgTable("inventory_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
-  quantity: integer("quantity").notNull().default(0),
-  unit: varchar("unit", { length: 50 }), // e.g., "pcs", "boxes", "gallons"
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("0"),
+  unit: varchar("unit", { length: 50 }), // e.g., "pcs", "boxes", "gallons", "bottles"
   location: varchar("location", { length: 200 }), // storage location
-  minQuantity: integer("min_quantity").default(0), // for low stock alerts
+  minQuantity: numeric("min_quantity", { precision: 10, scale: 2 }).default("0"), // for low stock alerts
   cost: numeric("cost", { precision: 10, scale: 2 }), // cost per unit
+  // Hybrid tracking system
+  trackingMode: varchar("tracking_mode", { length: 20 }).notNull().default("counted"), // 'counted' | 'container' | 'status'
+  category: varchar("category", { length: 50 }).notNull().default("general"), // 'auto' | 'cleaning' | 'landscaping' | 'plumbing' | 'electrical' | 'repairs' | 'general'
+  packageInfo: varchar("package_info", { length: 200 }), // e.g. "32 oz bottle", "500-sheet ream", "12-pack case"
+  barcode: varchar("barcode", { length: 200 }), // barcode or QR code value for scanning
+  stockStatus: varchar("stock_status", { length: 20 }).default("stocked"), // 'stocked' | 'low' | 'out' — used for status-only mode
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -222,7 +228,7 @@ export const partsUsed = pgTable("parts_used", {
   taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
   inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id), // Link to inventory
   partName: varchar("part_name", { length: 200 }).notNull(),
-  quantity: integer("quantity").notNull(),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
   cost: doublePrecision("cost").notNull().default(0),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

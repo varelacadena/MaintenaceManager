@@ -84,12 +84,14 @@ import {
   ThumbsDown,
   Link2,
   GripVertical,
+  ScanLine,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 import type {
   Task,
   TimeEntry,
@@ -208,6 +210,9 @@ export default function TaskDetail() {
   const [partNotes, setPartNotes] = useState("");
   const [pendingUploads, setPendingUploads] = useState<{ name: string; url: string; type: string }[]>([]);
   const [isAddPartDialogOpen, setIsAddPartDialogOpen] = useState(false);
+  const [isScanPartOpen, setIsScanPartOpen] = useState(false);
+  const [aiSuggestedParts, setAiSuggestedParts] = useState<Array<{ id: string; name: string; suggestedQuantity: number; unit: string; reason: string }>>([]);
+  const [isAiSuggestLoading, setIsAiSuggestLoading] = useState(false);
   const [isQuickAddInventoryOpen, setIsQuickAddInventoryOpen] = useState(false);
   const [quickInventoryName, setQuickInventoryName] = useState("");
   const [quickInventoryQuantity, setQuickInventoryQuantity] = useState(0);
@@ -458,6 +463,45 @@ export default function TaskDetail() {
     setPendingNavigation(null);
   };
 
+  const handleScanPart = async (barcodeValue: string) => {
+    const res = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(barcodeValue)}`, {
+      credentials: "include",
+    });
+    if (res.ok) {
+      const item: InventoryItem = await res.json();
+      setSelectedInventoryItemId(item.id);
+      setInventorySearchQuery(item.name);
+      setIsAddPartDialogOpen(true);
+      toast({ title: "Item found", description: item.name });
+    } else {
+      const proceed = window.confirm(
+        `No item found for barcode "${barcodeValue}". Add it to inventory first, then try again.`
+      );
+      if (proceed) {
+        setIsQuickAddInventoryOpen(true);
+        setQuickInventoryName(barcodeValue);
+      }
+    }
+  };
+
+  const handleAiSuggestParts = async () => {
+    if (!task) return;
+    setIsAiSuggestLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/inventory/ai-insights", {
+        type: "task_parts",
+        taskDescription: task.description || task.name,
+        taskCategory: (task as any).category || "general",
+      });
+      const data = await res.json();
+      setAiSuggestedParts(data.items || []);
+    } catch {
+      toast({ title: "Error", description: "Failed to get AI suggestions", variant: "destructive" });
+    } finally {
+      setIsAiSuggestLoading(false);
+    }
+  };
+
   const markAsReadMutation = useMutation({
     mutationFn: async (taskId: string) => {
       return await apiRequest("POST", `/api/messages/task/${taskId}/mark-read`, {});
@@ -635,12 +679,13 @@ export default function TaskDetail() {
       const selectedItem = inventoryItems?.find(item => item.id === selectedInventoryItemId);
       if (!selectedItem) throw new Error("Item not found");
 
+      const qty = parseFloat(partQuantity);
       const partData = {
         taskId: id,
         inventoryItemId: selectedInventoryItemId,
         partName: selectedItem.name,
-        quantity: parseInt(partQuantity),
-        cost: selectedItem.cost ? parseFloat(selectedItem.cost) * parseInt(partQuantity) : 0,
+        quantity: String(qty),
+        cost: selectedItem.cost ? parseFloat(selectedItem.cost) * qty : 0,
         notes: partNotes || undefined,
       };
 
@@ -1630,19 +1675,77 @@ export default function TaskDetail() {
         </Dialog>
 
         <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Part</DialogTitle>
               <DialogDescription>Select an inventory item to add to this task.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2">
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setIsScanPartOpen(true)}
+                  data-testid="button-scan-part"
+                >
+                  <ScanLine className="h-4 w-4 mr-2" />
+                  Scan Part
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleAiSuggestParts}
+                  disabled={isAiSuggestLoading}
+                  data-testid="button-ai-suggest-parts"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {isAiSuggestLoading ? "Thinking..." : "AI Suggest"}
+                </Button>
+              </div>
+
+              {/* AI Suggested Parts */}
+              {aiSuggestedParts.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Suggestions</p>
+                  {aiSuggestedParts.map((suggestion, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-md border text-sm" data-testid={`ai-suggestion-${i}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{suggestion.name}</p>
+                        <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const item = inventoryItems.find((i) => i.id === suggestion.id);
+                          if (item) {
+                            setSelectedInventoryItemId(item.id);
+                            setInventorySearchQuery(item.name);
+                            setPartQuantity(String(suggestion.suggestedQuantity));
+                          }
+                        }}
+                        data-testid={`button-add-suggestion-${i}`}
+                      >
+                        Use
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Search Inventory</Label>
                 <div className="relative">
                   <Input
                     placeholder="Type to search..."
                     value={inventorySearchQuery}
-                    onChange={(e) => setInventorySearchQuery(e.target.value)}
+                    onChange={(e) => { setInventorySearchQuery(e.target.value); setSelectedInventoryItemId(""); }}
                     data-testid="input-search-inventory"
                   />
                   {inventorySearchQuery && !selectedInventoryItemId && (
@@ -1660,33 +1763,59 @@ export default function TaskDetail() {
                           >
                             <div className="flex justify-between items-center">
                               <span className="font-medium">{item.name}</span>
-                              <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
+                              <div className="text-right">
+                                <span className="text-sm text-muted-foreground">
+                                  {(item.trackingMode === "status")
+                                    ? (item.stockStatus || "stocked")
+                                    : `${parseFloat(String(item.quantity || "0")).toFixed(2)} ${item.unit || ""}`}
+                                </span>
+                                {item.packageInfo && (
+                                  <p className="text-xs text-muted-foreground">{item.packageInfo}</p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
                       {inventoryItems?.filter((item) => item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())).length === 0 && (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">No items found</div>
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No items found.{" "}
+                          <button className="underline text-primary" onClick={() => { setIsQuickAddInventoryOpen(true); setQuickInventoryName(inventorySearchQuery); }}>
+                            Create new
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
                 {selectedInventoryItemId && (
-                  <div className="flex items-center justify-between text-sm bg-muted p-2 rounded">
-                    <span>Selected: <span className="font-medium">{inventoryItems.find(i => i.id === selectedInventoryItemId)?.name}</span></span>
-                    <Button variant="ghost" size="sm" onClick={() => { setSelectedInventoryItemId(""); setInventorySearchQuery(""); }}>
-                      Change
-                    </Button>
+                  <div className="bg-muted p-2 rounded space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{inventoryItems.find(i => i.id === selectedInventoryItemId)?.name}</span>
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedInventoryItemId(""); setInventorySearchQuery(""); }}>
+                        Change
+                      </Button>
+                    </div>
+                    {(() => {
+                      const sel = inventoryItems.find(i => i.id === selectedInventoryItemId);
+                      return sel?.packageInfo ? (
+                        <p className="text-xs text-muted-foreground">{sel.packageInfo}</p>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Quantity</Label>
+                <Label>Quantity {(() => {
+                  const sel = inventoryItems.find(i => i.id === selectedInventoryItemId);
+                  return sel?.unit ? `(${sel.unit})` : "";
+                })()}</Label>
                 <Input
                   type="number"
-                  min="1"
+                  min="0.01"
+                  step="0.01"
                   value={partQuantity}
                   onChange={(e) => setPartQuantity(e.target.value)}
-                  placeholder="Enter quantity"
+                  placeholder="e.g. 1, 0.5, 2.5"
                   data-testid="input-part-quantity"
                 />
               </div>
@@ -1700,18 +1829,28 @@ export default function TaskDetail() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); }}>
+              <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); setAiSuggestedParts([]); }}>
                 Cancel
               </Button>
               <Button
                 onClick={() => addPartMutation.mutate()}
-                disabled={!selectedInventoryItemId || !partQuantity || addPartMutation.isPending}
+                disabled={!selectedInventoryItemId || !partQuantity || isNaN(parseFloat(partQuantity)) || addPartMutation.isPending}
+                data-testid="button-confirm-add-part"
               >
-                Add Part
+                {addPartMutation.isPending ? "Adding..." : "Add Part"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Scan Part Scanner */}
+        <BarcodeScanner
+          open={isScanPartOpen}
+          onOpenChange={setIsScanPartOpen}
+          onScan={handleScanPart}
+          title="Scan Part"
+          description="Scan a barcode to find this part in inventory"
+        />
       </div>
     );
   }
@@ -3093,19 +3232,77 @@ export default function TaskDetail() {
 
       {/* Add Part Dialog */}
       <Dialog open={isAddPartDialogOpen} onOpenChange={setIsAddPartDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Part</DialogTitle>
             <DialogDescription>Select an inventory item to add to this task.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-2">
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setIsScanPartOpen(true)}
+                data-testid="button-scan-part"
+              >
+                <ScanLine className="h-4 w-4 mr-2" />
+                Scan Part
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={handleAiSuggestParts}
+                disabled={isAiSuggestLoading}
+                data-testid="button-ai-suggest-parts"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isAiSuggestLoading ? "Thinking..." : "AI Suggest"}
+              </Button>
+            </div>
+
+            {/* AI Suggested Parts */}
+            {aiSuggestedParts.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Suggestions</p>
+                {aiSuggestedParts.map((suggestion, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-md border text-sm" data-testid={`ai-suggestion-${i}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{suggestion.name}</p>
+                      <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const item = inventoryItems.find((inv) => inv.id === suggestion.id);
+                        if (item) {
+                          setSelectedInventoryItemId(item.id);
+                          setInventorySearchQuery(item.name);
+                          setPartQuantity(String(suggestion.suggestedQuantity));
+                        }
+                      }}
+                      data-testid={`button-add-suggestion-${i}`}
+                    >
+                      Use
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Search Inventory</Label>
               <div className="relative">
                 <Input
                   placeholder="Type to search..."
                   value={inventorySearchQuery}
-                  onChange={(e) => setInventorySearchQuery(e.target.value)}
+                  onChange={(e) => { setInventorySearchQuery(e.target.value); setSelectedInventoryItemId(""); }}
                   data-testid="input-search-inventory"
                 />
                 {inventorySearchQuery && !selectedInventoryItemId && (
@@ -3114,6 +3311,7 @@ export default function TaskDetail() {
                       className="px-3 py-2 cursor-pointer hover-elevate font-semibold text-primary border-b"
                       onClick={() => {
                         setIsQuickAddInventoryOpen(true);
+                        setQuickInventoryName(inventorySearchQuery);
                         setInventorySearchQuery("");
                       }}
                     >
@@ -3132,7 +3330,16 @@ export default function TaskDetail() {
                         >
                           <div className="flex justify-between items-center">
                             <span className="font-medium">{item.name}</span>
-                            <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
+                            <div className="text-right">
+                              <span className="text-sm text-muted-foreground">
+                                {(item.trackingMode === "status")
+                                  ? (item.stockStatus || "stocked")
+                                  : `${parseFloat(String(item.quantity || "0")).toFixed(2)} ${item.unit || ""}`}
+                              </span>
+                              {item.packageInfo && (
+                                <p className="text-xs text-muted-foreground">{item.packageInfo}</p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -3140,22 +3347,34 @@ export default function TaskDetail() {
                 )}
               </div>
               {selectedInventoryItemId && (
-                <div className="flex items-center justify-between text-sm bg-muted p-2 rounded">
-                  <span>Selected: <span className="font-medium">{inventoryItems.find(i => i.id === selectedInventoryItemId)?.name}</span></span>
-                  <Button variant="ghost" size="sm" onClick={() => { setSelectedInventoryItemId(""); setInventorySearchQuery(""); }}>
-                    Change
-                  </Button>
+                <div className="bg-muted p-2 rounded space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{inventoryItems.find(i => i.id === selectedInventoryItemId)?.name}</span>
+                    <Button variant="ghost" size="sm" onClick={() => { setSelectedInventoryItemId(""); setInventorySearchQuery(""); }}>
+                      Change
+                    </Button>
+                  </div>
+                  {(() => {
+                    const sel = inventoryItems.find(i => i.id === selectedInventoryItemId);
+                    return sel?.packageInfo ? (
+                      <p className="text-xs text-muted-foreground">{sel.packageInfo}</p>
+                    ) : null;
+                  })()}
                 </div>
               )}
             </div>
             <div className="space-y-2">
-              <Label>Quantity</Label>
+              <Label>Quantity {(() => {
+                const sel = inventoryItems.find(i => i.id === selectedInventoryItemId);
+                return sel?.unit ? `(${sel.unit})` : "";
+              })()}</Label>
               <Input
                 type="number"
-                min="1"
+                min="0.01"
+                step="0.01"
                 value={partQuantity}
                 onChange={(e) => setPartQuantity(e.target.value)}
-                placeholder="Enter quantity"
+                placeholder="e.g. 1, 0.5, 2.5"
                 data-testid="input-part-quantity"
               />
             </div>
@@ -3169,14 +3388,15 @@ export default function TaskDetail() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); }}>
+            <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); setAiSuggestedParts([]); }}>
               Cancel
             </Button>
             <Button
               onClick={() => addPartMutation.mutate()}
-              disabled={!selectedInventoryItemId || !partQuantity || addPartMutation.isPending}
+              disabled={!selectedInventoryItemId || !partQuantity || isNaN(parseFloat(partQuantity)) || addPartMutation.isPending}
+              data-testid="button-confirm-add-part"
             >
-              Add Part
+              {addPartMutation.isPending ? "Adding..." : "Add Part"}
             </Button>
           </DialogFooter>
         </DialogContent>
