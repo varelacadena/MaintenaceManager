@@ -32,9 +32,8 @@ app.use(express.urlencoded({ extended: false }));
 const isProduction = process.env.NODE_ENV === "production";
 
 // Trust proxy must be set before rate limiting so req.ip resolves correctly behind proxies
-if (isProduction) {
-  app.set("trust proxy", 1);
-}
+// Replit always runs behind a reverse proxy, even in development
+app.set("trust proxy", 1);
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,

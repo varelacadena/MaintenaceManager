@@ -50,6 +50,7 @@ export async function applyMigrations() {
     { file: "034_add_emergency_contacts.sql", name: "034_add_emergency_contacts" },
     { file: "035_add_notifications_table.sql", name: "035_add_notifications_table" },
     { file: "037_add_project_management.sql", name: "037_add_project_management" },
+    { file: "039_add_scheduled_start_time.sql", name: "039_add_scheduled_start_time" },
   ];
 
   try {

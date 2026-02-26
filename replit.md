@@ -47,7 +47,10 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 -   **Project Management:** Simplified project detail pages as read-only organizational containers for grouping tasks.
 -   **Internal Estimates/Quotes Workflow:** Task-level quote management for work requiring approval, supporting multiple vendor quotes, comparison, and approval processes.
 -   **File Storage Architecture:** Secure file uploads and downloads using Replit Object Storage with presigned URLs and role-based access control.
--   **Security Hardening:** Login and general API rate limiting, dynamic session secret, and a health check endpoint.
+-   **Security Hardening:** Login and general API rate limiting (with `trust proxy` always enabled for Replit's reverse proxy), dynamic session secret, and a health check endpoint.
+-   **Calendar (Redesigned):** Week view default on desktop, Day view default on mobile. Tasks display across their full active period (start date through due date). Day and Week views include an hourly time grid (6 AM–10 PM) with timed task blocks and an "All day" row. Per-user color coding via consistent hash. Assignee filter bar with color-coded chips. Current-time indicator line on today's grid. Tasks with a `scheduledStartTime` appear at the correct hour slot; tasks without appear in the All Day row.
+-   **Scheduled Time Field:** Optional `scheduledStartTime` (varchar, format "HH:MM") added to the tasks table and task creation/edit forms. Stored as `scheduled_start_time` in the database (migration 039).
+-   **One-tap Photo/Doc Upload:** TaskDetail bottom action bar has a single "Photos/Docs" button (Paperclip icon) that directly opens the file picker for both images and documents. Files upload and auto-save without an intermediate sheet or manual save step.
 
 ## External Dependencies
 

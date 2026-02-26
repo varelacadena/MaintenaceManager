@@ -1,11 +1,12 @@
-
 import { useRef } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
+  accept?: string;
   onGetUploadParameters: () => Promise<{
     method: "PUT";
     url: string;
@@ -13,16 +14,23 @@ interface ObjectUploaderProps {
   onComplete?: (result: any) => void;
   onError?: (error: Error) => void;
   buttonClassName?: string;
+  buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost";
+  buttonTestId?: string;
+  isLoading?: boolean;
   children: ReactNode;
 }
 
 export function ObjectUploader({
   maxNumberOfFiles = 1,
-  maxFileSize = 10485760, // 10MB default
+  maxFileSize = 10485760,
+  accept = "*/*",
   onGetUploadParameters,
   onComplete,
   onError,
   buttonClassName,
+  buttonVariant,
+  buttonTestId,
+  isLoading = false,
   children,
 }: ObjectUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,8 +44,7 @@ export function ObjectUploader({
 
     for (let i = 0; i < Math.min(files.length, maxNumberOfFiles); i++) {
       const file = files[i];
-      
-      // Check file size
+
       if (file.size > maxFileSize) {
         failed.push({
           file,
@@ -48,20 +55,18 @@ export function ObjectUploader({
 
       try {
         const { url } = await onGetUploadParameters();
-        
-        // Check if this is a mock URL (Object Storage not configured)
+
         const isMock = url.startsWith("https://mock-storage.local/");
-        
+
         if (isMock) {
-          // For mock uploads, just return the mock URL without actually uploading
           const mockKey = url.split('/').slice(3).join('/');
           successful.push({
-            file: file, // Include the original file object
+            file,
             name: file.name,
             fileName: file.name,
             type: file.type || "application/octet-stream",
             size: file.size || 0,
-            url: url,
+            url,
             objectUrl: url,
             uploadURL: url,
             isMock: true,
@@ -69,8 +74,7 @@ export function ObjectUploader({
           });
           continue;
         }
-        
-        // Upload file
+
         const response = await fetch(url, {
           method: "PUT",
           body: file,
@@ -84,36 +88,29 @@ export function ObjectUploader({
         }
 
         successful.push({
-          file: file, // Include the original file object
+          file,
           name: file.name,
           fileName: file.name,
           type: file.type || "application/octet-stream",
           size: file.size || 0,
-          uploadURL: url.split("?")[0], // Remove query params
-          objectUrl: url.split("?")[0], // Also include objectUrl for consistency
-          url: url.split("?")[0], // Add url field for consistency
+          uploadURL: url.split("?")[0],
+          objectUrl: url.split("?")[0],
+          url: url.split("?")[0],
           objectPath: url.includes('?') ? new URL(url).pathname.split('/').slice(2).join('/') : url.split('/').slice(3).join('/'),
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Upload failed";
-        failed.push({
-          file,
-          error: errorMessage,
-        });
-        
-        // Call onError for each failed upload
+        failed.push({ file, error: errorMessage });
         if (onError) {
           onError(error instanceof Error ? error : new Error(errorMessage));
         }
       }
     }
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
 
-    // Call onComplete with results
     if (onComplete) {
       onComplete({ successful, failed });
     }
@@ -127,15 +124,17 @@ export function ObjectUploader({
         multiple={maxNumberOfFiles > 1}
         onChange={handleFileChange}
         style={{ display: "none" }}
-        accept="*/*"
+        accept={accept}
       />
-      <Button 
-        type="button" 
-        onClick={() => fileInputRef.current?.click()} 
-        className={buttonClassName} 
-        data-testid="button-upload"
+      <Button
+        type="button"
+        variant={buttonVariant ?? "default"}
+        onClick={() => !isLoading && fileInputRef.current?.click()}
+        className={buttonClassName}
+        data-testid={buttonTestId ?? "button-upload"}
+        disabled={isLoading}
       >
-        {children}
+        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : children}
       </Button>
     </div>
   );

@@ -877,6 +877,28 @@ export default function TaskDetail() {
     }
   };
 
+  const handleAutoSaveUpload = async (result: any) => {
+    if (result.successful?.length > 0) {
+      try {
+        for (const file of result.successful) {
+          await addUploadMutation.mutateAsync({
+            fileName: file.name,
+            fileType: file.type || "application/octet-stream",
+            objectUrl: file.uploadURL || file.url,
+          });
+        }
+        toast({
+          title: result.successful.length === 1 ? "File saved" : `${result.successful.length} files saved`,
+        });
+      } catch {
+        toast({ title: "Upload failed", description: "Could not save file", variant: "destructive" });
+      }
+    }
+    if (result.failed?.length > 0) {
+      toast({ title: "Upload failed", description: result.failed[0]?.error || "Could not upload file", variant: "destructive" });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -2829,68 +2851,23 @@ export default function TaskDetail() {
             </Button>
           )}
 
-          <Sheet open={isUploadSheetOpen} onOpenChange={setIsUploadSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-14 px-4 flex-col gap-0.5" data-testid="bottom-button-upload">
-                <Camera className="w-5 h-5" />
-                <span className="text-xs">Photos</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[50vh]">
-              <SheetHeader>
-                <SheetTitle>Upload Photos</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4 space-y-4">
-                {pendingUploads.length > 0 && (
-                  <div className="space-y-2">
-                    {pendingUploads.map((upload, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <span className="text-sm truncate flex-1">{upload.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setPendingUploads(prev => prev.filter((_, i) => i !== index))}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      className="w-full"
-                      onClick={async () => {
-                        for (const upload of pendingUploads) {
-                          await addUploadMutation.mutateAsync({
-                            fileName: upload.name,
-                            fileType: upload.type,
-                            objectUrl: upload.url,
-                          });
-                        }
-                        setPendingUploads([]);
-                        setIsUploadSheetOpen(false);
-                      }}
-                      disabled={addUploadMutation.isPending}
-                    >
-                      Save {pendingUploads.length} Photo{pendingUploads.length !== 1 ? "s" : ""}
-                    </Button>
-                  </div>
-                )}
-                <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center">
-                  <ObjectUploader
-                    maxNumberOfFiles={5}
-                    maxFileSize={10485760}
-                    onGetUploadParameters={getUploadParameters}
-                    onComplete={handleFileUpload}
-                    onError={(error) => {
-                      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-                    }}
-                    buttonClassName="bg-primary text-primary-foreground"
-                  >
-                    Browse Photos
-                  </ObjectUploader>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <ObjectUploader
+            maxNumberOfFiles={5}
+            maxFileSize={10485760}
+            onGetUploadParameters={getUploadParameters}
+            onComplete={handleAutoSaveUpload}
+            onError={(error) => {
+              toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+            }}
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+            buttonClassName="h-14 px-4 flex-col gap-0.5 w-full"
+            buttonVariant="ghost"
+            buttonTestId="bottom-button-upload"
+            isLoading={addUploadMutation.isPending}
+          >
+            <Paperclip className="w-5 h-5" />
+            <span className="text-xs">Photos/Docs</span>
+          </ObjectUploader>
 
           <Button
             variant="ghost"

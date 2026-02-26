@@ -173,6 +173,9 @@ export default function EditTask() {
       if (task.estimatedCompletionDate) {
         form.setValue("estimatedCompletionDate", new Date(task.estimatedCompletionDate).toISOString().split("T")[0]);
       }
+      if ((task as any).scheduledStartTime) {
+        (form as any).setValue("scheduledStartTime", (task as any).scheduledStartTime);
+      }
       if (task.propertyId) {
         form.setValue("propertyId", task.propertyId);
         setSelectedPropertyId(task.propertyId);
@@ -259,6 +262,7 @@ export default function EditTask() {
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
+        scheduledStartTime: (data as any).scheduledStartTime || undefined,
       };
       const response = await apiRequest("PATCH", `/api/tasks/${id}`, taskData);
       return response.json();

@@ -183,6 +183,7 @@ export const tasks = pgTable("tasks", {
   approvedQuoteId: varchar("approved_quote_id"), // Reference to approved internal quote
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   estimatedHours: doublePrecision("estimated_hours"),
+  scheduledStartTime: varchar("scheduled_start_time", { length: 5 }),
   requiredSkill: varchar("required_skill", { length: 100 }),
   aiGenerated: boolean("ai_generated").default(false),
   createdAt: timestamp("created_at").defaultNow(),

@@ -542,6 +542,7 @@ export default function NewTask() {
         contactPhone: data.contactPhone || undefined,
         checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
         projectId: data.projectId || projectId || undefined,
+        scheduledStartTime: data.scheduledStartTime || undefined,
       };
       const response = await apiRequest("POST", "/api/tasks", taskData);
       return response.json();
