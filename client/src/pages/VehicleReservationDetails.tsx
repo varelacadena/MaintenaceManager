@@ -1,7 +1,7 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Car, Calendar, FileText, Key, Clock, CheckCircle2, AlertCircle,
+  Car, Calendar, FileText, Key, Clock,
   Lock, ShieldAlert, TriangleAlert, X, OctagonX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -216,7 +216,7 @@ export default function VehicleReservationDetails() {
   const isUnblurred = isAdmin || safetyAcknowledged || reservation.advisoryAccepted || isCheckoutComplete;
 
   const checkoutLocked = isApproved && !isTimeAvailable && !isAdmin;
-  const showKeyPickup = hasVehicle && !!reservation.keyPickupMethod && (isAdmin || isTimeAvailable || isCheckoutComplete || reservation.advisoryAccepted);
+  const showKeyPickup = hasVehicle && !!reservation.keyPickupMethod;
 
   const moreThan24hAway = new Date(reservation.startDate) > new Date(Date.now() + 24 * 60 * 60 * 1000);
   const showEditButton = isAdmin && isApproved && moreThan24hAway;
@@ -298,13 +298,27 @@ export default function VehicleReservationDetails() {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <Car className="h-6 w-6 text-primary" />
                 </div>
-                <div>
+                <div className="space-y-1">
                   <p className="font-semibold text-sm">Your vehicle is ready</p>
-                  <p className="text-base font-bold mt-0.5">{vehicle.make} {vehicle.model}</p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
-                    Full vehicle details will be visible once checkout is complete.
-                  </p>
+                  <p className="text-base font-bold">{vehicle.make} {vehicle.model}</p>
                 </div>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Fleet No.</p>
+                    <p className="font-medium">{vehicle.vehicleId}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">License Plate</p>
+                    <p className="font-medium">{vehicle.licensePlate ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Color</p>
+                    <p className="font-medium">{vehicle.color ?? "—"}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground max-w-[220px]">
+                  Full vehicle details will be visible once checkout is complete.
+                </p>
               </div>
             )}
           </CardContent>
@@ -333,20 +347,6 @@ export default function VehicleReservationDetails() {
             <div>
               <p className="text-sm text-muted-foreground">Passengers</p>
               <p className="font-medium">{reservation.passengerCount || "Not specified"}</p>
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              <p className="text-sm text-muted-foreground">Advisory Status:</p>
-              {reservation.advisoryAccepted ? (
-                <Badge variant="default" className="flex items-center gap-1 text-xs">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Accepted
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                  <AlertCircle className="h-3 w-3" />
-                  Pending
-                </Badge>
-              )}
             </div>
           </CardContent>
         </Card>
