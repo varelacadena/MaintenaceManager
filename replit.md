@@ -29,6 +29,13 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 -   **User Roles:** Admin, Technician, Staff, Student, each with specific permissions and dashboard views.
 -   **Task Management:** Creation, assignment, tracking, status updates, time logging, parts tracking, and conditional fields.
 -   **Vehicle Fleet Management:** Automatic status updates based on reservations/usage logs; manual overrides. Includes a detailed checkout/checkin flow with admin approval, safety acknowledgments, and photo/mileage/fuel logging.
+    - **Checkout Wizard (5 main steps):** Advisory (with key pickup reveal mid-wizard after acceptance) → Safety → Responsibilities → Checkout details (sub-stepped: mileage → fuel → condition → damage → photos) → Complete
+    - **Check-in Wizard (3 main steps):** Trip Summary → Inspection (sub-stepped: mileage → fuel → cleanliness → issues → photos → notes) → Complete
+    - **Vehicle Info Gating:** Non-admin users see only vehicle name (not full details) until checkout is completed; full details (make/model/year/capacity) visible to admins and after active/completed status
+    - **Key Pickup Timing:** Key pickup instructions revealed AFTER advisory acceptance in checkout wizard (mid-wizard, before checkout details), so user can retrieve key before filling out form
+    - **Time-locked Checkout Button:** Checkout button on reservation details is disabled before reservation start time, showing "Checkout opens [time]"; unlocks live every 30s via interval; admins can override
+    - **My Reservations Enrichment:** GET /api/vehicle-reservations/my returns vehicleName and vehicleDisplayId; approved cards show "Assigned Vehicle" badge; View Details hidden for pending/cancelled
+    - **Authorization Fixes:** Admins/technicians can accept advisory and create checkout logs for any reservation (not just their own)
 -   **Service Request Management:** Staff can submit requests; students can complete assigned tasks.
 -   **Inventory & Vendor Management:** Advanced hybrid inventory tracking system:
     - **Counted mode** (Auto, Plumbing, Electrical, Repairs): decimal-precise quantities, barcode scanning, decimal-safe parts logging

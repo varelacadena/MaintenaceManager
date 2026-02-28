@@ -3,37 +3,33 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Car, Camera, MapPin, ClipboardList, CircleCheck, Check,
   Gauge, Fuel, Sparkles, AlertTriangle, MessageSquare, ImagePlus,
-  Navigation, CheckCircle, Wrench, Info
+  Navigation, CheckCircle, Wrench, ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { VehicleCheckOutLog, Vehicle, VehicleReservation } from "@shared/schema";
-import { insertVehicleCheckInLogSchema } from "@shared/schema";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 
 type Step = "summary" | "inspection" | "complete";
+type InspectionSubStep = "mileage" | "fuel" | "cleanliness" | "issues" | "photos" | "notes";
 
 const STEPS: { id: Step; label: string; icon: any }[] = [
   { id: "summary", label: "Trip Summary", icon: MapPin },
   { id: "inspection", label: "Inspection", icon: ClipboardList },
   { id: "complete", label: "Done", icon: CircleCheck },
 ];
+
+const INSPECTION_SUB_STEPS: InspectionSubStep[] = ["mileage", "fuel", "cleanliness", "issues", "photos", "notes"];
 
 type CheckInOutcome = {
   hasIssues: boolean;
@@ -43,6 +39,84 @@ type CheckInOutcome = {
   endMileage: number;
   startMileage: number;
 };
+
+const FUEL_OPTIONS = [
+  { value: "empty", label: "Empty", filled: 0 },
+  { value: "1/4", label: "¼ Tank", filled: 1 },
+  { value: "1/2", label: "½ Tank", filled: 2 },
+  { value: "3/4", label: "¾ Tank", filled: 3 },
+  { value: "full", label: "Full", filled: 4 },
+];
+
+function FuelLevelSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {FUEL_OPTIONS.map((opt) => {
+        const isSelected = value === opt.value;
+        const isLow = opt.value === "empty" || opt.value === "1/4";
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            data-testid={`fuel-option-${opt.value}`}
+            className={`flex flex-col items-center gap-2 p-3 rounded-md border-2 transition-all ${
+              isSelected
+                ? isLow
+                  ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                  : "border-primary bg-primary/10"
+                : "border-muted hover-elevate"
+            }`}
+          >
+            <div className="flex flex-col gap-0.5 w-full">
+              {[0, 1, 2, 3].map((barIdx) => {
+                const isFilled = (4 - barIdx) <= opt.filled;
+                return (
+                  <div
+                    key={barIdx}
+                    className={`h-1.5 rounded-sm transition-colors ${
+                      isFilled
+                        ? isSelected
+                          ? isLow ? "bg-red-500" : "bg-primary"
+                          : "bg-muted-foreground/40"
+                        : "bg-muted"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <span className={`text-xs font-medium leading-tight text-center ${
+              isSelected
+                ? isLow ? "text-red-700 dark:text-red-400" : "text-primary"
+                : "text-muted-foreground"
+            }`}>
+              {opt.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SubStepDots({ total, currentIndex }: { total: number; currentIndex: number }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 pt-1 pb-3">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-1.5 rounded-full transition-all duration-300 ${
+            i < currentIndex
+              ? "w-4 bg-primary/40"
+              : i === currentIndex
+              ? "w-5 bg-primary"
+              : "w-1.5 bg-muted-foreground/30"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 function StepProgress({ currentStep }: { currentStep: Step }) {
   const currentIndex = STEPS.findIndex(s => s.id === currentStep);
@@ -89,10 +163,23 @@ export default function VehicleCheckIn() {
   const [dashPhoto, setDashPhoto] = useState<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string } | null>(null);
   const [interiorPhoto, setInteriorPhoto] = useState<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string } | null>(null);
   const [damagePhotos, setDamagePhotos] = useState<Array<{ fileName: string; objectUrl: string; fileType: string; objectPath?: string }>>([]);
+
   const [step, setStep] = useState<Step>("summary");
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const [isAnimating, setIsAnimating] = useState(false);
   const [outcome, setOutcome] = useState<CheckInOutcome | null>(null);
+
+  const [inspSubStep, setInspSubStep] = useState<InspectionSubStep>("mileage");
+  const [inspSlideDir, setInspSlideDir] = useState<"left" | "right">("left");
+  const [inspIsAnimating, setInspIsAnimating] = useState(false);
+
+  const [ciMileage, setCiMileage] = useState<number>(0);
+  const [ciFuelLevel, setCiFuelLevel] = useState<string>("");
+  const [ciIsClean, setCiIsClean] = useState<boolean | null>(null);
+  const [ciHasIssues, setCiHasIssues] = useState<boolean | null>(null);
+  const [ciIssues, setCiIssues] = useState<string>("");
+  const [ciReturnNotes, setCiReturnNotes] = useState<string>("");
+
   const [fuelViolationAck, setFuelViolationAck] = useState(false);
   const [cleanlinessViolationAck, setCleanlinessViolationAck] = useState(false);
 
@@ -110,35 +197,33 @@ export default function VehicleCheckIn() {
     enabled: !!checkOutLog?.reservationId,
   });
 
-  type CheckInFormData = {
-    endMileage: number;
-    fuelLevel: string;
-    cleanlinessStatus: string;
-    issues: string;
-    returnNotes: string;
+  useEffect(() => {
+    if (checkOutLog?.startMileage) setCiMileage(checkOutLog.startMileage);
+  }, [checkOutLog?.startMileage]);
+
+  const advanceStep = (next: Step) => {
+    setSlideDirection("left");
+    setIsAnimating(true);
+    setTimeout(() => { setStep(next); setIsAnimating(false); }, 150);
   };
 
-  const form = useForm<CheckInFormData>({
-    resolver: zodResolver(insertVehicleCheckInLogSchema.omit({ userId: true, vehicleId: true, checkOutLogId: true })),
-    defaultValues: {
-      endMileage: checkOutLog?.startMileage || 0,
-      fuelLevel: "full",
-      cleanlinessStatus: "clean",
-      issues: "",
-      returnNotes: "",
-    },
-  });
+  const goBackStep = (prev: Step) => {
+    setSlideDirection("right");
+    setIsAnimating(true);
+    setTimeout(() => { setStep(prev); setIsAnimating(false); }, 150);
+  };
 
-  const fuelLevel = form.watch("fuelLevel");
-  const cleanlinessStatus = form.watch("cleanlinessStatus");
-  const issues = form.watch("issues");
+  const advanceInspSubStep = (next: InspectionSubStep) => {
+    setInspSlideDir("left");
+    setInspIsAnimating(true);
+    setTimeout(() => { setInspSubStep(next); setInspIsAnimating(false); }, 150);
+  };
 
-  const isLowFuel = fuelLevel === "empty" || fuelLevel === "1/4";
-  const isDirty = cleanlinessStatus === "needs_cleaning";
-
-  const canSubmit = dashPhoto && interiorPhoto &&
-    (!isLowFuel || fuelViolationAck) &&
-    (!isDirty || cleanlinessViolationAck);
+  const goBackInspSubStep = (prev: InspectionSubStep) => {
+    setInspSlideDir("right");
+    setInspIsAnimating(true);
+    setTimeout(() => { setInspSubStep(prev); setInspIsAnimating(false); }, 150);
+  };
 
   const getUploadParameters = async () => {
     const response = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
@@ -150,7 +235,7 @@ export default function VehicleCheckIn() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
-  const handleFileUpload = (result: any, type: 'dash' | 'interior' | 'damage') => {
+  const handleFileUpload = (result: any, type: "dash" | "interior" | "damage") => {
     const { successful, failed } = result;
     if (failed?.length > 0) {
       toast({ title: "Some uploads failed", description: failed.map((f: any) => f.error).join(", "), variant: "destructive" });
@@ -160,17 +245,17 @@ export default function VehicleCheckIn() {
         fileName: file.fileName || file.name,
         objectUrl: file.objectUrl || file.uploadURL || file.url,
         fileType: file.type || "image/jpeg",
-        objectPath: file.objectPath
+        objectPath: file.objectPath,
       }));
-      if (type === 'dash') setDashPhoto(newFiles[0]);
-      else if (type === 'interior') setInteriorPhoto(newFiles[0]);
+      if (type === "dash") setDashPhoto(newFiles[0]);
+      else if (type === "interior") setInteriorPhoto(newFiles[0]);
       else setDamagePhotos(prev => [...prev, ...newFiles]);
       toast({ title: "Upload successful", description: `${successful.length} file(s) uploaded` });
     }
   };
 
   const checkInMutation = useMutation({
-    mutationFn: async (data: CheckInFormData) => {
+    mutationFn: async (data: { endMileage: number; fuelLevel: string; cleanlinessStatus: string; issues: string; returnNotes: string }) => {
       const response = await apiRequest("POST", "/api/vehicle-checkin-logs", {
         ...data,
         userId: user!.id,
@@ -207,23 +292,23 @@ export default function VehicleCheckIn() {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString();
-          return !!(key?.startsWith('/api/vehicle-checkin-logs') ||
-                 key?.startsWith('/api/vehicles') ||
-                 key?.startsWith('/api/vehicle-reservations') ||
-                 key?.startsWith('/api/tasks') ||
-                 key?.startsWith('/api/requests'));
+          return !!(key?.startsWith("/api/vehicle-checkin-logs") ||
+            key?.startsWith("/api/vehicles") ||
+            key?.startsWith("/api/vehicle-reservations") ||
+            key?.startsWith("/api/tasks") ||
+            key?.startsWith("/api/requests"));
         }
       });
 
-      return { checkInLog, formData: data };
+      return { checkInLog, data };
     },
-    onSuccess: ({ formData }) => {
+    onSuccess: ({ data }) => {
       setOutcome({
-        hasIssues: !!(formData.issues && formData.issues.trim().length > 0),
-        hasLowFuel: formData.fuelLevel === "empty" || formData.fuelLevel === "1/4",
+        hasIssues: !!(ciHasIssues && ciIssues.trim()),
+        hasLowFuel: ciFuelLevel === "empty" || ciFuelLevel === "1/4",
         fuelViolationAcknowledged: fuelViolationAck,
         cleanlinessViolationAcknowledged: cleanlinessViolationAck,
-        endMileage: formData.endMileage,
+        endMileage: ciMileage,
         startMileage: checkOutLog?.startMileage || 0,
       });
       advanceStep("complete");
@@ -233,16 +318,14 @@ export default function VehicleCheckIn() {
     },
   });
 
-  const advanceStep = (next: Step) => {
-    setSlideDirection("left");
-    setIsAnimating(true);
-    setTimeout(() => { setStep(next); setIsAnimating(false); }, 150);
-  };
-
-  const goBackStep = (prev: Step) => {
-    setSlideDirection("right");
-    setIsAnimating(true);
-    setTimeout(() => { setStep(prev); setIsAnimating(false); }, 150);
+  const handleCheckInSubmit = (notes = ciReturnNotes) => {
+    checkInMutation.mutate({
+      endMileage: ciMileage,
+      fuelLevel: ciFuelLevel,
+      cleanlinessStatus: ciIsClean === false ? "needs_cleaning" : "clean",
+      issues: ciHasIssues ? ciIssues : "",
+      returnNotes: notes,
+    });
   };
 
   if (isLoading) {
@@ -270,10 +353,19 @@ export default function VehicleCheckIn() {
   }
 
   const milesDriven = outcome ? outcome.endMileage - outcome.startMileage : 0;
+  const isLowFuel = ciFuelLevel === "empty" || ciFuelLevel === "1/4";
+  const isDirty = ciIsClean === false;
+  const milesDrivenPreview = ciMileage - (checkOutLog.startMileage || 0);
 
   const animationClass = isAnimating
     ? slideDirection === "left" ? "opacity-0 -translate-x-4" : "opacity-0 translate-x-4"
     : "opacity-100 translate-x-0";
+
+  const inspAnimClass = inspIsAnimating
+    ? inspSlideDir === "left" ? "opacity-0 -translate-x-4" : "opacity-0 translate-x-4"
+    : "opacity-100 translate-x-0";
+
+  const inspSubStepIndex = INSPECTION_SUB_STEPS.indexOf(inspSubStep);
 
   return (
     <div className="flex-1 p-4 max-w-2xl mx-auto">
@@ -287,6 +379,7 @@ export default function VehicleCheckIn() {
       <div className="overflow-hidden">
         <div className={`transition-all duration-300 ease-in-out ${animationClass}`}>
 
+          {/* ── SUMMARY ── */}
           {step === "summary" && (
             <Card>
               <CardHeader className="text-center pb-2">
@@ -343,7 +436,11 @@ export default function VehicleCheckIn() {
                 </Alert>
 
                 <div className="flex flex-col gap-2 pt-1">
-                  <Button onClick={() => advanceStep("inspection")} className="w-full" data-testid="button-start-inspection">
+                  <Button
+                    onClick={() => { setInspSubStep("mileage"); advanceStep("inspection"); }}
+                    className="w-full"
+                    data-testid="button-start-inspection"
+                  >
                     Start Return Inspection
                   </Button>
                   <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="w-full">
@@ -354,321 +451,448 @@ export default function VehicleCheckIn() {
             </Card>
           )}
 
+          {/* ── INSPECTION (sub-stepped) ── */}
           {step === "inspection" && (
             <Card>
-              <CardHeader className="text-center pb-2">
-                <div className="flex justify-center mb-3">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <ClipboardList className="h-8 w-8 text-primary" />
-                  </div>
-                </div>
-                <CardTitle className="text-xl">Return Inspection</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Be thorough and honest — your report is recorded and protects everyone.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit((data) => checkInMutation.mutate(data))} className="space-y-5">
-                    <FormField
-                      control={form.control}
-                      name="endMileage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Gauge className="h-4 w-4 text-muted-foreground" />
-                            Ending Mileage
-                          </FormLabel>
-                          <p className="text-xs text-muted-foreground">Enter the current odometer reading right now</p>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                              data-testid="input-end-mileage"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <div className="px-6 pt-4">
+                <SubStepDots total={INSPECTION_SUB_STEPS.length} currentIndex={inspSubStepIndex} />
+              </div>
+              <div className="overflow-hidden">
+                <div className={`transition-all duration-300 ease-in-out ${inspAnimClass}`}>
+                  <CardContent className="pt-2">
 
-                    <FormField
-                      control={form.control}
-                      name="fuelLevel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Fuel className="h-4 w-4 text-muted-foreground" />
-                            Ending Fuel Level
-                          </FormLabel>
-                          <p className="text-xs text-muted-foreground">Please refuel to at least ½ tank before returning</p>
-                          <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-fuel-level">
-                                <SelectValue placeholder="Select fuel level" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="empty">Empty</SelectItem>
-                              <SelectItem value="1/4">1/4 Tank</SelectItem>
-                              <SelectItem value="1/2">1/2 Tank</SelectItem>
-                              <SelectItem value="3/4">3/4 Tank</SelectItem>
-                              <SelectItem value="full">Full</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          {isLowFuel && (
-                            <div className="mt-2 space-y-2">
-                              <Alert variant="destructive" className="py-2">
-                                <Fuel className="h-4 w-4" />
-                                <AlertDescription className="text-sm">
-                                  You agreed to return the vehicle with at least ½ tank of fuel. Please refuel before completing check-in if possible.
-                                </AlertDescription>
-                              </Alert>
-                              <div className="bg-muted/50 rounded-md p-3 flex items-start gap-2">
-                                <Checkbox
-                                  id="fuel-violation-ack"
-                                  checked={fuelViolationAck}
-                                  onCheckedChange={(v) => setFuelViolationAck(v === true)}
-                                  data-testid="checkbox-fuel-violation"
-                                />
-                                <label htmlFor="fuel-violation-ack" className="text-xs leading-relaxed cursor-pointer text-muted-foreground">
-                                  I am unable to refuel at this time. I acknowledge this is a policy violation and understand it will be recorded on my account.
-                                </label>
-                              </div>
+                    {/* SUB: MILEAGE */}
+                    {inspSubStep === "mileage" && (
+                      <div className="space-y-5">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Gauge className="h-7 w-7 text-primary" />
                             </div>
-                          )}
-                        </FormItem>
-                      )}
-                    />
+                          </div>
+                          <h3 className="text-lg font-semibold">What's the ending mileage?</h3>
+                          <p className="text-sm text-muted-foreground">Enter the current odometer reading</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Input
+                            type="number"
+                            value={ciMileage || ""}
+                            onChange={(e) => setCiMileage(parseInt(e.target.value) || 0)}
+                            className="text-center text-2xl font-bold h-14"
+                            placeholder="0"
+                            data-testid="input-end-mileage"
+                          />
+                          <p className="text-xs text-muted-foreground text-center">miles</p>
+                        </div>
+                        {ciMileage > 0 && milesDrivenPreview >= 0 && (
+                          <div className="text-center p-3 bg-muted/50 rounded-md">
+                            <p className="text-xs text-muted-foreground">Miles driven this trip</p>
+                            <p className="text-xl font-bold">{milesDrivenPreview.toLocaleString()} mi</p>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => advanceInspSubStep("fuel")}
+                            disabled={!ciMileage || ciMileage < (checkOutLog.startMileage || 0)}
+                            className="w-full"
+                            data-testid="button-mileage-next"
+                          >
+                            Next
+                          </Button>
+                          <Button variant="ghost" onClick={() => goBackStep("summary")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
-                    <FormField
-                      control={form.control}
-                      name="cleanlinessStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-muted-foreground" />
-                            Vehicle Cleanliness
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-cleanliness">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="clean">Clean</SelectItem>
-                              <SelectItem value="needs_cleaning">Needs Cleaning</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          {isDirty && (
-                            <div className="mt-2 space-y-2">
-                              <Alert variant="destructive" className="py-2">
-                                <Sparkles className="h-4 w-4" />
-                                <AlertDescription className="text-sm">
-                                  You agreed to return the vehicle clean. Please clean it before completing check-in if possible.
-                                </AlertDescription>
-                              </Alert>
-                              <div className="bg-muted/50 rounded-md p-3 flex items-start gap-2">
-                                <Checkbox
-                                  id="cleanliness-violation-ack"
-                                  checked={cleanlinessViolationAck}
-                                  onCheckedChange={(v) => setCleanlinessViolationAck(v === true)}
-                                  data-testid="checkbox-cleanliness-violation"
-                                />
-                                <label htmlFor="cleanliness-violation-ack" className="text-xs leading-relaxed cursor-pointer text-muted-foreground">
-                                  I am unable to clean the vehicle at this time. I acknowledge this is a policy violation and will be recorded on my account.
-                                </label>
-                              </div>
+                    {/* SUB: FUEL */}
+                    {inspSubStep === "fuel" && (
+                      <div className="space-y-5">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Fuel className="h-7 w-7 text-primary" />
                             </div>
-                          )}
-                        </FormItem>
-                      )}
-                    />
+                          </div>
+                          <h3 className="text-lg font-semibold">What's the fuel level?</h3>
+                          <p className="text-sm text-muted-foreground">Please refuel to at least ½ tank before returning</p>
+                        </div>
+                        <FuelLevelSelector value={ciFuelLevel} onChange={(v) => { setCiFuelLevel(v); setFuelViolationAck(false); }} />
+                        {isLowFuel && ciFuelLevel && (
+                          <div className="space-y-2">
+                            <Alert variant="destructive" className="py-2">
+                              <Fuel className="h-4 w-4" />
+                              <AlertDescription className="text-sm">
+                                You agreed to return with at least ½ tank of fuel. Please refuel before completing check-in if possible.
+                              </AlertDescription>
+                            </Alert>
+                            <div className="bg-muted/50 rounded-md p-3 flex items-start gap-2">
+                              <Checkbox
+                                id="fuel-violation-ack"
+                                checked={fuelViolationAck}
+                                onCheckedChange={(v) => setFuelViolationAck(v === true)}
+                                data-testid="checkbox-fuel-violation"
+                              />
+                              <label htmlFor="fuel-violation-ack" className="text-xs leading-relaxed cursor-pointer text-muted-foreground">
+                                I am unable to refuel at this time. I acknowledge this is a policy violation and understand it will be recorded on my account.
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => advanceInspSubStep("cleanliness")}
+                            disabled={!ciFuelLevel || (isLowFuel && !fuelViolationAck)}
+                            className="w-full"
+                            data-testid="button-fuel-next"
+                          >
+                            Next
+                          </Button>
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("mileage")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
-                    <FormField
-                      control={form.control}
-                      name="issues"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                            Mechanical Issues or Damage (Optional)
-                          </FormLabel>
-                          <p className="text-xs text-muted-foreground">
-                            Report any mechanical problems, damage, or safety concerns. This will immediately flag the vehicle for admin review.
-                          </p>
-                          <FormControl>
+                    {/* SUB: CLEANLINESS */}
+                    {inspSubStep === "cleanliness" && (
+                      <div className="space-y-5">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Sparkles className="h-7 w-7 text-primary" />
+                            </div>
+                          </div>
+                          <h3 className="text-lg font-semibold">Is the vehicle clean?</h3>
+                          <p className="text-sm text-muted-foreground">You agreed to return the vehicle clean</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => { setCiIsClean(true); setCleanlinessViolationAck(false); }}
+                            data-testid="cleanliness-clean"
+                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                              ciIsClean === true
+                                ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                                : "border-muted hover-elevate"
+                            }`}
+                          >
+                            <Sparkles className={`h-8 w-8 ${ciIsClean === true ? "text-green-600" : "text-muted-foreground"}`} />
+                            <span className={`text-sm font-medium ${ciIsClean === true ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}`}>
+                              Yes, it's clean
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setCiIsClean(false); setCleanlinessViolationAck(false); }}
+                            data-testid="cleanliness-dirty"
+                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                              ciIsClean === false
+                                ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                                : "border-muted hover-elevate"
+                            }`}
+                          >
+                            <AlertTriangle className={`h-8 w-8 ${ciIsClean === false ? "text-red-600" : "text-muted-foreground"}`} />
+                            <span className={`text-sm font-medium ${ciIsClean === false ? "text-red-700 dark:text-red-400" : "text-muted-foreground"}`}>
+                              Needs cleaning
+                            </span>
+                          </button>
+                        </div>
+                        {isDirty && (
+                          <div className="space-y-2">
+                            <Alert variant="destructive" className="py-2">
+                              <Sparkles className="h-4 w-4" />
+                              <AlertDescription className="text-sm">
+                                You agreed to return the vehicle clean. Please clean it before completing check-in if possible.
+                              </AlertDescription>
+                            </Alert>
+                            <div className="bg-muted/50 rounded-md p-3 flex items-start gap-2">
+                              <Checkbox
+                                id="cleanliness-violation-ack"
+                                checked={cleanlinessViolationAck}
+                                onCheckedChange={(v) => setCleanlinessViolationAck(v === true)}
+                                data-testid="checkbox-cleanliness-violation"
+                              />
+                              <label htmlFor="cleanliness-violation-ack" className="text-xs leading-relaxed cursor-pointer text-muted-foreground">
+                                I am unable to clean the vehicle at this time. I acknowledge this is a policy violation and will be recorded on my account.
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => advanceInspSubStep("issues")}
+                            disabled={ciIsClean === null || (isDirty && !cleanlinessViolationAck)}
+                            className="w-full"
+                            data-testid="button-cleanliness-next"
+                          >
+                            Next
+                          </Button>
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("fuel")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB: ISSUES */}
+                    {inspSubStep === "issues" && (
+                      <div className="space-y-5">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Wrench className="h-7 w-7 text-primary" />
+                            </div>
+                          </div>
+                          <h3 className="text-lg font-semibold">Any mechanical issues?</h3>
+                          <p className="text-sm text-muted-foreground">Report problems, damage, or safety concerns</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => { setCiHasIssues(false); setCiIssues(""); }}
+                            data-testid="issues-none"
+                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                              ciHasIssues === false
+                                ? "border-primary bg-primary/10"
+                                : "border-muted hover-elevate"
+                            }`}
+                          >
+                            <CheckCircle className={`h-8 w-8 ${ciHasIssues === false ? "text-primary" : "text-muted-foreground"}`} />
+                            <span className={`text-sm font-medium ${ciHasIssues === false ? "text-primary" : "text-muted-foreground"}`}>
+                              No issues
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCiHasIssues(true)}
+                            data-testid="issues-yes"
+                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                              ciHasIssues === true
+                                ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                                : "border-muted hover-elevate"
+                            }`}
+                          >
+                            <Wrench className={`h-8 w-8 ${ciHasIssues === true ? "text-amber-600" : "text-muted-foreground"}`} />
+                            <span className={`text-sm font-medium ${ciHasIssues === true ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}`}>
+                              Report issue
+                            </span>
+                          </button>
+                        </div>
+                        {ciHasIssues === true && (
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Describe the issue</Label>
                             <Textarea
                               placeholder="e.g., Engine warning light on, brake noise, tire damage..."
+                              value={ciIssues}
+                              onChange={(e) => setCiIssues(e.target.value)}
                               className="min-h-[80px]"
-                              {...field}
-                              value={field.value || ""}
                               data-testid="input-issues"
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="returnNotes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                            General Notes (Optional)
-                          </FormLabel>
-                          <p className="text-xs text-muted-foreground">
-                            General observations. These will not trigger maintenance.
-                          </p>
-                          <FormControl>
-                            <Textarea
-                              placeholder="e.g., Great trip, returned on time, parked in lot B..."
-                              className="min-h-[60px]"
-                              {...field}
-                              value={field.value || ""}
-                              data-testid="input-return-notes"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-base font-semibold">
-                        <Camera className="h-4 w-4 text-muted-foreground" />
-                        Dash Photo (Required) *
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Clear photo of the dashboard showing the current mileage and fuel gauge
-                      </p>
-                      <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3 bg-amber-50 dark:bg-amber-950/20">
-                        <ObjectUploader
-                          maxNumberOfFiles={1}
-                          maxFileSize={10485760}
-                          onGetUploadParameters={getUploadParameters}
-                          onComplete={(res) => handleFileUpload(res, 'dash')}
-                          onError={(error) => toast({ title: "Upload failed", description: error.message, variant: "destructive" })}
-                          buttonClassName="bg-amber-600 text-white"
-                        >
-                          <Camera className="mr-2 h-4 w-4" />
-                          Upload Dash Photo
-                        </ObjectUploader>
-                      </div>
-                      {dashPhoto && (
-                        <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800 flex items-center justify-between">
-                          <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-1">
-                            <Check className="h-3 w-3" /> {dashPhoto.fileName}
-                          </p>
-                          <Button variant="ghost" size="sm" onClick={() => setDashPhoto(null)}>Remove</Button>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => advanceInspSubStep("photos")}
+                            disabled={ciHasIssues === null || (ciHasIssues === true && !ciIssues.trim())}
+                            className="w-full"
+                            data-testid="button-issues-next"
+                          >
+                            Next
+                          </Button>
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("cleanliness")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
                         </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-base font-semibold">
-                        <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        Interior Photo (Required) *
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Show the interior condition so our team can verify cleanliness
-                      </p>
-                      <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3 bg-blue-50 dark:bg-blue-950/20">
-                        <ObjectUploader
-                          maxNumberOfFiles={1}
-                          maxFileSize={10485760}
-                          onGetUploadParameters={getUploadParameters}
-                          onComplete={(res) => handleFileUpload(res, 'interior')}
-                          onError={(error) => toast({ title: "Upload failed", description: error.message, variant: "destructive" })}
-                          buttonClassName="bg-blue-600 text-white"
-                        >
-                          <Camera className="mr-2 h-4 w-4" />
-                          Upload Interior Photo
-                        </ObjectUploader>
                       </div>
-                      {interiorPhoto && (
-                        <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800 flex items-center justify-between">
-                          <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-1">
-                            <Check className="h-3 w-3" /> {interiorPhoto.fileName}
-                          </p>
-                          <Button variant="ghost" size="sm" onClick={() => setInteriorPhoto(null)}>Remove</Button>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
-                        Damage / Issue Photos (Optional)
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Document any new damage or issues discovered during your trip
-                      </p>
-                      <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3">
-                        <ObjectUploader
-                          maxNumberOfFiles={5}
-                          maxFileSize={10485760}
-                          onGetUploadParameters={getUploadParameters}
-                          onComplete={(res) => handleFileUpload(res, 'damage')}
-                          onError={(error) => toast({ title: "Upload failed", description: error.message, variant: "destructive" })}
-                          buttonClassName="bg-primary text-primary-foreground"
-                        >
-                          <ImagePlus className="mr-2 h-4 w-4" />
-                          Upload Photos
-                        </ObjectUploader>
-                      </div>
-                      {damagePhotos.length > 0 && (
-                        <div className="mt-2 space-y-2">
-                          <p className="text-sm font-medium">Photos ({damagePhotos.length})</p>
-                          {damagePhotos.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                              <span className="text-sm truncate flex-1">{file.fileName}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDamagePhotos(damagePhotos.filter((_, i) => i !== index))}
-                              >
-                                Remove
-                              </Button>
+                    {/* SUB: PHOTOS */}
+                    {inspSubStep === "photos" && (
+                      <div className="space-y-5">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                              <Camera className="h-7 w-7 text-amber-600 dark:text-amber-400" />
                             </div>
-                          ))}
+                          </div>
+                          <h3 className="text-lg font-semibold">Upload your return photos</h3>
+                          <p className="text-sm text-muted-foreground">Dash and interior photos are required</p>
                         </div>
-                      )}
-                    </div>
 
-                    <div className="flex flex-col gap-2 pt-2">
-                      <Button
-                        type="submit"
-                        disabled={checkInMutation.isPending || !canSubmit}
-                        className="w-full"
-                        data-testid="button-submit-checkin"
-                      >
-                        {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => goBackStep("summary")} className="w-full">
-                        Back
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Camera className="h-4 w-4 text-muted-foreground" />
+                            <Label className="font-semibold text-sm">
+                              Dash Photo <span className="text-destructive">*</span>
+                            </Label>
+                            {dashPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
+                          </div>
+                          {!dashPhoto ? (
+                            <div className="border-2 border-dashed rounded-lg p-5 flex flex-col items-center gap-3 bg-amber-50 dark:bg-amber-950/20">
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10485760}
+                                onGetUploadParameters={getUploadParameters}
+                                onComplete={(res) => handleFileUpload(res, "dash")}
+                                onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
+                                buttonClassName="bg-amber-600 text-white"
+                              >
+                                <Camera className="mr-2 h-4 w-4" />
+                                Upload Dash Photo
+                              </ObjectUploader>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800 flex items-center justify-between">
+                              <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
+                                <Check className="h-4 w-4" /> {dashPhoto.fileName}
+                              </p>
+                              <Button variant="ghost" size="sm" onClick={() => setDashPhoto(null)}>Remove</Button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-muted-foreground" />
+                            <Label className="font-semibold text-sm">
+                              Interior Photo <span className="text-destructive">*</span>
+                            </Label>
+                            {interiorPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
+                          </div>
+                          {!interiorPhoto ? (
+                            <div className="border-2 border-dashed rounded-lg p-5 flex flex-col items-center gap-3 bg-blue-50 dark:bg-blue-950/20">
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10485760}
+                                onGetUploadParameters={getUploadParameters}
+                                onComplete={(res) => handleFileUpload(res, "interior")}
+                                onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
+                                buttonClassName="bg-blue-600 text-white"
+                              >
+                                <Camera className="mr-2 h-4 w-4" />
+                                Upload Interior Photo
+                              </ObjectUploader>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800 flex items-center justify-between">
+                              <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
+                                <Check className="h-4 w-4" /> {interiorPhoto.fileName}
+                              </p>
+                              <Button variant="ghost" size="sm" onClick={() => setInteriorPhoto(null)}>Remove</Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {ciHasIssues === true && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                              <Label className="font-semibold text-sm">
+                                Issue Photos <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                              </Label>
+                            </div>
+                            <div className="border-2 border-dashed rounded-lg p-5 flex flex-col items-center gap-3">
+                              <ObjectUploader
+                                maxNumberOfFiles={5}
+                                maxFileSize={10485760}
+                                onGetUploadParameters={getUploadParameters}
+                                onComplete={(res) => handleFileUpload(res, "damage")}
+                                onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
+                                buttonClassName="bg-primary text-primary-foreground"
+                              >
+                                <Camera className="mr-2 h-4 w-4" />
+                                Upload Photos
+                              </ObjectUploader>
+                            </div>
+                            {damagePhotos.length > 0 && (
+                              <div className="space-y-2">
+                                {damagePhotos.map((file, index) => (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                                    <span className="text-sm truncate flex-1">{file.fileName}</span>
+                                    <Button variant="ghost" size="sm" onClick={() => setDamagePhotos(damagePhotos.filter((_, i) => i !== index))}>Remove</Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => advanceInspSubStep("notes")}
+                            disabled={!dashPhoto || !interiorPhoto}
+                            className="w-full"
+                            data-testid="button-photos-next"
+                          >
+                            Next
+                          </Button>
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("issues")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB: NOTES */}
+                    {inspSubStep === "notes" && (
+                      <div className="space-y-5">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <MessageSquare className="h-7 w-7 text-primary" />
+                            </div>
+                          </div>
+                          <h3 className="text-lg font-semibold">Any final notes?</h3>
+                          <p className="text-sm text-muted-foreground">General observations — optional, won't trigger maintenance</p>
+                        </div>
+                        <Textarea
+                          placeholder="e.g., Great trip, returned on time, parked in lot B..."
+                          value={ciReturnNotes}
+                          onChange={(e) => setCiReturnNotes(e.target.value)}
+                          className="min-h-[100px]"
+                          data-testid="input-return-notes"
+                        />
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => handleCheckInSubmit(ciReturnNotes)}
+                            disabled={checkInMutation.isPending}
+                            className="w-full"
+                            data-testid="button-submit-checkin"
+                          >
+                            {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleCheckInSubmit("")}
+                            disabled={checkInMutation.isPending}
+                            className="w-full"
+                            data-testid="button-skip-notes"
+                          >
+                            Skip — Complete Check-In
+                          </Button>
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("photos")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                  </CardContent>
+                </div>
+              </div>
             </Card>
           )}
 
+          {/* ── COMPLETE ── */}
           {step === "complete" && outcome && (
             <Card>
               <CardContent className="flex flex-col items-center text-center py-10 gap-6">
                 <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                   <CircleCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
                 </div>
-
                 <div>
                   <h3 className="text-2xl font-bold">Vehicle Returned!</h3>
                   <p className="text-muted-foreground mt-1">Thank you for completing your return inspection.</p>
@@ -679,7 +903,7 @@ export default function VehicleCheckIn() {
                     <Alert className="border-amber-500/50 bg-amber-500/10 text-left">
                       <Wrench className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-                        A <strong>high-priority maintenance task</strong> has been created for the admin team based on your reported issues. The vehicle is flagged for review.
+                        A <strong>high-priority maintenance task</strong> has been created for the admin team. The vehicle is flagged for review.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -687,7 +911,7 @@ export default function VehicleCheckIn() {
                     <Alert className="border-red-500/50 bg-red-500/10 text-left">
                       <Fuel className="h-4 w-4 text-red-600 dark:text-red-400" />
                       <AlertDescription className="text-red-800 dark:text-red-200 text-sm">
-                        <strong>Low fuel return recorded</strong> on your account. Please ensure you return with at least ½ tank next time.
+                        <strong>Low fuel return recorded</strong> on your account. Please return with at least ½ tank next time.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -695,7 +919,7 @@ export default function VehicleCheckIn() {
                     <Alert className="border-red-500/50 bg-red-500/10 text-left">
                       <Sparkles className="h-4 w-4 text-red-600 dark:text-red-400" />
                       <AlertDescription className="text-red-800 dark:text-red-200 text-sm">
-                        <strong>Unclean return recorded</strong> on your account. Please ensure you return the vehicle clean next time.
+                        <strong>Unclean return recorded</strong> on your account. Please return the vehicle clean next time.
                       </AlertDescription>
                     </Alert>
                   )}

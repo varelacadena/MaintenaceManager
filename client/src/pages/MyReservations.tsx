@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Calendar, Car, MapPin, Users, Plus, Clock } from "lucide-react";
+import { Calendar, Car, Users, Plus, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -19,19 +19,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useState } from "react";
-import type { Vehicle, VehicleCheckOutLog } from "@shared/schema";
+import type { VehicleCheckOutLog } from "@shared/schema";
 
 interface VehicleReservation {
   id: string;
   vehicleId: string;
-  vehicleName: string;
+  vehicleName: string | null;
+  vehicleDisplayId: string | null;
   startDate: string;
   endDate: string;
   purpose: string;
   status: string;
   passengerCount: number | null;
-  keyPickupLocation: string | null;
-  handoffInstructions: string | null;
+  advisoryAccepted: boolean | null;
   createdAt: string;
 }
 
@@ -54,11 +54,6 @@ export default function MyReservations() {
     queryKey: ["/api/vehicle-checkout-logs"],
   });
 
-  const { data: vehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
-    enabled: createDialogOpen,
-  });
-
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await fetch("/api/vehicle-reservations", {
@@ -67,20 +62,15 @@ export default function MyReservations() {
         body: JSON.stringify(data),
         credentials: "include",
       });
-
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to create reservation");
       }
-
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
-      toast({
-        title: "Success",
-        description: "Reservation request submitted successfully",
-      });
+      toast({ title: "Success", description: "Reservation request submitted successfully" });
       setCreateDialogOpen(false);
       setStartDateTime(undefined);
       setEndDateTime(undefined);
@@ -89,11 +79,7 @@ export default function MyReservations() {
       setNotes("");
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -103,60 +89,34 @@ export default function MyReservations() {
         method: "DELETE",
         credentials: "include",
       });
-
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to cancel reservation");
       }
-
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
-      toast({
-        title: "Success",
-        description: "Reservation cancelled successfully",
-      });
+      toast({ title: "Success", description: "Reservation cancelled successfully" });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const handleCreateReservation = () => {
     if (!startDateTime || !endDateTime || !passengerCount || !purpose) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
-
-    const now = new Date();
-
-    if (startDateTime < now) {
-      toast({
-        title: "Error",
-        description: "Cannot create reservations for past dates",
-        variant: "destructive",
-      });
+    if (startDateTime < new Date()) {
+      toast({ title: "Error", description: "Cannot create reservations for past dates", variant: "destructive" });
       return;
     }
-
     if (endDateTime <= startDateTime) {
-      toast({
-        title: "Error",
-        description: "Return time must be after pickup time",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Return time must be after pickup time", variant: "destructive" });
       return;
     }
-
     createMutation.mutate({
       startDate: startDateTime.toISOString(),
       endDate: endDateTime.toISOString(),
@@ -169,18 +129,12 @@ export default function MyReservations() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "approved":
-        return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
-      case "pending":
-        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
-      case "active":
-        return "bg-primary/10 text-primary border-primary/20";
-      case "rejected":
-        return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
-      case "completed":
-        return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
-      default:
-        return "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20";
+      case "approved": return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
+      case "pending": return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
+      case "active": return "bg-primary/10 text-primary border-primary/20";
+      case "rejected": return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
+      case "completed": return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
+      default: return "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20";
     }
   };
 
@@ -192,6 +146,9 @@ export default function MyReservations() {
     const hoursBefore = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     return hoursBefore <= 24 && now <= endTime;
   };
+
+  const showViewDetails = (status: string) =>
+    ["approved", "active", "completed"].includes(status.toLowerCase());
 
   if (isLoading) {
     return (
@@ -229,11 +186,9 @@ export default function MyReservations() {
                 <Car className="h-5 w-5" />
                 New Vehicle Reservation
               </DialogTitle>
-              <DialogDescription>
-                Fill in the details below to request a vehicle
-              </DialogDescription>
+              <DialogDescription>Fill in the details below to request a vehicle</DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-5 py-2">
               <div className="space-y-2">
                 <Label htmlFor="purpose" className="text-sm font-medium">
@@ -298,9 +253,7 @@ export default function MyReservations() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes" className="text-sm font-medium">
-                  Additional Notes
-                </Label>
+                <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
                 <Textarea
                   id="notes"
                   value={notes}
@@ -349,122 +302,124 @@ export default function MyReservations() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:gap-6">
-          {reservations.map((reservation) => (
-            <Card key={reservation.id} className="overflow-hidden">
-              <CardHeader className="pb-3 sm:pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg sm:text-xl flex items-center gap-2 mb-2">
-                      <Car className="h-5 w-5 shrink-0" />
-                      <span className="truncate">{reservation.vehicleName}</span>
-                    </CardTitle>
+          {reservations.map((reservation) => {
+            const status = reservation.status.toLowerCase();
+            return (
+              <Card key={reservation.id} className="overflow-hidden" data-testid={`card-reservation-${reservation.id}`}>
+                <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg sm:text-xl mb-1 truncate" data-testid={`text-purpose-${reservation.id}`}>
+                        {reservation.purpose}
+                      </CardTitle>
+                    </div>
+                    <Badge className={`${getStatusColor(reservation.status)} shrink-0 self-start capitalize`} data-testid={`badge-status-${reservation.id}`}>
+                      {reservation.status}
+                    </Badge>
                   </div>
-                  <Badge className={`${getStatusColor(reservation.status)} shrink-0 self-start`}>
-                    {reservation.status}
-                  </Badge>
-                </div>
-              </CardHeader>
 
-              <CardContent className="space-y-3 sm:space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-start gap-2">
-                    <Calendar className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground">Start</p>
-                      <p className="text-sm font-medium break-words">
-                        {format(new Date(reservation.startDate), "MMM dd, yyyy h:mm a")}
-                      </p>
+                  {status === "approved" && reservation.vehicleName && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground mb-1">Assigned Vehicle</p>
+                      <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 flex items-center gap-2" data-testid={`text-assigned-vehicle-${reservation.id}`}>
+                        <Car className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm font-medium text-primary">
+                          {reservation.vehicleName}
+                          {reservation.vehicleDisplayId && (
+                            <span className="text-muted-foreground font-normal"> ({reservation.vehicleDisplayId})</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardHeader>
+
+                <CardContent className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex items-start gap-2">
+                      <Calendar className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted-foreground">Start</p>
+                        <p className="text-sm font-medium break-words">
+                          {format(new Date(reservation.startDate), "MMM dd, yyyy h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted-foreground">End</p>
+                        <p className="text-sm font-medium break-words">
+                          {format(new Date(reservation.endDate), "MMM dd, yyyy h:mm a")}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground">End</p>
-                      <p className="text-sm font-medium break-words">
-                        {format(new Date(reservation.endDate), "MMM dd, yyyy h:mm a")}
+
+                  {reservation.passengerCount && (
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Passengers:</span>{" "}
+                        {reservation.passengerCount}
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Purpose:</p>
-                  <p className="text-sm break-words">{reservation.purpose}</p>
-                </div>
-
-                {reservation.passengerCount && (
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">Passengers:</span>{" "}
-                      {reservation.passengerCount}
-                    </p>
-                  </div>
-                )}
-
-                {reservation.keyPickupLocation && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-2">
-                      <MapPin className="h-4 w-4 shrink-0" />
-                      Key Pickup:
-                    </p>
-                    <p className="text-sm break-words pl-6">{reservation.keyPickupLocation}</p>
-                  </div>
-                )}
-
-                {reservation.handoffInstructions && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Instructions:</p>
-                    <p className="text-sm break-words whitespace-pre-wrap bg-muted/50 p-2 sm:p-3 rounded-md">
-                      {reservation.handoffInstructions}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
-                  {canCheckOut(reservation) && (
-                    <Button
-                      onClick={() => setLocation(`/vehicle-checkout/${reservation.id}`)}
-                      className="w-full sm:w-auto"
-                    >
-                      Check Out
-                    </Button>
                   )}
-                  {reservation.status.toLowerCase() === "active" && (() => {
-                    const checkOutLog = checkOutLogs?.find(log => log.reservationId === reservation.id);
-                    if (checkOutLog) {
-                      return (
-                        <Button
-                          onClick={() => setLocation(`/vehicle-checkin/${checkOutLog.id}`)}
-                          className="w-full sm:w-auto bg-green-600 text-white"
-                        >
-                          End Trip
-                        </Button>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <Button
-                    variant="outline"
-                    onClick={() => setLocation(`/vehicle-reservation-details/${reservation.id}`)}
-                    className="w-full sm:w-auto"
-                  >
-                    View Details
-                  </Button>
-                  {reservation.status.toLowerCase() === "pending" && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => cancelMutation.mutate(reservation.id)}
-                      disabled={cancelMutation.isPending}
-                      className="w-full sm:w-auto"
-                    >
-                      {cancelMutation.isPending ? "Cancelling..." : "Cancel"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 flex-wrap">
+                    {canCheckOut(reservation) && (
+                      <Button
+                        onClick={() => setLocation(`/vehicle-checkout/${reservation.id}`)}
+                        className="w-full sm:w-auto"
+                        data-testid={`button-checkout-${reservation.id}`}
+                      >
+                        Check Out
+                      </Button>
+                    )}
+
+                    {status === "active" && (() => {
+                      const checkOutLog = checkOutLogs?.find(log => log.reservationId === reservation.id);
+                      if (checkOutLog) {
+                        return (
+                          <Button
+                            onClick={() => setLocation(`/vehicle-checkin/${checkOutLog.id}`)}
+                            className="w-full sm:w-auto bg-green-600 text-white"
+                            data-testid={`button-checkin-${reservation.id}`}
+                          >
+                            End Trip
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {showViewDetails(status) && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setLocation(`/vehicle-reservation-details/${reservation.id}`)}
+                        className="w-full sm:w-auto"
+                        data-testid={`button-view-details-${reservation.id}`}
+                      >
+                        View Details
+                      </Button>
+                    )}
+
+                    {status === "pending" && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => cancelMutation.mutate(reservation.id)}
+                        disabled={cancelMutation.isPending}
+                        className="w-full sm:w-auto"
+                        data-testid={`button-cancel-${reservation.id}`}
+                      >
+                        {cancelMutation.isPending ? "Cancelling..." : "Cancel"}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Car, Calendar, FileText, Key, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Car, Calendar, FileText, Key, Clock, CheckCircle2, AlertCircle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 export default function VehicleReservationDetails() {
   const { reservationId } = useParams();
@@ -41,16 +42,29 @@ export default function VehicleReservationDetails() {
     enabled: !!reservation?.vehicleId,
   });
 
+  const [isTimeAvailable, setIsTimeAvailable] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!reservation?.startDate) return;
+    const check = () => new Date() >= new Date(reservation.startDate);
+    setIsTimeAvailable(check());
+    if (check()) return;
+    const interval = setInterval(() => {
+      if (check()) {
+        setIsTimeAvailable(true);
+        clearInterval(interval);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [reservation?.startDate]);
+
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", `/api/vehicle-reservations/${reservationId}/cancel`);
+      return apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
-      toast({
-        title: "Reservation Cancelled",
-        description: "The reservation has been successfully cancelled.",
-      });
+      toast({ title: "Reservation Cancelled", description: "The reservation has been successfully cancelled." });
       setLocation("/my-reservations");
     },
     onError: (error) => {
@@ -67,7 +81,7 @@ export default function VehicleReservationDetails() {
     const labels: Record<string, string> = {
       "in_person": "In Person Pickup",
       "mailbox": "Mailbox Pickup",
-      "inside_vehicle": "Inside the Vehicle"
+      "inside_vehicle": "Inside the Vehicle",
     };
     return labels[method] || method;
   };
@@ -109,7 +123,10 @@ export default function VehicleReservationDetails() {
 
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "technician";
   const isApproved = reservation.status === "approved";
+  const isCheckoutComplete = reservation.status === "active" || reservation.status === "completed";
   const hasVehicle = !!vehicle;
+
+  const showKeyPickup = hasVehicle && (isAdmin || reservation.advisoryAccepted || isCheckoutComplete);
 
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
@@ -119,10 +136,10 @@ export default function VehicleReservationDetails() {
             Reservation Details
           </h2>
           <p className="text-muted-foreground mt-0.5">
-            {vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})` : "Vehicle Pending Assignment"}
+            {reservation.purpose}
           </p>
         </div>
-        <Badge variant={getStatusColor(reservation.status)} className="text-sm capitalize">
+        <Badge variant={getStatusColor(reservation.status)} className="text-sm capitalize" data-testid="badge-status">
           {reservation.status}
         </Badge>
       </div>
@@ -136,8 +153,18 @@ export default function VehicleReservationDetails() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {hasVehicle ? (
-              <div className="space-y-3">
+            {!hasVehicle ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
+                <Clock className="h-10 w-10 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-muted-foreground">No vehicle assigned yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    A vehicle will be assigned once your reservation is approved.
+                  </p>
+                </div>
+              </div>
+            ) : (isAdmin || isCheckoutComplete) ? (
+              <div className="space-y-3" data-testid="vehicle-full-details">
                 <div>
                   <p className="text-sm text-muted-foreground">Make & Model</p>
                   <p className="font-medium">{vehicle.make} {vehicle.model}</p>
@@ -156,12 +183,15 @@ export default function VehicleReservationDetails() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
-                <Clock className="h-10 w-10 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-6 text-center gap-3" data-testid="vehicle-placeholder">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Car className="h-6 w-6 text-primary" />
+                </div>
                 <div>
-                  <p className="font-medium text-muted-foreground">No vehicle assigned yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    A vehicle will be assigned once your reservation is approved. You'll be able to see the details here.
+                  <p className="font-semibold text-sm">Your vehicle is ready</p>
+                  <p className="text-base font-bold mt-0.5">{vehicle.make} {vehicle.model}</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
+                    Full vehicle details will be visible once checkout is complete.
                   </p>
                 </div>
               </div>
@@ -215,27 +245,25 @@ export default function VehicleReservationDetails() {
         </Card>
       </div>
 
-      {isApproved && hasVehicle && (
-        <div className="relative">
-          <Alert className="border-blue-500/50 bg-blue-500/10">
-            <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-900 dark:text-blue-100">Key Pickup Instructions</AlertTitle>
-            <AlertDescription className="text-blue-800 dark:text-blue-200">
-              <div className="space-y-2 mt-2">
-                <div>
-                  <p className="font-semibold">Method:</p>
-                  <p>{getKeyPickupMethodLabel(reservation.keyPickupMethod)}</p>
-                </div>
-                {reservation.adminNotes && (
-                  <div className="mt-3">
-                    <p className="font-semibold">Additional Instructions:</p>
-                    <p className="whitespace-pre-wrap">{reservation.adminNotes}</p>
-                  </div>
-                )}
+      {showKeyPickup && (
+        <Alert className="border-blue-500/50 bg-blue-500/10" data-testid="alert-key-pickup">
+          <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-100">Key Pickup Instructions</AlertTitle>
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            <div className="space-y-2 mt-2">
+              <div>
+                <p className="font-semibold">Method:</p>
+                <p>{getKeyPickupMethodLabel(reservation.keyPickupMethod)}</p>
               </div>
-            </AlertDescription>
-          </Alert>
-        </div>
+              {reservation.adminNotes && (
+                <div className="mt-3">
+                  <p className="font-semibold">Additional Instructions:</p>
+                  <p className="whitespace-pre-wrap">{reservation.adminNotes}</p>
+                </div>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {reservation.notes && (
@@ -252,7 +280,7 @@ export default function VehicleReservationDetails() {
         </Card>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         {isAdmin && (
           <>
             <Link href={`/vehicle-reservations/edit/${reservation.id}`}>
@@ -285,12 +313,32 @@ export default function VehicleReservationDetails() {
             </AlertDialog>
           </>
         )}
+
         {isApproved && !isAdmin && (
-          <Link href={`/vehicle-checkout/${reservation.id}`} className="flex-1">
-            <Button className="w-full" size="lg" data-testid="button-proceed-checkout">
-              Proceed to Check Out Vehicle
-            </Button>
-          </Link>
+          <div className="flex-1 space-y-1.5" data-testid="checkout-button-area">
+            {isTimeAvailable ? (
+              <Link href={`/vehicle-checkout/${reservation.id}`}>
+                <Button className="w-full" size="lg" data-testid="button-proceed-checkout">
+                  Proceed to Check Out Vehicle
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Button
+                  disabled
+                  className="w-full opacity-50 cursor-not-allowed"
+                  size="lg"
+                  data-testid="button-proceed-checkout"
+                >
+                  Proceed to Check Out Vehicle
+                </Button>
+                <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1" data-testid="text-checkout-unlock-time">
+                  <Lock className="h-3 w-3" />
+                  Checkout opens {format(new Date(reservation.startDate), "MMM d 'at' h:mm a")}
+                </p>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>

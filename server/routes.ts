@@ -2777,10 +2777,19 @@ Be concise and practical. Do not use markdown formatting.`;
   app.get("/api/vehicle-reservations/my", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const reservations = await storage.getVehicleReservations({
-        userId,
-      });
-      res.json(reservations);
+      const reservations = await storage.getVehicleReservations({ userId });
+
+      const enriched = await Promise.all(reservations.map(async (r) => {
+        if (!r.vehicleId) return { ...r, vehicleName: null, vehicleDisplayId: null };
+        const vehicle = await storage.getVehicle(r.vehicleId);
+        return {
+          ...r,
+          vehicleName: vehicle ? `${vehicle.make} ${vehicle.model}` : null,
+          vehicleDisplayId: vehicle ? vehicle.vehicleId : null,
+        };
+      }));
+
+      res.json(enriched);
     } catch (error) {
       console.error("Error fetching user's vehicle reservations:", error);
       res.status(500).json({ message: "Failed to fetch vehicle reservations" });
@@ -3113,8 +3122,10 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      // Only the reservation owner can accept the advisory
-      if (reservation.userId !== userId) {
+      // Only the reservation owner (or admin/technician) can accept the advisory
+      const currentUser = await storage.getUser(userId);
+      const isAdmin = currentUser?.role === "admin" || currentUser?.role === "technician";
+      if (reservation.userId !== userId && !isAdmin) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -3206,12 +3217,14 @@ Be concise and practical. Do not use markdown formatting.`;
       const logData = insertVehicleCheckOutLogSchema.parse(cleanedBody);
       console.log("Parsed log data:", JSON.stringify(logData, null, 2));
 
-      // Verify reservation belongs to current user
+      // Verify reservation belongs to current user (admins/technicians can check out any)
       const reservation = await storage.getVehicleReservation(logData.reservationId);
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
-      if (reservation.userId !== req.userId) {
+      const checkoutUser = await storage.getUser(req.userId);
+      const isCheckoutAdmin = checkoutUser?.role === "admin" || checkoutUser?.role === "technician";
+      if (reservation.userId !== req.userId && !isCheckoutAdmin) {
         return res.status(403).json({ message: "Unauthorized: This reservation belongs to another user" });
       }
       if (reservation.vehicleId !== logData.vehicleId) {
