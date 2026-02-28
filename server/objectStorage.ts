@@ -284,8 +284,12 @@ export async function getDownloadUrl(key: string): Promise<string> {
       );
     }
     
-    const fullPath = `${privateDir}/${key}`;
-    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const { bucketName, objectName: privatePath } = parseObjectPath(privateDir);
+
+    // Avoid double-prefixing: if key already starts with the private path, use it directly
+    const objectName = (privatePath && key.startsWith(privatePath + '/'))
+      ? key
+      : (privatePath ? `${privatePath}/${key}` : key);
     
     const downloadUrl = await signObjectURL({
       bucketName,
