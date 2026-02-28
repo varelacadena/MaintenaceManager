@@ -215,7 +215,8 @@ export default function VehicleReservationDetails() {
 
   const isUnblurred = isAdmin || safetyAcknowledged || reservation.advisoryAccepted || isCheckoutComplete;
 
-  const showKeyPickup = hasVehicle && !!reservation.keyPickupMethod;
+  const checkoutLocked = isApproved && !isTimeAvailable && !isAdmin;
+  const showKeyPickup = hasVehicle && !!reservation.keyPickupMethod && (isAdmin || isTimeAvailable || isCheckoutComplete || reservation.advisoryAccepted);
 
   const moreThan24hAway = new Date(reservation.startDate) > new Date(Date.now() + 24 * 60 * 60 * 1000);
   const showEditButton = isAdmin && isApproved && moreThan24hAway;
@@ -233,6 +234,26 @@ export default function VehicleReservationDetails() {
           {reservation.status}
         </Badge>
       </div>
+
+      {checkoutLocked && (
+        <div className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-600 p-4" data-testid="banner-checkout-locked">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex-shrink-0">
+              <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-900 dark:text-amber-200">Checkout not available yet</p>
+              <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5">
+                You can begin checkout on{" "}
+                <span className="font-semibold">
+                  {format(new Date(reservation.startDate), "EEEE, MMM d 'at' h:mm a")}
+                </span>
+                . Come back then to pick up your key and start the checkout process.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
