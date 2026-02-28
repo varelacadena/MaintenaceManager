@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useState, useEffect } from "react";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
@@ -191,7 +190,6 @@ export default function VehicleCheckOut() {
   const [coIsClean, setCoIsClean] = useState<boolean | null>(null);
   const [coHasDamage, setCoHasDamage] = useState<boolean | null>(null);
   const [coDamageNotes, setCoDamageNotes] = useState<string>("");
-  const [adminOverride, setAdminOverride] = useState(false);
 
   const { data: reservation, isLoading } = useQuery<VehicleReservation>({
     queryKey: [`/api/vehicle-reservations/${reservationId}`],
@@ -208,16 +206,6 @@ export default function VehicleCheckOut() {
     }
   }, [vehicle?.currentMileage]);
 
-  useEffect(() => {
-    if (reservation) {
-      if (reservation.advisoryAccepted) {
-        setAdvisoryAccepted(true);
-        setStep("safety");
-      } else {
-        setStep("advisory");
-      }
-    }
-  }, [reservation?.advisoryAccepted]);
 
   const isWithinReservationTime = (res: VehicleReservation | undefined): boolean => {
     if (!res) return false;
@@ -282,7 +270,6 @@ export default function VehicleCheckOut() {
         vehicleId: reservation!.vehicleId,
         reservationId: reservationId!,
       };
-      if (adminOverride) payload.adminOverride = true;
       const response = await apiRequest("POST", "/api/vehicle-checkout-logs", payload);
       return await response.json();
     },
@@ -401,6 +388,39 @@ export default function VehicleCheckOut() {
 
   const subStepIndex = CHECKOUT_SUB_STEPS.indexOf(checkoutSubStep);
   const withinTime = isWithinReservationTime(reservation);
+
+  if (!withinTime) {
+    return (
+      <div className="flex-1 p-4 max-w-2xl mx-auto">
+        <div className="mb-2">
+          <h2 className="text-2xl font-bold tracking-tight">Vehicle Check-Out</h2>
+          <p className="text-muted-foreground mt-0.5">{vehicle.make} {vehicle.model} ({vehicle.vehicleId})</p>
+        </div>
+        <Card className="mt-6">
+          <CardContent className="flex flex-col items-center text-center py-12 gap-4">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <Lock className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold">Checkout Not Available Yet</h3>
+              <p className="text-muted-foreground text-sm">
+                Checkout opens on{" "}
+                <span className="font-semibold text-foreground">
+                  {format(new Date(reservation.startDate), "EEEE, MMM d 'at' h:mm a")}
+                </span>
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Please come back at the start of your reservation to begin checkout.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="mt-2">
+              Back to My Reservations
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-4 max-w-2xl mx-auto">
@@ -657,24 +677,10 @@ export default function VehicleCheckOut() {
                           />
                           <p className="text-xs text-muted-foreground text-center">miles</p>
                         </div>
-                        {isAdmin && !withinTime && (
-                          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                            <Switch id="admin-override" checked={adminOverride} onCheckedChange={setAdminOverride} />
-                            <Label htmlFor="admin-override" className="cursor-pointer text-sm">Admin Override — Allow Early Check-Out</Label>
-                          </div>
-                        )}
-                        {!withinTime && !adminOverride && (
-                          <Alert>
-                            <Lock className="h-4 w-4" />
-                            <AlertDescription className="text-sm">
-                              Check-out is available starting {format(new Date(reservation.startDate), "MMM d 'at' h:mm a")}
-                            </AlertDescription>
-                          </Alert>
-                        )}
                         <div className="flex flex-col gap-2">
                           <Button
                             onClick={() => advanceSubStep("fuel")}
-                            disabled={!coMileage || (!withinTime && !adminOverride)}
+                            disabled={!coMileage}
                             className="w-full"
                             data-testid="button-mileage-next"
                           >

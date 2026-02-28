@@ -208,7 +208,7 @@ export default function VehicleReservationDetails() {
     );
   }
 
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "technician";
+  const isAdmin = currentUser?.role === "admin";
   const isApproved = reservation.status === "approved";
   const isCheckoutComplete = reservation.status === "active" || reservation.status === "completed";
   const hasVehicle = !!vehicle;
