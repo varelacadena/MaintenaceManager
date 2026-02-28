@@ -94,9 +94,13 @@ export default function VehicleCheckInVerification() {
       const response = await apiRequest("PATCH", `/api/vehicles/${checkInLog?.vehicleId}`, { status });
       return response.json();
     },
-    onSuccess: (_, status) => {
+    onSuccess: async (_, status) => {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${checkInLog?.vehicleId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      if (checkOutLog?.reservationId) {
+        await apiRequest("PATCH", `/api/vehicle-reservations/${checkOutLog.reservationId}`, { status: "completed" });
+        queryClient.invalidateQueries({ queryKey: ['/api/vehicle-reservations'] });
+      }
       toast({
         title: status === "available" ? "Vehicle Returned to Service" : "Vehicle Flagged for Maintenance",
         description: status === "available"

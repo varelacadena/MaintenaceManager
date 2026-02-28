@@ -390,14 +390,14 @@ export default function FleetAnalytics() {
                     <TableCell className="py-2">
                       <Badge
                         variant={
-                          reservation.status === "completed" ? "default" 
+                          reservation.status === "completed" ? "default"
                           : reservation.status === "active" ? "secondary"
                           : reservation.status === "cancelled" ? "destructive"
                           : "outline"
                         }
                         className="text-xs"
                       >
-                        {reservation.status}
+                        {reservation.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs py-2">{new Date(reservation.startDate).toLocaleDateString()}</TableCell>

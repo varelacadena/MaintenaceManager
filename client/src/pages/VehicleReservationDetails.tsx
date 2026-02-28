@@ -178,11 +178,15 @@ export default function VehicleReservationDetails() {
       case "approved": return "default";
       case "pending": return "secondary";
       case "active": return "default";
+      case "pending_review": return "secondary";
       case "completed": return "secondary";
       case "cancelled": return "destructive";
       default: return "secondary";
     }
   };
+
+  const formatStatusLabel = (status: string) =>
+    status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
   if (reservationLoading) {
     return (
@@ -210,7 +214,7 @@ export default function VehicleReservationDetails() {
 
   const isAdmin = currentUser?.role === "admin";
   const isApproved = reservation.status === "approved";
-  const isCheckoutComplete = reservation.status === "active" || reservation.status === "completed";
+  const isCheckoutComplete = reservation.status === "active" || reservation.status === "pending_review" || reservation.status === "completed";
   const hasVehicle = !!vehicle;
 
   const isUnblurred = isAdmin || safetyAcknowledged || reservation.advisoryAccepted || isCheckoutComplete;
@@ -230,8 +234,8 @@ export default function VehicleReservationDetails() {
           </h2>
           <p className="text-muted-foreground mt-0.5">{reservation.purpose}</p>
         </div>
-        <Badge variant={getStatusColor(reservation.status)} className="text-sm capitalize" data-testid="badge-status">
-          {reservation.status}
+        <Badge variant={getStatusColor(reservation.status)} className="text-sm" data-testid="badge-status">
+          {formatStatusLabel(reservation.status)}
         </Badge>
       </div>
 

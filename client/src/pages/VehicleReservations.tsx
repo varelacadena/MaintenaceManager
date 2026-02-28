@@ -45,9 +45,13 @@ const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
   approved: "secondary",
   active: "default",
+  pending_review: "secondary",
   completed: "default",
   cancelled: "destructive",
 };
+
+const formatStatus = (status: string) =>
+  status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
 export function VehicleReservationsContent() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -301,6 +305,7 @@ export function VehicleReservationsContent() {
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="pending_review">Pending Review</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
@@ -335,7 +340,7 @@ export function VehicleReservationsContent() {
                     <span className="text-sm font-medium truncate">{getUserName(reservation.userId)}</span>
                   </div>
                   <Badge variant={statusColors[reservation.status]} data-testid={`badge-status-${reservation.id}`}>
-                    {reservation.status}
+                    {formatStatus(reservation.status)}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -469,7 +474,7 @@ export function VehicleReservationsContent() {
                     Edit
                   </Button>
                 )}
-                {reservation.status === "completed" && (() => {
+                {reservation.status === "pending_review" && (() => {
                   const checkOutLog = checkOutLogs?.find(log => log.reservationId === reservation.id);
                   if (!checkOutLog) return null;
                   const checkInLog = checkInLogs?.find(log => log.checkOutLogId === checkOutLog.id);

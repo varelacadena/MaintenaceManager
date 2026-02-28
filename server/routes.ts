@@ -3460,8 +3460,8 @@ Be concise and practical. Do not use markdown formatting.`;
 
       await storage.updateVehicleStatus(logData.vehicleId, newStatus);
 
-      // Update reservation status
-      await storage.updateReservationStatus(checkOutLog.reservationId, "completed");
+      // Update reservation status to pending_review — admin must verify before marking complete
+      await storage.updateReservationStatus(checkOutLog.reservationId, "pending_review");
 
       // Auto-create maintenance task if mechanical issues reported
       if (logData.issues && logData.issues.trim().length > 0) {

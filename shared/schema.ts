@@ -702,6 +702,7 @@ export const reservationStatusEnum = pgEnum("reservation_status", [
   "pending",
   "approved",
   "active",
+  "pending_review",
   "completed",
   "cancelled"
 ]);
