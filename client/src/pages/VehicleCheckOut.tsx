@@ -113,18 +113,19 @@ function SubStepDots({ total, currentIndex }: { total: number; currentIndex: num
 
 function StepProgress({ currentStep, advisoryAlreadyAccepted }: { currentStep: Step; advisoryAlreadyAccepted: boolean }) {
   const currentIndex = STEPS.findIndex(s => s.id === currentStep);
+  const currentStepData = STEPS[currentIndex];
   return (
-    <div className="flex items-center justify-between mb-6 px-2">
-      {STEPS.map((step, index) => {
-        const isCompleted = advisoryAlreadyAccepted && step.id === "advisory"
-          ? true
-          : index < currentIndex;
-        const isCurrent = step.id === currentStep;
-        const Icon = step.icon;
-        return (
-          <div key={step.id} className="flex items-center flex-1">
-            <div className="flex flex-col items-center gap-1">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+    <div className="mb-6">
+      <div className="flex items-center px-2">
+        {STEPS.map((step, index) => {
+          const isCompleted = advisoryAlreadyAccepted && step.id === "advisory"
+            ? true
+            : index < currentIndex;
+          const isCurrent = step.id === currentStep;
+          const Icon = step.icon;
+          return (
+            <div key={step.id} className="flex items-center flex-1">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 ${
                 isCompleted
                   ? "bg-primary border-primary text-primary-foreground"
                   : isCurrent
@@ -133,20 +134,20 @@ function StepProgress({ currentStep, advisoryAlreadyAccepted }: { currentStep: S
               }`}>
                 {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
               </div>
-              <span className={`text-xs text-center leading-tight max-w-[56px] ${
-                isCurrent ? "text-primary font-medium" : isCompleted ? "text-muted-foreground" : "text-muted-foreground/50"
-              }`}>
-                {step.label}
-              </span>
+              {index < STEPS.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-2 transition-all duration-300 ${
+                  index < currentIndex || (advisoryAlreadyAccepted && index === 0) ? "bg-primary" : "bg-muted"
+                }`} />
+              )}
             </div>
-            {index < STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1 mb-5 transition-all duration-300 ${
-                index < currentIndex || (advisoryAlreadyAccepted && index === 0) ? "bg-primary" : "bg-muted"
-              }`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-center gap-1.5 mt-2">
+        <span className="text-xs text-muted-foreground">Step {currentIndex + 1} of {STEPS.length}</span>
+        <span className="text-xs text-muted-foreground">—</span>
+        <span className="text-xs font-medium text-foreground">{currentStepData?.label}</span>
+      </div>
     </div>
   );
 }
