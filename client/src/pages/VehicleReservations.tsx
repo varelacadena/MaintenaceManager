@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { VehicleReservation, Vehicle, User as UserType, VehicleCheckOutLog } from "@shared/schema";
 import {
@@ -73,6 +73,16 @@ export function VehicleReservationsContent() {
   const [editKeyPickupMethod, setEditKeyPickupMethod] = useState<string>("");
   const [editAdminNotes, setEditAdminNotes] = useState<string>("");
   const { toast } = useToast();
+
+  const { data: currentUser } = useQuery<UserType>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  useEffect(() => {
+    if (currentUser) {
+      setStatusFilter(currentUser.role === "admin" ? "pending_and_review" : "approved_active");
+    }
+  }, [currentUser?.role]);
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
     queryKey: ["/api/vehicle-reservations"],
@@ -275,7 +285,14 @@ export function VehicleReservationsContent() {
       userName.includes(searchTerm.toLowerCase()) ||
       purpose.includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || reservation.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "pending_and_review"
+        ? ["pending", "pending_review"].includes(reservation.status)
+        : statusFilter === "approved_active"
+        ? ["approved", "active"].includes(reservation.status)
+        : reservation.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   })?.sort((a, b) => {
@@ -303,7 +320,10 @@ export function VehicleReservationsContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="pending_and_review">Pending &amp; Pending Review</SelectItem>
+            <SelectItem value="approved_active">Approved &amp; Active</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="pending_review">Pending Review</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
