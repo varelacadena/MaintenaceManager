@@ -2814,7 +2814,10 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      if (reservation.userId !== req.userId && req.userRole !== "admin" && req.userRole !== "maintenance") {
+      const currentUser = await storage.getUser(req.userId);
+      const isPrivileged = currentUser?.role === "admin" || currentUser?.role === "technician";
+
+      if (reservation.userId !== req.userId && !isPrivileged) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -3434,12 +3437,12 @@ Be concise and practical. Do not use markdown formatting.`;
       // Update vehicle mileage
       await storage.updateVehicleMileage(logData.vehicleId, logData.endMileage);
 
-      // Determine new vehicle status based on cleanliness and issues
+      // Determine new vehicle status — issues take priority over cleanliness
       let newStatus = "available";
-      if (logData.cleanlinessStatus === "needs_cleaning") {
-        newStatus = "needs_cleaning";
-      } else if (logData.issues && logData.issues.trim().length > 0) {
+      if (logData.issues && logData.issues.trim().length > 0) {
         newStatus = "needs_maintenance";
+      } else if (logData.cleanlinessStatus === "needs_cleaning") {
+        newStatus = "needs_cleaning";
       }
 
       await storage.updateVehicleStatus(logData.vehicleId, newStatus);
@@ -3447,26 +3450,7 @@ Be concise and practical. Do not use markdown formatting.`;
       // Update reservation status
       await storage.updateReservationStatus(checkOutLog.reservationId, "completed");
 
-      // Auto-create cleaning task if needed
-      if (logData.cleanlinessStatus === "needs_cleaning") {
-        const userId = req.userId;
-        const vehicle = await storage.getVehicle(logData.vehicleId);
-
-        if (vehicle) {
-          await storage.createTask({
-            vehicleId: logData.vehicleId,
-            name: `Clean Vehicle: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
-            description: `Vehicle returned and needs cleaning. Check-in log ID: ${log.id}`,
-            urgency: "medium",
-            initialDate: new Date(),
-            taskType: "one_time",
-            status: "not_started",
-            createdById: userId,
-          });
-        }
-      }
-
-      // Auto-create maintenance task if issues reported
+      // Auto-create maintenance task if mechanical issues reported
       if (logData.issues && logData.issues.trim().length > 0) {
         const userId = req.userId;
         const vehicle = await storage.getVehicle(logData.vehicleId);
@@ -3475,7 +3459,7 @@ Be concise and practical. Do not use markdown formatting.`;
           await storage.createTask({
             vehicleId: logData.vehicleId,
             name: `Maintenance Required: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
-            description: `Issues reported: ${logData.issues}\n\nCheck-in log ID: ${log.id}`,
+            description: `Issues reported by user at check-in: ${logData.issues}\n\nCheck-in log ID: ${log.id}`,
             urgency: "high",
             initialDate: new Date(),
             taskType: "one_time",
