@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,23 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, FileText, Settings, Search, Save, CheckCircle, XCircle, MinusCircle, Loader2, Plus, Trash2 } from "lucide-react";
+import { Mail, FileText, Settings, Search, Save, CheckCircle, XCircle, MinusCircle, Loader2, Plus, Trash2, ArrowLeft, Eye, Pencil } from "lucide-react";
 import type { EmailTemplate, EmailLog, NotificationSetting } from "@shared/schema";
 
 type TabType = "templates" | "settings" | "logs";
 
 const TRIGGERS = [
-  { value: "new_service_request", label: "New Service Request Submitted", description: "When a staff member submits a new maintenance request" },
-  { value: "new_vehicle_reservation", label: "New Vehicle Reservation Submitted", description: "When someone requests a vehicle reservation" },
-  { value: "vehicle_reservation_approved", label: "Vehicle Reservation Approved", description: "When an admin approves a vehicle reservation" },
-  { value: "vehicle_reservation_denied", label: "Vehicle Reservation Denied", description: "When an admin denies a vehicle reservation" },
+  { value: "new_service_request", label: "New Service Request", description: "When a staff member submits a new maintenance request" },
+  { value: "new_vehicle_reservation", label: "New Vehicle Reservation", description: "When someone requests a vehicle reservation" },
+  { value: "vehicle_reservation_approved", label: "Reservation Approved", description: "When an admin approves a vehicle reservation" },
+  { value: "vehicle_reservation_denied", label: "Reservation Denied", description: "When an admin denies a vehicle reservation" },
   { value: "task_created", label: "Task Created", description: "When a new maintenance task is created" },
   { value: "task_assigned", label: "Task Assigned", description: "When a task is assigned to a user" },
-  { value: "status_change", label: "Service Request Status Changed", description: "When a service request status is updated" },
-  { value: "task_reminder", label: "Task Reminder (Scheduled)", description: "Scheduled reminder for tasks due within 7 days" },
-  { value: "document_expiration", label: "Document Expiration Warning (Scheduled)", description: "Scheduled warning when a vehicle document is expiring" },
+  { value: "status_change", label: "Status Changed", description: "When a service request status is updated" },
+  { value: "task_reminder", label: "Task Reminder", description: "Scheduled reminder for tasks due within 7 days" },
+  { value: "document_expiration", label: "Document Expiration", description: "Scheduled warning when a vehicle document is expiring" },
 ];
 
 const TRIGGER_VARIABLES: Record<string, string[]> = {
@@ -77,13 +76,24 @@ export default function EmailManagement() {
   );
 }
 
+type EditorMode = "edit" | "preview";
+type PanelView = "list" | "editor";
+
 function TemplatesTab() {
   const { toast } = useToast();
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>("edit");
+  const [panelView, setPanelView] = useState<PanelView>("list");
+
   const [editName, setEditName] = useState("");
+  const [editTrigger, setEditTrigger] = useState("");
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const lastFocusedField = useRef<"subject" | "body">("body");
 
   const { data: templates, isLoading } = useQuery<EmailTemplate[]>({
     queryKey: ["/api/email-templates"],
@@ -96,11 +106,31 @@ function TemplatesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
-      setEditingId(null);
-      toast({ title: "Template updated", description: "Email template has been saved." });
+      toast({ title: "Template saved" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to update template.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save template.", variant: "destructive" });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/email-templates", {
+        name: editName,
+        trigger: editTrigger,
+        subject: editSubject,
+        body: editBody,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      toast({ title: "Template created" });
+      setIsCreating(false);
+      setSelectedId(data.id);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create template.", variant: "destructive" });
     },
   });
 
@@ -112,384 +142,341 @@ function TemplatesTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
       toast({ title: "Template deleted" });
+      clearSelection();
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete template.", variant: "destructive" });
     },
   });
 
-  const startEditing = (template: EmailTemplate) => {
-    setEditingId(template.id);
+  const selectTemplate = (template: EmailTemplate) => {
+    setSelectedId(template.id);
+    setIsCreating(false);
     setEditName(template.name);
+    setEditTrigger(template.trigger || "");
     setEditSubject(template.subject);
     setEditBody(template.body);
+    setEditorMode("edit");
+    setPanelView("editor");
   };
 
-  const cancelEditing = () => {
-    setEditingId(null);
+  const startCreating = () => {
+    setSelectedId(null);
+    setIsCreating(true);
+    setEditName("");
+    setEditTrigger("");
+    setEditSubject("");
+    setEditBody("");
+    setEditorMode("edit");
+    setPanelView("editor");
   };
 
-  const triggerLabel = (trigger: string | null | undefined) => {
-    if (!trigger) return null;
-    return TRIGGERS.find(t => t.value === trigger)?.label || trigger;
+  const clearSelection = () => {
+    setSelectedId(null);
+    setIsCreating(false);
+    setPanelView("list");
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const insertVariable = useCallback((variable: string) => {
+    const field = lastFocusedField.current;
+    if (field === "subject" && subjectRef.current) {
+      const el = subjectRef.current;
+      const start = el.selectionStart ?? editSubject.length;
+      const end = el.selectionEnd ?? editSubject.length;
+      const newVal = editSubject.slice(0, start) + variable + editSubject.slice(end);
+      setEditSubject(newVal);
+      setTimeout(() => {
+        el.focus();
+        el.setSelectionRange(start + variable.length, start + variable.length);
+      }, 0);
+    } else if (bodyRef.current) {
+      const el = bodyRef.current;
+      const start = el.selectionStart ?? editBody.length;
+      const end = el.selectionEnd ?? editBody.length;
+      const newVal = editBody.slice(0, start) + variable + editBody.slice(end);
+      setEditBody(newVal);
+      setTimeout(() => {
+        el.focus();
+        el.setSelectionRange(start + variable.length, start + variable.length);
+      }, 0);
+    }
+  }, [editSubject, editBody]);
+
+  const selectedTemplate = templates?.find(t => t.id === selectedId) ?? null;
+  const variables = isCreating
+    ? (editTrigger ? TRIGGER_VARIABLES[editTrigger] || [] : [])
+    : (selectedTemplate?.availableVariables || (selectedTemplate?.trigger ? TRIGGER_VARIABLES[selectedTemplate.trigger] : []) || []);
 
   const builtIn = templates?.filter(t => !t.isCustom) || [];
   const custom = templates?.filter(t => t.isCustom) || [];
 
+  const triggerLabel = (trigger: string | null | undefined) =>
+    TRIGGERS.find(t => t.value === trigger)?.label ?? trigger ?? null;
+
+  const handleSave = () => {
+    if (isCreating) {
+      createMutation.mutate();
+    } else if (selectedId) {
+      updateMutation.mutate({ id: selectedId, name: editName, subject: editSubject, body: editBody });
+    }
+  };
+
+  const isSaving = updateMutation.isPending || createMutation.isPending;
+  const canSave = editName.trim() && editSubject.trim() && editBody.trim() && (!isCreating || editTrigger);
+
+  const renderPreview = () => {
+    const renderWithBadges = (text: string) => {
+      const parts = text.split(/({{[^}]+}})/g);
+      return parts.map((part, i) => {
+        if (/^{{[^}]+}}$/.test(part)) {
+          const name = part.replace(/[{}]/g, "");
+          return <Badge key={i} variant="secondary" className="font-mono text-xs mx-0.5">{name}</Badge>;
+        }
+        return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+      });
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Subject</p>
+          <div className="text-sm font-medium leading-relaxed">{renderWithBadges(editSubject || "—")}</div>
+        </div>
+        <div className="h-px bg-border" />
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Body</p>
+          <div className="text-sm leading-relaxed">{renderWithBadges(editBody || "—")}</div>
+        </div>
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Edit templates or create new ones. Use <span className="font-mono text-xs bg-muted px-1 rounded">{"{{variables}}"}</span> to insert dynamic content. All templates are plain text.
-        </p>
-        <Button onClick={() => setShowCreateDialog(true)} data-testid="button-new-template">
+    <div className="flex gap-4 h-[calc(100vh-260px)] min-h-[500px]">
+      <div
+        className={`flex-col w-full md:w-64 md:flex md:flex-shrink-0 border-r pr-4 overflow-y-auto ${panelView === "list" ? "flex" : "hidden md:flex"}`}
+        data-testid="panel-template-list"
+      >
+        <Button
+          variant="outline"
+          className="w-full mb-4"
+          onClick={startCreating}
+          data-testid="button-new-template"
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Template
         </Button>
-      </div>
 
-      {custom.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Custom Templates</h2>
-          {custom.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              isEditing={editingId === template.id}
-              editName={editName}
-              editSubject={editSubject}
-              editBody={editBody}
-              onEditName={setEditName}
-              onEditSubject={setEditSubject}
-              onEditBody={setEditBody}
-              onStartEdit={startEditing}
-              onSave={() => updateMutation.mutate({ id: template.id, name: editName, subject: editSubject, body: editBody })}
-              onCancel={cancelEditing}
-              onDelete={() => deleteMutation.mutate(template.id)}
-              isSaving={updateMutation.isPending}
-              triggerLabel={triggerLabel(template.trigger)}
-            />
-          ))}
-        </div>
-      )}
+        {custom.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1 px-1">Custom</p>
+            <div className="space-y-0.5">
+              {custom.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => selectTemplate(t)}
+                  data-testid={`button-select-template-${t.id}`}
+                  className={`w-full text-left px-3 py-2 rounded-md transition-colors ${selectedId === t.id && !isCreating ? "bg-muted" : "hover-elevate"}`}
+                >
+                  <p className="text-sm font-medium leading-tight truncate">{t.name}</p>
+                  {t.trigger && <p className="text-xs text-muted-foreground truncate mt-0.5">{triggerLabel(t.trigger)}</p>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Built-in Templates</h2>
-        {builtIn.map((template) => (
-          <TemplateCard
-            key={template.id}
-            template={template}
-            isEditing={editingId === template.id}
-            editName={editName}
-            editSubject={editSubject}
-            editBody={editBody}
-            onEditName={setEditName}
-            onEditSubject={setEditSubject}
-            onEditBody={setEditBody}
-            onStartEdit={startEditing}
-            onSave={() => updateMutation.mutate({ id: template.id, name: editName, subject: editSubject, body: editBody })}
-            onCancel={cancelEditing}
-            onDelete={null}
-            isSaving={updateMutation.isPending}
-            triggerLabel={triggerLabel(template.trigger)}
-          />
-        ))}
-        {builtIn.length === 0 && (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              No built-in templates found.
-            </CardContent>
-          </Card>
+        {custom.length > 0 && builtIn.length > 0 && <div className="h-px bg-border mb-3" />}
+
+        {builtIn.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1 px-1">Built-in</p>
+            <div className="space-y-0.5">
+              {builtIn.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => selectTemplate(t)}
+                  data-testid={`button-select-template-${t.id}`}
+                  className={`w-full text-left px-3 py-2 rounded-md transition-colors ${selectedId === t.id && !isCreating ? "bg-muted" : "hover-elevate"}`}
+                >
+                  <p className="text-sm font-medium leading-tight truncate">{t.name}</p>
+                  {t.trigger && <p className="text-xs text-muted-foreground truncate mt-0.5">{triggerLabel(t.trigger)}</p>}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
-      <CreateTemplateDialog
-        open={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-      />
-    </div>
-  );
-}
-
-interface TemplateCardProps {
-  template: EmailTemplate;
-  isEditing: boolean;
-  editName: string;
-  editSubject: string;
-  editBody: string;
-  onEditName: (v: string) => void;
-  onEditSubject: (v: string) => void;
-  onEditBody: (v: string) => void;
-  onStartEdit: (t: EmailTemplate) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  onDelete: (() => void) | null;
-  isSaving: boolean;
-  triggerLabel: string | null;
-}
-
-function TemplateCard({
-  template, isEditing, editName, editSubject, editBody,
-  onEditName, onEditSubject, onEditBody,
-  onStartEdit, onSave, onCancel, onDelete, isSaving, triggerLabel,
-}: TemplateCardProps) {
-  const variables = template.availableVariables || (template.trigger ? TRIGGER_VARIABLES[template.trigger] : []) || [];
-
-  return (
-    <Card data-testid={`card-template-${template.id}`}>
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
-        <div className="space-y-1">
-          {isEditing ? (
-            <Input
-              value={editName}
-              onChange={(e) => onEditName(e.target.value)}
-              className="font-semibold text-base h-auto py-0.5 px-2"
-              data-testid={`input-template-name-${template.id}`}
-            />
-          ) : (
-            <CardTitle className="text-base">{template.name}</CardTitle>
-          )}
-          <div className="flex gap-1 flex-wrap">
-            {triggerLabel && (
-              <Badge variant="secondary" className="text-xs">{triggerLabel}</Badge>
-            )}
-            {template.isCustom && (
-              <Badge variant="outline" className="text-xs">Custom</Badge>
-            )}
+      <div
+        className={`flex-col flex-1 min-w-0 ${panelView === "editor" ? "flex" : "hidden md:flex"}`}
+        data-testid="panel-template-editor"
+      >
+        {!selectedId && !isCreating ? (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+            Select a template or create a new one
           </div>
-        </div>
-        <div className="flex gap-1">
-          {!isEditing && (
-            <>
+        ) : (
+          <div className="flex flex-col h-full gap-4">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onStartEdit(template)}
-                data-testid={`button-edit-template-${template.id}`}
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={clearSelection}
+                data-testid="button-back-to-list"
               >
-                Edit
+                <ArrowLeft className="w-4 h-4" />
               </Button>
-              {onDelete && (
+
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Template name"
+                className="flex-1 text-base font-semibold border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-b-2"
+                data-testid="input-template-name"
+              />
+
+              <div className="flex items-center gap-1 ml-auto">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
-                  onClick={onDelete}
-                  data-testid={`button-delete-template-${template.id}`}
+                  onClick={() => setEditorMode("edit")}
+                  className={editorMode === "edit" ? "bg-muted" : ""}
+                  data-testid="button-mode-edit"
+                  title="Edit"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditorMode("preview")}
+                  className={editorMode === "preview" ? "bg-muted" : ""}
+                  data-testid="button-mode-preview"
+                  title="Preview"
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {selectedTemplate?.isCustom && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => selectedId && deleteMutation.mutate(selectedId)}
+                  disabled={deleteMutation.isPending}
+                  data-testid="button-delete-template"
                 >
                   <Trash2 className="w-4 h-4 text-destructive" />
                 </Button>
               )}
-            </>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isEditing ? (
-          <div className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">Subject</Label>
-              <Input
-                value={editSubject}
-                onChange={(e) => onEditSubject(e.target.value)}
-                className="mt-1 font-mono text-sm"
-                data-testid={`input-template-subject-${template.id}`}
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Body (plain text)</Label>
-              <Textarea
-                value={editBody}
-                onChange={(e) => onEditBody(e.target.value)}
-                rows={10}
-                className="mt-1 font-mono text-sm"
-                data-testid={`input-template-body-${template.id}`}
-              />
-            </div>
-            {variables.length > 0 && (
-              <div>
-                <Label className="text-xs text-muted-foreground">Available variables:</Label>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {variables.map((v) => (
-                    <Badge key={v} variant="outline" className="font-mono text-xs">{v}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2 pt-1">
+
               <Button
+                variant="ghost"
                 size="sm"
-                onClick={onSave}
-                disabled={isSaving}
-                data-testid={`button-save-template-${template.id}`}
+                onClick={clearSelection}
+                data-testid="button-cancel-edit"
               >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-                Save
-              </Button>
-              <Button variant="outline" size="sm" onClick={onCancel} data-testid={`button-cancel-template-${template.id}`}>
                 Cancel
               </Button>
+
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={!canSave || isSaving}
+                data-testid="button-save-template"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                Save
+              </Button>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div>
-              <span className="text-xs text-muted-foreground">Subject:</span>
-              <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 mt-0.5 whitespace-pre-wrap" data-testid={`text-template-subject-${template.id}`}>
-                {template.subject}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground">Body:</span>
-              <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 mt-0.5 whitespace-pre-wrap line-clamp-6" data-testid={`text-template-body-${template.id}`}>
-                {template.body}
-              </p>
-            </div>
-            {variables.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {variables.map((v) => (
-                  <Badge key={v} variant="outline" className="font-mono text-xs">{v}</Badge>
-                ))}
+
+            {isCreating && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Trigger event</Label>
+                <Select value={editTrigger} onValueChange={setEditTrigger}>
+                  <SelectTrigger className="mt-1" data-testid="select-trigger">
+                    <SelectValue placeholder="Select a trigger..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRIGGERS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        <span className="font-medium">{t.label}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{t.description}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {editorMode === "edit" ? (
+              <div className="flex flex-col gap-3 flex-1 min-h-0">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Subject</Label>
+                  <Input
+                    ref={subjectRef}
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                    onFocus={() => { lastFocusedField.current = "subject"; }}
+                    placeholder="Email subject line"
+                    className="mt-1"
+                    data-testid="input-template-subject"
+                  />
+                </div>
+
+                <div className="flex flex-col flex-1 min-h-0">
+                  <Label className="text-xs text-muted-foreground mb-1">Body</Label>
+                  <Textarea
+                    ref={bodyRef}
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    onFocus={() => { lastFocusedField.current = "body"; }}
+                    placeholder={"Dear {{requester_name}},\n\n..."}
+                    className="flex-1 resize-none font-mono text-sm min-h-[180px]"
+                    data-testid="input-template-body"
+                  />
+                </div>
+
+                {variables.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Click to insert variable</p>
+                    <div className="flex flex-wrap gap-1">
+                      {variables.map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => insertVariable(v)}
+                          data-testid={`button-insert-variable-${v}`}
+                          className="inline-flex"
+                        >
+                          <Badge variant="outline" className="font-mono text-xs cursor-pointer hover-elevate">
+                            {v}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto rounded-md border p-4 bg-muted/30">
+                {renderPreview()}
               </div>
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function CreateTemplateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { toast } = useToast();
-  const [name, setName] = useState("");
-  const [trigger, setTrigger] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-
-  const variables = trigger ? (TRIGGER_VARIABLES[trigger] || []) : [];
-  const selectedTrigger = TRIGGERS.find(t => t.value === trigger);
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/email-templates", { name, trigger, subject, body });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
-      toast({ title: "Template created", description: "New email template has been added." });
-      setName(""); setTrigger(""); setSubject(""); setBody("");
-      onClose();
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create template.", variant: "destructive" });
-    },
-  });
-
-  const handleClose = () => {
-    setName(""); setTrigger(""); setSubject(""); setBody("");
-    onClose();
-  };
-
-  const isValid = name.trim() && trigger && subject.trim() && body.trim();
-
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Email Template</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <div>
-            <Label className="text-sm font-medium">Template Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Reservation Denial Notice"
-              className="mt-1"
-              data-testid="input-create-name"
-            />
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium">Trigger</Label>
-            <p className="text-xs text-muted-foreground mb-1">The system event that will send this email</p>
-            <Select value={trigger} onValueChange={setTrigger}>
-              <SelectTrigger data-testid="select-create-trigger">
-                <SelectValue placeholder="Select a trigger..." />
-              </SelectTrigger>
-              <SelectContent>
-                {TRIGGERS.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    <div>
-                      <div className="font-medium">{t.label}</div>
-                      <div className="text-xs text-muted-foreground">{t.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedTrigger && (
-              <p className="text-xs text-muted-foreground mt-1">{selectedTrigger.description}</p>
-            )}
-          </div>
-
-          {variables.length > 0 && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Available variables for this trigger:</Label>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {variables.map((v) => (
-                  <Badge key={v} variant="outline" className="font-mono text-xs">{v}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <Label className="text-sm font-medium">Subject</Label>
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="e.g. Your reservation for {{vehicle_name}} was not approved"
-              className="mt-1 font-mono text-sm"
-              data-testid="input-create-subject"
-            />
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium">Body (plain text)</Label>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder={"Dear {{requester_name}},\n\nYour reservation for {{vehicle_name}} has been reviewed...\n\nRegards,\nFacilities Team"}
-              rows={10}
-              className="mt-1 font-mono text-sm"
-              data-testid="input-create-body"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancel</Button>
-          <Button
-            onClick={() => createMutation.mutate()}
-            disabled={!isValid || createMutation.isPending}
-            data-testid="button-create-template-submit"
-          >
-            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-            Create Template
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 
@@ -507,7 +494,7 @@ function SettingsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notification-settings"] });
-      toast({ title: "Setting updated", description: "Notification setting has been saved." });
+      toast({ title: "Setting updated" });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update setting.", variant: "destructive" });
@@ -516,8 +503,8 @@ function SettingsTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -630,8 +617,8 @@ function LogsTab() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         </div>
       ) : !logs || logs.length === 0 ? (
         <Card>
@@ -655,7 +642,7 @@ function LogsTab() {
                       To: {log.recipientName ? `${log.recipientName} <${log.recipientEmail}>` : log.recipientEmail}
                     </div>
                     {log.errorMessage && (
-                      <p className="text-xs text-red-500 mt-1">{log.errorMessage}</p>
+                      <p className="text-xs text-destructive mt-1">{log.errorMessage}</p>
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-log-date-${log.id}`}>
