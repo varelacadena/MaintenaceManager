@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,20 +29,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Play,
-  FileText,
-  Image,
-  Link,
   Plus,
   Search,
-  Edit,
-  Trash2,
   BookOpen,
-  ExternalLink,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  CheckCircle2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCategoryStyle, CATEGORY_COLORS } from "@/lib/categoryColors";
+import ResourceCard from "@/components/ResourceCard";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 type ResourceCategory = {
   id: string;
@@ -71,29 +69,18 @@ type Property = {
 };
 
 function getYoutubeThumbnail(url: string): string | null {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (match) return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
+  const patterns = [
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg`;
+  }
   return null;
 }
-
-function getYoutubeId(url: string): string | null {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
-}
-
-const TYPE_ICONS = {
-  video: Play,
-  document: FileText,
-  image: Image,
-  link: Link,
-};
-
-const TYPE_LABELS = {
-  video: "Video",
-  document: "Document",
-  image: "Image",
-  link: "Link",
-};
 
 export default function ResourceLibrary() {
   const { toast } = useToast();
@@ -106,6 +93,8 @@ export default function ResourceLibrary() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryColor, setNewCategoryColor] = useState("gray");
   const [showNewCategory, setShowNewCategory] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [pasteUrlMode, setPasteUrlMode] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -187,6 +176,8 @@ export default function ResourceLibrary() {
 
   function resetForm() {
     setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", propertyIds: [] });
+    setPasteUrlMode(false);
+    setIsUploading(false);
   }
 
   function openCreate() {
@@ -206,12 +197,17 @@ export default function ResourceLibrary() {
       categoryId: r.categoryId || "",
       propertyIds: r.propertyIds,
     });
+    setPasteUrlMode(true);
     setDialogOpen(true);
   }
 
   function handleSubmit() {
-    if (!form.title.trim() || !form.url.trim()) {
-      toast({ title: "Title and URL are required", variant: "destructive" });
+    if (!form.title.trim()) {
+      toast({ title: "Title is required", variant: "destructive" });
+      return;
+    }
+    if (!form.url.trim()) {
+      toast({ title: "A URL or uploaded file is required", variant: "destructive" });
       return;
     }
     if (editResource) {
@@ -230,14 +226,37 @@ export default function ResourceLibrary() {
     }));
   }
 
+  async function getUploadParameters() {
+    const res = await apiRequest("POST", "/api/objects/upload");
+    const data = await res.json();
+    return { method: "PUT" as const, url: data.uploadURL };
+  }
+
+  function handleUploadComplete(result: any) {
+    setIsUploading(false);
+    const file = result.successful?.[0];
+    if (file) {
+      setForm(f => ({
+        ...f,
+        url: file.url || file.objectUrl || file.uploadURL,
+        fileName: f.fileName || file.fileName || file.name || "",
+      }));
+      toast({ title: "File uploaded successfully" });
+    } else if (result.failed?.length) {
+      toast({ title: "Upload failed", variant: "destructive" });
+    }
+  }
+
   const filtered = resourceList.filter(r => {
-    const matchSearch = !search || r.title.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || r.title.toLowerCase().includes(search.toLowerCase()) ||
+      (r.description || "").toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || r.type === typeFilter;
     const matchCat = categoryFilter === "all" || r.categoryId === categoryFilter;
     return matchSearch && matchType && matchCat;
   });
 
   const thumbnail = form.type === "video" ? getYoutubeThumbnail(form.url) : null;
+  const needsUpload = (form.type === "document" || form.type === "image") && !pasteUrlMode;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -305,63 +324,15 @@ export default function ResourceLibrary() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(resource => {
-            const Icon = TYPE_ICONS[resource.type];
-            const thumb = resource.type === "video" ? getYoutubeThumbnail(resource.url) : null;
-            const catStyle = resource.category ? getCategoryStyle(resource.category.color) : null;
             const linkedProps = properties.filter(p => resource.propertyIds.includes(p.id));
             return (
-              <Card key={resource.id} data-testid={`card-resource-${resource.id}`} className="flex flex-col">
-                {thumb && (
-                  <div className="relative h-36 overflow-hidden rounded-t-md bg-muted">
-                    <img src={thumb} alt={resource.title} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-black/60 rounded-full p-2">
-                        <Play className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <CardContent className="flex-1 flex flex-col gap-2 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <p className="font-medium text-sm truncate" data-testid={`text-resource-title-${resource.id}`}>
-                        {resource.title}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(resource)} data-testid={`button-edit-resource-${resource.id}`}>
-                        <Edit className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(resource.id)} data-testid={`button-delete-resource-${resource.id}`}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                  {resource.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">{resource.description}</p>
-                  )}
-                  <div className="flex flex-wrap gap-1 mt-auto pt-1">
-                    {resource.category && catStyle && (
-                      <Badge style={catStyle} className="text-xs" data-testid={`badge-category-${resource.id}`}>
-                        {resource.category.name}
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      {TYPE_LABELS[resource.type]}
-                    </Badge>
-                  </div>
-                  {linkedProps.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {linkedProps.map(p => (
-                        <span key={p.id} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          {p.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <ResourceCard
+                key={resource.id}
+                resource={resource}
+                onEdit={() => openEdit(resource)}
+                onDelete={() => setDeleteId(resource.id)}
+                linkedProperties={linkedProps.map(p => p.name)}
+              />
             );
           })}
         </div>
@@ -398,7 +369,7 @@ export default function ResourceLibrary() {
 
             <div className="space-y-1.5">
               <Label>Type <span className="text-destructive">*</span></Label>
-              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as any, url: "" }))}>
+              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as any, url: "", fileName: "" }))}>
                 <SelectTrigger data-testid="select-resource-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -411,40 +382,143 @@ export default function ResourceLibrary() {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>
-                {form.type === "video" ? "YouTube URL" :
-                 form.type === "link" ? "URL" :
-                 "File URL"}
-                <span className="text-destructive"> *</span>
-              </Label>
-              <Input
-                placeholder={
-                  form.type === "video" ? "https://www.youtube.com/watch?v=..." :
-                  form.type === "link" ? "https://..." :
-                  "Paste the file URL (upload via Files panel)"
-                }
-                value={form.url}
-                onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
-                data-testid="input-resource-url"
-              />
-              {form.type === "video" && thumbnail && (
-                <div className="mt-2 rounded-md overflow-hidden h-32 bg-muted">
-                  <img src={thumbnail} alt="Preview" className="w-full h-full object-cover" />
+            {/* URL / Upload field — varies by type */}
+            {form.type === "video" && (
+              <div className="space-y-1.5">
+                <Label>YouTube URL <span className="text-destructive">*</span></Label>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={form.url}
+                  onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                  data-testid="input-resource-url"
+                />
+                {thumbnail && (
+                  <div className="mt-2 rounded-md overflow-hidden h-32 bg-muted">
+                    <img src={thumbnail} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {form.type === "link" && (
+              <div className="space-y-1.5">
+                <Label>URL <span className="text-destructive">*</span></Label>
+                <Input
+                  placeholder="https://..."
+                  value={form.url}
+                  onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                  data-testid="input-resource-url"
+                />
+              </div>
+            )}
+
+            {(form.type === "document" || form.type === "image") && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>{form.type === "document" ? "File" : "Image"} <span className="text-destructive">*</span></Label>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline underline-offset-2"
+                    onClick={() => {
+                      setPasteUrlMode(v => !v);
+                      setForm(f => ({ ...f, url: "", fileName: "" }));
+                    }}
+                  >
+                    {pasteUrlMode ? "Upload a file instead" : "Paste URL instead"}
+                  </button>
                 </div>
-              )}
-              {(form.type === "document" || form.type === "image") && (
-                <div className="space-y-1.5 mt-2">
-                  <Label>File Name (displayed to users)</Label>
-                  <Input
-                    placeholder="e.g. Electrical_SOP_v2.pdf"
-                    value={form.fileName}
-                    onChange={e => setForm(f => ({ ...f, fileName: e.target.value }))}
-                    data-testid="input-resource-filename"
-                  />
-                </div>
-              )}
-            </div>
+
+                {pasteUrlMode ? (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder={form.type === "document" ? "https://example.com/file.pdf" : "https://example.com/image.jpg"}
+                      value={form.url}
+                      onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                      data-testid="input-resource-url"
+                    />
+                    <Input
+                      placeholder={form.type === "document" ? "e.g. Safety_Manual.pdf" : "e.g. Floor_Plan.jpg"}
+                      value={form.fileName}
+                      onChange={e => setForm(f => ({ ...f, fileName: e.target.value }))}
+                      data-testid="input-resource-filename"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {form.url ? (
+                      <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+                        <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          {form.type === "image" ? (
+                            <img
+                              src={form.url}
+                              alt="Preview"
+                              className="h-20 w-auto rounded object-contain"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <p className="text-sm truncate">{form.fileName || "File uploaded"}</p>
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setForm(f => ({ ...f, url: "", fileName: "" }))}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed rounded-md p-6 text-center space-y-3">
+                        {form.type === "image" ? (
+                          <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground opacity-50" />
+                        ) : (
+                          <FileText className="w-8 h-8 mx-auto text-muted-foreground opacity-50" />
+                        )}
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            {form.type === "document" ? "PDF or DOCX up to 50MB" : "JPG, PNG or GIF up to 20MB"}
+                          </p>
+                          <ObjectUploader
+                            accept={
+                              form.type === "document"
+                                ? "application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
+                                : "image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                            }
+                            maxFileSize={form.type === "document" ? 52428800 : 20971520}
+                            onGetUploadParameters={getUploadParameters}
+                            onComplete={handleUploadComplete}
+                            onError={() => toast({ title: "Upload failed", variant: "destructive" })}
+                            isLoading={isUploading}
+                            buttonVariant="outline"
+                            buttonTestId="button-upload-file"
+                          >
+                            <Upload className="w-3.5 h-3.5 mr-1.5" />
+                            Choose file
+                          </ObjectUploader>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* File name field shown after upload */}
+                    {form.url && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Display name</Label>
+                        <Input
+                          placeholder={form.type === "document" ? "e.g. Safety_Manual.pdf" : "e.g. Building_Floor_Plan.jpg"}
+                          value={form.fileName}
+                          onChange={e => setForm(f => ({ ...f, fileName: e.target.value }))}
+                          data-testid="input-resource-filename"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>Category</Label>
@@ -548,7 +622,7 @@ export default function ResourceLibrary() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending || isUploading}
               data-testid="button-save-resource"
             >
               {editResource ? "Save Changes" : "Add Resource"}
