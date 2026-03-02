@@ -1119,18 +1119,28 @@ function PropertyResourcesTab({ propertyId, propertyName }: { propertyId: string
     queryFn: () => fetch(`/api/properties/${propertyId}/resources`).then(r => r.json()),
   });
 
-  const grouped = propertyResources.reduce((acc: Record<string, any[]>, r: any) => {
+  const sorted = [...propertyResources].sort((a, b) =>
+    a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
+  );
+
+  const grouped = sorted.reduce((acc: Record<string, any[]>, r: any) => {
     const key = r.category?.name || "Uncategorized";
     if (!acc[key]) acc[key] = [];
     acc[key].push(r);
     return acc;
   }, {});
 
+  const sortedGroupKeys = Object.keys(grouped).sort((a, b) => {
+    if (a === "Uncategorized") return 1;
+    if (b === "Uncategorized") return -1;
+    return a.localeCompare(b, undefined, { sensitivity: "base" });
+  });
+
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="border rounded-md divide-y">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-32 bg-muted animate-pulse rounded-md" />
+          <div key={i} className="h-14 bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -1155,13 +1165,13 @@ function PropertyResourcesTab({ propertyId, propertyName }: { propertyId: string
   }
 
   return (
-    <div className="space-y-6 overflow-y-auto">
-      {Object.entries(grouped).map(([category, items]) => (
+    <div className="space-y-5 overflow-y-auto">
+      {sortedGroupKeys.map(category => (
         <div key={category}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">{category}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(items as any[]).map((resource: any) => (
-              <ResourceCard key={resource.id} resource={resource} />
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{category}</p>
+          <div className="border rounded-md divide-y">
+            {grouped[category].map((resource: any) => (
+              <ResourceCard key={resource.id} resource={resource} variant="list" />
             ))}
           </div>
         </div>

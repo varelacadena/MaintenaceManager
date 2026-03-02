@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -308,11 +309,11 @@ export default function ResourceLibrary() {
         </Select>
       </div>
 
-      {/* Resource Grid */}
+      {/* Resource List */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="border rounded-md divide-y">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-40 bg-muted animate-pulse rounded-md" />
+            <div key={i} className="h-14 bg-muted animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -322,19 +323,22 @@ export default function ResourceLibrary() {
           <p className="text-sm mt-1">Add your first resource using the button above</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(resource => {
-            const linkedProps = properties.filter(p => resource.propertyIds.includes(p.id));
-            return (
-              <ResourceCard
-                key={resource.id}
-                resource={resource}
-                onEdit={() => openEdit(resource)}
-                onDelete={() => setDeleteId(resource.id)}
-                linkedProperties={linkedProps.map(p => p.name)}
-              />
-            );
-          })}
+        <div className="border rounded-md divide-y">
+          {[...filtered]
+            .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }))
+            .map(resource => {
+              const linkedProps = properties.filter(p => resource.propertyIds.includes(p.id));
+              return (
+                <ResourceCard
+                  key={resource.id}
+                  resource={resource}
+                  variant="list"
+                  onEdit={() => openEdit(resource)}
+                  onDelete={() => setDeleteId(resource.id)}
+                  linkedProperties={linkedProps.map(p => p.name)}
+                />
+              );
+            })}
         </div>
       )}
 
@@ -343,6 +347,11 @@ export default function ResourceLibrary() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editResource ? "Edit Resource" : "Add Resource"}</DialogTitle>
+            <DialogDescription>
+              {editResource
+                ? "Update the details for this resource."
+                : "Fill in the details below to add a new resource to the library."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">

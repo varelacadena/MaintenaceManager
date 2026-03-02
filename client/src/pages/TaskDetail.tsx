@@ -3569,6 +3569,9 @@ export default function TaskDetail() {
 
 function TaskResourcesSection({ resources, propertyName }: { resources: any[]; propertyName?: string }) {
   if (!resources || resources.length === 0) return null;
+  const sorted = [...resources].sort((a, b) =>
+    a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
+  );
   return (
     <div className="space-y-3" data-testid="task-resources-section">
       <div className="flex items-center gap-2">
@@ -3577,9 +3580,9 @@ function TaskResourcesSection({ resources, propertyName }: { resources: any[]; p
           {propertyName ? `${propertyName} Resources` : "Property Resources"}
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {resources.map((resource: any) => (
-          <ResourceCard key={resource.id} resource={resource} />
+      <div className="border rounded-md divide-y">
+        {sorted.map((resource: any) => (
+          <ResourceCard key={resource.id} resource={resource} variant="list" />
         ))}
       </div>
     </div>

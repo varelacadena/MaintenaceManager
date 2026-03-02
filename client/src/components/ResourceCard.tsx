@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Play, FileText, Image, Link, ExternalLink, Edit, Trash2, ExternalLink as OpenIcon } from "lucide-react";
+import { Play, FileText, Image, ExternalLink, Edit, Trash2, ExternalLink as OpenIcon } from "lucide-react";
 import { getCategoryStyle } from "@/lib/categoryColors";
 
 type ResourceCategory = {
@@ -49,12 +49,19 @@ function getYoutubeEmbedUrl(url: string): string | null {
 
 interface ResourceCardProps {
   resource: Resource;
+  variant?: "card" | "list";
   onEdit?: () => void;
   onDelete?: () => void;
   linkedProperties?: string[];
 }
 
-export default function ResourceCard({ resource, onEdit, onDelete, linkedProperties }: ResourceCardProps) {
+export default function ResourceCard({
+  resource,
+  variant = "card",
+  onEdit,
+  onDelete,
+  linkedProperties,
+}: ResourceCardProps) {
   const [videoOpen, setVideoOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
 
@@ -65,11 +72,7 @@ export default function ResourceCard({ resource, onEdit, onDelete, linkedPropert
 
   function handleClick() {
     if (resource.type === "video") {
-      if (embedUrl) {
-        setVideoOpen(true);
-      } else {
-        window.open(resource.url, "_blank", "noopener");
-      }
+      embedUrl ? setVideoOpen(true) : window.open(resource.url, "_blank", "noopener");
     } else if (resource.type === "image") {
       setImageOpen(true);
     } else {
@@ -77,9 +80,147 @@ export default function ResourceCard({ resource, onEdit, onDelete, linkedPropert
     }
   }
 
-  function handleAdminClick(e: React.MouseEvent, action: () => void) {
+  function stopAndRun(e: React.MouseEvent, action: () => void) {
     e.stopPropagation();
     action();
+  }
+
+  const modals = (
+    <>
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="max-w-3xl p-0">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="text-base pr-8">{resource.title}</DialogTitle>
+          </DialogHeader>
+          {embedUrl ? (
+            <div className="aspect-video w-full">
+              <iframe
+                src={embedUrl}
+                title={resource.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <div className="p-6 text-center text-muted-foreground">
+              <Play className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm mb-3">This video cannot be embedded.</p>
+              <Button variant="outline" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
+                <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
+                Open video
+              </Button>
+            </div>
+          )}
+          {embedUrl && (
+            <div className="p-3 flex justify-end border-t">
+              <Button variant="ghost" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
+                <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
+                Open in new tab
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+        <DialogContent className="max-w-4xl p-2">
+          <DialogHeader className="p-2 pb-0">
+            <DialogTitle className="text-base pr-8">{resource.title}</DialogTitle>
+          </DialogHeader>
+          <img
+            src={resource.url}
+            alt={resource.title}
+            className="w-full h-auto max-h-[75vh] object-contain rounded-md mt-2"
+          />
+          <div className="flex justify-end pt-1">
+            <Button variant="ghost" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
+              <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
+              Open full size
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  if (variant === "list") {
+    return (
+      <>
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover-elevate"
+          onClick={handleClick}
+          data-testid={`card-resource-${resource.id}`}
+        >
+          {/* Icon / Thumbnail */}
+          <div className="flex-shrink-0 w-10 h-10 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+            {resource.type === "video" && thumb ? (
+              <div className="relative w-full h-full">
+                <img src={thumb} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <Play className="w-3.5 h-3.5 text-white fill-white" />
+                </div>
+              </div>
+            ) : resource.type === "video" ? (
+              <Play className="w-4 h-4 text-muted-foreground" />
+            ) : resource.type === "image" && resource.url ? (
+              <img src={resource.url} alt="" className="w-full h-full object-cover" />
+            ) : resource.type === "image" ? (
+              <Image className="w-4 h-4 text-muted-foreground" />
+            ) : resource.type === "document" ? (
+              <FileText className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ExternalLink className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-medium truncate" data-testid={`text-resource-title-${resource.id}`}>
+                {resource.title}
+              </p>
+              {resource.category && catStyle && (
+                <Badge style={catStyle} className="text-xs flex-shrink-0" data-testid={`badge-resource-category-${resource.id}`}>
+                  {resource.category.name}
+                </Badge>
+              )}
+            </div>
+            {(resource.description || resource.fileName) && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                {resource.description || resource.fileName}
+              </p>
+            )}
+            {linkedProperties && linkedProperties.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {linkedProperties.map(name => (
+                  <span key={name} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Admin actions */}
+          {hasAdminActions && (
+            <div className="flex gap-0.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+              {onEdit && (
+                <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onEdit)} data-testid={`button-edit-resource-${resource.id}`}>
+                  <Edit className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onDelete)} data-testid={`button-delete-resource-${resource.id}`}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+        {modals}
+      </>
+    );
   }
 
   return (
@@ -126,22 +267,12 @@ export default function ResourceCard({ resource, onEdit, onDelete, linkedPropert
             {hasAdminActions && (
               <div className="flex gap-0.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
                 {onEdit && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={e => handleAdminClick(e, onEdit)}
-                    data-testid={`button-edit-resource-${resource.id}`}
-                  >
+                  <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onEdit)} data-testid={`button-edit-resource-${resource.id}`}>
                     <Edit className="w-3.5 h-3.5" />
                   </Button>
                 )}
                 {onDelete && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={e => handleAdminClick(e, onDelete)}
-                    data-testid={`button-delete-resource-${resource.id}`}
-                  >
+                  <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onDelete)} data-testid={`button-delete-resource-${resource.id}`}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 )}
@@ -169,63 +300,7 @@ export default function ResourceCard({ resource, onEdit, onDelete, linkedPropert
           )}
         </CardContent>
       </Card>
-
-      {/* YouTube Video Modal */}
-      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
-        <DialogContent className="max-w-3xl p-0">
-          <DialogHeader className="p-4 pb-2">
-            <DialogTitle className="text-base pr-8">{resource.title}</DialogTitle>
-          </DialogHeader>
-          {embedUrl ? (
-            <div className="aspect-video w-full">
-              <iframe
-                src={embedUrl}
-                title={resource.title}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          ) : (
-            <div className="p-6 text-center text-muted-foreground">
-              <Play className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm mb-3">This video cannot be embedded.</p>
-              <Button variant="outline" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
-                <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
-                Open video
-              </Button>
-            </div>
-          )}
-          {embedUrl && (
-            <div className="p-3 flex justify-end border-t">
-              <Button variant="ghost" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
-                <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
-                Open in new tab
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Image Lightbox Modal */}
-      <Dialog open={imageOpen} onOpenChange={setImageOpen}>
-        <DialogContent className="max-w-4xl p-2">
-          <DialogHeader className="p-2 pb-0">
-            <DialogTitle className="text-base pr-8">{resource.title}</DialogTitle>
-          </DialogHeader>
-          <img
-            src={resource.url}
-            alt={resource.title}
-            className="w-full h-auto max-h-[75vh] object-contain rounded-md mt-2"
-          />
-          <div className="flex justify-end pt-1">
-            <Button variant="ghost" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
-              <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
-              Open full size
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {modals}
     </>
   );
 }
