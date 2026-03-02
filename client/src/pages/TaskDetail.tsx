@@ -85,6 +85,7 @@ import {
   Link2,
   GripVertical,
   ScanLine,
+  BookOpen,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
@@ -92,6 +93,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import ResourceCard from "@/components/ResourceCard";
 import type {
   Task,
   TimeEntry,
@@ -345,6 +347,12 @@ export default function TaskDetail() {
     queryKey: ["/api/tasks", id, "dependencies"],
     queryFn: () => apiRequest("GET", `/api/tasks/${id}/dependencies`).then((r) => r.json()),
     enabled: !!id && user?.role === "admin",
+  });
+
+  const { data: propertyResources = [] } = useQuery<any[]>({
+    queryKey: ["/api/properties", task?.propertyId, "resources"],
+    queryFn: () => fetch(`/api/properties/${task?.propertyId}/resources`).then(r => r.json()),
+    enabled: !!task?.propertyId,
   });
 
   const previousWork = useMemo(() => {
@@ -1028,6 +1036,10 @@ export default function TaskDetail() {
               </div>
             )}
 
+            {propertyResources.length > 0 && (
+              <TaskResourcesSection resources={propertyResources} propertyName={property?.name} />
+            )}
+
             {checklistGroups.length > 0 && (
               <div className="space-y-3">
                 <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
@@ -1347,6 +1359,10 @@ export default function TaskDetail() {
               <div className="p-4 bg-muted/30 rounded-lg">
                 <p className="text-sm leading-relaxed" data-testid="text-description">{task.description}</p>
               </div>
+            )}
+
+            {propertyResources.length > 0 && (
+              <TaskResourcesSection resources={propertyResources} propertyName={property?.name} />
             )}
 
             {previousWork.length > 0 && (
@@ -2076,6 +2092,10 @@ export default function TaskDetail() {
                 </div>
               </div>
             </div>
+          )}
+
+          {propertyResources.length > 0 && (
+            <TaskResourcesSection resources={propertyResources} propertyName={property?.name} />
           )}
 
           {/* Time Logged - Prominent Display for Students */}
@@ -3543,6 +3563,25 @@ export default function TaskDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function TaskResourcesSection({ resources, propertyName }: { resources: any[]; propertyName?: string }) {
+  if (!resources || resources.length === 0) return null;
+  return (
+    <div className="space-y-3" data-testid="task-resources-section">
+      <div className="flex items-center gap-2">
+        <BookOpen className="w-4 h-4 text-muted-foreground" />
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          {propertyName ? `${propertyName} Resources` : "Property Resources"}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {resources.map((resource: any) => (
+          <ResourceCard key={resource.id} resource={resource} />
+        ))}
+      </div>
     </div>
   );
 }

@@ -2533,6 +2533,114 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
+  app.get("/api/properties/:id/resources", isAuthenticated, async (req, res) => {
+    try {
+      const resources = await storage.getPropertyResources(req.params.id);
+      res.json(resources);
+    } catch (error) {
+      console.error("Error fetching property resources:", error);
+      res.status(500).json({ message: "Failed to fetch property resources" });
+    }
+  });
+
+  // Resource Library routes
+  app.get("/api/resource-categories", isAuthenticated, async (req, res) => {
+    try {
+      const categories = await storage.getResourceCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching resource categories:", error);
+      res.status(500).json({ message: "Failed to fetch resource categories" });
+    }
+  });
+
+  app.post("/api/resource-categories", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { name, color } = req.body;
+      if (!name || typeof name !== "string") {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+      const category = await storage.createResourceCategory({ name: name.trim(), color: color || "gray" });
+      res.status(201).json(category);
+    } catch (error: any) {
+      if (error.code === "23505") {
+        return res.status(409).json({ message: "A category with this name already exists" });
+      }
+      console.error("Error creating resource category:", error);
+      res.status(500).json({ message: "Failed to create resource category" });
+    }
+  });
+
+  app.get("/api/resources", isAuthenticated, async (req, res) => {
+    try {
+      const filters: { categoryId?: string; type?: string } = {};
+      if (req.query.categoryId) filters.categoryId = req.query.categoryId as string;
+      if (req.query.type) filters.type = req.query.type as string;
+      const resourceList = await storage.getResources(filters);
+      res.json(resourceList);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      res.status(500).json({ message: "Failed to fetch resources" });
+    }
+  });
+
+  app.get("/api/resources/:id", isAuthenticated, async (req, res) => {
+    try {
+      const resource = await storage.getResourceById(req.params.id);
+      if (!resource) return res.status(404).json({ message: "Resource not found" });
+      res.json(resource);
+    } catch (error) {
+      console.error("Error fetching resource:", error);
+      res.status(500).json({ message: "Failed to fetch resource" });
+    }
+  });
+
+  app.post("/api/resources", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { propertyIds = [], ...data } = req.body;
+      if (!data.title || !data.type || !data.url) {
+        return res.status(400).json({ message: "Title, type, and url are required" });
+      }
+      if (!data.categoryId) data.categoryId = null;
+      const user = req.user as any;
+      const resource = await storage.createResource(
+        { ...data, createdById: user?.id },
+        Array.isArray(propertyIds) ? propertyIds : []
+      );
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error("Error creating resource:", error);
+      res.status(500).json({ message: "Failed to create resource" });
+    }
+  });
+
+  app.patch("/api/resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { propertyIds = [], ...data } = req.body;
+      if ("categoryId" in data && !data.categoryId) data.categoryId = null;
+      const resource = await storage.updateResource(
+        req.params.id,
+        data,
+        Array.isArray(propertyIds) ? propertyIds : []
+      );
+      if (!resource) return res.status(404).json({ message: "Resource not found" });
+      res.json(resource);
+    } catch (error) {
+      console.error("Error updating resource:", error);
+      res.status(500).json({ message: "Failed to update resource" });
+    }
+  });
+
+  app.delete("/api/resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteResource(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      res.status(500).json({ message: "Failed to delete resource" });
+    }
+  });
+
   // Space routes (rooms within buildings)
   app.get("/api/spaces", isAuthenticated, async (req, res) => {
     try {

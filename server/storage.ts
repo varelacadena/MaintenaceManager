@@ -124,6 +124,13 @@ import {
   type InsertAiAgentLog,
   passwordResetTokens,
   type PasswordResetToken,
+  resourceCategories,
+  resources,
+  propertyResources,
+  type ResourceCategory,
+  type InsertResourceCategory,
+  type Resource,
+  type InsertResource,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -466,6 +473,16 @@ export interface IStorage {
   createResetToken(userId: string, token: string, expiresAt: Date): Promise<void>;
   getResetTokenByToken(token: string): Promise<import("@shared/schema").PasswordResetToken | undefined>;
   markResetTokenUsed(token: string): Promise<void>;
+
+  // Resource Library operations
+  getResourceCategories(): Promise<ResourceCategory[]>;
+  createResourceCategory(data: InsertResourceCategory): Promise<ResourceCategory>;
+  getResources(filters?: { categoryId?: string; type?: string }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
+  getResourceById(id: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] }) | undefined>;
+  createResource(data: InsertResource, propertyIds: string[]): Promise<Resource>;
+  updateResource(id: string, data: Partial<InsertResource>, propertyIds: string[]): Promise<Resource | undefined>;
+  deleteResource(id: string): Promise<void>;
+  getPropertyResources(propertyId: string): Promise<(Resource & { category: ResourceCategory | null })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2456,6 +2473,95 @@ export class DatabaseStorage implements IStorage {
 
   async markResetTokenUsed(token: string): Promise<void> {
     await this.db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.token, token));
+  }
+
+  // ─── Resource Library operations ─────────────────────────────────────────
+
+  async getResourceCategories(): Promise<ResourceCategory[]> {
+    return await this.db.select().from(resourceCategories).orderBy(resourceCategories.name);
+  }
+
+  async createResourceCategory(data: InsertResourceCategory): Promise<ResourceCategory> {
+    const [created] = await this.db.insert(resourceCategories).values(data).returning();
+    return created;
+  }
+
+  async getResources(filters?: { categoryId?: string; type?: string }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {
+    const rows = await this.db.select().from(resources)
+      .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
+      .orderBy(desc(resources.createdAt));
+
+    const filtered = rows.filter(row => {
+      if (filters?.categoryId && row.resources.categoryId !== filters.categoryId) return false;
+      if (filters?.type && row.resources.type !== filters.type) return false;
+      return true;
+    });
+
+    const result = await Promise.all(filtered.map(async (row) => {
+      const propRows = await this.db.select({ propertyId: propertyResources.propertyId })
+        .from(propertyResources)
+        .where(eq(propertyResources.resourceId, row.resources.id));
+      return {
+        ...row.resources,
+        category: row.resource_categories,
+        propertyIds: propRows.map(p => p.propertyId),
+      };
+    }));
+    return result;
+  }
+
+  async getResourceById(id: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] }) | undefined> {
+    const [row] = await this.db.select().from(resources)
+      .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
+      .where(eq(resources.id, id));
+    if (!row) return undefined;
+    const propRows = await this.db.select({ propertyId: propertyResources.propertyId })
+      .from(propertyResources)
+      .where(eq(propertyResources.resourceId, id));
+    return {
+      ...row.resources,
+      category: row.resource_categories,
+      propertyIds: propRows.map(p => p.propertyId),
+    };
+  }
+
+  async createResource(data: InsertResource, propertyIds: string[]): Promise<Resource> {
+    const [created] = await this.db.insert(resources).values(data as any).returning();
+    if (propertyIds.length > 0) {
+      await this.db.insert(propertyResources).values(
+        propertyIds.map(pid => ({ propertyId: pid, resourceId: created.id }))
+      ).onConflictDoNothing();
+    }
+    return created;
+  }
+
+  async updateResource(id: string, data: Partial<InsertResource>, propertyIds: string[]): Promise<Resource | undefined> {
+    const [updated] = await this.db.update(resources).set(data as any).where(eq(resources.id, id)).returning();
+    if (!updated) return undefined;
+    await this.db.delete(propertyResources).where(eq(propertyResources.resourceId, id));
+    if (propertyIds.length > 0) {
+      await this.db.insert(propertyResources).values(
+        propertyIds.map(pid => ({ propertyId: pid, resourceId: id }))
+      ).onConflictDoNothing();
+    }
+    return updated;
+  }
+
+  async deleteResource(id: string): Promise<void> {
+    await this.db.delete(propertyResources).where(eq(propertyResources.resourceId, id));
+    await this.db.delete(resources).where(eq(resources.id, id));
+  }
+
+  async getPropertyResources(propertyId: string): Promise<(Resource & { category: ResourceCategory | null })[]> {
+    const rows = await this.db.select().from(propertyResources)
+      .innerJoin(resources, eq(propertyResources.resourceId, resources.id))
+      .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
+      .where(eq(propertyResources.propertyId, propertyId))
+      .orderBy(resourceCategories.name, resources.title);
+    return rows.map(row => ({
+      ...row.resources,
+      category: row.resource_categories,
+    }));
   }
 }
 

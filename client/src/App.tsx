@@ -45,6 +45,7 @@ import NotificationsWidget from "./components/NotificationsWidget";
 import ProjectDetail from "./pages/ProjectDetail";
 import EmailManagement from "./pages/EmailManagement";
 import AiAgentDashboard from "./pages/AiAgentDashboard";
+import ResourceLibrary from "./pages/ResourceLibrary";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -250,6 +251,9 @@ function AuthenticatedApp() {
                 )} />
                 <Route path="/ai-agent" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><AiAgentDashboard /></RoleGuard>
+                )} />
+                <Route path="/resources" component={() => (
+                  <RoleGuard allowedRoles={["admin"]}><ResourceLibrary /></RoleGuard>
                 )} />
                 <Route component={NotFound} />
               </Switch>

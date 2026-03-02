@@ -58,7 +58,11 @@ import {
   Sparkles,
   HelpCircle,
   Settings,
+  BookOpen,
 } from "lucide-react";
+import ResourceCard from "@/components/ResourceCard";
+import { getCategoryStyle } from "@/lib/categoryColors";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -504,6 +508,10 @@ export default function PropertyDetail() {
             <Map className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
             <span className="whitespace-nowrap">Location</span>
           </TabsTrigger>
+          <TabsTrigger value="resources" data-testid="tab-resources" className="text-xs md:text-sm">
+            <BookOpen className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+            <span className="whitespace-nowrap">Resources</span>
+          </TabsTrigger>
         </TabsList>
 
         {isBuilding && (
@@ -836,6 +844,10 @@ export default function PropertyDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="resources" className="flex flex-col min-h-0 mt-2">
+          <PropertyResourcesTab propertyId={id!} propertyName={property.name} />
+        </TabsContent>
       </Tabs>
 
       <Dialog open={isEditPropertyDialogOpen} onOpenChange={setIsEditPropertyDialogOpen}>
@@ -1094,6 +1106,66 @@ export default function PropertyDetail() {
           </Form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function PropertyResourcesTab({ propertyId, propertyName }: { propertyId: string; propertyName: string }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const { data: propertyResources = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/properties", propertyId, "resources"],
+    queryFn: () => fetch(`/api/properties/${propertyId}/resources`).then(r => r.json()),
+  });
+
+  const grouped = propertyResources.reduce((acc: Record<string, any[]>, r: any) => {
+    const key = r.category?.name || "Uncategorized";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(r);
+    return acc;
+  }, {});
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-32 bg-muted animate-pulse rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
+  if (propertyResources.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground" data-testid="empty-resources">
+        <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
+        <p className="font-medium">No resources linked to this property</p>
+        {isAdmin ? (
+          <p className="text-sm mt-1">
+            Go to the{" "}
+            <Link href="/resources" className="underline text-primary">Resource Library</Link>
+            {" "}to add resources and link them here.
+          </p>
+        ) : (
+          <p className="text-sm mt-1">Resources can be added from the Resource Library.</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 overflow-y-auto">
+      {Object.entries(grouped).map(([category, items]) => (
+        <div key={category}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">{category}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(items as any[]).map((resource: any) => (
+              <ResourceCard key={resource.id} resource={resource} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
