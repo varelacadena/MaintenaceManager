@@ -59,6 +59,8 @@ type Resource = {
   url: string;
   fileName: string | null;
   categoryId: string | null;
+  equipmentId: string | null;
+  equipmentCategory: string | null;
   category: ResourceCategory | null;
   propertyIds: string[];
   createdAt: string;
@@ -68,6 +70,26 @@ type Property = {
   id: string;
   name: string;
 };
+
+type Equipment = {
+  id: string;
+  name: string;
+  category: string;
+  propertyId: string;
+};
+
+const EQUIPMENT_CATEGORIES_RESOURCE = [
+  { slug: "hvac", label: "HVAC" },
+  { slug: "electrical", label: "Electrical" },
+  { slug: "plumbing", label: "Plumbing" },
+  { slug: "mechanical", label: "Mechanical / Fleet" },
+  { slug: "appliances", label: "Appliances" },
+  { slug: "grounds", label: "Grounds / Landscaping" },
+  { slug: "janitorial", label: "Janitorial" },
+  { slug: "structural", label: "Structural" },
+  { slug: "water_treatment", label: "Water Treatment" },
+  { slug: "general", label: "General" },
+];
 
 function getYoutubeThumbnail(url: string): string | null {
   const patterns = [
@@ -104,8 +126,12 @@ export default function ResourceLibrary() {
     url: "",
     fileName: "",
     categoryId: "",
+    equipmentId: "",
+    equipmentCategory: "",
     propertyIds: [] as string[],
   });
+
+  const [equipmentSearch, setEquipmentSearch] = useState("");
 
   const { data: categories = [] } = useQuery<ResourceCategory[]>({
     queryKey: ["/api/resource-categories"],
@@ -117,6 +143,10 @@ export default function ResourceLibrary() {
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+  });
+
+  const { data: allEquipment = [] } = useQuery<Equipment[]>({
+    queryKey: ["/api/equipment"],
   });
 
   const createCategoryMutation = useMutation({
@@ -176,9 +206,10 @@ export default function ResourceLibrary() {
   });
 
   function resetForm() {
-    setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", propertyIds: [] });
+    setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
     setPasteUrlMode(false);
     setIsUploading(false);
+    setEquipmentSearch("");
   }
 
   function openCreate() {
@@ -189,6 +220,8 @@ export default function ResourceLibrary() {
 
   function openEdit(r: Resource) {
     setEditResource(r);
+    const selectedEq = r.equipmentId ? allEquipment.find(e => e.id === r.equipmentId) : null;
+    setEquipmentSearch(selectedEq ? selectedEq.name : "");
     setForm({
       title: r.title,
       description: r.description || "",
@@ -196,6 +229,8 @@ export default function ResourceLibrary() {
       url: r.url,
       fileName: r.fileName || "",
       categoryId: r.categoryId || "",
+      equipmentId: r.equipmentId || "",
+      equipmentCategory: r.equipmentCategory || "",
       propertyIds: r.propertyIds,
     });
     setPasteUrlMode(true);
@@ -601,6 +636,83 @@ export default function ResourceLibrary() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Equipment Linking */}
+            <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+              <div>
+                <Label className="text-sm font-medium">Link to Equipment (Optional)</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Resources linked here appear automatically when that equipment is scanned on the job.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Specific Equipment Unit</Label>
+                <div className="relative">
+                  <Input
+                    placeholder="Search equipment by name..."
+                    value={equipmentSearch}
+                    onChange={e => {
+                      setEquipmentSearch(e.target.value);
+                      if (!e.target.value) setForm(f => ({ ...f, equipmentId: "" }));
+                    }}
+                    data-testid="input-equipment-search"
+                  />
+                  {equipmentSearch && !form.equipmentId && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-44 overflow-y-auto">
+                      <div
+                        className="px-3 py-2 cursor-pointer hover-elevate text-sm text-muted-foreground"
+                        onClick={() => { setEquipmentSearch(""); setForm(f => ({ ...f, equipmentId: "" })); }}
+                      >
+                        None / Clear
+                      </div>
+                      {allEquipment
+                        .filter(e => e.name.toLowerCase().includes(equipmentSearch.toLowerCase()))
+                        .slice(0, 20)
+                        .map(e => {
+                          const prop = properties.find(p => p.id === e.propertyId);
+                          return (
+                            <div
+                              key={e.id}
+                              className="px-3 py-2 cursor-pointer hover-elevate text-sm"
+                              onClick={() => {
+                                setForm(f => ({ ...f, equipmentId: e.id }));
+                                setEquipmentSearch(e.name);
+                              }}
+                              data-testid={`equipment-option-${e.id}`}
+                            >
+                              <span className="font-medium">{e.name}</span>
+                              {prop && <span className="text-muted-foreground ml-1">— {prop.name}</span>}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                  {form.equipmentId && (
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                      onClick={() => { setEquipmentSearch(""); setForm(f => ({ ...f, equipmentId: "" })); }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Equipment Category (all units of this type)</Label>
+                <Select value={form.equipmentCategory || "none"} onValueChange={v => setForm(f => ({ ...f, equipmentCategory: v === "none" ? "" : v }))}>
+                  <SelectTrigger data-testid="select-equipment-category-link">
+                    <SelectValue placeholder="None / Any category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None / Any category</SelectItem>
+                    {EQUIPMENT_CATEGORIES_RESOURCE.map(cat => (
+                      <SelectItem key={cat.slug} value={cat.slug}>{cat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-1.5">

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import QRCode from "react-qr-code";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import {
   Select,
   SelectContent,
@@ -59,6 +61,10 @@ import {
   HelpCircle,
   Settings,
   BookOpen,
+  QrCode,
+  Printer,
+  Upload,
+  X,
 } from "lucide-react";
 import ResourceCard from "@/components/ResourceCard";
 import { getCategoryStyle } from "@/lib/categoryColors";
@@ -91,6 +97,7 @@ type EquipmentCategorySlug = typeof EQUIPMENT_CATEGORIES[number]["slug"];
 const formSchema = insertEquipmentSchema.extend({
   name: z.string().min(1, "Name is required"),
   category: z.string().min(1, "Category is required"),
+  manufacturerImageUrl: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -143,6 +150,9 @@ export default function PropertyDetail() {
   const [equipmentSearch, setEquipmentSearch] = useState("");
   const [spaceSearch, setSpaceSearch] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
+  const [qrEquipment, setQrEquipment] = useState<Equipment | null>(null);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [manufacturerImageUrl, setManufacturerImageUrl] = useState("");
 
   const { data: property, isLoading } = useQuery<Property>({
     queryKey: ["/api/properties", id],
@@ -267,12 +277,15 @@ export default function PropertyDetail() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newEquipment: Equipment) => {
       queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
       setIsCreateDialogOpen(false);
       setEditingEquipment(null);
+      setManufacturerImageUrl("");
       toast({ title: "Success", description: "Equipment added successfully" });
+      setQrEquipment(newEquipment);
+      setIsQrDialogOpen(true);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to create equipment", variant: "destructive" });
@@ -323,10 +336,11 @@ export default function PropertyDetail() {
   });
 
   const onSubmit = (data: FormData) => {
+    const submitData = { ...data, manufacturerImageUrl: manufacturerImageUrl || undefined };
     if (editingEquipment) {
-      updateEquipmentMutation.mutate({ id: editingEquipment.id, data });
+      updateEquipmentMutation.mutate({ id: editingEquipment.id, data: submitData });
     } else {
-      createEquipmentMutation.mutate(data);
+      createEquipmentMutation.mutate(submitData);
     }
   };
 
@@ -372,6 +386,7 @@ export default function PropertyDetail() {
 
   const handleEditEquipment = (item: Equipment) => {
     setEditingEquipment(item);
+    setManufacturerImageUrl((item as any).manufacturerImageUrl || "");
     form.reset({
       propertyId: item.propertyId,
       name: item.name,
@@ -381,6 +396,7 @@ export default function PropertyDetail() {
       condition: item.condition || "",
       notes: item.notes || "",
       imageUrl: item.imageUrl || "",
+      manufacturerImageUrl: (item as any).manufacturerImageUrl || "",
     });
     setIsCreateDialogOpen(true);
   };
@@ -652,9 +668,11 @@ export default function PropertyDetail() {
                     size="sm"
                     onClick={() => {
                       setEditingEquipment(null);
+                      setManufacturerImageUrl("");
                       form.reset({
                         propertyId: id || "", name: "", category: "general",
                         description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
+                        manufacturerImageUrl: "",
                       });
                       setIsCreateDialogOpen(true);
                     }}
@@ -745,6 +763,15 @@ export default function PropertyDetail() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => { setQrEquipment(item); setIsQrDialogOpen(true); }}
+                          title="Show QR Code"
+                          data-testid={`button-qr-${item.id}`}
+                        >
+                          <QrCode className="w-3 h-3 text-primary" />
+                        </Button>
                         <Button
                           size="icon"
                           variant="ghost"
@@ -1020,6 +1047,55 @@ export default function PropertyDetail() {
                   </FormItem>
                 )}
               />
+
+              {/* Manufacturer Image Upload */}
+              <div className="space-y-2">
+                <FormLabel>Manufacturer Image (Optional)</FormLabel>
+                <p className="text-xs text-muted-foreground">Upload a label, manual cover, or product photo. Displayed when scanning this equipment.</p>
+                {manufacturerImageUrl ? (
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={manufacturerImageUrl}
+                      alt="Manufacturer"
+                      className="w-20 h-20 object-cover rounded-md border"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setManufacturerImageUrl("")}
+                      data-testid="button-remove-manufacturer-image"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <ObjectUploader
+                    accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                    maxFileSize={10485760}
+                    onGetUploadParameters={async () => {
+                      const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
+                      const data = await res.json();
+                      return { method: "PUT" as const, url: data.uploadURL };
+                    }}
+                    onComplete={(result: any) => {
+                      const file = result.successful?.[0];
+                      if (file) {
+                        const url = file.url || file.objectUrl || file.uploadURL;
+                        setManufacturerImageUrl(url);
+                      }
+                    }}
+                    onError={() => toast({ title: "Upload failed", variant: "destructive" })}
+                    buttonVariant="outline"
+                    buttonTestId="button-upload-manufacturer-image"
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    Upload image
+                  </ObjectUploader>
+                )}
+              </div>
+
               <DialogFooter>
                 <Button
                   type="button"
@@ -1027,9 +1103,11 @@ export default function PropertyDetail() {
                   onClick={() => {
                     setIsCreateDialogOpen(false);
                     setEditingEquipment(null);
+                    setManufacturerImageUrl("");
                     form.reset({
                       propertyId: id || "", name: "", category: "general",
                       description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
+                      manufacturerImageUrl: "",
                     });
                   }}
                   data-testid="button-cancel-equipment"
@@ -1040,6 +1118,73 @@ export default function PropertyDetail() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" />
+              Equipment QR Code
+            </DialogTitle>
+            <DialogDescription>
+              {qrEquipment?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            {qrEquipment && (
+              <>
+                <div className="bg-white p-4 rounded-md border" id="qr-print-area">
+                  <QRCode
+                    value={`${window.location.origin}/equipment/${qrEquipment.id}`}
+                    size={200}
+                  />
+                  <div className="mt-2 text-center">
+                    <p className="text-xs font-medium text-black">{qrEquipment.name}</p>
+                    {qrEquipment.serialNumber && (
+                      <p className="text-xs text-gray-500">SN: {qrEquipment.serialNumber}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground px-2">
+                  Scan to view equipment info, work history, and linked manuals.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const printContent = document.getElementById("qr-print-area");
+                      if (printContent) {
+                        const w = window.open("", "_blank");
+                        if (w) {
+                          w.document.write(`<html><head><title>${qrEquipment.name} QR</title><style>body{display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:sans-serif;}@media print{body{margin:0;}}</style></head><body>${printContent.outerHTML}</body></html>`);
+                          w.document.close();
+                          w.focus();
+                          w.print();
+                          w.close();
+                        }
+                      }
+                    }}
+                    data-testid="button-print-qr"
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1.5" />
+                    Print Label
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsQrDialogOpen(false)}
+                    data-testid="button-close-qr"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

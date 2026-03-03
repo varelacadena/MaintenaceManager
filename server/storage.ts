@@ -483,6 +483,7 @@ export interface IStorage {
   updateResource(id: string, data: Partial<InsertResource>, propertyIds: string[]): Promise<Resource | undefined>;
   deleteResource(id: string): Promise<void>;
   getPropertyResources(propertyId: string): Promise<(Resource & { category: ResourceCategory | null })[]>;
+  getEquipmentResources(equipmentId: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -800,6 +801,7 @@ export class DatabaseStorage implements IStorage {
     areaId?: string;
     executorType?: string;
     assignedToIdOrPool?: { userId: string; pool: string };
+    equipmentId?: string;
   }): Promise<Task[]> {
     let query = this.db.select({
         id: tasks.id,
@@ -865,6 +867,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.executorType) {
       conditions.push(eq(tasks.executorType, filters.executorType as any));
+    }
+    if (filters?.equipmentId) {
+      conditions.push(eq(tasks.equipmentId, filters.equipmentId));
     }
     // Filter by assigned user OR assigned pool (for students/technicians)
     if (filters?.assignedToIdOrPool) {
@@ -2562,6 +2567,42 @@ export class DatabaseStorage implements IStorage {
       ...row.resources,
       category: row.resource_categories,
     }));
+  }
+
+  async getEquipmentResources(equipmentId: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {
+    const item = await this.getEquipmentItem(equipmentId);
+    if (!item) return [];
+
+    const rows = await this.db.select().from(resources)
+      .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
+      .where(
+        or(
+          sql`${resources.equipmentId}::text = ${equipmentId}`,
+          eq(resources.equipmentCategory, item.category)
+        )
+      )
+      .orderBy(resources.title);
+
+    const seen = new Set<string>();
+    const result = await Promise.all(
+      rows
+        .filter(row => {
+          if (seen.has(row.resources.id)) return false;
+          seen.add(row.resources.id);
+          return true;
+        })
+        .map(async (row) => {
+          const propRows = await this.db.select({ propertyId: propertyResources.propertyId })
+            .from(propertyResources)
+            .where(eq(propertyResources.resourceId, row.resources.id));
+          return {
+            ...row.resources,
+            category: row.resource_categories,
+            propertyIds: propRows.map(p => p.propertyId),
+          };
+        })
+    );
+    return result;
   }
 }
 

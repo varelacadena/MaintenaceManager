@@ -1235,13 +1235,17 @@ Be concise and practical. Do not use markdown formatting.`;
 
       let filters: any = {};
 
-      // Role-based filtering
-      if (currentUser.role === "student") {
-        // Students only see tasks directly assigned to them
-        filters.assignedToId = userId;
-      } else if (currentUser.role === "technician") {
-        // Technicians only see tasks directly assigned to them
-        filters.assignedToId = userId;
+      // When fetching equipment work history, bypass role-based task filtering
+      // so techs/students can see all historical tasks on a piece of equipment
+      const equipmentIdFilter = req.query.equipmentId as string | undefined;
+
+      if (!equipmentIdFilter) {
+        // Role-based filtering only applies when NOT querying by equipment
+        if (currentUser.role === "student") {
+          filters.assignedToId = userId;
+        } else if (currentUser.role === "technician") {
+          filters.assignedToId = userId;
+        }
       }
       // Admin sees all
 
@@ -1260,6 +1264,9 @@ Be concise and practical. Do not use markdown formatting.`;
       }
       if (req.query.executorType && currentUser.role === "admin") {
         filters.executorType = req.query.executorType;
+      }
+      if (equipmentIdFilter) {
+        filters.equipmentId = equipmentIdFilter;
       }
 
       const tasks = await storage.getTasks(filters);
@@ -2602,6 +2609,8 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(400).json({ message: "Title, type, and url are required" });
       }
       if (!data.categoryId) data.categoryId = null;
+      if (!data.equipmentId) data.equipmentId = null;
+      if (!data.equipmentCategory) data.equipmentCategory = null;
       const user = req.user as any;
       const resource = await storage.createResource(
         { ...data, createdById: user?.id },
@@ -2618,6 +2627,8 @@ Be concise and practical. Do not use markdown formatting.`;
     try {
       const { propertyIds = [], ...data } = req.body;
       if ("categoryId" in data && !data.categoryId) data.categoryId = null;
+      if ("equipmentId" in data && !data.equipmentId) data.equipmentId = null;
+      if ("equipmentCategory" in data && !data.equipmentCategory) data.equipmentCategory = null;
       const resource = await storage.updateResource(
         req.params.id,
         data,
@@ -2790,6 +2801,17 @@ Be concise and practical. Do not use markdown formatting.`;
     } catch (error) {
       console.error("Error deleting equipment:", error);
       res.status(500).json({ message: "Failed to delete equipment" });
+    }
+  });
+
+  // Equipment resources (manuals, videos linked to this equipment or its category)
+  app.get("/api/equipment/:id/resources", isAuthenticated, async (req, res) => {
+    try {
+      const resourceList = await storage.getEquipmentResources(req.params.id);
+      res.json(resourceList);
+    } catch (error) {
+      console.error("Error fetching equipment resources:", error);
+      res.status(500).json({ message: "Failed to fetch equipment resources" });
     }
   });
 

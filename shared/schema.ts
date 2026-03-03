@@ -410,6 +410,7 @@ export const equipment = pgTable("equipment", {
   condition: varchar("condition", { length: 100 }), // good, fair, poor, needs replacement
   notes: text("notes"),
   imageUrl: varchar("image_url", { length: 500 }),
+  manufacturerImageUrl: varchar("manufacturer_image_url", { length: 500 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1409,6 +1410,8 @@ export const resources = pgTable("resources", {
   objectPath: text("object_path"),
   fileName: varchar("file_name", { length: 255 }),
   categoryId: varchar("category_id").references(() => resourceCategories.id, { onDelete: "set null" }),
+  equipmentId: varchar("equipment_id").references(() => equipment.id, { onDelete: "set null" }),
+  equipmentCategory: varchar("equipment_category", { length: 50 }),
   createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
 });
