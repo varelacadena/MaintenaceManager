@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +46,7 @@ function parseTimeValue(value: string | undefined): { hour: string; minute: stri
   };
 }
 
-function buildTimeValue(hour: string, minute: string, period: string): string | undefined {
-  if (!hour || !minute || !period) return undefined;
+function buildTimeValue(hour: string, minute: string, period: string): string {
   let h = parseInt(hour, 10);
   if (period === "AM") {
     if (h === 12) h = 0;
@@ -56,54 +56,113 @@ function buildTimeValue(hour: string, minute: string, period: string): string | 
   return `${String(h).padStart(2, "0")}:${minute}`;
 }
 
-function TimeSelect({ field }: { field: any }) {
-  const parsed = parseTimeValue(field.value);
+function formatDisplay(hour: string, minute: string, period: string): string {
+  return `${parseInt(hour, 10)}:${minute} ${period}`;
+}
 
-  function handleChange(type: "hour" | "minute" | "period", val: string) {
-    const next = {
-      hour: parsed.hour,
-      minute: parsed.minute,
-      period: parsed.period,
-      [type]: val,
-    };
-    const result = buildTimeValue(next.hour, next.minute, next.period);
-    field.onChange(result);
+function TimePopover({ field }: { field: any }) {
+  const parsed = parseTimeValue(field.value);
+  const [hour, setHour] = useState(parsed.hour);
+  const [minute, setMinute] = useState(parsed.minute);
+  const [period, setPeriod] = useState(parsed.period);
+  const [open, setOpen] = useState(false);
+
+  function handleOpen(isOpen: boolean) {
+    if (isOpen) {
+      const current = parseTimeValue(field.value);
+      setHour(current.hour);
+      setMinute(current.minute);
+      setPeriod(current.period);
+    }
+    setOpen(isOpen);
   }
 
+  function commit(h: string, m: string, p: string) {
+    const resolvedMinute = m || "00";
+    const resolvedPeriod = p || "AM";
+    if (h) {
+      field.onChange(buildTimeValue(h, resolvedMinute, resolvedPeriod));
+    }
+  }
+
+  function handleHour(val: string) {
+    setHour(val);
+    const m = minute || "00";
+    const p = period || "AM";
+    setMinute(m);
+    setPeriod(p);
+    commit(val, m, p);
+  }
+
+  function handleMinute(val: string) {
+    setMinute(val);
+    if (hour) commit(hour, val, period || "AM");
+  }
+
+  function handlePeriod(val: string) {
+    setPeriod(val);
+    if (hour) commit(hour, minute || "00", val);
+  }
+
+  const hasValue = !!field.value;
+  const displayParsed = parseTimeValue(field.value);
+
   return (
-    <div className="flex gap-2" data-testid="input-scheduled-time">
-      <Select value={parsed.hour} onValueChange={(v) => handleChange("hour", v)}>
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder="HH" />
-        </SelectTrigger>
-        <SelectContent>
-          {HOURS.map((h) => (
-            <SelectItem key={h} value={h}>{h}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <Popover open={open} onOpenChange={handleOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          type="button"
+          data-testid="input-scheduled-time"
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !hasValue && "text-muted-foreground"
+          )}
+        >
+          <Clock className="mr-2 h-4 w-4" />
+          {hasValue
+            ? formatDisplay(displayParsed.hour, displayParsed.minute, displayParsed.period)
+            : "Pick time"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <div className="flex gap-2 items-center">
+          <Select value={hour} onValueChange={handleHour}>
+            <SelectTrigger className="w-20">
+              <SelectValue placeholder="HH" />
+            </SelectTrigger>
+            <SelectContent>
+              {HOURS.map((h) => (
+                <SelectItem key={h} value={h}>{h}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <Select value={parsed.minute} onValueChange={(v) => handleChange("minute", v)}>
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder="MM" />
-        </SelectTrigger>
-        <SelectContent>
-          {MINUTES.map((m) => (
-            <SelectItem key={m} value={m}>{m}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <span className="text-muted-foreground font-medium">:</span>
 
-      <Select value={parsed.period} onValueChange={(v) => handleChange("period", v)}>
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder="AM/PM" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="AM">AM</SelectItem>
-          <SelectItem value="PM">PM</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+          <Select value={minute} onValueChange={handleMinute}>
+            <SelectTrigger className="w-20">
+              <SelectValue placeholder="MM" />
+            </SelectTrigger>
+            <SelectContent>
+              {MINUTES.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={period} onValueChange={handlePeriod}>
+            <SelectTrigger className="w-20">
+              <SelectValue placeholder="AM/PM" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="AM">AM</SelectItem>
+              <SelectItem value="PM">PM</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -215,7 +274,7 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
               Scheduled Time <span className="text-muted-foreground font-normal">(optional)</span>
             </FormLabel>
             <FormControl>
-              <TimeSelect field={field} />
+              <TimePopover field={field} />
             </FormControl>
             <FormMessage />
           </FormItem>
