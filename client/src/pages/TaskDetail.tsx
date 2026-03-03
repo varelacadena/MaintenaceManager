@@ -102,6 +102,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import ResourceCard from "@/components/ResourceCard";
 import type {
   Task,
@@ -1519,7 +1520,7 @@ export default function TaskDetail() {
                     {equipmentInfoTab === "info" && (
                       <div className="space-y-4">
                         {(scannedEquipment as any).manufacturerImageUrl && (
-                          <img src={(scannedEquipment as any).manufacturerImageUrl} alt="Manufacturer" className="w-full max-h-48 object-contain rounded-md border" />
+                          <img src={toDisplayUrl((scannedEquipment as any).manufacturerImageUrl)} alt="Manufacturer" className="w-full max-h-48 object-contain rounded-md border" />
                         )}
                         {scannedEquipment.description && <div><p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p><p className="text-sm">{scannedEquipment.description}</p></div>}
                         {scannedEquipment.serialNumber && <div className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Serial Number:</span><span className="font-mono font-medium">{scannedEquipment.serialNumber}</span></div>}
@@ -2247,7 +2248,7 @@ export default function TaskDetail() {
                     {equipmentInfoTab === "info" && (
                       <div className="space-y-4">
                         {(scannedEquipment as any).manufacturerImageUrl && (
-                          <img src={(scannedEquipment as any).manufacturerImageUrl} alt="Manufacturer" className="w-full max-h-48 object-contain rounded-md border" />
+                          <img src={toDisplayUrl((scannedEquipment as any).manufacturerImageUrl)} alt="Manufacturer" className="w-full max-h-48 object-contain rounded-md border" />
                         )}
                         {scannedEquipment.description && <div><p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p><p className="text-sm">{scannedEquipment.description}</p></div>}
                         {scannedEquipment.serialNumber && <div className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Serial Number:</span><span className="font-mono font-medium">{scannedEquipment.serialNumber}</span></div>}
@@ -4071,7 +4072,7 @@ export default function TaskDetail() {
                     <div className="space-y-4">
                       {(scannedEquipment as any).manufacturerImageUrl && (
                         <img
-                          src={(scannedEquipment as any).manufacturerImageUrl}
+                          src={toDisplayUrl((scannedEquipment as any).manufacturerImageUrl)}
                           alt="Manufacturer"
                           className="w-full max-h-48 object-contain rounded-md border"
                           data-testid="img-manufacturer"

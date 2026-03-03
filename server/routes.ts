@@ -1863,6 +1863,54 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
+  // Image proxy: generates a fresh signed GET URL and redirects.
+  // Accepts ?path= as either a relative objectPath ("uploads/key") or a full GCS URL.
+  app.get("/api/objects/image", isAuthenticated, async (req, res) => {
+    try {
+      const { getDownloadUrl, getPrivateDir } = await import("./objectStorage");
+      let rawPath = req.query.path as string;
+      if (!rawPath) {
+        return res.status(400).json({ message: "path query parameter is required" });
+      }
+
+      let objectKey: string;
+
+      if (rawPath.startsWith("https://storage.googleapis.com/")) {
+        // Extract the relative key from the GCS URL:
+        // URL path is /bucket-name/.private/uploads/KEY
+        const urlPath = new URL(rawPath).pathname; // e.g. /replit-objstore-UUID/.private/uploads/KEY
+        const uploadsMatch = urlPath.match(/\/uploads\/(.+)$/);
+        if (uploadsMatch) {
+          objectKey = `uploads/${uploadsMatch[1]}`;
+        } else {
+          // Fallback: try extracting everything after the private dir marker
+          const privateDir = getPrivateDir();
+          if (privateDir) {
+            const privateDirParts = privateDir.replace(/^\//, "").split("/");
+            const privateDirName = privateDirParts.slice(1).join("/"); // e.g. ".private"
+            const parts = urlPath.split("/").filter(Boolean);
+            const idx = parts.findIndex((p) => p === privateDirName || p === ".private");
+            if (idx >= 0) {
+              objectKey = parts.slice(idx + 1).join("/");
+            } else {
+              objectKey = parts.slice(2).join("/");
+            }
+          } else {
+            return res.status(400).json({ message: "Cannot resolve image path" });
+          }
+        }
+      } else {
+        objectKey = rawPath;
+      }
+
+      const signedUrl = await getDownloadUrl(objectKey);
+      return res.redirect(302, signedUrl);
+    } catch (error) {
+      console.error("Error proxying image:", error);
+      res.status(500).json({ message: "Failed to serve image" });
+    }
+  });
+
   // Upload routes
   app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
     try {

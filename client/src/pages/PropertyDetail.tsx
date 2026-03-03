@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import QRCode from "react-qr-code";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   Select,
   SelectContent,
@@ -153,6 +154,7 @@ export default function PropertyDetail() {
   const [qrEquipment, setQrEquipment] = useState<Equipment | null>(null);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [manufacturerImageUrl, setManufacturerImageUrl] = useState("");
+  const uploadObjectPathRef = useRef<string>("");
 
   const { data: property, isLoading } = useQuery<Property>({
     queryKey: ["/api/properties", id],
@@ -386,7 +388,7 @@ export default function PropertyDetail() {
 
   const handleEditEquipment = (item: Equipment) => {
     setEditingEquipment(item);
-    setManufacturerImageUrl((item as any).manufacturerImageUrl || "");
+    setManufacturerImageUrl(toDisplayUrl((item as any).manufacturerImageUrl));
     form.reset({
       propertyId: item.propertyId,
       name: item.name,
@@ -1077,13 +1079,17 @@ export default function PropertyDetail() {
                     onGetUploadParameters={async () => {
                       const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
                       const data = await res.json();
+                      uploadObjectPathRef.current = data.objectPath || "";
                       return { method: "PUT" as const, url: data.uploadURL };
                     }}
                     onComplete={(result: any) => {
                       const file = result.successful?.[0];
                       if (file) {
-                        const url = file.url || file.objectUrl || file.uploadURL;
-                        setManufacturerImageUrl(url);
+                        const objectPath = uploadObjectPathRef.current;
+                        const displayUrl = objectPath
+                          ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
+                          : (file.url || file.objectUrl || file.uploadURL);
+                        setManufacturerImageUrl(displayUrl);
                       }
                     }}
                     onError={() => toast({ title: "Upload failed", variant: "destructive" })}
