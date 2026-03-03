@@ -247,7 +247,7 @@ export default function PropertyDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       if (selectedSpaceId) setSelectedSpaceId(null);
       toast({ title: "Success", description: "Space deleted successfully" });
     },
@@ -268,7 +268,7 @@ export default function PropertyDetail() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
       setIsCreateDialogOpen(false);
       setEditingEquipment(null);
@@ -284,7 +284,7 @@ export default function PropertyDetail() {
       return await apiRequest("PATCH", `/api/equipment/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       toast({ title: "Success", description: "Equipment updated successfully" });
       setEditingEquipment(null);
       form.reset({ propertyId: id });
@@ -299,7 +299,7 @@ export default function PropertyDetail() {
       return await apiRequest("DELETE", `/api/equipment/${equipmentId}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       toast({ title: "Success", description: "Equipment deleted successfully" });
     },
     onError: (error: any) => {

@@ -379,6 +379,7 @@ export default function NewTask() {
       }
       
       queryClient.invalidateQueries({ queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${selectedPropertyId}`] });
       form.setValue("equipmentId", newEquipment.id);
       setIsEquipmentDialogOpen(false);
       equipmentForm.reset({

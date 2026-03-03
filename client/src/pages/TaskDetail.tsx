@@ -518,6 +518,9 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
     },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to mark messages as read", variant: "destructive" });
+    },
   });
 
   const sendMessageMutation = useMutation({
@@ -611,6 +614,9 @@ export default function TaskDetail() {
         }
       }
       toast({ title: "Timer started" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to start timer", variant: "destructive" });
     },
   });
 
@@ -779,7 +785,11 @@ export default function TaskDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Quote approved", description: "The task is now ready to start work." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to approve quote", variant: "destructive" });
     },
   });
 
@@ -844,6 +854,9 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "checklist-groups"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update checklist item", variant: "destructive" });
     },
   });
 

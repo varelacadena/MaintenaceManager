@@ -284,6 +284,9 @@ export default function Messages() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
     },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to mark messages as read", variant: "destructive" });
+    },
   });
 
   const scrollToBottom = () => {
