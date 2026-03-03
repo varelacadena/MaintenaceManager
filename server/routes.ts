@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { requireRole, getCurrentUser, requireAdmin, requireStaffOrHigher, requireRequestAccess, requireTaskExecutorOrAdmin, requireTaskAccess, canAccessTask } from "./middleware";
+import { requireRole, getCurrentUser, requireAdmin, requireTechnicianOrAdmin, requireStaffOrHigher, requireRequestAccess, requireTaskExecutorOrAdmin, requireTaskAccess, canAccessTask } from "./middleware";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { db } from "./db";
@@ -4647,11 +4647,19 @@ Be concise and practical. Do not use markdown formatting.`;
   });
 
   // Create quote (internal estimate)
-  app.post("/api/quotes", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/quotes", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const user = await getAuthUser(req);
       if (!user) {
         return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Technicians can only create quotes for tasks assigned to them
+      if (user.role === "technician" && req.body.taskId) {
+        const hasAccess = await canAccessTask(user.id, req.body.taskId);
+        if (!hasAccess) {
+          return res.status(403).json({ message: "You can only add estimates to tasks assigned to you" });
+        }
       }
       
       const data = insertQuoteSchema.parse({
@@ -4683,13 +4691,27 @@ Be concise and practical. Do not use markdown formatting.`;
   });
 
   // Update quote
-  app.patch("/api/quotes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/quotes/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
-      const quote = await storage.updateQuote(req.params.id, req.body);
-      if (!quote) {
-        return res.status(404).json({ message: "Quote not found" });
+      const user = await getAuthUser(req);
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+
+      if (user.role === "technician" && quote.createdById !== user.id) {
+        return res.status(403).json({ message: "You can only edit your own estimates" });
       }
-      res.json(quote);
+
+      // Technicians can only update safe fields, not status or taskId
+      let updateData = req.body;
+      if (user.role === "technician") {
+        const { status, taskId, createdById, ...safeFields } = req.body;
+        updateData = safeFields;
+      }
+
+      const updated = await storage.updateQuote(req.params.id, updateData);
+      res.json(updated);
     } catch (error) {
       console.error("Error updating quote:", error);
       res.status(500).json({ message: "Failed to update quote" });
@@ -4733,9 +4755,54 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
-  // Delete quote
-  app.delete("/api/quotes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  // Reject quote (admin only - sends task back for new estimates if all rejected)
+  app.post("/api/quotes/:id/reject", isAuthenticated, requireAdmin, async (req, res) => {
     try {
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      if (quote.status === "approved") {
+        return res.status(400).json({ message: "Cannot reject an already approved estimate" });
+      }
+
+      if (quote.status === "rejected") {
+        return res.status(400).json({ message: "Estimate is already rejected" });
+      }
+
+      const rejectedQuote = await storage.updateQuote(req.params.id, { status: "rejected" });
+
+      const taskQuotes = await storage.getQuotesByTaskId(quote.taskId);
+      const allRejected = taskQuotes.every(q => q.id === req.params.id ? true : q.status === "rejected");
+
+      if (allRejected) {
+        await storage.updateTask(quote.taskId, {
+          estimateStatus: "needs_estimate",
+          status: "needs_estimate",
+        });
+      }
+
+      res.json(rejectedQuote);
+    } catch (error) {
+      console.error("Error rejecting quote:", error);
+      res.status(500).json({ message: "Failed to reject quote" });
+    }
+  });
+
+  // Delete quote
+  app.delete("/api/quotes/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+
+      if (user.role === "technician" && quote.createdById !== user.id) {
+        return res.status(403).json({ message: "You can only delete your own estimates" });
+      }
+
       await storage.deleteQuote(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -4758,8 +4825,18 @@ Be concise and practical. Do not use markdown formatting.`;
   });
 
   // Create quote attachment
-  app.post("/api/quotes/:id/attachments", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/quotes/:id/attachments", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
+      const user = await getAuthUser(req);
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+
+      if (user.role === "technician" && quote.createdById !== user.id) {
+        return res.status(403).json({ message: "You can only add attachments to your own estimates" });
+      }
+
       const attachment = await storage.createQuoteAttachment({
         quoteId: req.params.id,
         fileName: req.body.fileName,
@@ -4775,8 +4852,19 @@ Be concise and practical. Do not use markdown formatting.`;
   });
 
   // Delete quote attachment
-  app.delete("/api/quote-attachments/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/quote-attachments/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
+      const user = await getAuthUser(req);
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+
+      const attachment = await storage.getQuoteAttachment(req.params.id);
+      if (!attachment) return res.status(404).json({ message: "Attachment not found" });
+
+      const quote = await storage.getQuote(attachment.quoteId);
+      if (user.role === "technician" && quote && quote.createdById !== user.id) {
+        return res.status(403).json({ message: "You can only delete attachments from your own estimates" });
+      }
+
       await storage.deleteQuoteAttachment(req.params.id);
       res.status(204).send();
     } catch (error) {

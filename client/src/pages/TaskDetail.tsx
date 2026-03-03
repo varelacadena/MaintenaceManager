@@ -897,13 +897,31 @@ export default function TaskDetail() {
     },
   });
 
+  const rejectQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return await apiRequest("POST", `/api/quotes/${quoteId}/reject`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Estimate rejected", description: "The estimate has been rejected." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to reject estimate", variant: "destructive" });
+    },
+  });
+
   const deleteQuoteMutation = useMutation({
     mutationFn: async (quoteId: string) => {
       return await apiRequest("DELETE", `/api/quotes/${quoteId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-      toast({ title: "Quote deleted" });
+      toast({ title: "Estimate deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete estimate", variant: "destructive" });
     },
   });
 
@@ -1672,6 +1690,106 @@ export default function TaskDetail() {
               </div>
             )}
 
+            {task?.requiresEstimate && (
+              <Collapsible open={quotesExpanded} onOpenChange={setQuotesExpanded}>
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-quotes">
+                    <div className="flex items-center gap-3">
+                      <CircleDollarSign className="w-5 h-5 text-primary" />
+                      <span className="font-medium">Estimates</span>
+                      {quotes.length > 0 && <Badge variant="secondary">{quotes.length}</Badge>}
+                      {task?.estimateStatus === "needs_estimate" && (
+                        <Badge variant="outline" className={statusColors.needs_estimate}>Needs Estimate</Badge>
+                      )}
+                      {task?.estimateStatus === "waiting_approval" && (
+                        <Badge variant="outline" className={statusColors.waiting_approval}>Pending Review</Badge>
+                      )}
+                      {task?.estimateStatus === "approved" && (
+                        <Badge variant="outline" className={statusColors.ready}>Approved</Badge>
+                      )}
+                    </div>
+                    {quotesExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-3">
+                  {task?.estimateStatus !== "approved" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddQuoteDialogOpen(true)}
+                      className="w-full"
+                      data-testid="button-add-quote"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Estimate
+                    </Button>
+                  )}
+                  {quotes.length === 0 ? (
+                    <p className="text-center text-muted-foreground text-sm py-4">
+                      No estimates added yet. Add estimates to compare and approve before work begins.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {quotes.map((quote) => {
+                        const quoteCreator = users.find(u => u.id === quote.createdById);
+                        const isOwnQuote = user?.id === quote.createdById;
+                        return (
+                          <div
+                            key={quote.id}
+                            className={`p-4 rounded-lg border ${
+                              quote.status === "approved" ? "border-green-500/50 bg-green-500/5" :
+                              quote.status === "rejected" ? "border-red-500/30 bg-red-500/5 opacity-60" :
+                              "border-border"
+                            }`}
+                            data-testid={`quote-card-${quote.id}`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                  <span className="font-semibold text-lg">
+                                    ${(quote.estimatedCost || 0).toLocaleString()}
+                                  </span>
+                                  <Badge variant="secondary" className={quoteStatusColors[quote.status]}>
+                                    {quote.status}
+                                  </Badge>
+                                </div>
+                                {quote.vendorName && (
+                                  <p className="text-sm text-muted-foreground">Vendor: {quote.vendorName}</p>
+                                )}
+                                {quoteCreator && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Submitted by {quoteCreator.fullName || quoteCreator.username}
+                                  </p>
+                                )}
+                                {quote.notes && <p className="text-sm mt-2">{quote.notes}</p>}
+                                <QuoteAttachmentsList quoteId={quote.id} />
+                              </div>
+                              <div className="flex gap-2">
+                                {quote.status === "draft" && task?.estimateStatus !== "approved" && isOwnQuote && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteQuoteMutation.mutate(quote.id)}
+                                    disabled={deleteQuoteMutation.isPending}
+                                    data-testid={`button-delete-quote-${quote.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {quote.status === "approved" && (
+                                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             <div className="space-y-3">
               <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Notes</p>
               <div className="flex gap-2">
@@ -2207,6 +2325,123 @@ export default function TaskDetail() {
           title="Scan Part"
           description="Scan a barcode to find this part in inventory"
         />
+
+        {/* Add Estimate Dialog (technician view) */}
+        <Dialog open={isAddQuoteDialogOpen} onOpenChange={setIsAddQuoteDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add Estimate</DialogTitle>
+              <DialogDescription>Add a new estimate for comparison. You can add multiple estimates to compare before approving one.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Estimated Cost *</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={newQuoteEstimatedCost}
+                    onChange={(e) => setNewQuoteEstimatedCost(e.target.value)}
+                    className="pl-8"
+                    data-testid="input-quote-cost"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Vendor/Source (Optional)</Label>
+                <Select
+                  value={newQuoteVendorId}
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      setNewQuoteVendorId("");
+                      setNewQuoteVendorName("");
+                    } else {
+                      setNewQuoteVendorId(value);
+                      const selectedVendor = vendors.find(v => v.id === value);
+                      setNewQuoteVendorName(selectedVendor?.name || "");
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-quote-vendor">
+                    <SelectValue placeholder="Select a vendor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No vendor</SelectItem>
+                    {vendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Notes (Optional)</Label>
+                <Textarea
+                  placeholder="Details about this estimate..."
+                  value={newQuoteNotes}
+                  onChange={(e) => setNewQuoteNotes(e.target.value)}
+                  data-testid="input-quote-notes"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsAddQuoteDialogOpen(false);
+                setNewQuoteVendorId("");
+                setNewQuoteVendorName("");
+              }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => createQuoteMutation.mutate({
+                  vendorName: newQuoteVendorName,
+                  estimatedCost: parseFloat(newQuoteEstimatedCost) || 0,
+                  notes: newQuoteNotes,
+                  files: pendingQuoteFiles,
+                })}
+                disabled={!newQuoteEstimatedCost || createQuoteMutation.isPending}
+                data-testid="button-submit-quote"
+              >
+                Add Estimate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Vendor Dialog (technician view) */}
+        <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Vendor</DialogTitle>
+              <DialogDescription>Create a new vendor to associate with this estimate.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Vendor Name *</Label>
+                <Input
+                  value={newVendorName}
+                  onChange={(e) => setNewVendorName(e.target.value)}
+                  placeholder="Enter vendor name"
+                  data-testid="input-new-vendor-name"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddVendorDialogOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => createVendorMutation.mutate({ name: newVendorName })}
+                disabled={!newVendorName.trim() || createVendorMutation.isPending}
+                data-testid="button-submit-vendor"
+              >
+                Create Vendor
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -2968,20 +3203,20 @@ export default function TaskDetail() {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Quotes/Estimates - Collapsible (only for tasks requiring estimates) */}
+          {/* Estimates - Collapsible (only for tasks requiring estimates) */}
           {task?.requiresEstimate && isTechnicianOrAdmin && (
             <Collapsible open={quotesExpanded} onOpenChange={setQuotesExpanded}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-quotes">
                   <div className="flex items-center gap-3">
                     <CircleDollarSign className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Estimates & Quotes</span>
+                    <span className="font-medium">Estimates</span>
                     {quotes.length > 0 && <Badge variant="secondary">{quotes.length}</Badge>}
                     {task?.estimateStatus === "needs_estimate" && (
                       <Badge variant="outline" className={statusColors.needs_estimate}>Needs Estimate</Badge>
                     )}
                     {task?.estimateStatus === "waiting_approval" && (
-                      <Badge variant="outline" className={statusColors.waiting_approval}>Awaiting Approval</Badge>
+                      <Badge variant="outline" className={statusColors.waiting_approval}>Pending Review</Badge>
                     )}
                     {task?.estimateStatus === "approved" && (
                       <Badge variant="outline" className={statusColors.ready}>Approved</Badge>
@@ -2991,7 +3226,7 @@ export default function TaskDetail() {
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-3">
-                {/* Add Quote Button */}
+                {/* Add Estimate Button */}
                 {task?.estimateStatus !== "approved" && (
                   <Button
                     variant="outline"
@@ -3011,67 +3246,94 @@ export default function TaskDetail() {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {quotes.map((quote) => (
-                      <div
-                        key={quote.id}
-                        className={`p-4 rounded-lg border ${
-                          quote.status === "approved" ? "border-green-500/50 bg-green-500/5" : 
-                          quote.status === "rejected" ? "border-red-500/30 bg-red-500/5 opacity-60" : 
-                          "border-border"
-                        }`}
-                        data-testid={`quote-card-${quote.id}`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-semibold text-lg">
-                                ${(quote.estimatedCost || 0).toLocaleString()}
-                              </span>
-                              <Badge variant="secondary" className={quoteStatusColors[quote.status]}>
-                                {quote.status}
-                              </Badge>
+                    {quotes.map((quote) => {
+                      const quoteCreator = users.find(u => u.id === quote.createdById);
+                      const isOwnQuote = user?.id === quote.createdById;
+                      const canModify = user?.role === "admin" || isOwnQuote;
+
+                      return (
+                        <div
+                          key={quote.id}
+                          className={`p-4 rounded-lg border ${
+                            quote.status === "approved" ? "border-green-500/50 bg-green-500/5" : 
+                            quote.status === "rejected" ? "border-red-500/30 bg-red-500/5 opacity-60" : 
+                            "border-border"
+                          }`}
+                          data-testid={`quote-card-${quote.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <span className="font-semibold text-lg">
+                                  ${(quote.estimatedCost || 0).toLocaleString()}
+                                </span>
+                                <Badge variant="secondary" className={quoteStatusColors[quote.status]}>
+                                  {quote.status}
+                                </Badge>
+                              </div>
+                              {quote.vendorName && (
+                                <p className="text-sm text-muted-foreground">
+                                  Vendor: {quote.vendorName}
+                                </p>
+                              )}
+                              {quoteCreator && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Submitted by {quoteCreator.fullName || quoteCreator.username}
+                                </p>
+                              )}
+                              {quote.notes && (
+                                <p className="text-sm mt-2">{quote.notes}</p>
+                              )}
+                              <QuoteAttachmentsList quoteId={quote.id} />
                             </div>
-                            {quote.vendorName && (
-                              <p className="text-sm text-muted-foreground">
-                                Vendor: {quote.vendorName}
-                              </p>
-                            )}
-                            {quote.notes && (
-                              <p className="text-sm mt-2">{quote.notes}</p>
-                            )}
-                            <QuoteAttachmentsList quoteId={quote.id} />
-                          </div>
-                          <div className="flex gap-2">
-                            {quote.status === "draft" && task?.estimateStatus !== "approved" && (
-                              <>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => approveQuoteMutation.mutate(quote.id)}
-                                  disabled={approveQuoteMutation.isPending}
-                                  data-testid={`button-approve-quote-${quote.id}`}
-                                >
-                                  <Check className="w-4 h-4 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteQuoteMutation.mutate(quote.id)}
-                                  disabled={deleteQuoteMutation.isPending}
-                                  data-testid={`button-delete-quote-${quote.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
-                            {quote.status === "approved" && (
-                              <CheckCircle2 className="w-5 h-5 text-green-500" />
-                            )}
+                            <div className="flex gap-2">
+                              {quote.status === "draft" && task?.estimateStatus !== "approved" && (
+                                <>
+                                  {user?.role === "admin" && (
+                                    <>
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => approveQuoteMutation.mutate(quote.id)}
+                                        disabled={approveQuoteMutation.isPending}
+                                        data-testid={`button-approve-quote-${quote.id}`}
+                                      >
+                                        <Check className="w-4 h-4 mr-1" />
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => rejectQuoteMutation.mutate(quote.id)}
+                                        disabled={rejectQuoteMutation.isPending}
+                                        data-testid={`button-reject-quote-${quote.id}`}
+                                      >
+                                        <X className="w-4 h-4 mr-1" />
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                  {canModify && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteQuoteMutation.mutate(quote.id)}
+                                      disabled={deleteQuoteMutation.isPending}
+                                      data-testid={`button-delete-quote-${quote.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                              {quote.status === "approved" && (
+                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CollapsibleContent>

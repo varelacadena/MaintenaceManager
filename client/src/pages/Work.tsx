@@ -96,7 +96,7 @@ const statusDotColors: Record<string, string> = {
 const unifiedStatusConfig = [
   { key: "not_started", label: "Not Started" },
   { key: "needs_estimate", label: "Needs Estimate" },
-  { key: "waiting_approval", label: "Waiting Approval" },
+  { key: "waiting_approval", label: "Estimate Review" },
   { key: "in_progress", label: "In Progress" },
   { key: "on_hold", label: "On Hold" },
   { key: "completed", label: "Completed" },
@@ -131,7 +131,7 @@ const projectPriorityConfig: Record<string, { color: string; label: string }> = 
 const taskStatusConfig = [
   { key: "not_started", label: "Not Started" },
   { key: "needs_estimate", label: "Needs Estimate" },
-  { key: "waiting_approval", label: "Waiting Approval" },
+  { key: "waiting_approval", label: "Estimate Review" },
   { key: "in_progress", label: "In Progress" },
   { key: "on_hold", label: "On Hold" },
   { key: "completed", label: "Completed" },

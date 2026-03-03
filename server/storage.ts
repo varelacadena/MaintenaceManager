@@ -423,6 +423,7 @@ export interface IStorage {
   deleteQuote(id: string): Promise<void>;
 
   // Quote attachment operations
+  getQuoteAttachment(id: string): Promise<QuoteAttachment | undefined>;
   getQuoteAttachments(quoteId: string): Promise<QuoteAttachment[]>;
   createQuoteAttachment(attachment: InsertQuoteAttachment): Promise<QuoteAttachment>;
   deleteQuoteAttachment(id: string): Promise<void>;
@@ -2264,6 +2265,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Quote attachment operations
+  async getQuoteAttachment(id: string): Promise<QuoteAttachment | undefined> {
+    const [result] = await this.db
+      .select()
+      .from(quoteAttachments)
+      .where(eq(quoteAttachments.id, id));
+    return result;
+  }
+
   async getQuoteAttachments(quoteId: string): Promise<QuoteAttachment[]> {
     return await this.db
       .select()
