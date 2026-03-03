@@ -439,6 +439,17 @@ function TaskTableRow({
         <div className="flex items-center gap-1.5">
           <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <EditableDateCell
+            value={task.initialDate}
+            taskId={task.id}
+            field="initialDate"
+            onSave={handleInlineEdit}
+          />
+        </div>
+      </TableCell>
+      <TableCell className="py-2.5">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <EditableDateCell
             value={task.estimatedCompletionDate}
             taskId={task.id}
             field="estimatedCompletionDate"
@@ -1270,6 +1281,7 @@ export default function Work() {
                         <TableRow className="hover:bg-transparent">
                           <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>
                           <TableHead className="w-[60px] text-xs font-medium text-muted-foreground">Assignee</TableHead>
+                          <TableHead className="w-[120px] text-xs font-medium text-muted-foreground">Start Date</TableHead>
                           <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Due Date</TableHead>
                           <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Status</TableHead>
                           <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
@@ -1679,6 +1691,9 @@ function ProjectRowGroup({
               {completedChildTasks}/{childTasks.length} tasks
             </span>
           </div>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <span className="text-sm text-muted-foreground">-</span>
         </TableCell>
         <TableCell className="py-2.5">
           <span className="text-sm text-muted-foreground">-</span>
