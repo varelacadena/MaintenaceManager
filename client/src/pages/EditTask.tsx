@@ -43,6 +43,7 @@ const formSchema = insertTaskSchema.extend({
   spaceId: z.string().optional(),
   equipmentId: z.string().optional(),
   taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
+  scheduledStartTime: z.string().optional(),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
   contactName: z.string().optional(),
