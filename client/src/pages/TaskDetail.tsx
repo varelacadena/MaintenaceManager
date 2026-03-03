@@ -253,7 +253,6 @@ export default function TaskDetail() {
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>("");
   const [partQuantity, setPartQuantity] = useState("");
   const [partNotes, setPartNotes] = useState("");
-  const [pendingUploads, setPendingUploads] = useState<{ name: string; url: string; type: string }[]>([]);
   const [isAddPartDialogOpen, setIsAddPartDialogOpen] = useState(false);
   const [isScanPartOpen, setIsScanPartOpen] = useState(false);
   const [isScanEquipmentOpen, setIsScanEquipmentOpen] = useState(false);
@@ -992,17 +991,6 @@ export default function TaskDetail() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
-  const handleFileUpload = async (result: any) => {
-    if (result.successful?.length > 0) {
-      const newUploads = result.successful.map((file: any) => ({
-        name: file.name,
-        url: file.uploadURL,
-        type: file.type || "application/octet-stream",
-      }));
-      setPendingUploads((prev) => [...prev, ...newUploads]);
-    }
-  };
-
   const handleAutoSaveUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       try {
@@ -1251,68 +1239,22 @@ export default function TaskDetail() {
             <div className="space-y-3">
               <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Photos</p>
               <div className="grid grid-cols-2 gap-3">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="h-14 flex-col gap-1" data-testid="button-take-photo">
-                      <Camera className="w-6 h-6" />
-                      <span className="text-xs font-medium">Take Photo</span>
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-[50vh]">
-                    <SheetHeader>
-                      <SheetTitle>Upload Photos</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-4 space-y-4">
-                      {pendingUploads.length > 0 && (
-                        <div className="space-y-2">
-                          {pendingUploads.map((upload, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                              <span className="text-sm truncate flex-1">{upload.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setPendingUploads(prev => prev.filter((_, i) => i !== index))}
-                                data-testid={`button-remove-photo-${index}`}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button
-                            className="w-full"
-                            onClick={async () => {
-                              for (const upload of pendingUploads) {
-                                await addUploadMutation.mutateAsync({
-                                  fileName: upload.name,
-                                  fileType: upload.type,
-                                  objectUrl: upload.url,
-                                });
-                              }
-                              setPendingUploads([]);
-                            }}
-                            disabled={addUploadMutation.isPending}
-                            data-testid="button-save-photos"
-                          >
-                            Save {pendingUploads.length} Photo{pendingUploads.length !== 1 ? "s" : ""}
-                          </Button>
-                        </div>
-                      )}
-                      <ObjectUploader
-                        maxNumberOfFiles={5}
-                        maxFileSize={10485760}
-                        onGetUploadParameters={getUploadParameters}
-                        onComplete={handleFileUpload}
-                        onError={(error) => {
-                          toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-                        }}
-                        buttonClassName="w-full bg-primary text-primary-foreground"
-                        buttonTestId="button-browse-photos"
-                      >
-                        Browse Photos
-                      </ObjectUploader>
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                <ObjectUploader
+                  maxNumberOfFiles={5}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={getUploadParameters}
+                  onComplete={handleAutoSaveUpload}
+                  onError={(error) => {
+                    toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+                  }}
+                  buttonVariant="outline"
+                  buttonClassName="h-14 flex-col gap-1 w-full"
+                  buttonTestId="button-take-photo"
+                  isLoading={addUploadMutation.isPending}
+                >
+                  <Camera className="w-6 h-6" />
+                  <span className="text-xs font-medium">Take Photo</span>
+                </ObjectUploader>
 
                 {uploads.length > 0 && (
                   <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg" data-testid="text-photo-count">
@@ -1769,68 +1711,22 @@ export default function TaskDetail() {
             <div className="space-y-3">
               <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Photos</p>
               <div className="grid grid-cols-2 gap-3">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="h-14 flex-col gap-1" data-testid="button-take-photo">
-                      <Camera className="w-6 h-6" />
-                      <span className="text-xs font-medium">Take Photo</span>
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-[50vh]">
-                    <SheetHeader>
-                      <SheetTitle>Upload Photos</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-4 space-y-4">
-                      {pendingUploads.length > 0 && (
-                        <div className="space-y-2">
-                          {pendingUploads.map((upload, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                              <span className="text-sm truncate flex-1">{upload.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setPendingUploads(prev => prev.filter((_, i) => i !== index))}
-                                data-testid={`button-remove-photo-${index}`}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button
-                            className="w-full"
-                            onClick={async () => {
-                              for (const upload of pendingUploads) {
-                                await addUploadMutation.mutateAsync({
-                                  fileName: upload.name,
-                                  fileType: upload.type,
-                                  objectUrl: upload.url,
-                                });
-                              }
-                              setPendingUploads([]);
-                            }}
-                            disabled={addUploadMutation.isPending}
-                            data-testid="button-save-photos"
-                          >
-                            Save {pendingUploads.length} Photo{pendingUploads.length !== 1 ? "s" : ""}
-                          </Button>
-                        </div>
-                      )}
-                      <ObjectUploader
-                        maxNumberOfFiles={5}
-                        maxFileSize={10485760}
-                        onGetUploadParameters={getUploadParameters}
-                        onComplete={handleFileUpload}
-                        onError={(error) => {
-                          toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-                        }}
-                        buttonClassName="w-full bg-primary text-primary-foreground"
-                        buttonTestId="button-browse-photos"
-                      >
-                        Browse Photos
-                      </ObjectUploader>
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                <ObjectUploader
+                  maxNumberOfFiles={5}
+                  maxFileSize={10485760}
+                  onGetUploadParameters={getUploadParameters}
+                  onComplete={handleAutoSaveUpload}
+                  onError={(error) => {
+                    toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+                  }}
+                  buttonVariant="outline"
+                  buttonClassName="h-14 flex-col gap-1 w-full"
+                  buttonTestId="button-take-photo"
+                  isLoading={addUploadMutation.isPending}
+                >
+                  <Camera className="w-6 h-6" />
+                  <span className="text-xs font-medium">Take Photo</span>
+                </ObjectUploader>
 
                 {uploads.length > 0 && (
                   <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg" data-testid="text-photo-count">
