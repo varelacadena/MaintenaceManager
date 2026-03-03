@@ -877,19 +877,17 @@ export default function VehicleCheckOut() {
                             {dashPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
                           </div>
                           {!dashPhoto ? (
-                            <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-3 bg-amber-50 dark:bg-amber-950/20">
-                              <ObjectUploader
-                                maxNumberOfFiles={1}
-                                maxFileSize={10485760}
-                                onGetUploadParameters={getUploadParameters}
-                                onComplete={(res) => handleFileUpload(res, "dash")}
-                                onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
-                                buttonClassName="bg-amber-600 text-white"
-                              >
-                                <Camera className="mr-2 h-4 w-4" />
-                                Upload Dash Photo
-                              </ObjectUploader>
-                            </div>
+                            <ObjectUploader
+                              maxNumberOfFiles={1}
+                              maxFileSize={10485760}
+                              onGetUploadParameters={getUploadParameters}
+                              onComplete={(res) => handleFileUpload(res, "dash")}
+                              onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
+                              buttonClassName="w-full bg-amber-600 text-white"
+                            >
+                              <Camera className="mr-2 h-4 w-4" />
+                              Upload Dash Photo
+                            </ObjectUploader>
                           ) : (
                             <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800 flex items-center justify-between">
                               <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
@@ -908,19 +906,17 @@ export default function VehicleCheckOut() {
                                 Damage Photos <span className="text-muted-foreground font-normal text-xs">(optional)</span>
                               </Label>
                             </div>
-                            <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-3">
-                              <ObjectUploader
-                                maxNumberOfFiles={5}
-                                maxFileSize={10485760}
-                                onGetUploadParameters={getUploadParameters}
-                                onComplete={(res) => handleFileUpload(res, "damage")}
-                                onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
-                                buttonClassName="bg-primary text-primary-foreground"
-                              >
-                                <Camera className="mr-2 h-4 w-4" />
-                                Upload Photos
-                              </ObjectUploader>
-                            </div>
+                            <ObjectUploader
+                              maxNumberOfFiles={5}
+                              maxFileSize={10485760}
+                              onGetUploadParameters={getUploadParameters}
+                              onComplete={(res) => handleFileUpload(res, "damage")}
+                              onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
+                              buttonClassName="w-full bg-primary text-primary-foreground"
+                            >
+                              <Camera className="mr-2 h-4 w-4" />
+                              Upload Photos
+                            </ObjectUploader>
                             {damagePhotos.length > 0 && (
                               <div className="space-y-2">
                                 {damagePhotos.map((file, index) => (

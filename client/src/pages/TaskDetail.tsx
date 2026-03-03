@@ -1297,20 +1297,19 @@ export default function TaskDetail() {
                           </Button>
                         </div>
                       )}
-                      <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center" data-testid="photo-upload-area">
-                        <ObjectUploader
-                          maxNumberOfFiles={5}
-                          maxFileSize={10485760}
-                          onGetUploadParameters={getUploadParameters}
-                          onComplete={handleFileUpload}
-                          onError={(error) => {
-                            toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-                          }}
-                          buttonClassName="bg-primary text-primary-foreground"
-                        >
-                          Browse Photos
-                        </ObjectUploader>
-                      </div>
+                      <ObjectUploader
+                        maxNumberOfFiles={5}
+                        maxFileSize={10485760}
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={handleFileUpload}
+                        onError={(error) => {
+                          toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+                        }}
+                        buttonClassName="w-full bg-primary text-primary-foreground"
+                        buttonTestId="button-browse-photos"
+                      >
+                        Browse Photos
+                      </ObjectUploader>
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -1816,20 +1815,19 @@ export default function TaskDetail() {
                           </Button>
                         </div>
                       )}
-                      <div className="border-2 border-dashed rounded-lg p-8 flex items-center justify-center" data-testid="photo-upload-area">
-                        <ObjectUploader
-                          maxNumberOfFiles={5}
-                          maxFileSize={10485760}
-                          onGetUploadParameters={getUploadParameters}
-                          onComplete={handleFileUpload}
-                          onError={(error) => {
-                            toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-                          }}
-                          buttonClassName="bg-primary text-primary-foreground"
-                        >
-                          Browse Photos
-                        </ObjectUploader>
-                      </div>
+                      <ObjectUploader
+                        maxNumberOfFiles={5}
+                        maxFileSize={10485760}
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={handleFileUpload}
+                        onError={(error) => {
+                          toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+                        }}
+                        buttonClassName="w-full bg-primary text-primary-foreground"
+                        buttonTestId="button-browse-photos"
+                      >
+                        Browse Photos
+                      </ObjectUploader>
                     </div>
                   </SheetContent>
                 </Sheet>
