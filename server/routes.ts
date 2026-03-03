@@ -2758,6 +2758,10 @@ Be concise and practical. Do not use markdown formatting.`;
   });
 
   app.get("/api/equipment/:id", isAuthenticated, async (req, res) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(req.params.id)) {
+      return res.status(404).json({ message: "Equipment not found" });
+    }
     try {
       const item = await storage.getEquipmentItem(req.params.id);
       if (!item) {
@@ -2806,6 +2810,10 @@ Be concise and practical. Do not use markdown formatting.`;
 
   // Equipment resources (manuals, videos linked to this equipment or its category)
   app.get("/api/equipment/:id/resources", isAuthenticated, async (req, res) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(req.params.id)) {
+      return res.json([]);
+    }
     try {
       const resourceList = await storage.getEquipmentResources(req.params.id);
       res.json(resourceList);

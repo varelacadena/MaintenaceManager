@@ -17,6 +17,12 @@ interface BarcodeScannerProps {
   description?: string;
 }
 
+declare global {
+  interface Window {
+    BarcodeDetector?: any;
+  }
+}
+
 export function BarcodeScanner({
   open,
   onOpenChange,
@@ -24,106 +30,167 @@ export function BarcodeScanner({
   title = "Scan Code",
   description,
 }: BarcodeScannerProps) {
-  const html5QrcodeRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const detectorRef = useRef<any>(null);
+  const jsQRRef = useRef<any>(null);
+  const activeRef = useRef(false);
+  const isFrontRef = useRef(false);
+
   const [error, setError] = useState<string>("");
   const [manualEntry, setManualEntry] = useState(false);
   const [manualValue, setManualValue] = useState("");
   const [isFront, setIsFront] = useState(false);
-  const startedRef = useRef(false);
-  const lastFrameRef = useRef<number>(Date.now());
-  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isFrontRef = useRef(false);
 
-  const stopScanner = useCallback(async () => {
-    startedRef.current = false;
-    if (watchdogRef.current) {
-      clearInterval(watchdogRef.current);
-      watchdogRef.current = null;
+  const stopCamera = useCallback(() => {
+    activeRef.current = false;
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
-    if (html5QrcodeRef.current) {
-      try { await html5QrcodeRef.current.stop(); } catch {}
-      try { await html5QrcodeRef.current.clear(); } catch {}
-      html5QrcodeRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   }, []);
 
-  const startScanner = useCallback(async (front: boolean) => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    isFrontRef.current = front;
-    setError("");
-    lastFrameRef.current = Date.now();
+  const scanFrame = useCallback(() => {
+    if (!activeRef.current) return;
 
-    try {
-      const { Html5Qrcode } = await import("html5-qrcode");
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState < 2) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
 
-      if (html5QrcodeRef.current) {
-        try { await html5QrcodeRef.current.stop(); } catch {}
-        try { await html5QrcodeRef.current.clear(); } catch {}
-        html5QrcodeRef.current = null;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (w === 0 || h === 0) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+    ctx.drawImage(video, 0, 0, w, h);
+
+    const runDetection = async () => {
+      if (!activeRef.current) return;
+
+      try {
+        if (detectorRef.current) {
+          const results = await detectorRef.current.detect(canvas);
+          if (results && results.length > 0) {
+            const code = results[0].rawValue;
+            if (code) {
+              activeRef.current = false;
+              onScan(code);
+              onOpenChange(false);
+              return;
+            }
+          }
+        } else if (jsQRRef.current) {
+          const imageData = ctx.getImageData(0, 0, w, h);
+          const result = jsQRRef.current(imageData.data, w, h);
+          if (result && result.data) {
+            activeRef.current = false;
+            onScan(result.data);
+            onOpenChange(false);
+            return;
+          }
+        }
+      } catch {
       }
 
-      const el = document.getElementById("qr-reader-native");
-      if (!el) { startedRef.current = false; return; }
+      if (activeRef.current) {
+        rafRef.current = requestAnimationFrame(scanFrame);
+      }
+    };
 
-      const qr = new Html5Qrcode("qr-reader-native");
-      html5QrcodeRef.current = qr;
+    runDetection();
+  }, [onScan, onOpenChange]);
 
-      await qr.start(
-        { facingMode: front ? "user" : "environment" },
-        {
-          fps: 15,
-          qrbox: { width: Math.min(250, window.innerWidth - 80), height: 150 },
-          aspectRatio: 1.5,
-        },
-        (decodedText: string) => {
-          lastFrameRef.current = Date.now();
-          onScan(decodedText);
-          onOpenChange(false);
-        },
-        () => {
-          lastFrameRef.current = Date.now();
+  const startCamera = useCallback(async (front: boolean) => {
+    setError("");
+    activeRef.current = true;
+    isFrontRef.current = front;
+
+    try {
+      if (window.BarcodeDetector) {
+        const formats = await window.BarcodeDetector.getSupportedFormats();
+        detectorRef.current = new window.BarcodeDetector({ formats });
+      } else {
+        if (!jsQRRef.current) {
+          const mod = await import("jsqr");
+          jsQRRef.current = mod.default;
         }
-      );
-
-      if (watchdogRef.current) clearInterval(watchdogRef.current);
-      watchdogRef.current = setInterval(async () => {
-        const elapsed = Date.now() - lastFrameRef.current;
-        if (elapsed > 4000 && startedRef.current) {
-          startedRef.current = false;
-          if (html5QrcodeRef.current) {
-            try { await html5QrcodeRef.current.stop(); } catch {}
-            try { await html5QrcodeRef.current.clear(); } catch {}
-            html5QrcodeRef.current = null;
-          }
-          setTimeout(() => startScanner(isFrontRef.current), 100);
+        detectorRef.current = null;
+      }
+    } catch {
+      if (!jsQRRef.current) {
+        try {
+          const mod = await import("jsqr");
+          jsQRRef.current = mod.default;
+        } catch {
         }
-      }, 2000);
+      }
+      detectorRef.current = null;
+    }
 
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: front ? "user" : "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (!activeRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      rafRef.current = requestAnimationFrame(scanFrame);
     } catch (err: any) {
-      startedRef.current = false;
+      activeRef.current = false;
       const msg = err?.message || "";
-      if (msg.includes("Permission") || msg.includes("NotAllowed")) {
+      if (msg.includes("Permission") || msg.includes("NotAllowed") || err?.name === "NotAllowedError") {
         setError("Camera access was denied. Please allow camera permissions and try again.");
-      } else if (msg.includes("NotFound") || msg.includes("no camera") || msg.includes("Requested device")) {
+      } else if (msg.includes("NotFound") || err?.name === "NotFoundError") {
         setError("No camera found on this device.");
       } else {
-        setError("Could not start camera scanner.");
+        setError("Could not start camera. Check that no other app is using it.");
       }
       setManualEntry(true);
     }
-  }, [onScan, onOpenChange]);
+  }, [scanFrame]);
 
   useEffect(() => {
     if (!open) {
-      stopScanner();
+      stopCamera();
       setManualEntry(false);
       setManualValue("");
       setError("");
       return;
     }
     if (!manualEntry) {
-      const timer = setTimeout(() => startScanner(isFront), 300);
+      const timer = setTimeout(() => startCamera(isFront), 250);
       return () => clearTimeout(timer);
     }
   }, [open, manualEntry]);
@@ -132,11 +199,8 @@ export function BarcodeScanner({
     const next = !isFront;
     setIsFront(next);
     isFrontRef.current = next;
-    await stopScanner();
-    setTimeout(() => {
-      startedRef.current = false;
-      startScanner(next);
-    }, 200);
+    stopCamera();
+    setTimeout(() => startCamera(next), 150);
   };
 
   function handleManualSubmit() {
@@ -146,11 +210,14 @@ export function BarcodeScanner({
     onOpenChange(false);
   }
 
-  const boxW = Math.min(250, window.innerWidth - 80);
-  const boxH = 150;
-
   return (
-    <Dialog open={open} onOpenChange={(val) => { if (!val) stopScanner(); onOpenChange(val); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        if (!val) stopCamera();
+        onOpenChange(val);
+      }}
+    >
       <DialogContent
         className="p-0 gap-0 overflow-hidden w-full max-w-sm rounded-2xl"
         data-testid="dialog-barcode-scanner"
@@ -164,10 +231,17 @@ export function BarcodeScanner({
 
         {!manualEntry && (
           <div className="relative bg-black" style={{ height: 220 }}>
-            <div id="qr-reader-native" className="w-full h-full" />
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+            <canvas ref={canvasRef} className="hidden" />
 
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative" style={{ width: boxW, height: boxH }}>
+              <div className="relative" style={{ width: 240, height: 150 }}>
                 <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl" />
                 <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white rounded-tr" />
                 <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl" />
@@ -223,8 +297,7 @@ export function BarcodeScanner({
                 onClick={() => {
                   setManualEntry(false);
                   setError("");
-                  startedRef.current = false;
-                  setTimeout(() => startScanner(isFront), 300);
+                  setTimeout(() => startCamera(isFrontRef.current), 300);
                 }}
               >
                 Try camera again
@@ -239,7 +312,10 @@ export function BarcodeScanner({
                 variant="ghost"
                 size="sm"
                 className="shrink-0 text-muted-foreground"
-                onClick={() => { stopScanner(); setManualEntry(true); }}
+                onClick={() => {
+                  stopCamera();
+                  setManualEntry(true);
+                }}
                 data-testid="button-toggle-manual-entry"
               >
                 <Keyboard className="h-3.5 w-3.5 mr-1" />
