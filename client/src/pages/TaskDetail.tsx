@@ -371,6 +371,24 @@ export default function TaskDetail() {
     enabled: !!task?.propertyId,
   });
 
+  const { data: equipmentResources = [] } = useQuery<any[]>({
+    queryKey: ["/api/equipment", task?.equipmentId, "resources"],
+    queryFn: () => fetch(`/api/equipment/${task?.equipmentId}/resources`).then(r => r.json()),
+    enabled: !!task?.equipmentId,
+  });
+
+  const allTaskResources = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: any[] = [];
+    for (const r of [...propertyResources, ...equipmentResources]) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        merged.push(r);
+      }
+    }
+    return merged;
+  }, [propertyResources, equipmentResources]);
+
   const previousWork = useMemo(() => {
     if (!task || !allTasks.length) return [];
     return allTasks
@@ -1101,8 +1119,8 @@ export default function TaskDetail() {
               </div>
             )}
 
-            {propertyResources.length > 0 && (
-              <TaskResourcesSection resources={propertyResources} propertyName={property?.name} />
+            {allTaskResources.length > 0 && (
+              <TaskResourcesSection resources={allTaskResources} propertyName={property?.name} />
             )}
 
             {checklistGroups.length > 0 && (
@@ -1426,8 +1444,8 @@ export default function TaskDetail() {
               </div>
             )}
 
-            {propertyResources.length > 0 && (
-              <TaskResourcesSection resources={propertyResources} propertyName={property?.name} />
+            {allTaskResources.length > 0 && (
+              <TaskResourcesSection resources={allTaskResources} propertyName={property?.name} />
             )}
 
             {previousWork.length > 0 && (
@@ -2192,8 +2210,8 @@ export default function TaskDetail() {
             </div>
           )}
 
-          {propertyResources.length > 0 && (
-            <TaskResourcesSection resources={propertyResources} propertyName={property?.name} />
+          {allTaskResources.length > 0 && (
+            <TaskResourcesSection resources={allTaskResources} propertyName={property?.name} />
           )}
 
           {/* Time Logged - Prominent Display for Students */}
