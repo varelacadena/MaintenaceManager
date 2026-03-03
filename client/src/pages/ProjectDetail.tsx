@@ -9,7 +9,12 @@ import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Edit, Trash2, Plus, Calendar, DollarSign, Building2,
   ClipboardList, Clock, CheckCircle, AlertCircle, XCircle, FolderKanban,
+  GanttChart,
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
+  Cell, ResponsiveContainer, ReferenceLine,
+} from "recharts";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +53,16 @@ import { statusColors, priorityColors, taskStatusColors } from "@/lib/constants"
 import type { Project, Task, Property, Area } from "@shared/schema";
 import { format } from "date-fns";
 
+const GANTT_STATUS_COLORS: Record<string, string> = {
+  not_started: "#6b7280",
+  needs_estimate: "#f59e0b",
+  waiting_approval: "#8b5cf6",
+  in_progress: "#f43f5e",
+  on_hold: "#eab308",
+  completed: "#10b981",
+  cancelled: "#ef4444",
+};
+
 const editProjectSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -57,6 +72,8 @@ const editProjectSchema = z.object({
   notes: z.string().optional(),
   startDate: z.string().optional(),
   targetEndDate: z.string().optional(),
+  propertyId: z.string().nullable().optional(),
+  areaId: z.string().nullable().optional(),
 });
 
 type EditProjectFormValues = z.infer<typeof editProjectSchema>;
@@ -131,6 +148,8 @@ export default function ProjectDetail() {
       notes: project.notes || "",
       startDate: project.startDate ? format(new Date(project.startDate), "yyyy-MM-dd") : "",
       targetEndDate: project.targetEndDate ? format(new Date(project.targetEndDate), "yyyy-MM-dd") : "",
+      propertyId: project.propertyId || null,
+      areaId: project.areaId || null,
     } : undefined,
   });
 
@@ -203,6 +222,10 @@ export default function ProjectDetail() {
     ? Math.round((analytics.taskStats.completed / analytics.taskStats.total) * 100)
     : 0;
 
+  const isOverdue = project.targetEndDate
+    && !["completed", "cancelled"].includes(project.status)
+    && new Date(project.targetEndDate) < new Date();
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -213,13 +236,19 @@ export default function ProjectDetail() {
             </Button>
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <FolderKanban className="w-5 h-5 text-indigo-500" />
               <h1 className="text-2xl font-bold text-foreground" data-testid="text-project-name">{project.name}</h1>
+              {isOverdue && (
+                <Badge variant="destructive" className="shrink-0" data-testid="badge-overdue">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Overdue
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <Badge className={statusColors[project.status]} variant="secondary">
-                {project.status.replace("_", " ")}
+                {project.status.replace(/_/g, " ")}
               </Badge>
               <Badge className={priorityColors[project.priority]} variant="secondary">
                 {project.priority}
@@ -396,6 +425,8 @@ export default function ProjectDetail() {
         </CardContent>
       </Card>
 
+      <ProjectGanttChart tasks={tasks || []} project={project} />
+
       {project.notes && (
         <Collapsible defaultOpen={false}>
           <Card>
@@ -511,6 +542,60 @@ export default function ProjectDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editForm.control}
+                  name="propertyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(val === "__none__" ? null : val)}
+                        value={field.value || "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-project-property">
+                            <SelectValue placeholder="No property" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {properties?.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="areaId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Area</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(val === "__none__" ? null : val)}
+                        value={field.value || "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-project-area">
+                            <SelectValue placeholder="No area" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {areas?.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
                   name="startDate"
                   render={({ field }) => (
                     <FormItem>
@@ -584,5 +669,153 @@ export default function ProjectDetail() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ProjectGanttChart({ tasks, project }: { tasks: Task[]; project: Project }) {
+  const tasksWithDates = tasks.filter((t) => t.estimatedCompletionDate);
+  const tasksWithoutDates = tasks.filter((t) => !t.estimatedCompletionDate);
+
+  const allTimestamps = [
+    project.startDate ? new Date(project.startDate).getTime() : null,
+    project.targetEndDate ? new Date(project.targetEndDate).getTime() : null,
+    ...tasksWithDates.map((t) => new Date(t.estimatedCompletionDate!).getTime()),
+    ...tasksWithDates.map((t) =>
+      t.scheduledStartTime ? new Date(t.scheduledStartTime).getTime() : null
+    ),
+  ].filter((v): v is number => v !== null);
+
+  if (tasksWithDates.length === 0 && tasksWithoutDates.length === 0) return null;
+
+  const minDate = allTimestamps.length > 0 ? Math.min(...allTimestamps) : Date.now();
+  const maxDate = allTimestamps.length > 0 ? Math.max(...allTimestamps) : Date.now() + 86400000 * 7;
+  const range = Math.max(maxDate - minDate, 86400000);
+
+  const ganttData = tasksWithDates.map((task) => {
+    const taskStart = task.scheduledStartTime
+      ? new Date(task.scheduledStartTime).getTime()
+      : minDate;
+    const taskEnd = new Date(task.estimatedCompletionDate!).getTime();
+    const spacer = taskStart - minDate;
+    const duration = Math.max(taskEnd - taskStart, range * 0.015);
+    const label = task.name.length > 22 ? task.name.substring(0, 22) + "…" : task.name;
+    return { label, fullName: task.name, status: task.status, spacer, duration, taskStart, taskEnd };
+  });
+
+  const projectEndMs = project.targetEndDate
+    ? new Date(project.targetEndDate).getTime() - minDate
+    : null;
+
+  const formatTickDate = (ms: number) => {
+    const d = new Date(minDate + ms);
+    return format(d, "MMM d");
+  };
+
+  const customTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const entry = payload.find((p: any) => p.dataKey === "duration");
+    if (!entry) return null;
+    const d = entry.payload;
+    return (
+      <div className="bg-popover border rounded-md shadow-md p-3 text-sm space-y-1">
+        <p className="font-semibold">{d.fullName}</p>
+        <p className="text-muted-foreground capitalize">{d.status.replace(/_/g, " ")}</p>
+        {d.taskStart !== minDate && (
+          <p className="text-xs text-muted-foreground">
+            Start: {format(new Date(d.taskStart), "MMM d, yyyy")}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Due: {format(new Date(d.taskEnd), "MMM d, yyyy")}
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <Card data-testid="card-project-gantt">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+        <div className="flex items-center gap-2">
+          <GanttChart className="w-4 h-4 text-muted-foreground" />
+          <CardTitle className="text-lg">Timeline</CardTitle>
+        </div>
+        {tasksWithDates.length > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {tasksWithDates.length} scheduled · {tasksWithoutDates.length} unscheduled
+          </span>
+        )}
+      </CardHeader>
+      <CardContent>
+        {tasksWithDates.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8 text-sm">
+            Add due dates to tasks to see the timeline.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <div style={{ minWidth: Math.max(ganttData.length * 0, 400) }}>
+              <ResponsiveContainer width="100%" height={Math.max(ganttData.length * 36 + 40, 120)}>
+                <BarChart
+                  layout="vertical"
+                  data={ganttData}
+                  margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+                  barCategoryGap="25%"
+                >
+                  <XAxis
+                    type="number"
+                    domain={[0, range]}
+                    tickFormatter={formatTickDate}
+                    tick={{ fontSize: 11 }}
+                    tickCount={5}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={130}
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <RechartsTooltip content={customTooltip} cursor={{ fill: "transparent" }} />
+                  {projectEndMs !== null && (
+                    <ReferenceLine
+                      x={projectEndMs}
+                      stroke="hsl(var(--destructive))"
+                      strokeDasharray="4 2"
+                      strokeWidth={1.5}
+                      label={{ value: "Deadline", position: "top", fontSize: 10, fill: "hsl(var(--destructive))" }}
+                    />
+                  )}
+                  <Bar dataKey="spacer" stackId="g" fill="transparent" isAnimationActive={false} />
+                  <Bar dataKey="duration" stackId="g" radius={[3, 3, 3, 3]} isAnimationActive={false}>
+                    {ganttData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={GANTT_STATUS_COLORS[entry.status] || "#6b7280"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+        {tasksWithoutDates.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Unscheduled
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {tasksWithoutDates.map((task) => (
+                <Badge key={task.id} variant="outline" className="text-xs font-normal">
+                  {task.name}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

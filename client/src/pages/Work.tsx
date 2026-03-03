@@ -80,6 +80,7 @@ const taskStatusColors: Record<string, string> = {
   in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
   on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
   completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
+  cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
 };
 
 const statusDotColors: Record<string, string> = {
@@ -89,6 +90,7 @@ const statusDotColors: Record<string, string> = {
   in_progress: "bg-rose-500 dark:bg-rose-400",
   on_hold: "bg-yellow-500 dark:bg-yellow-400",
   completed: "bg-emerald-500 dark:bg-emerald-400",
+  cancelled: "bg-red-400 dark:bg-red-500",
 };
 
 const unifiedStatusConfig = [
@@ -98,6 +100,7 @@ const unifiedStatusConfig = [
   { key: "in_progress", label: "In Progress" },
   { key: "on_hold", label: "On Hold" },
   { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
 ];
 
 const unifiedStatusColors: Record<string, string> = {
@@ -107,6 +110,7 @@ const unifiedStatusColors: Record<string, string> = {
   in_progress: taskStatusColors.in_progress,
   on_hold: taskStatusColors.on_hold,
   completed: taskStatusColors.completed,
+  cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
 };
 
 const projectStatusMapping: Record<string, string> = {
@@ -114,7 +118,14 @@ const projectStatusMapping: Record<string, string> = {
   in_progress: "in_progress",
   on_hold: "on_hold",
   completed: "completed",
-  cancelled: "completed",
+  cancelled: "cancelled",
+};
+
+const projectPriorityConfig: Record<string, { color: string; label: string }> = {
+  low: { color: "text-muted-foreground", label: "Low" },
+  medium: { color: "text-amber-500 dark:text-amber-400", label: "Medium" },
+  high: { color: "text-red-500 dark:text-red-400", label: "High" },
+  critical: { color: "text-red-700 dark:text-red-300 font-semibold", label: "Critical" },
 };
 
 const taskStatusConfig = [
@@ -682,6 +693,23 @@ export default function Work() {
       });
     },
   });
+
+  const updateProjectStatusMutation = useMutation({
+    mutationFn: async ({ projectId, status }: { projectId: string; status: string }) => {
+      return await apiRequest("PATCH", `/api/projects/${projectId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({ title: "Project updated", description: "Status changed successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update project status.", variant: "destructive" });
+    },
+  });
+
+  const handleProjectStatusChange = (projectId: string, status: string) => {
+    updateProjectStatusMutation.mutate({ projectId, status });
+  };
 
   const getAssigneeName = (userId: string | null) => {
     if (!userId) return null;
@@ -1292,6 +1320,7 @@ export default function Work() {
                               handleTaskTypeChange={handleTaskTypeChange}
                               handleInlineEdit={handleInlineEdit}
                               getPropertyName={getPropertyName}
+                              handleProjectStatusChange={handleProjectStatusChange}
                             />
                           );
                         })}
@@ -1590,6 +1619,7 @@ function ProjectRowGroup({
   handleTaskTypeChange,
   handleInlineEdit,
   getPropertyName,
+  handleProjectStatusChange,
 }: {
   project: Project;
   childTasks: Task[];
@@ -1606,10 +1636,11 @@ function ProjectRowGroup({
   handleTaskTypeChange: (taskId: string, taskType: string) => void;
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   getPropertyName: (propertyId: string | null) => string | null;
+  handleProjectStatusChange: (projectId: string, status: string) => void;
 }) {
   const propertyName = getPropertyName(project.propertyId);
   const projectStatusToUnified = projectStatusMapping[project.status] || "not_started";
-  const urg = urgencyConfig[project.priority] || urgencyConfig.low;
+  const urg = projectPriorityConfig[project.priority] || projectPriorityConfig.low;
 
   return (
     <>
@@ -1663,18 +1694,35 @@ function ProjectRowGroup({
           </div>
         </TableCell>
         <TableCell className="py-2.5">
-          <Badge
-            variant="outline"
-            className={`${taskStatusColors[projectStatusToUnified] || taskStatusColors.not_started} text-[10px] font-semibold uppercase tracking-wider no-default-hover-elevate no-default-active-elevate`}
-            data-testid={`badge-project-status-${project.id}`}
+          <Select
+            value={project.status}
+            onValueChange={(val) => handleProjectStatusChange(project.id, val)}
           >
-            {project.status.replace("_", " ")}
-          </Badge>
+            <SelectTrigger
+              className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
+              data-testid={`select-project-status-${project.id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Badge
+                variant="outline"
+                className={`${taskStatusColors[projectStatusToUnified] || taskStatusColors.not_started} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+              >
+                <SelectValue />
+              </Badge>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="planning">Planning</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="on_hold">On Hold</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
         </TableCell>
         <TableCell className="py-2.5">
           <span className="flex items-center gap-1">
             <Flag className={`w-3.5 h-3.5 ${urg.color} shrink-0`} />
-            <span className={`text-xs ${urg.color} capitalize`}>{project.priority}</span>
+            <span className={`text-xs ${urg.color}`}>{urg.label}</span>
           </span>
         </TableCell>
         <TableCell className="py-2.5 hidden md:table-cell">

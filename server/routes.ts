@@ -4425,8 +4425,15 @@ Be concise and practical. Do not use markdown formatting.`;
     try {
       const userId = (req as any).userId;
       
+      const body = { ...req.body };
+      if (body.startDate && typeof body.startDate === "string") {
+        body.startDate = new Date(body.startDate);
+      }
+      if (body.targetEndDate && typeof body.targetEndDate === "string") {
+        body.targetEndDate = new Date(body.targetEndDate);
+      }
       const data = insertProjectSchema.parse({
-        ...req.body,
+        ...body,
         createdById: userId,
       });
       
@@ -4444,7 +4451,14 @@ Be concise and practical. Do not use markdown formatting.`;
   // Update project
   app.patch("/api/projects/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const project = await storage.updateProject(req.params.id, req.body);
+      const body = { ...req.body };
+      if (body.startDate && typeof body.startDate === "string") {
+        body.startDate = new Date(body.startDate);
+      }
+      if (body.targetEndDate && typeof body.targetEndDate === "string") {
+        body.targetEndDate = new Date(body.targetEndDate);
+      }
+      const project = await storage.updateProject(req.params.id, body);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
@@ -4647,11 +4661,14 @@ Be concise and practical. Do not use markdown formatting.`;
       
       const quote = await storage.createQuote(data);
       
-      // If a task requires estimate, update its estimate status
+      // If a task requires estimate, update its estimate status AND task status
       if (req.body.taskId) {
         const task = await storage.getTask(req.body.taskId);
         if (task && task.requiresEstimate && task.estimateStatus === "needs_estimate") {
-          await storage.updateTask(req.body.taskId, { estimateStatus: "waiting_approval" });
+          await storage.updateTask(req.body.taskId, {
+            estimateStatus: "waiting_approval",
+            status: "waiting_approval",
+          });
         }
       }
       
