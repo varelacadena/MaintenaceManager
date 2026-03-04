@@ -53,6 +53,7 @@ export async function applyMigrations() {
     { file: "039_add_scheduled_start_time.sql", name: "039_add_scheduled_start_time" },
     { file: "040_add_password_reset_tokens.sql", name: "040_add_password_reset_tokens" },
     { file: "041_add_resource_library.sql", name: "041_add_resource_library" },
+    { file: "042_add_subtasks_and_task_log_link.sql", name: "042_add_subtasks_and_task_log_link" },
   ];
 
   try {

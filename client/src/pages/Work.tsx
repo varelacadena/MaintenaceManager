@@ -54,11 +54,13 @@ import {
   AlertTriangle,
   Pencil,
   Flag,
+  ClipboardCheck,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import type { Task, Area, User, Property, Vendor, Project, Space } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -350,6 +352,7 @@ function TaskTableRow({
   rowIndex,
   onReviewEstimates,
   isAdmin,
+  onViewSummary,
 }: {
   task: Task;
   userGroups: { label: string; items: User[] }[];
@@ -365,6 +368,7 @@ function TaskTableRow({
   rowIndex?: number;
   onReviewEstimates?: (taskId: string) => void;
   isAdmin?: boolean;
+  onViewSummary?: (taskId: string) => void;
 }) {
   const isOverdue = task.estimatedCompletionDate
     && task.status !== "completed"
@@ -512,6 +516,19 @@ function TaskTableRow({
               Review & Approve
             </Button>
           )}
+          {task.status === "completed" && onViewSummary && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewSummary(task.id);
+              }}
+              data-testid={`button-view-summary-${task.id}`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </TableCell>
       <TableCell className="py-2.5">
@@ -578,6 +595,7 @@ export default function Work() {
     return initial;
   });
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedParentTasks, setExpandedParentTasks] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
@@ -587,6 +605,7 @@ export default function Work() {
     task: Task;
   } | null>(null);
   const [reviewEstimatesTaskId, setReviewEstimatesTaskId] = useState<string | null>(null);
+  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
 
   const { data: tasks, isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -859,8 +878,31 @@ export default function Work() {
     });
   };
 
+  const toggleParentTaskExpanded = (taskId: string) => {
+    setExpandedParentTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const subTasksMap = useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    tasks?.forEach((t) => {
+      if (t.parentTaskId) {
+        if (!map[t.parentTaskId]) map[t.parentTaskId] = [];
+        map[t.parentTaskId].push(t);
+      }
+    });
+    return map;
+  }, [tasks]);
+
   const standaloneTasks = useMemo(
-    () => tasks?.filter((t) => !t.projectId) || [],
+    () => tasks?.filter((t) => !t.projectId && !t.parentTaskId) || [],
     [tasks]
   );
 
@@ -954,6 +996,7 @@ export default function Work() {
   if (user?.role === "student") {
     const studentTasks =
       tasks?.filter((t) => {
+        if (t.parentTaskId) return false;
         const isAssignedToMe = t.assignedToId === user.id;
         const isStudentPoolTask = t.assignedToId === "student_pool";
         if (!isAssignedToMe && !isStudentPoolTask) return false;
@@ -1070,6 +1113,17 @@ export default function Work() {
                             <p className="text-xs text-muted-foreground truncate">{property.name}</p>
                           )}
                         </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSummaryTaskId(task.id);
+                          }}
+                          data-testid={`button-view-summary-${task.id}`}
+                        >
+                          <ClipboardCheck className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -1079,6 +1133,11 @@ export default function Work() {
           </div>
         )}
 
+        <CompletedTaskSummary
+          taskId={summaryTaskId!}
+          open={!!summaryTaskId}
+          onOpenChange={(open) => !open && setSummaryTaskId(null)}
+        />
       </div>
     );
   }
@@ -1086,6 +1145,7 @@ export default function Work() {
   if (user?.role === "technician") {
     const techTasks =
       tasks?.filter((t) => {
+        if (t.parentTaskId) return false;
         const isAssignedToMe = t.assignedToId === user.id;
         const isTechPoolTask = t.assignedToId === "technician_pool" || t.assignedPool === "technician_pool";
         if (!isAssignedToMe && !isTechPoolTask) return false;
@@ -1198,6 +1258,17 @@ export default function Work() {
                         </p>
                       )}
                     </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSummaryTaskId(task.id);
+                      }}
+                      data-testid={`button-view-summary-${task.id}`}
+                    >
+                      <ClipboardCheck className="w-4 h-4" />
+                    </Button>
                     <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400" data-testid={`badge-completed-${task.id}`}>
                       Done
                     </Badge>
@@ -1207,6 +1278,12 @@ export default function Work() {
             })}
           </div>
         )}
+
+        <CompletedTaskSummary
+          taskId={summaryTaskId!}
+          open={!!summaryTaskId}
+          onOpenChange={(open) => !open && setSummaryTaskId(null)}
+        />
       </div>
     );
   }
@@ -1324,10 +1401,35 @@ export default function Work() {
                       <TableBody>
                         {itemsInGroup.map((item, idx) => {
                           if (item.type === "task") {
+                            const task = item.data as Task;
+                            const childSubTasks = subTasksMap[task.id] || [];
+                            if (childSubTasks.length > 0) {
+                              return (
+                                <ParentTaskRowGroup
+                                  key={task.id}
+                                  task={task}
+                                  childSubTasks={childSubTasks}
+                                  isExpanded={expandedParentTasks.has(task.id)}
+                                  onToggleExpand={() => toggleParentTaskExpanded(task.id)}
+                                  userGroups={userGroups}
+                                  allUsers={allUsers}
+                                  properties={properties}
+                                  handleStatusChange={handleStatusChange}
+                                  handleUrgencyChange={handleUrgencyChange}
+                                  handleAssigneeChange={handleAssigneeChange}
+                                  handlePropertyChange={handlePropertyChange}
+                                  handleTaskTypeChange={handleTaskTypeChange}
+                                  handleInlineEdit={handleInlineEdit}
+                                  isAdmin={isAdmin}
+                                  onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
+                                  onViewSummary={(taskId) => setSummaryTaskId(taskId)}
+                                />
+                              );
+                            }
                             return (
                               <TaskTableRow
-                                key={item.data.id}
-                                task={item.data as Task}
+                                key={task.id}
+                                task={task}
                                 userGroups={userGroups}
                                 allUsers={allUsers}
                                 properties={properties}
@@ -1340,6 +1442,7 @@ export default function Work() {
                                 rowIndex={idx}
                                 isAdmin={isAdmin}
                                 onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
+                                onViewSummary={(taskId) => setSummaryTaskId(taskId)}
                               />
                             );
                           }
@@ -1370,6 +1473,7 @@ export default function Work() {
                               handleProjectStatusChange={handleProjectStatusChange}
                               isAdmin={isAdmin}
                               onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
+                              onViewSummary={(taskId) => setSummaryTaskId(taskId)}
                             />
                           );
                         })}
@@ -1658,6 +1762,292 @@ export default function Work() {
           }}
         />
       )}
+
+      <CompletedTaskSummary
+        taskId={summaryTaskId!}
+        open={!!summaryTaskId}
+        onOpenChange={(open) => !open && setSummaryTaskId(null)}
+      />
+    </>
+  );
+}
+
+function ParentTaskRowGroup({
+  task,
+  childSubTasks,
+  isExpanded,
+  onToggleExpand,
+  userGroups,
+  allUsers,
+  properties,
+  handleStatusChange,
+  handleUrgencyChange,
+  handleAssigneeChange,
+  handlePropertyChange,
+  handleTaskTypeChange,
+  handleInlineEdit,
+  isAdmin,
+  onReviewEstimates,
+  onViewSummary,
+}: {
+  task: Task;
+  childSubTasks: Task[];
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  userGroups: { label: string; items: User[] }[];
+  allUsers: User[] | undefined;
+  properties: Property[] | undefined;
+  handleStatusChange: (taskId: string, newStatus: StatusType) => void;
+  handleUrgencyChange: (taskId: string, urgency: string) => void;
+  handleAssigneeChange: (taskId: string, assignedToId: string) => void;
+  handlePropertyChange: (taskId: string, propertyId: string) => void;
+  handleTaskTypeChange: (taskId: string, taskType: string) => void;
+  handleInlineEdit: (taskId: string, field: string, value: string) => void;
+  isAdmin?: boolean;
+  onReviewEstimates?: (taskId: string) => void;
+  onViewSummary?: (taskId: string) => void;
+}) {
+  const completedSubTasks = childSubTasks.filter((t) => t.status === "completed").length;
+  const isOverdue = task.estimatedCompletionDate
+    && task.status !== "completed"
+    && new Date(task.estimatedCompletionDate) < new Date();
+  const assignee = task.assignedToId ? allUsers?.find(u => u.id === task.assignedToId) : null;
+  const assigneeInitials = assignee
+    ? (assignee.firstName && assignee.lastName
+        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
+        : (assignee.username?.[0] || "?")).toUpperCase()
+    : null;
+  const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
+
+  return (
+    <>
+      <TableRow
+        data-testid={`row-parent-task-${task.id}`}
+        className={isExpanded ? "bg-muted/20" : ""}
+      >
+        <TableCell className="py-2.5">
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              data-testid={`button-expand-subtasks-${task.id}`}
+              className="shrink-0"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </Button>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColors[task.status] || "bg-gray-400"}`} />
+            <EditableTextCell
+              value={task.name}
+              taskId={task.id}
+              field="name"
+              onSave={handleInlineEdit}
+              linkTo={`/tasks/${task.id}`}
+            />
+            <Badge
+              variant="outline"
+              className="text-[10px] shrink-0 no-default-hover-elevate no-default-active-elevate"
+              data-testid={`badge-subtask-count-${task.id}`}
+            >
+              {completedSubTasks}/{childSubTasks.length} complete
+            </Badge>
+            {isOverdue && (
+              <span className="shrink-0" title="Overdue">
+                <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+              </span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <Select
+            value={task.assignedToId || "__none__"}
+            onValueChange={(val) => handleAssigneeChange(task.id, val)}
+          >
+            <SelectTrigger
+              className="border-0 bg-transparent p-0 shadow-none h-auto"
+              data-testid={`select-assignee-${task.id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {assignee ? (
+                <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
+                  <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-[10px] font-medium`}>
+                    {assigneeInitials}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <span className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center cursor-pointer" data-testid={`avatar-unassigned-${task.id}`}>
+                  <UserIcon className="w-3 h-3 text-muted-foreground/40" />
+                </span>
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Unassigned</SelectItem>
+              {userGroups.map((group) => (
+                <SelectGroup key={group.label}>
+                  <SelectLabel>{group.label}</SelectLabel>
+                  {group.items.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.firstName && u.lastName
+                        ? `${u.firstName} ${u.lastName}`
+                        : u.username}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <EditableDateCell
+              value={task.initialDate}
+              taskId={task.id}
+              field="initialDate"
+              onSave={handleInlineEdit}
+            />
+          </div>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <EditableDateCell
+              value={task.estimatedCompletionDate}
+              taskId={task.id}
+              field="estimatedCompletionDate"
+              onSave={handleInlineEdit}
+            />
+            {isOverdue && (
+              <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Select
+              value={task.status}
+              onValueChange={(val) => handleStatusChange(task.id, val as StatusType)}
+            >
+              <SelectTrigger
+                className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
+                data-testid={`select-status-${task.id}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Badge
+                  variant="outline"
+                  className={`${taskStatusColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                >
+                  <SelectValue />
+                </Badge>
+              </SelectTrigger>
+              <SelectContent>
+                {taskStatusConfig
+                  .filter((s) => {
+                    if (s.key === "completed" && task.requiresEstimate && task.estimateStatus !== "approved") {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((s) => (
+                  <SelectItem key={s.key} value={s.key}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isAdmin && task.requiresEstimate && task.estimateStatus === "waiting_approval" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReviewEstimates?.(task.id);
+                }}
+                className="text-[10px]"
+                data-testid={`button-review-estimates-${task.id}`}
+              >
+                Review & Approve
+              </Button>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="py-2.5">
+          <Select
+            value={task.urgency}
+            onValueChange={(val) => handleUrgencyChange(task.id, val)}
+          >
+            <SelectTrigger
+              className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
+              data-testid={`select-urgency-${task.id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="flex items-center gap-1 cursor-pointer">
+                <Flag className={`w-3.5 h-3.5 ${urg.color} shrink-0`} />
+                <span className={`text-xs ${urg.color}`}>{urg.label}</span>
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="py-2.5 hidden md:table-cell">
+          <Select
+            value={task.propertyId || "__none__"}
+            onValueChange={(val) => handlePropertyChange(task.id, val)}
+          >
+            <SelectTrigger
+              className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
+              data-testid={`select-property-${task.id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <SelectValue placeholder="No property" />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">No property</SelectItem>
+              {properties?.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+      </TableRow>
+
+      {isExpanded &&
+        childSubTasks.map((subTask, idx) => (
+          <TaskTableRow
+            key={subTask.id}
+            task={subTask}
+            userGroups={userGroups}
+            allUsers={allUsers}
+            properties={properties}
+            handleStatusChange={handleStatusChange}
+            handleUrgencyChange={handleUrgencyChange}
+            handleAssigneeChange={handleAssigneeChange}
+            handlePropertyChange={handlePropertyChange}
+            handleTaskTypeChange={handleTaskTypeChange}
+            handleInlineEdit={handleInlineEdit}
+            isChildTask
+            rowIndex={idx}
+            isAdmin={isAdmin}
+            onReviewEstimates={onReviewEstimates}
+            onViewSummary={onViewSummary}
+          />
+        ))}
     </>
   );
 }
@@ -1681,6 +2071,7 @@ function ProjectRowGroup({
   handleProjectStatusChange,
   isAdmin,
   onReviewEstimates,
+  onViewSummary,
 }: {
   project: Project;
   childTasks: Task[];
@@ -1700,6 +2091,7 @@ function ProjectRowGroup({
   handleProjectStatusChange: (projectId: string, status: string) => void;
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
+  onViewSummary?: (taskId: string) => void;
 }) {
   const propertyName = getPropertyName(project.propertyId);
   const projectStatusToUnified = projectStatusMapping[project.status] || "not_started";
@@ -1817,6 +2209,7 @@ function ProjectRowGroup({
             rowIndex={idx}
             isAdmin={isAdmin}
             onReviewEstimates={onReviewEstimates}
+            onViewSummary={onViewSummary}
           />
         ))}
     </>

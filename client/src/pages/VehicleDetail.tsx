@@ -19,6 +19,7 @@ import { AlertCircle } from "lucide-react";
 import { SecureImage } from "@/components/SecureImage";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -317,6 +318,7 @@ export default function VehicleDetail() {
   const canManageVehicles = user?.role === "admin" || user?.role === "technician";
 
   const [addDocumentDate, setAddDocumentDate] = useState<Date | undefined>(undefined);
+  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -913,7 +915,12 @@ export default function VehicleDetail() {
             <h3 className="text-base sm:text-lg font-semibold">Maintenance History</h3>
             {maintenanceLogs && maintenanceLogs.length > 0 ? (
               maintenanceLogs.map((log) => (
-                <Card key={log.id}>
+                <Card
+                  key={log.id}
+                  className={log.taskId ? "cursor-pointer hover-elevate" : ""}
+                  onClick={log.taskId ? () => setSummaryTaskId(log.taskId!) : undefined}
+                  data-testid={`card-maintenance-log-${log.id}`}
+                >
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div>
@@ -979,6 +986,12 @@ export default function VehicleDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <CompletedTaskSummary
+        taskId={summaryTaskId || ""}
+        open={!!summaryTaskId}
+        onOpenChange={(open) => { if (!open) setSummaryTaskId(null); }}
+      />
     </div>
   );
 }

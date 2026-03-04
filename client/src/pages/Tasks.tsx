@@ -36,9 +36,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, CheckCircle2, Eye, EyeOff, MapPin, User as UserIcon, ChevronDown, ChevronRight, ExternalLink, Check, X } from "lucide-react";
+import { Plus, CheckCircle2, Eye, EyeOff, MapPin, User as UserIcon, ChevronDown, ChevronRight, ExternalLink, Check, X, ClipboardCheck } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import type { Task, Area, User, Property, Vendor } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -223,6 +224,7 @@ export default function Tasks() {
     newStatus: StatusType;
     task: Task;
   } | null>(null);
+  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -519,7 +521,20 @@ export default function Tasks() {
                               </div>
                             )}
                           </div>
-                          <div className="flex-shrink-0">
+                          <div className="flex-shrink-0 flex items-center gap-1">
+                            {task.status === "completed" && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSummaryTaskId(task.id);
+                                }}
+                                data-testid={`button-view-summary-${task.id}`}
+                              >
+                                <ClipboardCheck className="w-4 h-4" />
+                              </Button>
+                            )}
                             {task.status === "completed" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                           </div>
                         </div>
@@ -531,6 +546,11 @@ export default function Tasks() {
             )}
           </CardContent>
         </Card>
+        <CompletedTaskSummary
+          taskId={summaryTaskId!}
+          open={!!summaryTaskId}
+          onOpenChange={(open) => !open && setSummaryTaskId(null)}
+        />
       </div>
     );
   }
@@ -779,15 +799,30 @@ export default function Tasks() {
                                 </Select>
                               </TableCell>
                               <TableCell>
-                                <Link href={`/tasks/${task.id}`}>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    data-testid={`button-view-task-${task.id}`}
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                  </Button>
-                                </Link>
+                                <div className="flex items-center gap-1">
+                                  {task.status === "completed" && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSummaryTaskId(task.id);
+                                      }}
+                                      data-testid={`button-view-summary-${task.id}`}
+                                    >
+                                      <ClipboardCheck className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                  <Link href={`/tasks/${task.id}`}>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      data-testid={`button-view-task-${task.id}`}
+                                    >
+                                      <ExternalLink className="w-4 h-4" />
+                                    </Button>
+                                  </Link>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -841,6 +876,12 @@ export default function Tasks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CompletedTaskSummary
+        taskId={summaryTaskId!}
+        open={!!summaryTaskId}
+        onOpenChange={(open) => !open && setSummaryTaskId(null)}
+      />
     </>
   );
 }

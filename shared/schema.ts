@@ -186,6 +186,7 @@ export const tasks = pgTable("tasks", {
   scheduledStartTime: varchar("scheduled_start_time", { length: 5 }),
   requiredSkill: varchar("required_skill", { length: 100 }),
   aiGenerated: boolean("ai_generated").default(false),
+  parentTaskId: varchar("parent_task_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -427,12 +428,13 @@ export type Equipment = typeof equipment.$inferSelect;
 export const vehicleMaintenanceLogs = pgTable("vehicle_maintenance_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "set null" }),
   maintenanceDate: timestamp("maintenance_date").notNull().defaultNow(),
-  type: varchar("type", { length: 100 }).notNull(), // e.g., "Oil Change", "Repair", "Inspection"
+  type: varchar("type", { length: 100 }).notNull(),
   description: text("description").notNull(),
   cost: doublePrecision("cost").default(0),
   mileageAtMaintenance: integer("mileage_at_maintenance"),
-  performedBy: varchar("performed_by", { length: 200 }), // Vendor or staff name
+  performedBy: varchar("performed_by", { length: 200 }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -553,6 +555,12 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.subdivisionId],
     references: [subdivisions.id],
   }),
+  parentTask: one(tasks, {
+    fields: [tasks.parentTaskId],
+    references: [tasks.id],
+    relationName: "task_subtasks",
+  }),
+  subTasks: many(tasks, { relationName: "task_subtasks" }),
   timeEntries: many(timeEntries),
   partsUsed: many(partsUsed),
   messages: many(messages),
@@ -955,6 +963,10 @@ export const vehicleMaintenanceLogsRelations = relations(vehicleMaintenanceLogs,
   vehicle: one(vehicles, {
     fields: [vehicleMaintenanceLogs.vehicleId],
     references: [vehicles.id],
+  }),
+  task: one(tasks, {
+    fields: [vehicleMaintenanceLogs.taskId],
+    references: [tasks.id],
   }),
 }));
 

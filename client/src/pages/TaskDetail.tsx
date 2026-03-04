@@ -95,6 +95,11 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   Info,
+  Car,
+  ArrowLeft,
+  Search,
+  Layers,
+  ClipboardCheck,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
@@ -104,6 +109,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import ResourceCard from "@/components/ResourceCard";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import type {
   Task,
   TimeEntry,
@@ -122,7 +128,9 @@ import type {
   Quote,
   Vendor,
   QuoteAttachment,
+  Vehicle,
 } from "@shared/schema";
+import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@radix-ui/react-label";
 import { format, isToday, isTomorrow, isPast, formatDistanceToNow } from "date-fns";
@@ -301,6 +309,12 @@ export default function TaskDetail() {
   const [newVendorPhone, setNewVendorPhone] = useState("");
   const [newVendorAddress, setNewVendorAddress] = useState("");
   const [newVendorNotes, setNewVendorNotes] = useState("");
+  const [scannedVehicle, setScannedVehicle] = useState<Vehicle | null>(null);
+  const [isVehicleInfoOpen, setIsVehicleInfoOpen] = useState(false);
+  const [isAddSubTaskDialogOpen, setIsAddSubTaskDialogOpen] = useState(false);
+  const [subTaskSearchQuery, setSubTaskSearchQuery] = useState("");
+  const [subTaskSearchType, setSubTaskSearchType] = useState<"equipment" | "vehicle">("equipment");
+  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -391,6 +405,36 @@ export default function TaskDetail() {
   const { data: allTasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
     enabled: !!task?.propertyId && (user?.role === "technician" || user?.role === "admin"),
+  });
+
+  const { data: subTasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks", id, "subtasks"],
+    enabled: !!id,
+  });
+
+  const { data: vehicle } = useQuery<Vehicle>({
+    queryKey: ["/api/vehicles", task?.vehicleId],
+    enabled: !!task?.vehicleId,
+  });
+
+  const { data: parentTask } = useQuery<Task>({
+    queryKey: ["/api/tasks", task?.parentTaskId],
+    enabled: !!task?.parentTaskId,
+  });
+
+  const { data: allEquipment = [] } = useQuery<Equipment[]>({
+    queryKey: ["/api/equipment"],
+    enabled: !!isAddSubTaskDialogOpen,
+  });
+
+  const { data: allVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+    enabled: !!isAddSubTaskDialogOpen,
+  });
+
+  const { data: subTaskTimeEntries = [] } = useQuery<TimeEntry[]>({
+    queryKey: ["/api/time-entries"],
+    enabled: subTasks.length > 0,
   });
 
   const { data: taskDependencies = [] } = useQuery<any[]>({
@@ -560,11 +604,42 @@ export default function TaskDetail() {
     }
   };
 
+  const addSubTaskMutation = useMutation({
+    mutationFn: async (body: { equipmentId?: string; vehicleId?: string; name?: string }) => {
+      return await apiRequest("POST", `/api/tasks/${id}/subtasks`, body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Sub-task created" });
+      setIsEquipmentInfoOpen(false);
+      setIsVehicleInfoOpen(false);
+      setIsAddSubTaskDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleEquipmentScan = async (value: string) => {
     setIsScanEquipmentOpen(false);
     setIsEquipmentLoading(true);
     setEquipmentInfoTab("info");
     try {
+      const vehicleIdMatch = value.match(/\/vehicles\/([a-f0-9-]{36})/i);
+      if (vehicleIdMatch) {
+        const vId = vehicleIdMatch[1];
+        const vRes = await fetch(`/api/vehicles/${encodeURIComponent(vId)}`, { credentials: "include" });
+        if (!vRes.ok) {
+          toast({ title: "Vehicle not found", description: "Could not find vehicle for this QR code.", variant: "destructive" });
+          return;
+        }
+        const veh = await vRes.json();
+        setScannedVehicle(veh);
+        setIsVehicleInfoOpen(true);
+        return;
+      }
+
       const equipmentIdMatch = value.match(/\/equipment\/([a-f0-9-]{36})/i) || value.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
       const equipmentId = equipmentIdMatch ? equipmentIdMatch[1] : value.trim();
 
@@ -1098,6 +1173,11 @@ export default function TaskDetail() {
     0
   );
 
+  const isParentTask = subTasks.length > 0;
+  const isSubTask = !!task.parentTaskId;
+  const completedSubTasks = subTasks.filter(st => st.status === "completed").length;
+  const subTaskProgress = subTasks.length > 0 ? (completedSubTasks / subTasks.length) * 100 : 0;
+
   const handleStartOrPause = () => {
     if (activeTimer) {
       setIsStopTimerDialogOpen(true);
@@ -1166,6 +1246,16 @@ export default function TaskDetail() {
       <div className="flex flex-col min-h-screen bg-background pb-28">
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
+            {isSubTask && parentTask && (
+              <button
+                className="flex items-center gap-1.5 text-sm text-primary"
+                onClick={() => safeNavigate(`/tasks/${task.parentTaskId}`)}
+                data-testid="link-back-to-parent"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to {parentTask.name}
+              </button>
+            )}
             <div className="space-y-1">
               <h1 className="text-xl font-bold leading-tight" data-testid="text-task-name">
                 {task.name}
@@ -1178,6 +1268,45 @@ export default function TaskDetail() {
                 </p>
               )}
             </div>
+
+            {isParentTask && (
+              <div className="space-y-3" data-testid="subtasks-section">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    Sub-Tasks
+                  </p>
+                  <span className="text-sm text-muted-foreground" data-testid="text-subtask-progress">
+                    {completedSubTasks} of {subTasks.length} complete
+                  </span>
+                </div>
+                <Progress value={subTaskProgress} className="h-2" data-testid="progress-subtasks" />
+                <div className="space-y-2">
+                  {subTasks.map((st) => (
+                    <div
+                      key={st.id}
+                      className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
+                      onClick={() => safeNavigate(`/tasks/${st.id}`)}
+                      data-testid={`subtask-card-${st.id}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {st.vehicleId ? (
+                          <Car className="w-4 h-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <Package className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{st.name}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={`text-xs shrink-0 ${statusColors[st.status] || ""}`}>
+                        {statusLabels[st.status] || st.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {task.instructions && (
               <div className="p-4 bg-primary/5 border-2 border-primary/20 rounded-lg" data-testid="task-instructions">
@@ -1333,7 +1462,12 @@ export default function TaskDetail() {
 
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
           <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
-            {task.status === "completed" ? (
+            {isParentTask ? (
+              <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
+                <Layers className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
+              </div>
+            ) : task.status === "completed" ? (
               <Button
                 size="lg"
                 className="flex-1 font-bold bg-green-600 text-white border-green-600"
@@ -1596,6 +1730,16 @@ export default function TaskDetail() {
       <div className="flex flex-col min-h-screen bg-background pb-28">
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
+            {isSubTask && parentTask && (
+              <button
+                className="flex items-center gap-1.5 text-sm text-primary"
+                onClick={() => safeNavigate(`/tasks/${task.parentTaskId}`)}
+                data-testid="link-back-to-parent"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to {parentTask.name}
+              </button>
+            )}
             <div className="space-y-1">
               <h1 className="text-xl font-bold leading-tight" data-testid="text-task-name">
                 {task.name}
@@ -1613,7 +1757,73 @@ export default function TaskDetail() {
                   {equipment.name}
                 </p>
               )}
+              {vehicle && (
+                <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                  <Car className="w-4 h-4 shrink-0" />
+                  {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vehicleId}
+                </p>
+              )}
             </div>
+
+            {isParentTask && (
+              <div className="space-y-3" data-testid="subtasks-section">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    Sub-Tasks
+                  </p>
+                  <span className="text-sm text-muted-foreground" data-testid="text-subtask-progress">
+                    {completedSubTasks} of {subTasks.length} complete
+                  </span>
+                </div>
+                <Progress value={subTaskProgress} className="h-2" data-testid="progress-subtasks" />
+                <div className="space-y-2">
+                  {subTasks.map((st) => (
+                    <div
+                      key={st.id}
+                      className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
+                      onClick={() => safeNavigate(`/tasks/${st.id}`)}
+                      data-testid={`subtask-card-${st.id}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {st.vehicleId ? (
+                          <Car className="w-4 h-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <Package className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{st.name}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={`text-xs shrink-0 ${statusColors[st.status] || ""}`}>
+                        {statusLabels[st.status] || st.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setIsScanEquipmentOpen(true)}
+                  disabled={isEquipmentLoading}
+                  data-testid="button-add-subtask-scan"
+                >
+                  <QrCode className="w-4 h-4 mr-2" />
+                  Scan QR to Add Sub-Task
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setIsAddSubTaskDialogOpen(true)}
+                  data-testid="button-add-subtask-search"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Search Equipment / Vehicle
+                </Button>
+              </div>
+            )}
 
             {(task.contactPhone || contactStaff?.phoneNumber) && (
               <a
@@ -1970,7 +2180,12 @@ export default function TaskDetail() {
 
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
           <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
-            {task.status === "completed" ? (
+            {isParentTask ? (
+              <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
+                <Layers className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
+              </div>
+            ) : task.status === "completed" ? (
               <Button
                 size="lg"
                 className="flex-1 font-bold bg-green-600 text-white border-green-600"
@@ -2528,6 +2743,16 @@ export default function TaskDetail() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
+          {isSubTask && parentTask && (
+            <button
+              className="flex items-center gap-1.5 text-sm text-primary"
+              onClick={() => safeNavigate(`/tasks/${task.parentTaskId}`)}
+              data-testid="link-back-to-parent"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {parentTask.name}
+            </button>
+          )}
           {/* Task Header */}
           <div className="space-y-2">
             <div className="flex items-start gap-2">
@@ -2576,6 +2801,17 @@ export default function TaskDetail() {
                 <Badge variant="secondary" className="text-xs capitalize" data-testid="badge-task-type">
                   {task.taskType.replace("_", " ")}
                 </Badge>
+                {task.status === "completed" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSummaryTaskId(task.id)}
+                    data-testid="button-view-summary"
+                  >
+                    <ClipboardCheck className="w-4 h-4 mr-1" />
+                    View Summary
+                  </Button>
+                )}
               </div>
               
               <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
@@ -2671,6 +2907,66 @@ export default function TaskDetail() {
                 <p className="font-medium truncate">{equipment.name}</p>
                 <p className="text-sm text-muted-foreground capitalize">{equipment.category}</p>
               </div>
+            </div>
+          )}
+
+          {isParentTask && (
+            <div className="space-y-3" data-testid="subtasks-section">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                  <Layers className="w-4 h-4" />
+                  Sub-Tasks
+                </p>
+                <span className="text-sm text-muted-foreground" data-testid="text-subtask-progress">
+                  {completedSubTasks} of {subTasks.length} complete
+                </span>
+              </div>
+              <Progress value={subTaskProgress} className="h-2" data-testid="progress-subtasks" />
+              <div className="space-y-2">
+                {subTasks.map((st) => (
+                  <div
+                    key={st.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
+                    onClick={() => safeNavigate(`/tasks/${st.id}`)}
+                    data-testid={`subtask-card-${st.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {st.vehicleId ? (
+                        <Car className="w-4 h-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <Package className="w-4 h-4 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{st.name}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={`text-xs shrink-0 ${statusColors[st.status] || ""}`}>
+                      {statusLabels[st.status] || st.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setIsScanEquipmentOpen(true)}
+                disabled={isEquipmentLoading}
+                data-testid="button-add-subtask-scan"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                Scan QR to Add Sub-Task
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setIsAddSubTaskDialogOpen(true)}
+                data-testid="button-add-subtask-search"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Search Equipment / Vehicle
+              </Button>
             </div>
           )}
 
@@ -3487,8 +3783,12 @@ export default function TaskDetail() {
       {/* Sticky Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
         <div className="flex items-center justify-around px-2 py-2 max-w-2xl mx-auto gap-2">
-          {/* Single Primary Action Button - follows workflow */}
-          {task.status === "completed" ? (
+          {isParentTask ? (
+            <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
+              <Layers className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
+            </div>
+          ) : task.status === "completed" ? (
             <Button
               variant="ghost"
               size="sm"
@@ -4431,6 +4731,162 @@ export default function TaskDetail() {
           })()}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isVehicleInfoOpen} onOpenChange={setIsVehicleInfoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vehicle Info</DialogTitle>
+            <DialogDescription>Scanned vehicle details</DialogDescription>
+          </DialogHeader>
+          {scannedVehicle && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <Car className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">{scannedVehicle.make} {scannedVehicle.model} {scannedVehicle.year}</p>
+                  <p className="text-sm text-muted-foreground">{scannedVehicle.vehicleId}</p>
+                </div>
+              </div>
+              {scannedVehicle.vin && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">VIN</p>
+                  <p className="text-sm font-mono">{scannedVehicle.vin}</p>
+                </div>
+              )}
+              {scannedVehicle.licensePlate && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">License Plate</p>
+                  <p className="text-sm">{scannedVehicle.licensePlate}</p>
+                </div>
+              )}
+              {scannedVehicle.currentMileage && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Mileage</p>
+                  <p className="text-sm">{scannedVehicle.currentMileage.toLocaleString()} mi</p>
+                </div>
+              )}
+              <Button
+                className="w-full"
+                onClick={() => {
+                  addSubTaskMutation.mutate({
+                    vehicleId: scannedVehicle.id,
+                    name: `${task.name} - ${scannedVehicle.make} ${scannedVehicle.model} ${scannedVehicle.year}`,
+                  });
+                }}
+                disabled={addSubTaskMutation.isPending}
+                data-testid="button-add-vehicle-subtask"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add as Sub-Task
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddSubTaskDialogOpen} onOpenChange={setIsAddSubTaskDialogOpen}>
+        <DialogContent className="max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add Sub-Task</DialogTitle>
+            <DialogDescription>Search for equipment or vehicles to create a sub-task.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant={subTaskSearchType === "equipment" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSubTaskSearchType("equipment")}
+              data-testid="button-search-equipment"
+            >
+              <Package className="w-4 h-4 mr-1" />
+              Equipment
+            </Button>
+            <Button
+              variant={subTaskSearchType === "vehicle" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSubTaskSearchType("vehicle")}
+              data-testid="button-search-vehicles"
+            >
+              <Car className="w-4 h-4 mr-1" />
+              Vehicles
+            </Button>
+          </div>
+          <Input
+            placeholder={subTaskSearchType === "equipment" ? "Search equipment..." : "Search vehicles..."}
+            value={subTaskSearchQuery}
+            onChange={(e) => setSubTaskSearchQuery(e.target.value)}
+            data-testid="input-subtask-search"
+          />
+          <div className="flex-1 overflow-y-auto space-y-2 mt-2 max-h-[40vh]">
+            {subTaskSearchType === "equipment" ? (
+              (allEquipment || [])
+                .filter((eq: any) => {
+                  if (!subTaskSearchQuery.trim()) return true;
+                  const q = subTaskSearchQuery.toLowerCase();
+                  return eq.name?.toLowerCase().includes(q) || eq.category?.toLowerCase().includes(q);
+                })
+                .map((eq: any) => (
+                  <div
+                    key={eq.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
+                    onClick={() => {
+                      addSubTaskMutation.mutate({
+                        equipmentId: eq.id,
+                        name: `${task.name} - ${eq.name}`,
+                      });
+                    }}
+                    data-testid={`subtask-equipment-${eq.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Package className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{eq.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{eq.category}</p>
+                      </div>
+                    </div>
+                    <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </div>
+                ))
+            ) : (
+              (allVehicles || [])
+                .filter((v: any) => {
+                  if (!subTaskSearchQuery.trim()) return true;
+                  const q = subTaskSearchQuery.toLowerCase();
+                  return v.vehicleId?.toLowerCase().includes(q) || v.make?.toLowerCase().includes(q) || v.model?.toLowerCase().includes(q);
+                })
+                .map((v: any) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
+                    onClick={() => {
+                      addSubTaskMutation.mutate({
+                        vehicleId: v.id,
+                        name: `${task.name} - ${v.make} ${v.model} ${v.year}`,
+                      });
+                    }}
+                    data-testid={`subtask-vehicle-${v.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Car className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{v.make} {v.model} {v.year}</p>
+                        <p className="text-xs text-muted-foreground">{v.vehicleId}</p>
+                      </div>
+                    </div>
+                    <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </div>
+                ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <CompletedTaskSummary
+        taskId={summaryTaskId || ""}
+        open={!!summaryTaskId}
+        onOpenChange={(open) => { if (!open) setSummaryTaskId(null); }}
+      />
     </div>
   );
 }

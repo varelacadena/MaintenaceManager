@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, User, MapPin, ExternalLink } from "lucide-react";
 import type { Task, Equipment, User as UserType } from "@shared/schema";
 import { Link } from "wouter";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 
 const statusColors: Record<string, string> = {
   not_started: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",
@@ -24,6 +26,7 @@ const urgencyColors = {
 export default function EquipmentWorkHistory() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
 
   const { data: equipment, isLoading: equipmentLoading } = useQuery<Equipment>({
     queryKey: ["/api/equipment", id],
@@ -95,8 +98,8 @@ export default function EquipmentWorkHistory() {
             </div>
           ) : (
             <div className="space-y-3">
-              {equipmentTasks.map((task) => (
-                <Link key={task.id} href={`/tasks/${task.id}`}>
+              {equipmentTasks.map((task) => {
+                const cardContent = (
                   <Card className="hover-elevate transition-colors cursor-pointer" data-testid={`task-${task.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
@@ -145,12 +148,32 @@ export default function EquipmentWorkHistory() {
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
-              ))}
+                );
+
+                if (task.status === "completed") {
+                  return (
+                    <div key={task.id} onClick={() => setSummaryTaskId(task.id)}>
+                      {cardContent}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link key={task.id} href={`/tasks/${task.id}`}>
+                    {cardContent}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <CompletedTaskSummary
+        taskId={summaryTaskId || ""}
+        open={!!summaryTaskId}
+        onOpenChange={(open) => { if (!open) setSummaryTaskId(null); }}
+      />
     </div>
   );
 }

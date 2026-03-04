@@ -217,6 +217,7 @@ export interface IStorage {
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<void>;
   updateTaskStatus(id: string, status: string, onHoldReason?: string, actualCompletionDate?: Date): Promise<Task | undefined>;
+  getSubTasks(parentTaskId: string): Promise<Task[]>;
 
   // Time entry operations (linked to tasks)
   createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
@@ -355,6 +356,7 @@ export interface IStorage {
 
   // Vehicle maintenance log operations
   getVehicleMaintenanceLogs(vehicleId: string): Promise<VehicleMaintenanceLog[]>;
+  getVehicleMaintenanceLogByTaskId(taskId: string): Promise<VehicleMaintenanceLog | undefined>;
   createVehicleMaintenanceLog(log: InsertVehicleMaintenanceLog): Promise<VehicleMaintenanceLog>;
   deleteVehicleMaintenanceLog(id: string): Promise<void>;
 
@@ -975,6 +977,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.id, id))
       .returning();
     return task;
+  }
+
+  async getSubTasks(parentTaskId: string): Promise<Task[]> {
+    return await this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.parentTaskId, parentTaskId));
   }
 
   // Time entry operations
@@ -1779,6 +1788,14 @@ export class DatabaseStorage implements IStorage {
       .from(vehicleMaintenanceLogs)
       .where(eq(vehicleMaintenanceLogs.vehicleId, vehicleId))
       .orderBy(desc(vehicleMaintenanceLogs.maintenanceDate));
+  }
+
+  async getVehicleMaintenanceLogByTaskId(taskId: string): Promise<VehicleMaintenanceLog | undefined> {
+    const [log] = await this.db
+      .select()
+      .from(vehicleMaintenanceLogs)
+      .where(eq(vehicleMaintenanceLogs.taskId, taskId));
+    return log;
   }
 
   async createVehicleMaintenanceLog(logData: InsertVehicleMaintenanceLog): Promise<VehicleMaintenanceLog> {

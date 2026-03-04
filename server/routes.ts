@@ -1515,7 +1515,81 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
-  // Allow students and technicians to update status on their assigned tasks
+  app.get("/api/tasks/:taskId/subtasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const subTasks = await storage.getSubTasks(req.params.taskId);
+      res.json(subTasks);
+    } catch (error) {
+      console.error("Error fetching sub-tasks:", error);
+      res.status(500).json({ message: "Failed to fetch sub-tasks" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/subtasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const parentTask = await storage.getTask(req.params.taskId);
+      if (!parentTask) {
+        return res.status(404).json({ message: "Parent task not found" });
+      }
+
+      const currentUser = await storage.getUser(req.userId);
+      if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "technician")) {
+        return res.status(403).json({ message: "Only admins and technicians can create sub-tasks" });
+      }
+
+      const { equipmentId, vehicleId, name, description } = req.body;
+
+      if (!equipmentId && !vehicleId) {
+        return res.status(400).json({ message: "Either equipmentId or vehicleId is required" });
+      }
+
+      let assetName = "";
+      if (equipmentId) {
+        const equip = await storage.getEquipmentItem(equipmentId);
+        if (!equip) return res.status(404).json({ message: "Equipment not found" });
+        const locationParts = [];
+        if (equip.propertyId) {
+          const prop = await storage.getProperty(equip.propertyId);
+          if (prop) locationParts.push(prop.name);
+        }
+        assetName = equip.name + (locationParts.length ? ` (${locationParts.join(", ")})` : "");
+      } else if (vehicleId) {
+        const vehicle = await storage.getVehicle(vehicleId);
+        if (!vehicle) return res.status(404).json({ message: "Vehicle not found" });
+        assetName = `${vehicle.make} ${vehicle.model} ${vehicle.vehicleId}`;
+      }
+
+      const subTaskName = name || `${parentTask.name} — ${assetName}`;
+
+      const subTaskData: any = {
+        name: subTaskName,
+        description: description || parentTask.description,
+        urgency: parentTask.urgency,
+        taskType: parentTask.taskType,
+        initialDate: parentTask.initialDate,
+        estimatedCompletionDate: parentTask.estimatedCompletionDate,
+        assignedToId: parentTask.assignedToId,
+        areaId: parentTask.areaId,
+        propertyId: equipmentId ? (await storage.getEquipmentItem(equipmentId))?.propertyId || parentTask.propertyId : parentTask.propertyId,
+        spaceId: equipmentId ? (await storage.getEquipmentItem(equipmentId))?.spaceId || parentTask.spaceId : parentTask.spaceId,
+        executorType: parentTask.executorType,
+        instructions: parentTask.instructions,
+        requiresPhoto: parentTask.requiresPhoto,
+        createdById: req.userId,
+        parentTaskId: parentTask.id,
+        status: "not_started" as const,
+        equipmentId: equipmentId || null,
+        vehicleId: vehicleId || null,
+      };
+
+      const subTask = await storage.createTask(subTaskData);
+      res.status(201).json(subTask);
+    } catch (error) {
+      console.error("Error creating sub-task:", error);
+      res.status(500).json({ message: "Failed to create sub-task" });
+    }
+  });
+
   app.patch("/api/tasks/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const { status, onHoldReason } = req.body;
@@ -1631,6 +1705,108 @@ Be concise and practical. Do not use markdown formatting.`;
           senderId: (req as any).userId,
           content: `Task "${updatedTask.name}" has been completed.`
         });
+      }
+
+      // Helper: auto-create vehicle maintenance log for a completed task
+      async function autoCreateVehicleMaintenanceLog(completedTask: any) {
+        if (!completedTask.vehicleId) return;
+        try {
+          const existingLog = await storage.getVehicleMaintenanceLogByTaskId(completedTask.id);
+          if (existingLog) return;
+
+          const vehicle = await storage.getVehicle(completedTask.vehicleId);
+          if (!vehicle) return;
+
+          const parts = await storage.getPartsByTask(completedTask.id);
+          let totalCost = 0;
+          for (const part of parts) {
+            totalCost += (Number(part.cost) || 0) * (Number(part.quantity) || 1);
+          }
+
+          const taskQuotes = await storage.getQuotesByTaskId(completedTask.id);
+          const approvedQuote = taskQuotes.find((q: any) => q.status === "approved");
+          if (approvedQuote) {
+            totalCost += Number(approvedQuote.estimatedCost) || 0;
+          }
+
+          let performedBy = "Maintenance Staff";
+          if (completedTask.assignedToId) {
+            const tech = await storage.getUser(completedTask.assignedToId);
+            if (tech) {
+              performedBy = [tech.firstName, tech.lastName].filter(Boolean).join(" ") || tech.username;
+            }
+          }
+
+          const taskNotes = await storage.getNotesByTask(completedTask.id);
+          const notesText = taskNotes.map((n: any) => n.content).filter(Boolean).join("; ");
+
+          let maintenanceType = "repair";
+          const nameLower = completedTask.name.toLowerCase();
+          if (nameLower.includes("inspect")) maintenanceType = "inspection";
+          else if (nameLower.includes("oil change")) maintenanceType = "oil_change";
+          else if (nameLower.includes("tire")) maintenanceType = "tire";
+          else if (nameLower.includes("brake")) maintenanceType = "brake";
+          else if (nameLower.includes("filter")) maintenanceType = "filter";
+
+          const partsNotes = parts.length > 0
+            ? "Parts used: " + parts.map((p: any) => `${p.name} x${p.quantity}`).join(", ")
+            : "";
+
+          await storage.createVehicleMaintenanceLog({
+            vehicleId: completedTask.vehicleId,
+            taskId: completedTask.id,
+            maintenanceDate: completedTask.actualCompletionDate || new Date(),
+            type: maintenanceType,
+            description: completedTask.description || completedTask.name,
+            cost: totalCost,
+            mileageAtMaintenance: vehicle.currentMileage,
+            performedBy,
+            notes: [notesText, partsNotes].filter(Boolean).join(". ") || null,
+          });
+        } catch (err) {
+          console.error("Error auto-creating vehicle maintenance log:", err);
+        }
+      }
+
+      // Sub-task auto-completion: when a sub-task completes, check if all siblings are done
+      if (normalizedStatus === "completed" && updatedTask.parentTaskId) {
+        try {
+          const siblings = await storage.getSubTasks(updatedTask.parentTaskId);
+          const allCompleted = siblings.every(s => s.status === "completed");
+          if (allCompleted) {
+            const completedParent = await storage.updateTask(updatedTask.parentTaskId, {
+              status: "completed" as any,
+              actualCompletionDate: new Date(),
+            });
+            if (completedParent?.projectId) {
+              await syncProjectStatusFromTasks(completedParent.projectId);
+            }
+            if (completedParent) {
+              await autoCreateVehicleMaintenanceLog(completedParent);
+            }
+          }
+        } catch (err) {
+          console.error("Error in sub-task auto-completion:", err);
+        }
+      }
+
+      // Sub-task auto-start: when a sub-task starts, auto-start the parent
+      if (normalizedStatus === "in_progress" && updatedTask.parentTaskId) {
+        try {
+          const parentTask = await storage.getTask(updatedTask.parentTaskId);
+          if (parentTask && parentTask.status === "not_started") {
+            await storage.updateTask(updatedTask.parentTaskId, {
+              status: "in_progress" as any,
+            });
+          }
+        } catch (err) {
+          console.error("Error in sub-task auto-start:", err);
+        }
+      }
+
+      // Auto-create vehicle maintenance log when a vehicle-linked task completes
+      if (normalizedStatus === "completed") {
+        await autoCreateVehicleMaintenanceLog(updatedTask);
       }
 
       res.json(updatedTask);
