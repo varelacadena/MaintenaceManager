@@ -59,7 +59,7 @@ export default function VehicleReservationDetails() {
 
   useEffect(() => {
     if (!reservation?.startDate) return;
-    const check = () => new Date() >= new Date(reservation.startDate);
+    const check = () => new Date() >= new Date(new Date(reservation.startDate).getTime() - 60 * 60 * 1000);
     setIsTimeAvailable(check());
     if (check()) return;
     const interval = setInterval(() => {
@@ -470,7 +470,7 @@ export default function VehicleReservationDetails() {
                 </Button>
                 <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1" data-testid="text-checkout-unlock-time">
                   <Lock className="h-3 w-3" />
-                  Checkout opens {format(new Date(reservation.startDate), "MMM d 'at' h:mm a")}
+                  Checkout opens {format(new Date(new Date(reservation.startDate).getTime() - 60 * 60 * 1000), "MMM d 'at' h:mm a")}
                 </p>
               </>
             )}

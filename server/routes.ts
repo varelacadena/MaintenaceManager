@@ -43,6 +43,8 @@ import {
   insertUserSkillSchema,
   insertTaskDependencySchema,
   insertSlaConfigSchema,
+  insertLockboxSchema,
+  insertLockboxCodeSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3102,6 +3104,147 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
+  // Lockbox routes
+  app.get("/api/lockboxes", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+    try {
+      const lockboxes = await storage.getLockboxes();
+      res.json(lockboxes);
+    } catch (error) {
+      console.error("Error fetching lockboxes:", error);
+      res.status(500).json({ message: "Failed to fetch lockboxes" });
+    }
+  });
+
+  app.get("/api/lockboxes/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+    try {
+      const lockbox = await storage.getLockbox(req.params.id);
+      if (!lockbox) return res.status(404).json({ message: "Lockbox not found" });
+      res.json(lockbox);
+    } catch (error) {
+      console.error("Error fetching lockbox:", error);
+      res.status(500).json({ message: "Failed to fetch lockbox" });
+    }
+  });
+
+  app.post("/api/lockboxes", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const parsed = insertLockboxSchema.parse(req.body);
+      const lockbox = await storage.createLockbox(parsed);
+      res.status(201).json(lockbox);
+    } catch (error: any) {
+      if (error?.name === "ZodError") return res.status(400).json({ message: "Invalid lockbox data", errors: error.errors });
+      console.error("Error creating lockbox:", error);
+      res.status(500).json({ message: "Failed to create lockbox" });
+    }
+  });
+
+  app.patch("/api/lockboxes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const parsed = insertLockboxSchema.partial().parse(req.body);
+      const lockbox = await storage.updateLockbox(req.params.id, parsed);
+      if (!lockbox) return res.status(404).json({ message: "Lockbox not found" });
+      res.json(lockbox);
+    } catch (error: any) {
+      if (error?.name === "ZodError") return res.status(400).json({ message: "Invalid lockbox data", errors: error.errors });
+      console.error("Error updating lockbox:", error);
+      res.status(500).json({ message: "Failed to update lockbox" });
+    }
+  });
+
+  app.delete("/api/lockboxes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteLockbox(req.params.id);
+      res.json({ message: "Lockbox deleted" });
+    } catch (error) {
+      console.error("Error deleting lockbox:", error);
+      res.status(500).json({ message: "Failed to delete lockbox" });
+    }
+  });
+
+  app.get("/api/lockboxes/:id/codes", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const codes = await storage.getLockboxCodes(req.params.id);
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching lockbox codes:", error);
+      res.status(500).json({ message: "Failed to fetch lockbox codes" });
+    }
+  });
+
+  app.post("/api/lockboxes/:id/codes", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const parsed = insertLockboxCodeSchema.omit({ lockboxId: true }).parse(req.body);
+      const code = await storage.createLockboxCode({ ...parsed, lockboxId: req.params.id });
+      res.status(201).json(code);
+    } catch (error: any) {
+      if (error?.name === "ZodError") return res.status(400).json({ message: "Invalid code data", errors: error.errors });
+      console.error("Error creating lockbox code:", error);
+      res.status(500).json({ message: "Failed to create lockbox code" });
+    }
+  });
+
+  app.patch("/api/lockbox-codes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const parsed = insertLockboxCodeSchema.partial().parse(req.body);
+      const code = await storage.updateLockboxCode(req.params.id, parsed);
+      if (!code) return res.status(404).json({ message: "Code not found" });
+      res.json(code);
+    } catch (error: any) {
+      if (error?.name === "ZodError") return res.status(400).json({ message: "Invalid code data", errors: error.errors });
+      console.error("Error updating lockbox code:", error);
+      res.status(500).json({ message: "Failed to update lockbox code" });
+    }
+  });
+
+  app.delete("/api/lockbox-codes/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteLockboxCode(req.params.id);
+      res.json({ message: "Code deleted" });
+    } catch (error) {
+      console.error("Error deleting lockbox code:", error);
+      res.status(500).json({ message: "Failed to delete lockbox code" });
+    }
+  });
+
+  app.post("/api/lockboxes/:lockboxId/assign-code", isAuthenticated, async (req, res) => {
+    try {
+      const user = await getAuthenticatedUser(req);
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+      const lockboxId = req.params.lockboxId;
+
+      if (user.role !== "admin") {
+        const vehicles = await storage.getVehicles();
+        const matchingVehicle = vehicles.find((v: any) => v.lockboxId === lockboxId);
+        if (!matchingVehicle) {
+          return res.status(403).json({ message: "No vehicle associated with this lockbox" });
+        }
+
+        const reservations = await storage.getVehicleReservations();
+        const now = new Date();
+        const hasValidReservation = reservations.some((r: any) => {
+          if (r.userId !== user.id) return false;
+          if (r.vehicleId !== matchingVehicle.id) return false;
+          if (r.status !== "approved") return false;
+          const startTime = new Date(r.startDate).getTime();
+          const oneHourBefore = startTime - 60 * 60 * 1000;
+          return now.getTime() >= oneHourBefore && now.getTime() <= new Date(r.endDate).getTime();
+        });
+
+        if (!hasValidReservation) {
+          return res.status(403).json({ message: "No valid reservation for this vehicle" });
+        }
+      }
+
+      const code = await storage.assignRandomCode(lockboxId);
+      if (!code) return res.status(404).json({ message: "No active codes available for this lockbox" });
+      res.json(code);
+    } catch (error) {
+      console.error("Error assigning lockbox code:", error);
+      res.status(500).json({ message: "Failed to assign lockbox code" });
+    }
+  });
+
   // Vehicle routes
   app.get("/api/vehicles", isAuthenticated, async (req, res) => {
     try {
@@ -3614,7 +3757,8 @@ Be concise and practical. Do not use markdown formatting.`;
         fuelLevel: req.body.fuelLevel || "full",
         cleanlinessConfirmed: Boolean(req.body.cleanlinessConfirmed),
         damageNotes: req.body.damageNotes || null,
-        adminOverride: req.body.adminOverride === true ? true : undefined, // Only include if true
+        adminOverride: req.body.adminOverride === true ? true : undefined,
+        assignedCodeId: req.body.assignedCodeId || null,
       };
       
       console.log("Cleaned body:", JSON.stringify(cleanedBody, null, 2));

@@ -18,6 +18,8 @@ import {
   properties,
   spaces,
   equipment,
+  lockboxes,
+  lockboxCodes,
   vehicles,
   vehicleReservations,
   vehicleCheckOutLogs,
@@ -73,6 +75,10 @@ import {
   type InsertSpace,
   type Equipment,
   type InsertEquipment,
+  type Lockbox,
+  type InsertLockbox,
+  type LockboxCode,
+  type InsertLockboxCode,
   type Vehicle,
   type InsertVehicle,
   type VehicleReservation,
@@ -308,6 +314,21 @@ export interface IStorage {
   createEquipment(equipment: InsertEquipment): Promise<Equipment>;
   updateEquipment(id: string, data: Partial<InsertEquipment>): Promise<Equipment | undefined>;
   deleteEquipment(id: string): Promise<void>;
+
+  // Lockbox operations
+  getLockboxes(): Promise<Lockbox[]>;
+  getLockbox(id: string): Promise<Lockbox | undefined>;
+  createLockbox(lockbox: InsertLockbox): Promise<Lockbox>;
+  updateLockbox(id: string, data: Partial<InsertLockbox>): Promise<Lockbox | undefined>;
+  deleteLockbox(id: string): Promise<void>;
+
+  // Lockbox code operations
+  getLockboxCodes(lockboxId: string): Promise<LockboxCode[]>;
+  getLockboxCode(id: string): Promise<LockboxCode | undefined>;
+  createLockboxCode(code: InsertLockboxCode): Promise<LockboxCode>;
+  updateLockboxCode(id: string, data: Partial<InsertLockboxCode>): Promise<LockboxCode | undefined>;
+  deleteLockboxCode(id: string): Promise<void>;
+  assignRandomCode(lockboxId: string): Promise<LockboxCode | null>;
 
   // Vehicle operations
   getVehicles(filters?: { status?: string }): Promise<Vehicle[]>;
@@ -1457,6 +1478,74 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEquipment(id: string): Promise<void> {
     await this.db.delete(equipment).where(eq(equipment.id, id));
+  }
+
+  // Lockbox operations
+  async getLockboxes(): Promise<Lockbox[]> {
+    return await this.db.select().from(lockboxes).orderBy(lockboxes.name);
+  }
+
+  async getLockbox(id: string): Promise<Lockbox | undefined> {
+    const [lockbox] = await this.db.select().from(lockboxes).where(eq(lockboxes.id, id));
+    return lockbox;
+  }
+
+  async createLockbox(lockbox: InsertLockbox): Promise<Lockbox> {
+    const [created] = await this.db.insert(lockboxes).values(lockbox).returning();
+    return created;
+  }
+
+  async updateLockbox(id: string, data: Partial<InsertLockbox>): Promise<Lockbox | undefined> {
+    const [updated] = await this.db.update(lockboxes).set(data).where(eq(lockboxes.id, id)).returning();
+    return updated;
+  }
+
+  async deleteLockbox(id: string): Promise<void> {
+    await this.db.delete(lockboxes).where(eq(lockboxes.id, id));
+  }
+
+  // Lockbox code operations
+  async getLockboxCodes(lockboxId: string): Promise<LockboxCode[]> {
+    return await this.db.select().from(lockboxCodes).where(eq(lockboxCodes.lockboxId, lockboxId)).orderBy(lockboxCodes.createdAt);
+  }
+
+  async getLockboxCode(id: string): Promise<LockboxCode | undefined> {
+    const [code] = await this.db.select().from(lockboxCodes).where(eq(lockboxCodes.id, id));
+    return code;
+  }
+
+  async createLockboxCode(code: InsertLockboxCode): Promise<LockboxCode> {
+    const [created] = await this.db.insert(lockboxCodes).values(code).returning();
+    return created;
+  }
+
+  async updateLockboxCode(id: string, data: Partial<InsertLockboxCode>): Promise<LockboxCode | undefined> {
+    const [updated] = await this.db.update(lockboxCodes).set(data).where(eq(lockboxCodes.id, id)).returning();
+    return updated;
+  }
+
+  async deleteLockboxCode(id: string): Promise<void> {
+    await this.db.delete(lockboxCodes).where(eq(lockboxCodes.id, id));
+  }
+
+  async assignRandomCode(lockboxId: string): Promise<LockboxCode | null> {
+    const activeCodes = await this.db.select().from(lockboxCodes)
+      .where(and(eq(lockboxCodes.lockboxId, lockboxId), eq(lockboxCodes.status, "active")));
+
+    if (activeCodes.length === 0) return null;
+
+    const randomIndex = Math.floor(Math.random() * activeCodes.length);
+    const selected = activeCodes[randomIndex];
+
+    const [updated] = await this.db.update(lockboxCodes)
+      .set({
+        lastUsedAt: new Date(),
+        useCount: sql`${lockboxCodes.useCount} + 1`,
+      })
+      .where(eq(lockboxCodes.id, selected.id))
+      .returning();
+
+    return updated;
   }
 
   // Vehicle operations

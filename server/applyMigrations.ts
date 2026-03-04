@@ -54,6 +54,7 @@ export async function applyMigrations() {
     { file: "040_add_password_reset_tokens.sql", name: "040_add_password_reset_tokens" },
     { file: "041_add_resource_library.sql", name: "041_add_resource_library" },
     { file: "042_add_subtasks_and_task_log_link.sql", name: "042_add_subtasks_and_task_log_link" },
+    { file: "043_add_lockboxes_and_codes.sql", name: "043_add_lockboxes_and_codes" },
   ];
 
   try {

@@ -716,13 +716,53 @@ export const reservationStatusEnum = pgEnum("reservation_status", [
   "cancelled"
 ]);
 
+// Lockboxes table
+export const lockboxStatusEnum = pgEnum("lockbox_status", ["active", "inactive"]);
+
+export const lockboxes = pgTable("lockboxes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  location: varchar("location", { length: 200 }).notNull(),
+  status: lockboxStatusEnum("lockbox_status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLockboxSchema = createInsertSchema(lockboxes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertLockbox = z.infer<typeof insertLockboxSchema>;
+export type Lockbox = typeof lockboxes.$inferSelect;
+
+// Lockbox codes table
+export const lockboxCodeStatusEnum = pgEnum("lockbox_code_status", ["active", "inactive"]);
+
+export const lockboxCodes = pgTable("lockbox_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lockboxId: varchar("lockbox_id").notNull().references(() => lockboxes.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 50 }).notNull(),
+  status: lockboxCodeStatusEnum("lockbox_code_status").notNull().default("active"),
+  lastUsedAt: timestamp("last_used_at"),
+  useCount: integer("use_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLockboxCodeSchema = createInsertSchema(lockboxCodes).omit({
+  id: true,
+  lastUsedAt: true,
+  useCount: true,
+  createdAt: true,
+});
+export type InsertLockboxCode = z.infer<typeof insertLockboxCodeSchema>;
+export type LockboxCode = typeof lockboxCodes.$inferSelect;
+
 // Vehicles table
 export const vehicles = pgTable("vehicles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   make: varchar("make", { length: 100 }).notNull(),
   model: varchar("model", { length: 100 }).notNull(),
   year: integer("year").notNull(),
-  vehicleId: varchar("vehicle_id", { length: 50 }).notNull().unique(), // Custom ID like "VEH-001"
+  vehicleId: varchar("vehicle_id", { length: 50 }).notNull().unique(),
   vin: varchar("vin", { length: 50 }),
   licensePlate: varchar("license_plate", { length: 20 }),
   category: varchar("category", { length: 50 }).notNull(),
@@ -731,6 +771,7 @@ export const vehicles = pgTable("vehicles", {
   fuelType: varchar("fuel_type", { length: 50 }).notNull(),
   passengerCapacity: integer("passenger_capacity"),
   color: varchar("color", { length: 50 }),
+  lockboxId: varchar("lockbox_id").references(() => lockboxes.id, { onDelete: "set null" }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -785,6 +826,7 @@ export const vehicleCheckOutLogs = pgTable("vehicle_check_out_logs", {
   damageNotes: text("damage_notes"),
   digitalSignature: text("digital_signature"),
   adminOverride: boolean("admin_override").default(false),
+  assignedCodeId: varchar("assigned_code_id").references(() => lockboxCodes.id, { onDelete: "set null" }),
   checkOutTime: timestamp("check_out_time").notNull().defaultNow(),
 }, (table) => [
   index("idx_checkout_vehicle_time").on(table.vehicleId, table.checkOutTime),

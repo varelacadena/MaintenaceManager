@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User, VehicleMaintenanceLog, VehicleDocument } from "@shared/schema";
+import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User, VehicleMaintenanceLog, VehicleDocument, Lockbox } from "@shared/schema";
 import { format } from "date-fns";
 import { Image, FileText, CheckCircle, XCircle, AlertTriangle, User as UserIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -263,6 +263,24 @@ function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] 
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function LockboxInfo({ lockboxId }: { lockboxId: string }) {
+  const { data: lockbox } = useQuery<Lockbox>({
+    queryKey: ["/api/lockboxes", lockboxId],
+  });
+
+  if (!lockbox) return null;
+
+  return (
+    <>
+      <Separator />
+      <div className="flex justify-between items-center gap-2" data-testid="lockbox-info">
+        <span className="text-sm text-muted-foreground">Lockbox</span>
+        <span className="text-sm text-right">{lockbox.name} — {lockbox.location}</span>
+      </div>
+    </>
   );
 }
 
@@ -526,6 +544,9 @@ export default function VehicleDetail() {
                   <span className="text-sm text-muted-foreground">Passenger Capacity</span>
                   <span className="text-sm">{vehicle.passengerCapacity}</span>
                 </div>
+                {canManageVehicles && vehicle.lockboxId && (
+                  <LockboxInfo lockboxId={vehicle.lockboxId} />
+                )}
               </CardContent>
             </Card>
 

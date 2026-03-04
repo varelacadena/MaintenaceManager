@@ -191,6 +191,9 @@ export default function VehicleCheckOut() {
   const [coIsClean, setCoIsClean] = useState<boolean | null>(null);
   const [coHasDamage, setCoHasDamage] = useState<boolean | null>(null);
   const [coDamageNotes, setCoDamageNotes] = useState<string>("");
+  const [assignedCode, setAssignedCode] = useState<{ id: string; code: string } | null>(null);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeError, setCodeError] = useState(false);
 
   const { data: reservation, isLoading } = useQuery<VehicleReservation>({
     queryKey: [`/api/vehicle-reservations/${reservationId}`],
@@ -210,7 +213,7 @@ export default function VehicleCheckOut() {
 
   const isWithinReservationTime = (res: VehicleReservation | undefined): boolean => {
     if (!res) return false;
-    return new Date() >= new Date(res.startDate);
+    return new Date() >= new Date(new Date(res.startDate).getTime() - 60 * 60 * 1000);
   };
 
   const advanceStep = (next: Step) => {
@@ -249,10 +252,35 @@ export default function VehicleCheckOut() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
       setAdvisoryAccepted(true);
-      if (!reservation?.keyPickupMethod) {
+
+      if (vehicle?.lockboxId) {
+        setCodeLoading(true);
+        setCodeError(false);
+        try {
+          const codeRes = await fetch(`/api/lockboxes/${vehicle.lockboxId}/assign-code`, {
+            method: "POST",
+            credentials: "include",
+          });
+          if (codeRes.ok) {
+            const codeData = await codeRes.json();
+            setAssignedCode({ id: codeData.id, code: codeData.code });
+          } else {
+            setCodeError(true);
+            toast({ title: "Code Assignment Failed", description: "Could not assign a lockbox code. Contact an administrator.", variant: "destructive" });
+          }
+        } catch (err) {
+          console.error("Failed to assign lockbox code:", err);
+          setCodeError(true);
+          toast({ title: "Code Assignment Failed", description: "Could not assign a lockbox code. Contact an administrator.", variant: "destructive" });
+        } finally {
+          setCodeLoading(false);
+        }
+      }
+
+      if (!reservation?.keyPickupMethod && !vehicle?.lockboxId) {
         advanceStep("safety");
       } else {
         setAdvisoryJustAccepted(true);
@@ -270,6 +298,7 @@ export default function VehicleCheckOut() {
         userId: user!.id,
         vehicleId: reservation!.vehicleId,
         reservationId: reservationId!,
+        ...(assignedCode ? { assignedCodeId: assignedCode.id } : {}),
       };
       const response = await apiRequest("POST", "/api/vehicle-checkout-logs", payload);
       return await response.json();
@@ -407,11 +436,11 @@ export default function VehicleCheckOut() {
               <p className="text-muted-foreground text-sm">
                 Checkout opens on{" "}
                 <span className="font-semibold text-foreground">
-                  {format(new Date(reservation.startDate), "EEEE, MMM d 'at' h:mm a")}
+                  {format(new Date(new Date(reservation.startDate).getTime() - 60 * 60 * 1000), "EEEE, MMM d 'at' h:mm a")}
                 </span>
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Please come back at the start of your reservation to begin checkout.
+                Please come back 1 hour before your reservation to begin checkout.
               </p>
             </div>
             <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="mt-2">
@@ -500,30 +529,64 @@ export default function VehicleCheckOut() {
                 <p className="text-sm text-muted-foreground mt-1">Here's how to retrieve your keys before continuing.</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-4 space-y-3">
-                  <p className="flex items-center gap-2 font-semibold text-blue-900 dark:text-blue-100 text-sm">
-                    <Key className="h-4 w-4" />
-                    Your Key Pickup Instructions
-                  </p>
-                  <div className="space-y-1">
-                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Method</p>
-                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                      {getKeyPickupMethodLabel(reservation.keyPickupMethod)}
+                {assignedCode && (
+                  <div className="rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30 p-4 space-y-3" data-testid="lockbox-code-section">
+                    <p className="flex items-center gap-2 font-semibold text-green-900 dark:text-green-100 text-sm">
+                      <Lock className="h-4 w-4" />
+                      Lockbox Access Code
+                    </p>
+                    <div className="flex items-center justify-center py-3">
+                      <span className="text-3xl font-mono font-bold tracking-widest text-green-800 dark:text-green-200 bg-green-100 dark:bg-green-900/50 px-6 py-3 rounded-md border border-green-300 dark:border-green-700" data-testid="text-lockbox-code">
+                        {assignedCode.code}
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-700 dark:text-green-300 italic text-center">
+                      Use this code to open the lockbox and retrieve the vehicle keys.
                     </p>
                   </div>
-                  {reservation.adminNotes && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Additional Instructions</p>
-                      <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{reservation.adminNotes}</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-blue-700 dark:text-blue-300 italic">
-                    Go retrieve your keys using the instructions above, then tap Continue.
-                  </p>
-                </div>
+                )}
+                {codeLoading && (
+                  <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-4 flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                    <span className="text-sm text-blue-800 dark:text-blue-200">Assigning lockbox code...</span>
+                  </div>
+                )}
+                {(reservation.keyPickupMethod || reservation.adminNotes) && (
+                  <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-4 space-y-3">
+                    <p className="flex items-center gap-2 font-semibold text-blue-900 dark:text-blue-100 text-sm">
+                      <Key className="h-4 w-4" />
+                      Your Key Pickup Instructions
+                    </p>
+                    {reservation.keyPickupMethod && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Method</p>
+                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                          {getKeyPickupMethodLabel(reservation.keyPickupMethod)}
+                        </p>
+                      </div>
+                    )}
+                    {reservation.adminNotes && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Additional Instructions</p>
+                        <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{reservation.adminNotes}</p>
+                      </div>
+                    )}
+                    <p className="text-xs text-blue-700 dark:text-blue-300 italic">
+                      Go retrieve your keys using the instructions above, then tap Continue.
+                    </p>
+                  </div>
+                )}
+                {codeError && (
+                  <div className="rounded-md border border-destructive bg-destructive/10 p-3">
+                    <p className="text-sm text-destructive font-medium" data-testid="text-code-error">
+                      Failed to assign a lockbox code. Please contact an administrator before proceeding.
+                    </p>
+                  </div>
+                )}
                 <Button
                   onClick={() => { setAdvisoryJustAccepted(false); advanceStep("safety"); }}
                   className="w-full"
+                  disabled={codeLoading || (!!vehicle?.lockboxId && codeError)}
                   data-testid="button-have-keys-continue"
                 >
                   <Key className="h-4 w-4 mr-2" />

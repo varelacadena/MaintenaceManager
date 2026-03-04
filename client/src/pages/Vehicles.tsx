@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle } from "@shared/schema";
+import type { Vehicle, Lockbox } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VehicleReservationsContent } from "@/pages/VehicleReservations";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
+import CodeHub from "@/components/CodeHub";
 
 const statusColors = {
   available: "default",
@@ -53,6 +54,11 @@ function FleetContent() {
 
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+
+  const { data: lockboxes } = useQuery<Lockbox[]>({
+    queryKey: ["/api/lockboxes"],
+    enabled: user?.role === "admin",
   });
 
   const form = useForm<InsertVehicle>({
@@ -337,6 +343,31 @@ function FleetContent() {
                         </FormItem>
                       )}
                     />
+                    {lockboxes && lockboxes.length > 0 && (
+                      <FormField
+                        control={form.control}
+                        name="lockboxId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Lockbox</FormLabel>
+                            <Select onValueChange={(val) => field.onChange(val === "none" ? null : val)} value={field.value || "none"}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-lockbox">
+                                  <SelectValue placeholder="No lockbox" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">No lockbox</SelectItem>
+                                {lockboxes.filter(lb => lb.status === "active").map(lb => (
+                                  <SelectItem key={lb.id} value={lb.id}>{lb.name} — {lb.location}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
                   <DialogFooter>
                     <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-vehicle">
@@ -449,7 +480,8 @@ function FleetContent() {
 export default function Vehicles() {
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
-  const defaultTab = urlParams.get("tab") === "reservations" ? "reservations" : "fleet";
+  const tabParam = urlParams.get("tab");
+  const defaultTab = tabParam === "reservations" ? "reservations" : tabParam === "codehub" ? "codehub" : "fleet";
   const { user } = useAuth();
   const notificationCounts = useNotificationCounts();
 
@@ -476,6 +508,11 @@ export default function Vehicles() {
               </Badge>
             )}
           </TabsTrigger>
+          {user?.role === "admin" && (
+            <TabsTrigger value="codehub" data-testid="tab-codehub">
+              Code Hub
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="fleet">
           <FleetContent />
@@ -483,6 +520,11 @@ export default function Vehicles() {
         <TabsContent value="reservations">
           <VehicleReservationsContent />
         </TabsContent>
+        {user?.role === "admin" && (
+          <TabsContent value="codehub">
+            <CodeHub />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
