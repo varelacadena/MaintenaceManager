@@ -652,7 +652,14 @@ export default function Tasks() {
                                     </Badge>
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {statusConfig.map((s) => (
+                                    {statusConfig
+                                      .filter((s) => {
+                                        if (s.key === "completed" && task.requiresEstimate && task.estimateStatus !== "approved") {
+                                          return false;
+                                        }
+                                        return true;
+                                      })
+                                      .map((s) => (
                                       <SelectItem key={s.key} value={s.key}>
                                         {s.label}
                                       </SelectItem>

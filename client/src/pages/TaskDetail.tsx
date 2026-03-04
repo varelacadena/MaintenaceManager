@@ -669,6 +669,13 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Status updated" });
     },
+    onError: async (error: any) => {
+      let message = "Failed to update status";
+      try {
+        if (error?.message) message = error.message;
+      } catch {}
+      toast({ title: "Error", description: message, variant: "destructive" });
+    },
   });
 
   const updateTaskMutation = useMutation({
@@ -680,6 +687,13 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Task updated" });
+    },
+    onError: async (error: any) => {
+      let message = "Failed to update task";
+      try {
+        if (error?.message) message = error.message;
+      } catch {}
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
@@ -764,6 +778,13 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       toast({ title: "Timer stopped" });
+    },
+    onError: async (error: any) => {
+      let message = "Failed to stop timer";
+      try {
+        if (error?.message) message = error.message;
+      } catch {}
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
@@ -1058,6 +1079,7 @@ export default function TaskDetail() {
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const isStudent = user?.role === "student";
+  const estimateBlocksCompletion = task.requiresEstimate && task.estimateStatus !== "approved";
   const assignedUser = users.find(u => u.id === task.assignedToId);
   const adminUsers = users.filter(u => u.role === "admin");
   const technicianUsers = users.filter(u => u.role === "technician");
@@ -1085,6 +1107,16 @@ export default function TaskDetail() {
   };
 
   const handleComplete = () => {
+    if (estimateBlocksCompletion) {
+      toast({
+        title: "Cannot complete task",
+        description: isStudent
+          ? "This task requires approved estimates. Contact your supervisor."
+          : "Estimates must be approved before completing this task.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (task.requiresPhoto && uploads.length === 0) {
       toast({
         title: "Photo required",
@@ -1158,6 +1190,20 @@ export default function TaskDetail() {
               <div className="p-4 bg-muted/30 rounded-lg">
                 <p className="text-sm leading-relaxed" data-testid="text-description">{task.description}</p>
               </div>
+            )}
+
+            {task.requiresEstimate && (
+              task.estimateStatus === "approved" ? (
+                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                  <p className="text-sm text-green-800 dark:text-green-300">Estimate approved — you can complete this task.</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-pending">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-sm text-amber-800 dark:text-amber-300">This task requires approved estimates. Contact your supervisor.</p>
+                </div>
+              )
             )}
 
             {allTaskResources.length > 0 && (
@@ -1312,11 +1358,12 @@ export default function TaskDetail() {
                   size="lg"
                   className="flex-1 font-bold bg-green-600 text-white border-green-600"
                   onClick={handleComplete}
-                  disabled={stopTimerMutation.isPending}
+                  disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
+                  title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
                   data-testid="bottom-button-complete"
                 >
                   <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Mark as Completed
+                  {estimateBlocksCompletion ? "Estimate Required" : "Mark as Completed"}
                 </Button>
               </>
             ) : task.status === "in_progress" ? (
@@ -1334,11 +1381,12 @@ export default function TaskDetail() {
                   size="lg"
                   className="flex-1 font-bold bg-green-600 text-white border-green-600"
                   onClick={handleComplete}
-                  disabled={updateStatusMutation.isPending}
+                  disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
+                  title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
                   data-testid="bottom-button-complete"
                 >
                   <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Mark as Completed
+                  {estimateBlocksCompletion ? "Estimate Required" : "Mark as Completed"}
                 </Button>
               </>
             ) : (
@@ -1382,11 +1430,15 @@ export default function TaskDetail() {
                 variant="outline"
                 className="w-full justify-start"
                 onClick={() => {
+                  if (estimateBlocksCompletion) {
+                    toast({ title: "Cannot complete task", description: "Estimates must be approved before completing this task.", variant: "destructive" });
+                    return;
+                  }
                   if (activeTimer) {
                     stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
                   }
                 }}
-                disabled={stopTimerMutation.isPending}
+                disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
                 data-testid="button-stop-complete"
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -1589,6 +1641,25 @@ export default function TaskDetail() {
               <div className="p-4 bg-muted/30 rounded-lg">
                 <p className="text-sm leading-relaxed" data-testid="text-description">{task.description}</p>
               </div>
+            )}
+
+            {task.requiresEstimate && (
+              task.estimateStatus === "needs_estimate" ? (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-needs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-sm text-amber-800 dark:text-amber-300">This task requires an estimate. Estimates must be submitted and approved before completion.</p>
+                </div>
+              ) : task.estimateStatus === "waiting_approval" ? (
+                <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-md" data-testid="banner-estimate-waiting">
+                  <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                  <p className="text-sm text-purple-800 dark:text-purple-300">Estimates submitted and pending approval.</p>
+                </div>
+              ) : task.estimateStatus === "approved" ? (
+                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                  <p className="text-sm text-green-800 dark:text-green-300">Estimate approved — this task can be completed.</p>
+                </div>
+              ) : null
             )}
 
             {allTaskResources.length > 0 && (
@@ -1924,11 +1995,12 @@ export default function TaskDetail() {
                   size="lg"
                   className="flex-1 font-bold bg-green-600 text-white border-green-600"
                   onClick={handleComplete}
-                  disabled={stopTimerMutation.isPending}
+                  disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
+                  title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
                   data-testid="bottom-button-complete"
                 >
                   <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Mark as Completed
+                  {estimateBlocksCompletion ? "Estimate Required" : "Mark as Completed"}
                 </Button>
               </>
             ) : task.status === "in_progress" ? (
@@ -1946,11 +2018,12 @@ export default function TaskDetail() {
                   size="lg"
                   className="flex-1 font-bold bg-green-600 text-white border-green-600"
                   onClick={handleComplete}
-                  disabled={updateStatusMutation.isPending}
+                  disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
+                  title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
                   data-testid="bottom-button-complete"
                 >
                   <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Mark as Completed
+                  {estimateBlocksCompletion ? "Estimate Required" : "Mark as Completed"}
                 </Button>
               </>
             ) : (
@@ -1994,11 +2067,15 @@ export default function TaskDetail() {
                 variant="outline"
                 className="w-full justify-start"
                 onClick={() => {
+                  if (estimateBlocksCompletion) {
+                    toast({ title: "Cannot complete task", description: "Estimates must be approved before completing this task.", variant: "destructive" });
+                    return;
+                  }
                   if (activeTimer) {
                     stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
                   }
                 }}
-                disabled={stopTimerMutation.isPending}
+                disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
                 data-testid="button-stop-complete"
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -2523,6 +2600,26 @@ export default function TaskDetail() {
               </div>
             </div>
           </div>
+
+          {task.requiresEstimate && (
+            task.estimateStatus === "needs_estimate" ? (
+              <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-needs">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <p className="text-sm text-amber-800 dark:text-amber-300">This task requires an estimate. Estimates must be submitted and approved before completion.</p>
+              </div>
+            ) : task.estimateStatus === "waiting_approval" ? (
+              <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-md" data-testid="banner-estimate-waiting">
+                <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                <p className="text-sm text-purple-800 dark:text-purple-300">Estimates submitted and pending approval.</p>
+              </div>
+            ) : task.estimateStatus === "approved" ? (
+              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
+                <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                <p className="text-sm text-green-800 dark:text-green-300">Estimate approved — this task can be completed.</p>
+              </div>
+            ) : null
+          )}
+
           {/* Location - Clickable for admin/tech only */}
           {property && (
             isTechnicianOrAdmin ? (
@@ -2778,7 +2875,9 @@ export default function TaskDetail() {
                       <SelectItem value="not_started">Not Started</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="on_hold">On Hold</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                      {!estimateBlocksCompletion && (
+                        <SelectItem value="completed">Completed</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -3430,11 +3529,12 @@ export default function TaskDetail() {
                 size="sm"
                 className="flex-1 h-14 flex-col gap-0.5 bg-green-600"
                 onClick={handleComplete}
-                disabled={updateStatusMutation.isPending}
+                disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
+                title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
                 data-testid="bottom-button-complete"
               >
                 <CheckCircle2 className="w-6 h-6" />
-                <span className="text-xs font-medium">Complete</span>
+                <span className="text-xs font-medium">{estimateBlocksCompletion ? "Estimate Required" : "Complete"}</span>
               </Button>
             </div>
           ) : (
@@ -3620,11 +3720,15 @@ export default function TaskDetail() {
               variant="outline"
               className="w-full justify-start h-12"
               onClick={() => {
+                if (estimateBlocksCompletion) {
+                  toast({ title: "Cannot complete task", description: "Estimates must be approved before completing this task.", variant: "destructive" });
+                  return;
+                }
                 if (activeTimer) {
                   stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
                 }
               }}
-              disabled={stopTimerMutation.isPending}
+              disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
               Complete Task

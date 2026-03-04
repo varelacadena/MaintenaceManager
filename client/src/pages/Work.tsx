@@ -58,6 +58,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import type { Task, Area, User, Property, Vendor, Project, Space } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -347,6 +348,8 @@ function TaskTableRow({
   handleInlineEdit,
   isChildTask,
   rowIndex,
+  onReviewEstimates,
+  isAdmin,
 }: {
   task: Task;
   userGroups: { label: string; items: User[] }[];
@@ -360,6 +363,8 @@ function TaskTableRow({
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isChildTask?: boolean;
   rowIndex?: number;
+  onReviewEstimates?: (taskId: string) => void;
+  isAdmin?: boolean;
 }) {
   const isOverdue = task.estimatedCompletionDate
     && task.status !== "completed"
@@ -461,30 +466,53 @@ function TaskTableRow({
         </div>
       </TableCell>
       <TableCell className="py-2.5">
-        <Select
-          value={task.status}
-          onValueChange={(val) => handleStatusChange(task.id, val as StatusType)}
-        >
-          <SelectTrigger
-            className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
-            data-testid={`select-status-${task.id}`}
-            onClick={(e) => e.stopPropagation()}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Select
+            value={task.status}
+            onValueChange={(val) => handleStatusChange(task.id, val as StatusType)}
           >
-            <Badge
-              variant="outline"
-              className={`${taskStatusColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+            <SelectTrigger
+              className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
+              data-testid={`select-status-${task.id}`}
+              onClick={(e) => e.stopPropagation()}
             >
-              <SelectValue />
-            </Badge>
-          </SelectTrigger>
-          <SelectContent>
-            {taskStatusConfig.map((s) => (
-              <SelectItem key={s.key} value={s.key}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              <Badge
+                variant="outline"
+                className={`${taskStatusColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+              >
+                <SelectValue />
+              </Badge>
+            </SelectTrigger>
+            <SelectContent>
+              {taskStatusConfig
+                .filter((s) => {
+                  if (s.key === "completed" && task.requiresEstimate && task.estimateStatus !== "approved") {
+                    return false;
+                  }
+                  return true;
+                })
+                .map((s) => (
+                <SelectItem key={s.key} value={s.key}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isAdmin && task.requiresEstimate && task.estimateStatus === "waiting_approval" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReviewEstimates?.(task.id);
+              }}
+              className="text-[10px]"
+              data-testid={`button-review-estimates-${task.id}`}
+            >
+              Review & Approve
+            </Button>
+          )}
+        </div>
       </TableCell>
       <TableCell className="py-2.5">
         <Select
@@ -558,6 +586,7 @@ export default function Work() {
     newStatus: StatusType;
     task: Task;
   } | null>(null);
+  const [reviewEstimatesTaskId, setReviewEstimatesTaskId] = useState<string | null>(null);
 
   const { data: tasks, isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -670,10 +699,14 @@ export default function Work() {
       setHoldReason("");
       setPendingStatusChange(null);
     },
-    onError: () => {
+    onError: async (error: any) => {
+      let description = "Failed to update task status.";
+      if (error?.message) {
+        description = error.message;
+      }
       toast({
         title: "Error",
-        description: "Failed to update task status.",
+        description,
         variant: "destructive",
       });
     },
@@ -1305,6 +1338,8 @@ export default function Work() {
                                 handleTaskTypeChange={handleTaskTypeChange}
                                 handleInlineEdit={handleInlineEdit}
                                 rowIndex={idx}
+                                isAdmin={isAdmin}
+                                onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
                               />
                             );
                           }
@@ -1333,6 +1368,8 @@ export default function Work() {
                               handleInlineEdit={handleInlineEdit}
                               getPropertyName={getPropertyName}
                               handleProjectStatusChange={handleProjectStatusChange}
+                              isAdmin={isAdmin}
+                              onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
                             />
                           );
                         })}
@@ -1611,6 +1648,16 @@ export default function Work() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {reviewEstimatesTaskId && (
+        <EstimateReviewDialog
+          taskId={reviewEstimatesTaskId}
+          open={!!reviewEstimatesTaskId}
+          onOpenChange={(open) => {
+            if (!open) setReviewEstimatesTaskId(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -1632,6 +1679,8 @@ function ProjectRowGroup({
   handleInlineEdit,
   getPropertyName,
   handleProjectStatusChange,
+  isAdmin,
+  onReviewEstimates,
 }: {
   project: Project;
   childTasks: Task[];
@@ -1649,6 +1698,8 @@ function ProjectRowGroup({
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   getPropertyName: (propertyId: string | null) => string | null;
   handleProjectStatusChange: (projectId: string, status: string) => void;
+  isAdmin?: boolean;
+  onReviewEstimates?: (taskId: string) => void;
 }) {
   const propertyName = getPropertyName(project.propertyId);
   const projectStatusToUnified = projectStatusMapping[project.status] || "not_started";
@@ -1764,6 +1815,8 @@ function ProjectRowGroup({
             handleInlineEdit={handleInlineEdit}
             isChildTask
             rowIndex={idx}
+            isAdmin={isAdmin}
+            onReviewEstimates={onReviewEstimates}
           />
         ))}
     </>

@@ -104,7 +104,8 @@ export default function Dashboard() {
 
   const statusMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: Task["status"] }) => {
-      return apiRequest("PATCH", `/api/tasks/${taskId}`, { status });
+      const res = await apiRequest("PATCH", `/api/tasks/${taskId}`, { status });
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -113,10 +114,14 @@ export default function Dashboard() {
         description: "Task status has been changed",
       });
     },
-    onError: () => {
+    onError: async (error: any) => {
+      let message = "Failed to update task status";
+      if (error?.message) {
+        message = error.message;
+      }
       toast({
         title: "Error",
-        description: "Failed to update task status",
+        description: message,
         variant: "destructive",
       });
     },

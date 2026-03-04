@@ -1462,6 +1462,19 @@ Be concise and practical. Do not use markdown formatting.`;
         updateData.status = "not_started";
       }
 
+      if (updateData.status === "completed") {
+        const currentTask = await storage.getTask(req.params.id);
+        if (currentTask?.requiresEstimate) {
+          const taskQuotes = await storage.getQuotesByTaskId(req.params.id);
+          if (taskQuotes.length === 0) {
+            return res.status(400).json({ message: "Submit an estimate before completing this task" });
+          }
+          if (currentTask.estimateStatus !== "approved") {
+            return res.status(400).json({ message: "Estimates must be approved before completing this task" });
+          }
+        }
+      }
+
       // Handle date conversions
       if (updateData.actualCompletionDate) {
         updateData.actualCompletionDate = new Date(updateData.actualCompletionDate);
@@ -1546,6 +1559,16 @@ Be concise and practical. Do not use markdown formatting.`;
         const inPool = task.executorType === "technician" && task.assignedPool === "technician_pool";
         if (!directlyAssigned && !inPool) {
           return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
+        }
+      }
+
+      if (normalizedStatus === "completed" && task.requiresEstimate) {
+        const taskQuotes = await storage.getQuotesByTaskId(taskId);
+        if (taskQuotes.length === 0) {
+          return res.status(400).json({ message: "Submit an estimate before completing this task" });
+        }
+        if (task.estimateStatus !== "approved") {
+          return res.status(400).json({ message: "Estimates must be approved before completing this task" });
         }
       }
 
@@ -4737,9 +4760,12 @@ Be concise and practical. Do not use markdown formatting.`;
         }
       }
 
-      // Update task status to 'not_started' and set approved quote ID
+      const currentTask = await storage.getTask(quote.taskId);
+      const keepStatus = currentTask && (currentTask.status === "in_progress" || currentTask.status === "on_hold")
+        ? currentTask.status
+        : "not_started";
       const updatedQuoteTask = await storage.updateTask(quote.taskId, {
-        status: "not_started",
+        status: keepStatus,
         estimateStatus: "approved",
         approvedQuoteId: req.params.id,
       });
@@ -4779,7 +4805,7 @@ Be concise and practical. Do not use markdown formatting.`;
       if (allRejected) {
         await storage.updateTask(quote.taskId, {
           estimateStatus: "needs_estimate",
-          status: "needs_estimate",
+          status: "in_progress",
         });
       }
 

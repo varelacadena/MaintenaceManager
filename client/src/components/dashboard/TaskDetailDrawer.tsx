@@ -255,15 +255,31 @@ export default function TaskDetailDrawer({
             )}
             {task.status === "in_progress" && (
               <>
-                <Button
-                  onClick={() => onStatusChange(task.id, "completed")}
-                  disabled={isPending}
-                  className="flex-1"
-                  data-testid="drawer-complete-task"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Complete
-                </Button>
+                {task.requiresEstimate && task.estimateStatus !== "approved" ? (
+                  <div className="flex-1 space-y-1">
+                    <Button
+                      disabled
+                      className="w-full"
+                      data-testid="drawer-complete-task"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Complete
+                    </Button>
+                    <p className="text-xs text-amber-600 dark:text-amber-400" data-testid="text-estimate-required">
+                      Estimates must be approved before completing this task
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => onStatusChange(task.id, "completed")}
+                    disabled={isPending}
+                    className="flex-1"
+                    data-testid="drawer-complete-task"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Complete
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => onStatusChange(task.id, "on_hold")}
