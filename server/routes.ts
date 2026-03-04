@@ -555,6 +555,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/users/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const userToDelete = await storage.getUser(req.params.id);
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (userToDelete.id === req.userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      await storage.deleteUser(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      if (error.code === "23503") {
+        return res.status(400).json({ message: "Cannot delete user with associated data. Remove their tasks and assignments first." });
+      }
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Credential management routes (admin only)
   app.post("/api/credentials/create", isAuthenticated, requireAdmin, async (req, res) => {
     try {

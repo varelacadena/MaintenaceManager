@@ -847,6 +847,7 @@ export class DatabaseStorage implements IStorage {
         scheduledStartTime: tasks.scheduledStartTime,
         requiredSkill: tasks.requiredSkill,
         aiGenerated: tasks.aiGenerated,
+        parentTaskId: tasks.parentTaskId,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
       })
