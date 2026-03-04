@@ -3115,7 +3115,7 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
-  app.get("/api/lockboxes/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+  app.get("/api/lockboxes/:id", isAuthenticated, async (req, res) => {
     try {
       const lockbox = await storage.getLockbox(req.params.id);
       if (!lockbox) return res.status(404).json({ message: "Lockbox not found" });

@@ -3,11 +3,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Car, Camera, MapPin, ClipboardList, CircleCheck, Check,
   Gauge, Fuel, Sparkles, AlertTriangle, MessageSquare, ImagePlus,
-  Navigation, CheckCircle, Wrench, ChevronLeft,
+  Navigation, CheckCircle, Wrench, ChevronLeft, KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { VehicleCheckOutLog, Vehicle, VehicleReservation } from "@shared/schema";
+import type { VehicleCheckOutLog, Vehicle, VehicleReservation, Lockbox } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 
 type Step = "summary" | "inspection" | "complete";
-type InspectionSubStep = "mileage" | "fuel" | "cleanliness" | "issues" | "photos" | "notes";
+type InspectionSubStep = "mileage" | "fuel" | "cleanliness" | "issues" | "photos" | "notes" | "keyReturn";
 
 const STEPS: { id: Step; label: string; icon: any }[] = [
   { id: "summary", label: "Trip Summary", icon: MapPin },
@@ -182,6 +182,7 @@ export default function VehicleCheckIn() {
 
   const [fuelViolationAck, setFuelViolationAck] = useState(false);
   const [cleanlinessViolationAck, setCleanlinessViolationAck] = useState(false);
+  const [keyReturned, setKeyReturned] = useState(false);
 
   const { data: checkOutLog, isLoading } = useQuery<VehicleCheckOutLog>({
     queryKey: [`/api/vehicle-checkout-logs/${checkOutLogId}`],
@@ -196,6 +197,13 @@ export default function VehicleCheckIn() {
     queryKey: [`/api/vehicle-reservations/${checkOutLog?.reservationId}`],
     enabled: !!checkOutLog?.reservationId,
   });
+
+  const { data: lockbox } = useQuery<Lockbox>({
+    queryKey: ["/api/lockboxes", vehicle?.lockboxId],
+    enabled: !!vehicle?.lockboxId,
+  });
+
+  const hasLockbox = !!vehicle?.lockboxId;
 
   useEffect(() => {
     if (checkOutLog?.startMileage) setCiMileage(checkOutLog.startMileage);
@@ -365,7 +373,10 @@ export default function VehicleCheckIn() {
     ? inspSlideDir === "left" ? "opacity-0 -translate-x-4" : "opacity-0 translate-x-4"
     : "opacity-100 translate-x-0";
 
-  const inspSubStepIndex = INSPECTION_SUB_STEPS.indexOf(inspSubStep);
+  const activeSubSteps = hasLockbox
+    ? [...INSPECTION_SUB_STEPS, "keyReturn" as InspectionSubStep]
+    : INSPECTION_SUB_STEPS;
+  const inspSubStepIndex = activeSubSteps.indexOf(inspSubStep);
 
   return (
     <div className="flex-1 p-4 max-w-2xl mx-auto">
@@ -455,7 +466,7 @@ export default function VehicleCheckIn() {
           {step === "inspection" && (
             <Card>
               <div className="px-6 pt-4">
-                <SubStepDots total={INSPECTION_SUB_STEPS.length} currentIndex={inspSubStepIndex} />
+                <SubStepDots total={activeSubSteps.length} currentIndex={inspSubStepIndex} />
               </div>
               <div className="overflow-hidden">
                 <div className={`transition-all duration-300 ease-in-out ${inspAnimClass}`}>
@@ -850,24 +861,104 @@ export default function VehicleCheckIn() {
                           data-testid="input-return-notes"
                         />
                         <div className="flex flex-col gap-2">
+                          {hasLockbox ? (
+                            <>
+                              <Button
+                                onClick={() => advanceInspSubStep("keyReturn")}
+                                className="w-full"
+                                data-testid="button-notes-next"
+                              >
+                                Continue
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => { setCiReturnNotes(""); advanceInspSubStep("keyReturn"); }}
+                                className="w-full"
+                                data-testid="button-skip-notes"
+                              >
+                                Skip Notes — Continue
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                onClick={() => handleCheckInSubmit(ciReturnNotes)}
+                                disabled={checkInMutation.isPending}
+                                className="w-full"
+                                data-testid="button-submit-checkin"
+                              >
+                                {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleCheckInSubmit("")}
+                                disabled={checkInMutation.isPending}
+                                className="w-full"
+                                data-testid="button-skip-notes"
+                              >
+                                Skip — Complete Check-In
+                              </Button>
+                            </>
+                          )}
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("photos")} className="w-full text-sm">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB: KEY RETURN */}
+                    {inspSubStep === "keyReturn" && (
+                      <div className="space-y-5" data-testid="key-return-section">
+                        <div className="text-center space-y-2">
+                          <div className="flex justify-center">
+                            <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                              <KeyRound className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+                            </div>
+                          </div>
+                          <h3 className="text-lg font-semibold">Return the Key</h3>
+                          <p className="text-sm text-muted-foreground">Please return the vehicle key to the lockbox drop slot</p>
+                        </div>
+
+                        <div className="rounded-md border border-amber-500/30 bg-amber-50 dark:bg-amber-900/10 p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium" data-testid="text-lockbox-name">
+                                {lockbox?.name || "Lockbox"}
+                              </p>
+                              <p className="text-sm text-muted-foreground" data-testid="text-lockbox-location">
+                                {lockbox?.location || "See admin for location"}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-amber-800 dark:text-amber-200">
+                            Drop the key into the lockbox's key return slot. You do not need a code to return the key.
+                          </p>
+                        </div>
+
+                        <div className="flex items-start gap-3 p-3 rounded-md border">
+                          <Checkbox
+                            id="key-returned"
+                            checked={keyReturned}
+                            onCheckedChange={(checked) => setKeyReturned(checked === true)}
+                            data-testid="checkbox-key-returned"
+                          />
+                          <Label htmlFor="key-returned" className="text-sm leading-snug cursor-pointer">
+                            I have returned the key to the lockbox
+                          </Label>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
                           <Button
                             onClick={() => handleCheckInSubmit(ciReturnNotes)}
-                            disabled={checkInMutation.isPending}
+                            disabled={!keyReturned || checkInMutation.isPending}
                             className="w-full"
-                            data-testid="button-submit-checkin"
+                            data-testid="button-complete-checkin-key"
                           >
                             {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
                           </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleCheckInSubmit("")}
-                            disabled={checkInMutation.isPending}
-                            className="w-full"
-                            data-testid="button-skip-notes"
-                          >
-                            Skip — Complete Check-In
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("photos")} className="w-full text-sm">
+                          <Button variant="ghost" onClick={() => goBackInspSubStep("notes")} className="w-full text-sm">
                             <ChevronLeft className="h-4 w-4 mr-1" /> Back
                           </Button>
                         </div>
