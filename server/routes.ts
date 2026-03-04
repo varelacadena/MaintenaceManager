@@ -3208,7 +3208,7 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.post("/api/lockboxes/:lockboxId/assign-code", isAuthenticated, async (req, res) => {
     try {
-      const user = await getAuthenticatedUser(req);
+      const user = await getAuthUser(req);
       if (!user) return res.status(401).json({ message: "Unauthorized" });
 
       const lockboxId = req.params.lockboxId;
