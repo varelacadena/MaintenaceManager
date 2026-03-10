@@ -31,6 +31,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   Search,
   BookOpen,
@@ -39,6 +45,13 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Link as LinkIcon,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  FolderPlus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -52,6 +65,14 @@ type ResourceCategory = {
   color: string;
 };
 
+type ResourceFolder = {
+  id: string;
+  name: string;
+  parentId: string | null;
+  createdAt: string;
+  breadcrumbs?: { id: string; name: string }[];
+};
+
 type Resource = {
   id: string;
   title: string;
@@ -60,6 +81,7 @@ type Resource = {
   url: string;
   fileName: string | null;
   categoryId: string | null;
+  folderId: string | null;
   equipmentId: string | null;
   equipmentCategory: string | null;
   category: ResourceCategory | null;
@@ -120,6 +142,12 @@ export default function ResourceLibrary() {
   const [isUploading, setIsUploading] = useState(false);
   const [pasteUrlMode, setPasteUrlMode] = useState(false);
 
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [editingFolder, setEditingFolder] = useState<ResourceFolder | null>(null);
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -127,6 +155,7 @@ export default function ResourceLibrary() {
     url: "",
     fileName: "",
     categoryId: "",
+    folderId: "" as string,
     equipmentId: "",
     equipmentCategory: "",
     propertyIds: [] as string[],
@@ -139,7 +168,48 @@ export default function ResourceLibrary() {
   });
 
   const { data: resourceList = [], isLoading } = useQuery<Resource[]>({
-    queryKey: ["/api/resources"],
+    queryKey: ["/api/resources", currentFolderId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (currentFolderId) {
+        params.set("folderId", currentFolderId);
+      } else {
+        params.set("folderId", "root");
+      }
+      const res = await fetch(`/api/resources?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch resources");
+      return res.json();
+    },
+  });
+
+  const { data: folders = [] } = useQuery<ResourceFolder[]>({
+    queryKey: ["/api/resource-folders", currentFolderId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (currentFolderId) params.set("parentId", currentFolderId);
+      const res = await fetch(`/api/resource-folders?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch folders");
+      return res.json();
+    },
+  });
+
+  const { data: currentFolderData } = useQuery<ResourceFolder>({
+    queryKey: ["/api/resource-folders", "detail", currentFolderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/resource-folders/${currentFolderId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch folder");
+      return res.json();
+    },
+    enabled: !!currentFolderId,
+  });
+
+  const { data: allFolders = [] } = useQuery<ResourceFolder[]>({
+    queryKey: ["/api/resource-folders", "all"],
+    queryFn: async () => {
+      const res = await fetch(`/api/resource-folders?all=true`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch folders");
+      return res.json();
+    },
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
@@ -206,8 +276,45 @@ export default function ResourceLibrary() {
     onError: () => toast({ title: "Failed to delete resource", variant: "destructive" }),
   });
 
+  const createFolderMutation = useMutation({
+    mutationFn: (data: { name: string; parentId: string | null }) =>
+      apiRequest("POST", "/api/resource-folders", data),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      setFolderDialogOpen(false);
+      setFolderName("");
+      setEditingFolder(null);
+      toast({ title: "Folder created" });
+    },
+    onError: () => toast({ title: "Failed to create folder", variant: "destructive" }),
+  });
+
+  const updateFolderMutation = useMutation({
+    mutationFn: (data: { id: string; name: string }) =>
+      apiRequest("PATCH", `/api/resource-folders/${data.id}`, { name: data.name }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      setFolderDialogOpen(false);
+      setFolderName("");
+      setEditingFolder(null);
+      toast({ title: "Folder renamed" });
+    },
+    onError: () => toast({ title: "Failed to rename folder", variant: "destructive" }),
+  });
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/resource-folders/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+      setDeleteFolderId(null);
+      toast({ title: "Folder deleted" });
+    },
+    onError: () => toast({ title: "Failed to delete folder", variant: "destructive" }),
+  });
+
   function resetForm() {
-    setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
+    setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", folderId: currentFolderId || "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
     setPasteUrlMode(false);
     setIsUploading(false);
     setEquipmentSearch("");
@@ -230,6 +337,7 @@ export default function ResourceLibrary() {
       url: r.url,
       fileName: r.fileName || "",
       categoryId: r.categoryId || "",
+      folderId: r.folderId || "",
       equipmentId: r.equipmentId || "",
       equipmentCategory: r.equipmentCategory || "",
       propertyIds: r.propertyIds,
@@ -284,12 +392,48 @@ export default function ResourceLibrary() {
     }
   }
 
+  function openCreateFolder() {
+    setEditingFolder(null);
+    setFolderName("");
+    setFolderDialogOpen(true);
+  }
+
+  function openRenameFolder(folder: ResourceFolder) {
+    setEditingFolder(folder);
+    setFolderName(folder.name);
+    setFolderDialogOpen(true);
+  }
+
+  function handleFolderSubmit() {
+    if (!folderName.trim()) {
+      toast({ title: "Folder name is required", variant: "destructive" });
+      return;
+    }
+    if (editingFolder) {
+      updateFolderMutation.mutate({ id: editingFolder.id, name: folderName.trim() });
+    } else {
+      createFolderMutation.mutate({ name: folderName.trim(), parentId: currentFolderId });
+    }
+  }
+
+  function navigateToFolder(folderId: string | null) {
+    setCurrentFolderId(folderId);
+    setSearch("");
+  }
+
+  const breadcrumbs = currentFolderData?.breadcrumbs || [];
+
   const filtered = resourceList.filter(r => {
     const matchSearch = !search || r.title.toLowerCase().includes(search.toLowerCase()) ||
       (r.description || "").toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || r.type === typeFilter;
     const matchCat = categoryFilter === "all" || r.categoryId === categoryFilter;
     return matchSearch && matchType && matchCat;
+  });
+
+  const filteredFolders = folders.filter(f => {
+    if (!search) return true;
+    return f.name.toLowerCase().includes(search.toLowerCase());
   });
 
   const thumbnail = form.type === "video" ? getYoutubeThumbnail(form.url) : null;
@@ -302,11 +446,46 @@ export default function ResourceLibrary() {
           <BookOpen className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-semibold">Resource Library</h1>
         </div>
-        <Button onClick={openCreate} data-testid="button-add-resource">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Resource
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openCreateFolder} data-testid="button-new-folder">
+            <FolderPlus className="w-4 h-4 mr-2" />
+            New Folder
+          </Button>
+          <Button onClick={openCreate} data-testid="button-add-resource">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Resource
+          </Button>
+        </div>
       </div>
+
+      {/* Breadcrumbs */}
+      {currentFolderId && (
+        <nav className="flex items-center gap-1 text-sm" data-testid="breadcrumb-nav">
+          <button
+            onClick={() => navigateToFolder(null)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="breadcrumb-root"
+          >
+            Library
+          </button>
+          {breadcrumbs.map((crumb, idx) => (
+            <span key={crumb.id} className="flex items-center gap-1">
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+              {idx === breadcrumbs.length - 1 ? (
+                <span className="font-medium" data-testid={`breadcrumb-current-${crumb.id}`}>{crumb.name}</span>
+              ) : (
+                <button
+                  onClick={() => navigateToFolder(crumb.id)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid={`breadcrumb-${crumb.id}`}
+                >
+                  {crumb.name}
+                </button>
+              )}
+            </span>
+          ))}
+        </nav>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
@@ -345,21 +524,72 @@ export default function ResourceLibrary() {
         </Select>
       </div>
 
-      {/* Resource List */}
+      {/* Folders + Resource List */}
       {isLoading ? (
         <div className="border rounded-md divide-y">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-14 bg-muted animate-pulse" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : (filteredFolders.length === 0 && filtered.length === 0) ? (
         <div className="text-center py-16 text-muted-foreground">
           <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No resources found</p>
-          <p className="text-sm mt-1">Add your first resource using the button above</p>
+          <p className="text-sm mt-1">
+            {currentFolderId
+              ? "This folder is empty. Add resources or create subfolders."
+              : "Add your first resource using the button above"}
+          </p>
         </div>
       ) : (
         <div className="border rounded-md divide-y">
+          {/* Folders first */}
+          {filteredFolders
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+            .map(folder => (
+              <div
+                key={folder.id}
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover-elevate"
+                onClick={() => navigateToFolder(folder.id)}
+                data-testid={`folder-item-${folder.id}`}
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Folder className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" data-testid={`text-folder-name-${folder.id}`}>
+                    {folder.name}
+                  </p>
+                </div>
+                <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" data-testid={`button-folder-menu-${folder.id}`}>
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => openRenameFolder(folder)}
+                        data-testid={`button-rename-folder-${folder.id}`}
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setDeleteFolderId(folder.id)}
+                        className="text-destructive"
+                        data-testid={`button-delete-folder-${folder.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+          {/* Resources */}
           {[...filtered]
             .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }))
             .map(resource => {
@@ -378,7 +608,7 @@ export default function ResourceLibrary() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Resource Dialog */}
       <Dialog open={dialogOpen} onOpenChange={open => { setDialogOpen(open); if (!open) { setEditResource(null); resetForm(); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -565,6 +795,27 @@ export default function ResourceLibrary() {
               </div>
             )}
 
+            {/* Folder */}
+            <div className="space-y-1.5">
+              <Label>Folder</Label>
+              <Select value={form.folderId || "none"} onValueChange={v => setForm(f => ({ ...f, folderId: v === "none" ? "" : v }))}>
+                <SelectTrigger data-testid="select-resource-folder">
+                  <SelectValue placeholder="No folder (root)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No folder (root)</SelectItem>
+                  {allFolders.map(f => (
+                    <SelectItem key={f.id} value={f.id}>
+                      <div className="flex items-center gap-2">
+                        <Folder className="w-3.5 h-3.5 text-muted-foreground" />
+                        {f.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-1.5">
               <Label>Category</Label>
               {!showNewCategory ? (
@@ -694,7 +945,7 @@ export default function ResourceLibrary() {
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
                       onClick={() => { setEquipmentSearch(""); setForm(f => ({ ...f, equipmentId: "" })); }}
                     >
-                      ✕
+                      x
                     </button>
                   )}
                 </div>
@@ -753,7 +1004,7 @@ export default function ResourceLibrary() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirm */}
+      {/* Delete Resource Confirm */}
       <AlertDialog open={!!deleteId} onOpenChange={open => { if (!open) setDeleteId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -768,6 +1019,65 @@ export default function ResourceLibrary() {
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Create/Rename Folder Dialog */}
+      <Dialog open={folderDialogOpen} onOpenChange={open => { setFolderDialogOpen(open); if (!open) { setEditingFolder(null); setFolderName(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingFolder ? "Rename Folder" : "New Folder"}</DialogTitle>
+            <DialogDescription>
+              {editingFolder ? "Enter a new name for this folder." : "Enter a name for the new folder."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Folder Name</Label>
+              <Input
+                placeholder="e.g. HVAC Manuals"
+                value={folderName}
+                onChange={e => setFolderName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleFolderSubmit(); }}
+                autoFocus
+                data-testid="input-folder-name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setFolderDialogOpen(false); setEditingFolder(null); setFolderName(""); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFolderSubmit}
+              disabled={!folderName.trim() || createFolderMutation.isPending || updateFolderMutation.isPending}
+              data-testid="button-save-folder"
+            >
+              {editingFolder ? "Rename" : "Create Folder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Confirm */}
+      <AlertDialog open={!!deleteFolderId} onOpenChange={open => { if (!open) setDeleteFolderId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this folder and all subfolders inside it. Resources in this folder will be moved to the root level.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteFolderId && deleteFolderMutation.mutate(deleteFolderId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-folder"
             >
               Delete
             </AlertDialogAction>

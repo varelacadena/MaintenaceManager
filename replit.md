@@ -66,6 +66,7 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 -   **Calendar (Redesigned):** Week view default on desktop, Day view default on mobile. Tasks display across their full active period (start date through due date). Day and Week views include an hourly time grid (6 AM–10 PM) with timed task blocks and an "All day" row. Per-user color coding via consistent hash. Assignee filter bar with color-coded chips. Current-time indicator line on today's grid. Tasks with a `scheduledStartTime` appear at the correct hour slot; tasks without appear in the All Day row.
 -   **Scheduled Time Field:** Optional `scheduledStartTime` (varchar, format "HH:MM") added to the tasks table and task creation/edit forms. Stored as `scheduled_start_time` in the database (migration 039).
 -   **One-tap Photo/Doc Upload:** TaskDetail bottom action bar has a single "Photos/Docs" button (Paperclip icon) that directly opens the file picker for both images and documents. Files upload and auto-save without an intermediate sheet or manual save step.
+-   **Resource Library Folders:** Nested folder system for organizing documentation in the Resource Library. Admins can create, rename, and delete folders. Resources can be assigned to folders via the resource form. The UI shows a breadcrumb trail for navigation and displays folders above resources in a file-manager style. Table: `resource_folders` (id, name, parent_id, created_at). Resources table has `folder_id` FK. Migration: 044.
 
 ## External Dependencies
 

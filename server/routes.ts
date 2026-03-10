@@ -2847,11 +2847,85 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
+  // Resource folder routes
+  app.get("/api/resource-folders", isAuthenticated, async (req, res) => {
+    try {
+      if (req.query.all === "true") {
+        const folders = await storage.getAllResourceFolders();
+        return res.json(folders);
+      }
+      const parentId = req.query.parentId as string | undefined;
+      const folders = await storage.getResourceFolders(parentId || null);
+      res.json(folders);
+    } catch (error) {
+      console.error("Error fetching resource folders:", error);
+      res.status(500).json({ message: "Failed to fetch resource folders" });
+    }
+  });
+
+  app.get("/api/resource-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folder = await storage.getResourceFolderById(req.params.id);
+      if (!folder) return res.status(404).json({ message: "Folder not found" });
+      res.json(folder);
+    } catch (error) {
+      console.error("Error fetching resource folder:", error);
+      res.status(500).json({ message: "Failed to fetch resource folder" });
+    }
+  });
+
+  app.post("/api/resource-folders", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { name, parentId } = req.body;
+      if (!name || typeof name !== "string") {
+        return res.status(400).json({ message: "Folder name is required" });
+      }
+      const folder = await storage.createResourceFolder({ name: name.trim(), parentId: parentId || null });
+      res.status(201).json(folder);
+    } catch (error) {
+      console.error("Error creating resource folder:", error);
+      res.status(500).json({ message: "Failed to create resource folder" });
+    }
+  });
+
+  app.patch("/api/resource-folders/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { name, parentId } = req.body;
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (parentId !== undefined) updateData.parentId = parentId || null;
+      const folder = await storage.updateResourceFolder(req.params.id, updateData);
+      if (!folder) return res.status(404).json({ message: "Folder not found" });
+      res.json(folder);
+    } catch (error: any) {
+      if (error.message?.includes("circular") || error.message?.includes("own parent")) {
+        return res.status(400).json({ message: error.message });
+      }
+      console.error("Error updating resource folder:", error);
+      res.status(500).json({ message: "Failed to update resource folder" });
+    }
+  });
+
+  app.delete("/api/resource-folders/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteResourceFolder(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting resource folder:", error);
+      res.status(500).json({ message: "Failed to delete resource folder" });
+    }
+  });
+
   app.get("/api/resources", isAuthenticated, async (req, res) => {
     try {
-      const filters: { categoryId?: string; type?: string } = {};
+      const filters: { categoryId?: string; type?: string; folderId?: string | null } = {};
       if (req.query.categoryId) filters.categoryId = req.query.categoryId as string;
       if (req.query.type) filters.type = req.query.type as string;
+      if (req.query.folderId === "root") {
+        filters.folderId = null;
+      } else if (req.query.folderId) {
+        filters.folderId = req.query.folderId as string;
+      }
       const resourceList = await storage.getResources(filters);
       res.json(resourceList);
     } catch (error) {
@@ -2878,6 +2952,7 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(400).json({ message: "Title, type, and url are required" });
       }
       if (!data.categoryId) data.categoryId = null;
+      if (!data.folderId) data.folderId = null;
       if (!data.equipmentId) data.equipmentId = null;
       if (!data.equipmentCategory) data.equipmentCategory = null;
       const user = req.user as any;
@@ -2896,6 +2971,7 @@ Be concise and practical. Do not use markdown formatting.`;
     try {
       const { propertyIds = [], ...data } = req.body;
       if ("categoryId" in data && !data.categoryId) data.categoryId = null;
+      if ("folderId" in data && !data.folderId) data.folderId = null;
       if ("equipmentId" in data && !data.equipmentId) data.equipmentId = null;
       if ("equipmentCategory" in data && !data.equipmentCategory) data.equipmentCategory = null;
       const resource = await storage.updateResource(

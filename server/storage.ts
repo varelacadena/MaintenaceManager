@@ -131,10 +131,13 @@ import {
   passwordResetTokens,
   type PasswordResetToken,
   resourceCategories,
+  resourceFolders,
   resources,
   propertyResources,
   type ResourceCategory,
   type InsertResourceCategory,
+  type ResourceFolder,
+  type InsertResourceFolder,
   type Resource,
   type InsertResource,
 } from "@shared/schema";
@@ -501,7 +504,13 @@ export interface IStorage {
   // Resource Library operations
   getResourceCategories(): Promise<ResourceCategory[]>;
   createResourceCategory(data: InsertResourceCategory): Promise<ResourceCategory>;
-  getResources(filters?: { categoryId?: string; type?: string }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
+  getResourceFolders(parentId?: string | null): Promise<ResourceFolder[]>;
+  getAllResourceFolders(): Promise<ResourceFolder[]>;
+  getResourceFolderById(id: string): Promise<(ResourceFolder & { breadcrumbs: { id: string; name: string }[] }) | undefined>;
+  createResourceFolder(data: InsertResourceFolder): Promise<ResourceFolder>;
+  updateResourceFolder(id: string, data: Partial<InsertResourceFolder>): Promise<ResourceFolder | undefined>;
+  deleteResourceFolder(id: string): Promise<void>;
+  getResources(filters?: { categoryId?: string; type?: string; folderId?: string | null }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
   getResourceById(id: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] }) | undefined>;
   createResource(data: InsertResource, propertyIds: string[]): Promise<Resource>;
   updateResource(id: string, data: Partial<InsertResource>, propertyIds: string[]): Promise<Resource | undefined>;
@@ -2607,7 +2616,83 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getResources(filters?: { categoryId?: string; type?: string }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {
+  async getResourceFolders(parentId?: string | null): Promise<ResourceFolder[]> {
+    if (parentId === null || parentId === undefined) {
+      return await this.db.select().from(resourceFolders)
+        .where(isNull(resourceFolders.parentId))
+        .orderBy(resourceFolders.name);
+    }
+    return await this.db.select().from(resourceFolders)
+      .where(eq(resourceFolders.parentId, parentId))
+      .orderBy(resourceFolders.name);
+  }
+
+  async getAllResourceFolders(): Promise<ResourceFolder[]> {
+    return await this.db.select().from(resourceFolders).orderBy(resourceFolders.name);
+  }
+
+  async getResourceFolderById(id: string): Promise<(ResourceFolder & { breadcrumbs: { id: string; name: string }[] }) | undefined> {
+    const [folder] = await this.db.select().from(resourceFolders).where(eq(resourceFolders.id, id));
+    if (!folder) return undefined;
+
+    const breadcrumbs: { id: string; name: string }[] = [];
+    const visited = new Set<string>();
+    let current: ResourceFolder | undefined = folder;
+    while (current && !visited.has(current.id) && breadcrumbs.length < 50) {
+      visited.add(current.id);
+      breadcrumbs.unshift({ id: current.id, name: current.name });
+      if (current.parentId) {
+        const [parent] = await this.db.select().from(resourceFolders).where(eq(resourceFolders.id, current.parentId));
+        current = parent;
+      } else {
+        current = undefined;
+      }
+    }
+
+    return { ...folder, breadcrumbs };
+  }
+
+  async createResourceFolder(data: InsertResourceFolder): Promise<ResourceFolder> {
+    const [created] = await this.db.insert(resourceFolders).values(data as any).returning();
+    return created;
+  }
+
+  async updateResourceFolder(id: string, data: Partial<InsertResourceFolder>): Promise<ResourceFolder | undefined> {
+    if (data.parentId !== undefined) {
+      if (data.parentId === id) {
+        throw new Error("A folder cannot be its own parent");
+      }
+      if (data.parentId) {
+        const visited = new Set<string>();
+        visited.add(id);
+        let currentId: string | null = data.parentId;
+        while (currentId) {
+          if (visited.has(currentId)) {
+            throw new Error("Moving this folder would create a circular reference");
+          }
+          visited.add(currentId);
+          const [parent] = await this.db.select().from(resourceFolders).where(eq(resourceFolders.id, currentId));
+          currentId = parent?.parentId || null;
+        }
+      }
+    }
+    const [updated] = await this.db.update(resourceFolders).set(data as any).where(eq(resourceFolders.id, id)).returning();
+    return updated;
+  }
+
+  async deleteResourceFolder(id: string, visited?: Set<string>): Promise<void> {
+    const seen = visited || new Set<string>();
+    if (seen.has(id)) return;
+    seen.add(id);
+    await this.db.update(resources).set({ folderId: null }).where(eq(resources.folderId, id));
+    const childFolders = await this.db.select().from(resourceFolders).where(eq(resourceFolders.parentId, id));
+    for (const child of childFolders) {
+      await this.deleteResourceFolder(child.id, seen);
+    }
+    await this.db.delete(resourceFolders).where(eq(resourceFolders.id, id));
+  }
+
+  async getResources(filters?: { categoryId?: string; type?: string; folderId?: string | null }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {
     const rows = await this.db.select().from(resources)
       .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
       .orderBy(desc(resources.createdAt));
@@ -2615,6 +2700,13 @@ export class DatabaseStorage implements IStorage {
     const filtered = rows.filter(row => {
       if (filters?.categoryId && row.resources.categoryId !== filters.categoryId) return false;
       if (filters?.type && row.resources.type !== filters.type) return false;
+      if (filters && 'folderId' in filters) {
+        if (filters.folderId === null) {
+          if (row.resources.folderId !== null) return false;
+        } else if (filters.folderId !== undefined) {
+          if (row.resources.folderId !== filters.folderId) return false;
+        }
+      }
       return true;
     });
 

@@ -1453,6 +1453,17 @@ export const insertResourceCategorySchema = createInsertSchema(resourceCategorie
 export type InsertResourceCategory = z.infer<typeof insertResourceCategorySchema>;
 export type ResourceCategory = typeof resourceCategories.$inferSelect;
 
+export const resourceFolders = pgTable("resource_folders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  parentId: varchar("parent_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertResourceFolderSchema = createInsertSchema(resourceFolders).omit({ id: true, createdAt: true });
+export type InsertResourceFolder = z.infer<typeof insertResourceFolderSchema>;
+export type ResourceFolder = typeof resourceFolders.$inferSelect;
+
 export const resourceTypeEnum = pgEnum("resource_type", ["video", "document", "image", "link"]);
 
 export const resources = pgTable("resources", {
@@ -1464,6 +1475,7 @@ export const resources = pgTable("resources", {
   objectPath: text("object_path"),
   fileName: varchar("file_name", { length: 255 }),
   categoryId: varchar("category_id").references(() => resourceCategories.id, { onDelete: "set null" }),
+  folderId: varchar("folder_id").references(() => resourceFolders.id, { onDelete: "set null" }),
   equipmentId: varchar("equipment_id").references(() => equipment.id, { onDelete: "set null" }),
   equipmentCategory: varchar("equipment_category", { length: 50 }),
   createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
