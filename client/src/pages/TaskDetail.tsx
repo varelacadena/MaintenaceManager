@@ -206,7 +206,7 @@ function QuoteAttachmentsList({ quoteId }: { quoteId: string }) {
   }
 
   const handleDownload = (attachment: QuoteAttachment) => {
-    window.open(attachment.storageUrl, "_blank");
+    window.open(toDisplayUrl(attachment.storageUrl), "_blank");
   };
 
   return (
@@ -1701,7 +1701,7 @@ export default function TaskDetail() {
                           scannedEquipmentResources.map((r: any) => {
                             const RIcon = RESOURCE_TYPE_ICONS[r.type] || FileText;
                             return (
-                              <button key={r.id} className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left" onClick={() => window.open(r.url, "_blank")}>
+                              <button key={r.id} className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left" onClick={() => window.open(toDisplayUrl(r.url), "_blank")}>
                                 <div className="p-1.5 rounded-md bg-primary/10 shrink-0"><RIcon className="w-4 h-4 text-primary" /></div>
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium truncate">{r.title}</p>
@@ -2588,7 +2588,7 @@ export default function TaskDetail() {
                           scannedEquipmentResources.map((r: any) => {
                             const RIcon = RESOURCE_TYPE_ICONS[r.type] || FileText;
                             return (
-                              <button key={r.id} className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left" onClick={() => window.open(r.url, "_blank")}>
+                              <button key={r.id} className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left" onClick={() => window.open(toDisplayUrl(r.url), "_blank")}>
                                 <div className="p-1.5 rounded-md bg-primary/10 shrink-0"><RIcon className="w-4 h-4 text-primary" /></div>
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium truncate">{r.title}</p>
@@ -4707,7 +4707,7 @@ export default function TaskDetail() {
                             <button
                               key={r.id}
                               className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left"
-                              onClick={() => window.open(r.url, "_blank")}
+                              onClick={() => window.open(toDisplayUrl(r.url), "_blank")}
                               data-testid={`resource-item-${r.id}`}
                             >
                               <div className="p-1.5 rounded-md bg-primary/10 shrink-0">

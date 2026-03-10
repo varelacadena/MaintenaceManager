@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useFileDownload } from "@/hooks/use-download";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   Check,
   X,
@@ -21,7 +21,6 @@ import {
 import type { Task, Quote, QuoteAttachment, User as UserType } from "@shared/schema";
 
 function QuoteAttachments({ quoteId }: { quoteId: string }) {
-  const { downloadFile } = useFileDownload();
   const { data: attachments = [] } = useQuery<QuoteAttachment[]>({
     queryKey: ["/api/quotes", quoteId, "attachments"],
   });
@@ -35,7 +34,7 @@ function QuoteAttachments({ quoteId }: { quoteId: string }) {
           key={attachment.id}
           variant="outline"
           size="sm"
-          onClick={() => downloadFile(attachment.storageUrl, attachment.fileName)}
+          onClick={() => window.open(toDisplayUrl(attachment.storageUrl), "_blank")}
           data-testid={`button-download-attachment-${attachment.id}`}
         >
           <Download className="w-3 h-3 mr-1" />

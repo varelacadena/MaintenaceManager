@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Play, FileText, Image, ExternalLink, Edit, Trash2, ExternalLink as OpenIcon } from "lucide-react";
 import { getCategoryStyle } from "@/lib/categoryColors";
+import { toDisplayUrl } from "@/lib/imageUtils";
 
 type ResourceCategory = {
   id: string;
@@ -72,11 +73,11 @@ export default function ResourceCard({
 
   function handleClick() {
     if (resource.type === "video") {
-      embedUrl ? setVideoOpen(true) : window.open(resource.url, "_blank", "noopener");
+      embedUrl ? setVideoOpen(true) : window.open(toDisplayUrl(resource.url), "_blank", "noopener");
     } else if (resource.type === "image") {
       setImageOpen(true);
     } else {
-      window.open(resource.url, "_blank", "noopener");
+      window.open(toDisplayUrl(resource.url), "_blank", "noopener");
     }
   }
 
@@ -106,7 +107,7 @@ export default function ResourceCard({
             <div className="p-6 text-center text-muted-foreground">
               <Play className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm mb-3">This video cannot be embedded.</p>
-              <Button variant="outline" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
+              <Button variant="outline" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener")}>
                 <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
                 Open video
               </Button>
@@ -114,7 +115,7 @@ export default function ResourceCard({
           )}
           {embedUrl && (
             <div className="p-3 flex justify-end border-t">
-              <Button variant="ghost" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
+              <Button variant="ghost" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener")}>
                 <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
                 Open in new tab
               </Button>
@@ -129,12 +130,12 @@ export default function ResourceCard({
             <DialogTitle className="text-base pr-8">{resource.title}</DialogTitle>
           </DialogHeader>
           <img
-            src={resource.url}
+            src={toDisplayUrl(resource.url)}
             alt={resource.title}
             className="w-full h-auto max-h-[75vh] object-contain rounded-md mt-2"
           />
           <div className="flex justify-end pt-1">
-            <Button variant="ghost" size="sm" onClick={() => window.open(resource.url, "_blank", "noopener")}>
+            <Button variant="ghost" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener")}>
               <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
               Open full size
             </Button>
@@ -164,7 +165,7 @@ export default function ResourceCard({
             ) : resource.type === "video" ? (
               <Play className="w-4 h-4 text-muted-foreground" />
             ) : resource.type === "image" && resource.url ? (
-              <img src={resource.url} alt="" className="w-full h-full object-cover" />
+              <img src={toDisplayUrl(resource.url)} alt="" className="w-full h-full object-cover" />
             ) : resource.type === "image" ? (
               <Image className="w-4 h-4 text-muted-foreground" />
             ) : resource.type === "document" ? (
@@ -242,7 +243,7 @@ export default function ResourceCard({
         )}
         {resource.type === "image" && resource.url && (
           <div className="relative h-28 overflow-hidden rounded-t-md bg-muted flex-shrink-0">
-            <img src={resource.url} alt={resource.title} className="w-full h-full object-cover" />
+            <img src={toDisplayUrl(resource.url)} alt={resource.title} className="w-full h-full object-cover" />
           </div>
         )}
         <CardContent className="p-3 space-y-2 flex-1 flex flex-col">

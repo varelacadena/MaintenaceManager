@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -495,7 +496,7 @@ export default function ResourceLibrary() {
                         <div className="min-w-0 flex-1">
                           {form.type === "image" ? (
                             <img
-                              src={form.url}
+                              src={toDisplayUrl(form.url)}
                               alt="Preview"
                               className="h-20 w-auto rounded object-contain"
                             />
