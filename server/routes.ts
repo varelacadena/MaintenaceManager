@@ -1899,25 +1899,24 @@ Be concise and practical. Do not use markdown formatting.`;
         }
       }
 
-      const { endTime, durationMinutes } = req.body;
+      const timeEntryUpdateSchema = z.object({
+        endTime: z.string().refine(val => !isNaN(new Date(val).getTime()), { message: "Invalid endTime format" }),
+        durationMinutes: z.number().int().min(0).optional(),
+      });
 
-      // Validate endTime is provided and valid
-      if (!endTime) {
-        return res.status(400).json({ message: "endTime is required" });
-      }
-
-      const parsedEndTime = new Date(endTime);
-      if (isNaN(parsedEndTime.getTime())) {
-        return res.status(400).json({ message: "Invalid endTime format" });
-      }
+      const parsed = timeEntryUpdateSchema.parse(req.body);
+      const parsedEndTime = new Date(parsed.endTime);
 
       const entry = await storage.updateTimeEntry(
         req.params.id,
         parsedEndTime,
-        durationMinutes
+        parsed.durationMinutes
       );
       res.json(entry);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid time entry data", errors: error.errors });
+      }
       console.error("Error updating time entry:", error);
       res.status(500).json({ message: "Failed to update time entry" });
     }
@@ -2449,8 +2448,19 @@ Be concise and practical. Do not use markdown formatting.`;
       const currentUser = await storage.getUser(userId);
       if (!currentUser) return res.status(401).json({ message: "User not found" });
 
-      if (upload.uploadedById !== userId && currentUser.role !== "admin") {
-        return res.status(403).json({ message: "You can only delete your own uploads" });
+      if (currentUser.role !== "admin" && upload.uploadedById !== userId) {
+        let hasAccess = false;
+        if (upload.taskId) {
+          hasAccess = await canAccessTask(userId, upload.taskId);
+        } else if (upload.requestId) {
+          const request = await storage.getServiceRequest(upload.requestId);
+          if (request && (request.requesterId === userId || request.assignedTo === userId)) {
+            hasAccess = true;
+          }
+        }
+        if (!hasAccess) {
+          return res.status(403).json({ message: "You don't have permission to delete this upload" });
+        }
       }
 
       await storage.deleteUpload(req.params.id);
@@ -3617,7 +3627,8 @@ Be concise and practical. Do not use markdown formatting.`;
       }
 
       const { id } = req.params;
-      const updates = req.body;
+      const validated = insertVehicleReservationSchema.partial().parse(req.body);
+      const updates: any = { ...validated };
 
       const reservation = await storage.getVehicleReservation(id);
       if (!reservation) {
@@ -3707,6 +3718,9 @@ Be concise and practical. Do not use markdown formatting.`;
 
       res.json(updatedReservation);
     } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid reservation data", errors: error.errors });
+      }
       console.error("Error updating vehicle reservation:", error);
       res.status(500).json({ message: error.message });
     }
