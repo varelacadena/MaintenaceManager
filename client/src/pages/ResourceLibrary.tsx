@@ -195,7 +195,7 @@ export default function ResourceLibrary() {
     },
   });
 
-  const { data: currentFolderData } = useQuery<ResourceFolder>({
+  const { data: currentFolderData, isError: isFolderDetailError } = useQuery<ResourceFolder>({
     queryKey: ["/api/resource-folders", "detail", currentFolderId],
     queryFn: async () => {
       const res = await fetch(`/api/resource-folders/${currentFolderId}`, { credentials: "include" });
@@ -527,7 +527,7 @@ export default function ResourceLibrary() {
       </div>
 
       {/* Folders + Resource List */}
-      {(isResourcesError || isFoldersError) ? (
+      {(isResourcesError || isFoldersError || isFolderDetailError) ? (
         <div className="text-center py-16 text-muted-foreground">
           <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-40 text-destructive" />
           <p className="font-medium text-foreground">Failed to load resources</p>
