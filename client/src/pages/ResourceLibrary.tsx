@@ -130,6 +130,51 @@ function getYoutubeThumbnail(url: string): string | null {
   return null;
 }
 
+function FolderActionMenu({ folder, onRename, onDelete }: {
+  folder: ResourceFolder;
+  onRename: (folder: ResourceFolder) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="ghost" data-testid={`button-folder-menu-${folder.id}`}>
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              setMenuOpen(false);
+              requestAnimationFrame(() => onRename(folder));
+            }}
+            data-testid={`button-rename-folder-${folder.id}`}
+          >
+            <Pencil className="w-4 h-4 mr-2" />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              setMenuOpen(false);
+              requestAnimationFrame(() => onDelete(folder.id));
+            }}
+            className="text-destructive"
+            data-testid={`button-delete-folder-${folder.id}`}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export default function ResourceLibrary() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -578,36 +623,11 @@ export default function ResourceLibrary() {
                     {folder.name}
                   </p>
                 </div>
-                <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost" data-testid={`button-folder-menu-${folder.id}`}>
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          setTimeout(() => openRenameFolder(folder), 0);
-                        }}
-                        data-testid={`button-rename-folder-${folder.id}`}
-                      >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          setTimeout(() => setDeleteFolderId(folder.id), 0);
-                        }}
-                        className="text-destructive"
-                        data-testid={`button-delete-folder-${folder.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <FolderActionMenu
+                  folder={folder}
+                  onRename={openRenameFolder}
+                  onDelete={(id) => setDeleteFolderId(id)}
+                />
               </div>
             ))}
           {/* Resources */}
