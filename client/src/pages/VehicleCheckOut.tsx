@@ -295,9 +295,9 @@ export default function VehicleCheckOut() {
     mutationFn: async (data: { startMileage: number; fuelLevel: string; cleanlinessConfirmed: boolean; damageNotes: string }) => {
       const payload: any = {
         ...data,
-        userId: user!.id,
-        vehicleId: reservation!.vehicleId,
-        reservationId: reservationId!,
+        userId: user?.id,
+        vehicleId: reservation?.vehicleId,
+        reservationId: reservationId,
         ...(assignedCode ? { assignedCodeId: assignedCode.id } : {}),
       };
       const response = await apiRequest("POST", "/api/vehicle-checkout-logs", payload);

@@ -712,6 +712,7 @@ export default function TaskDetail() {
       setNewMessage("");
       toast({ title: "Message sent" });
     },
+    onError: () => toast({ title: "Failed to send message", variant: "destructive" }),
   });
 
   const deleteMessageMutation = useMutation({
@@ -885,6 +886,7 @@ export default function TaskDetail() {
       setQuickInventoryUnit("");
       toast({ title: "Item created" });
     },
+    onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to create item", variant: "destructive" }),
   });
 
   const addPartMutation = useMutation({
@@ -916,6 +918,7 @@ export default function TaskDetail() {
       setInventorySearchQuery("");
       toast({ title: "Part added" });
     },
+    onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to add part", variant: "destructive" }),
   });
 
   const addNoteMutation = useMutation({
@@ -929,6 +932,7 @@ export default function TaskDetail() {
       setIsAddNoteDialogOpen(false);
       toast({ title: "Note added" });
     },
+    onError: () => toast({ title: "Failed to add note", variant: "destructive" }),
   });
 
   const deleteNoteMutation = useMutation({
@@ -939,6 +943,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       toast({ title: "Note deleted" });
     },
+    onError: () => toast({ title: "Failed to delete note", variant: "destructive" }),
   });
 
   const createQuoteMutation = useMutation({
@@ -976,6 +981,7 @@ export default function TaskDetail() {
       setIsAddQuoteDialogOpen(false);
       toast({ title: "Quote added", description: "The estimate has been added for comparison." });
     },
+    onError: () => toast({ title: "Failed to create quote", variant: "destructive" }),
   });
 
   const approveQuoteMutation = useMutation({
@@ -1038,6 +1044,7 @@ export default function TaskDetail() {
       setIsAddVendorDialogOpen(false);
       toast({ title: "Vendor created", description: `${newVendor.name} has been added.` });
     },
+    onError: () => toast({ title: "Failed to create vendor", variant: "destructive" }),
   });
 
   const addUploadMutation = useMutation({
@@ -1090,6 +1097,7 @@ export default function TaskDetail() {
       toast({ title: "Task deleted" });
       navigate("/work");
     },
+    onError: () => toast({ title: "Failed to delete task", variant: "destructive" }),
   });
 
   const getUploadParameters = async () => {

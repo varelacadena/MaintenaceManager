@@ -375,7 +375,10 @@ function TimeGrid({
 
   function getTaskTopOffset(task: Task): number {
     if (!task.scheduledStartTime) return 0;
-    const [h, m] = task.scheduledStartTime.split(":").map(Number);
+    const parts = task.scheduledStartTime.split(":");
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1] || "0", 10);
+    if (isNaN(h) || isNaN(m)) return 0;
     return ((h - HOUR_START) * HOUR_HEIGHT) + (m / 60) * HOUR_HEIGHT;
   }
 

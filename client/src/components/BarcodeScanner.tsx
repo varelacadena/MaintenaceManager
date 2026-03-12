@@ -110,7 +110,8 @@ export function BarcodeScanner({
             return;
           }
         }
-      } catch {
+      } catch (scanErr) {
+        console.warn("Barcode scan frame error:", scanErr);
       }
 
       if (activeRef.current) {
@@ -142,7 +143,9 @@ export function BarcodeScanner({
         try {
           const mod = await import("jsqr");
           jsQRRef.current = mod.default;
-        } catch {
+        } catch (importErr) {
+          console.warn("Failed to load jsQR fallback:", importErr);
+          setError("Could not initialize barcode scanner. Please try again.");
         }
       }
       detectorRef.current = null;

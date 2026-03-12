@@ -266,9 +266,9 @@ export default function VehicleCheckIn() {
     mutationFn: async (data: { endMileage: number; fuelLevel: string; cleanlinessStatus: string; issues: string; returnNotes: string }) => {
       const response = await apiRequest("POST", "/api/vehicle-checkin-logs", {
         ...data,
-        userId: user!.id,
-        vehicleId: checkOutLog!.vehicleId,
-        checkOutLogId: checkOutLogId!,
+        userId: user?.id,
+        vehicleId: checkOutLog?.vehicleId,
+        checkOutLogId: checkOutLogId,
       });
 
       const checkInLog = await response.json();
