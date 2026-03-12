@@ -24,6 +24,7 @@ import {
   insertVendorSchema,
   insertInventoryItemSchema,
   insertPropertySchema,
+  insertResourceSchema,
   insertSpaceSchema,
   insertEquipmentSchema,
   insertVehicleSchema,
@@ -513,16 +514,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:id/role", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { role } = req.body;
-
-      // Validate role value
-      if (!["admin", "technician", "staff", "student"].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
+      const roleSchema = z.object({
+        role: z.enum(["admin", "technician", "staff", "student"]),
+      });
+      const { role } = roleSchema.parse(req.body);
 
       const user = await storage.updateUserRole(id, role);
       res.json(user);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid role", errors: error.errors });
+      }
       console.error("Error updating user role:", error);
       res.status(500).json({ message: "Failed to update user role" });
     }
@@ -625,11 +627,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/credentials/:id/password", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { password } = req.body;
-
-      if (!password) {
-        return res.status(400).json({ message: "Password is required" });
-      }
+      const passwordSchema = z.object({
+        password: z.string().min(1, "Password is required"),
+      });
+      const { password } = passwordSchema.parse(req.body);
 
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -643,7 +644,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid password data", errors: error.errors });
+      }
       console.error("Error updating password:", error);
       res.status(500).json({ message: "Failed to update password" });
     }
@@ -870,10 +874,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/inventory/:id/quantity", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { change } = req.body;
-      if (typeof change !== 'number') {
-        return res.status(400).json({ message: "Quantity change must be a number" });
-      }
+      const quantitySchema = z.object({ change: z.number() });
+      const { change } = quantitySchema.parse(req.body);
       const item = await storage.updateInventoryQuantity(req.params.id, change);
       if (!item) {
         return res.status(404).json({ message: "Inventory item not found" });
@@ -898,11 +900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update stock status (for status-only mode items)
   app.patch("/api/inventory/:id/status", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { stockStatus } = req.body;
-      const validStatuses = ["stocked", "low", "out"];
-      if (!validStatuses.includes(stockStatus)) {
-        return res.status(400).json({ message: "Invalid stock status. Must be: stocked, low, or out" });
-      }
+      const stockStatusSchema = z.object({ stockStatus: z.enum(["stocked", "low", "out"]) });
+      const { stockStatus } = stockStatusSchema.parse(req.body);
       const item = await storage.updateInventoryStatus(req.params.id, stockStatus);
       if (!item) return res.status(404).json({ message: "Inventory item not found" });
       res.json(item);
@@ -1241,7 +1240,11 @@ Be concise and practical. Do not use markdown formatting.`;
     requireAdmin,
     async (req, res) => {
       try {
-        const { status, rejectionReason } = req.body;
+        const reqStatusSchema = z.object({
+          status: z.string().min(1),
+          rejectionReason: z.string().optional(),
+        });
+        const { status, rejectionReason } = reqStatusSchema.parse(req.body);
 
         const request = await storage.updateServiceRequestStatus(
           req.params.id,
@@ -1250,7 +1253,10 @@ Be concise and practical. Do not use markdown formatting.`;
         );
 
         res.json(request);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === "ZodError") {
+          return res.status(400).json({ message: "Invalid status data", errors: error.errors });
+        }
         console.error("Error updating service request status:", error);
         res
           .status(500)
@@ -1634,17 +1640,17 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.patch("/api/tasks/:id/status", isAuthenticated, async (req: any, res) => {
     try {
-      const { status, onHoldReason } = req.body;
+      const taskStatusSchema = z.object({
+        status: z.string().min(1),
+        onHoldReason: z.string().optional(),
+      });
+      const { status, onHoldReason } = taskStatusSchema.parse(req.body);
       const taskId = req.params.id;
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
 
       if (!currentUser) {
         return res.status(401).json({ message: "User not found" });
-      }
-
-      if (!status) {
-        return res.status(400).json({ message: "Status is required" });
       }
 
       const normalizedStatus = status === "ready" ? "not_started" : status;
@@ -2678,9 +2684,13 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
       
-      const checklist = await storage.updateTaskChecklist(req.params.id, req.body);
+      const validated = insertTaskChecklistSchema.partial().parse(req.body);
+      const checklist = await storage.updateTaskChecklist(req.params.id, validated);
       res.json(checklist);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid checklist data", errors: error.errors });
+      }
       console.error("Error updating task checklist:", error);
       res.status(500).json({ message: "Failed to update task checklist" });
     }
@@ -2743,9 +2753,17 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
       
-      const group = await storage.updateChecklistGroup(req.params.id, req.body);
+      const groupUpdateSchema = z.object({
+        name: z.string().optional(),
+        sortOrder: z.number().optional(),
+      });
+      const validated = groupUpdateSchema.parse(req.body);
+      const group = await storage.updateChecklistGroup(req.params.id, validated);
       res.json(group);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid group data", errors: error.errors });
+      }
       console.error("Error updating checklist group:", error);
       res.status(500).json({ message: "Failed to update checklist group" });
     }
@@ -2810,9 +2828,19 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
       
-      const item = await storage.updateChecklistItem(req.params.id, req.body);
+      const itemUpdateSchema = z.object({
+        text: z.string().optional(),
+        isCompleted: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+        completedById: z.string().nullable().optional(),
+      });
+      const validated = itemUpdateSchema.parse(req.body);
+      const item = await storage.updateChecklistItem(req.params.id, validated);
       res.json(item);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid checklist item data", errors: error.errors });
+      }
       console.error("Error updating checklist item:", error);
       res.status(500).json({ message: "Failed to update checklist item" });
     }
@@ -2981,7 +3009,11 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.patch("/api/resource-folders/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { name, parentId } = req.body;
+      const folderUpdateSchema = z.object({
+        name: z.string().min(1).optional(),
+        parentId: z.string().nullable().optional(),
+      });
+      const { name, parentId } = folderUpdateSchema.parse(req.body);
       const updateData: any = {};
       if (name !== undefined) updateData.name = name.trim();
       if (parentId !== undefined) updateData.parentId = parentId || null;
@@ -3060,7 +3092,8 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.patch("/api/resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { propertyIds = [], ...data } = req.body;
+      const { propertyIds = [], ...rawData } = req.body;
+      const data: any = insertResourceSchema.partial().parse(rawData);
       if ("categoryId" in data && !data.categoryId) data.categoryId = null;
       if ("folderId" in data && !data.folderId) data.folderId = null;
       if ("equipmentId" in data && !data.equipmentId) data.equipmentId = null;
@@ -3072,7 +3105,10 @@ Be concise and practical. Do not use markdown formatting.`;
       );
       if (!resource) return res.status(404).json({ message: "Resource not found" });
       res.json(resource);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid resource data", errors: error.errors });
+      }
       console.error("Error updating resource:", error);
       res.status(500).json({ message: "Failed to update resource" });
     }
@@ -5576,7 +5612,12 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.patch("/api/email-templates/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { subject, body, name } = req.body;
+      const emailTemplateUpdateSchema = z.object({
+        subject: z.string().optional(),
+        body: z.string().optional(),
+        name: z.string().optional(),
+      });
+      const { subject, body, name } = emailTemplateUpdateSchema.parse(req.body);
       const template = await storage.updateEmailTemplate(req.params.id, { subject, body, name });
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
@@ -5632,7 +5673,11 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.patch("/api/notification-settings/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { emailEnabled, inAppEnabled } = req.body;
+      const notifSettingSchema = z.object({
+        emailEnabled: z.boolean().optional(),
+        inAppEnabled: z.boolean().optional(),
+      });
+      const { emailEnabled, inAppEnabled } = notifSettingSchema.parse(req.body);
       const setting = await storage.updateNotificationSetting(req.params.id, { emailEnabled, inAppEnabled });
       if (!setting) {
         return res.status(404).json({ message: "Setting not found" });
@@ -5766,10 +5811,8 @@ Be concise and practical. Do not use markdown formatting.`;
     try {
       const user = await getAuthUser(req);
       if (!user) return res.status(401).json({ message: "Unauthorized" });
-      const { status } = req.body;
-      if (!["approved", "rejected"].includes(status)) {
-        return res.status(400).json({ message: "status must be 'approved' or 'rejected'" });
-      }
+      const aiLogSchema = z.object({ status: z.enum(["approved", "rejected"]) });
+      const { status } = aiLogSchema.parse(req.body);
       const log = await storage.updateAiAgentLog(req.params.id, { status, reviewedBy: user.id });
       if (!log) return res.status(404).json({ message: "Log not found" });
 
