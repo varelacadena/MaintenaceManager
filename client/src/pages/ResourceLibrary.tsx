@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +65,7 @@ import {
   FolderPlus,
   AlertTriangle,
   RefreshCw,
+  GripVertical,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -130,6 +142,47 @@ function getYoutubeThumbnail(url: string): string | null {
   return null;
 }
 
+function DroppableFolder({ folder, children }: { folder: { id: string }; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id: `folder-${folder.id}`, data: { type: "folder", folderId: folder.id } });
+  return (
+    <div ref={setNodeRef} className={`transition-colors ${isOver ? "ring-2 ring-primary ring-inset bg-primary/5" : ""}`}>
+      {children}
+    </div>
+  );
+}
+
+function DroppableBreadcrumb({ folderId, children }: { folderId: string | null; children: React.ReactNode }) {
+  const droppableId = folderId ? `breadcrumb-${folderId}` : "breadcrumb-root";
+  const { isOver, setNodeRef } = useDroppable({ id: droppableId, data: { type: "breadcrumb", folderId } });
+  return (
+    <span ref={setNodeRef} className={`rounded px-1 -mx-1 transition-colors ${isOver ? "ring-2 ring-primary bg-primary/10" : ""}`}>
+      {children}
+    </span>
+  );
+}
+
+function DraggableResource({ resource, children }: { resource: { id: string; title: string }; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `resource-${resource.id}`,
+    data: { type: "resource", resourceId: resource.id, title: resource.title },
+  });
+  return (
+    <div ref={setNodeRef} className={`relative ${isDragging ? "opacity-30" : ""}`}>
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab active:cursor-grabbing z-10 text-muted-foreground/40 hover:text-muted-foreground"
+        data-testid={`drag-handle-${resource.id}`}
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+      <div className="pl-6">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function FolderActionMenu({ folder, onRename, onDelete }: {
   folder: ResourceFolder;
   onRename: (folder: ResourceFolder) => void;
@@ -188,6 +241,9 @@ export default function ResourceLibrary() {
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [pasteUrlMode, setPasteUrlMode] = useState(false);
+
+  const [activeDrag, setActiveDrag] = useState<{ id: string; title: string } | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
@@ -360,6 +416,40 @@ export default function ResourceLibrary() {
     onError: () => toast({ title: "Failed to delete folder", variant: "destructive" }),
   });
 
+  const moveResourceMutation = useMutation({
+    mutationFn: (data: { id: string; folderId: string | null }) =>
+      apiRequest("PATCH", `/api/resources/${data.id}`, { folderId: data.folderId }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+      const targetFolder = variables.folderId
+        ? (folders.find(f => f.id === variables.folderId) || allFolders.find(f => f.id === variables.folderId))
+        : null;
+      toast({
+        title: "Resource moved",
+        description: targetFolder ? `Moved to "${targetFolder.name}"` : "Moved to Library root",
+      });
+    },
+    onError: () => toast({ title: "Failed to move resource", variant: "destructive" }),
+  });
+
+  function handleDragStart(event: DragStartEvent) {
+    const data = event.active.data.current as { type: string; resourceId: string; title: string };
+    setActiveDrag({ id: data.resourceId, title: data.title });
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDrag(null);
+    const { over, active } = event;
+    if (!over) return;
+    const resourceId = active.data.current?.resourceId as string;
+    const targetFolderId = over.data.current?.folderId as string | null;
+    const resource = resourceList.find(r => r.id === resourceId);
+    if (!resource) return;
+    const currentFolder = resource.folderId || null;
+    if (currentFolder === targetFolderId) return;
+    moveResourceMutation.mutate({ id: resourceId, folderId: targetFolderId });
+  }
+
   function resetForm() {
     setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", folderId: currentFolderId || "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
     setPasteUrlMode(false);
@@ -487,6 +577,7 @@ export default function ResourceLibrary() {
   const needsUpload = (form.type === "document" || form.type === "image") && !pasteUrlMode;
 
   return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -508,26 +599,30 @@ export default function ResourceLibrary() {
       {/* Breadcrumbs */}
       {currentFolderId && (
         <nav className="flex items-center gap-1 text-sm" data-testid="breadcrumb-nav">
-          <button
-            onClick={() => navigateToFolder(null)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            data-testid="breadcrumb-root"
-          >
-            Library
-          </button>
+          <DroppableBreadcrumb folderId={null}>
+            <button
+              onClick={() => navigateToFolder(null)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="breadcrumb-root"
+            >
+              Library
+            </button>
+          </DroppableBreadcrumb>
           {breadcrumbs.map((crumb, idx) => (
             <span key={crumb.id} className="flex items-center gap-1">
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
               {idx === breadcrumbs.length - 1 ? (
                 <span className="font-medium" data-testid={`breadcrumb-current-${crumb.id}`}>{crumb.name}</span>
               ) : (
-                <button
-                  onClick={() => navigateToFolder(crumb.id)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid={`breadcrumb-${crumb.id}`}
-                >
-                  {crumb.name}
-                </button>
+                <DroppableBreadcrumb folderId={crumb.id}>
+                  <button
+                    onClick={() => navigateToFolder(crumb.id)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid={`breadcrumb-${crumb.id}`}
+                  >
+                    {crumb.name}
+                  </button>
+                </DroppableBreadcrumb>
               )}
             </span>
           ))}
@@ -609,26 +704,27 @@ export default function ResourceLibrary() {
           {filteredFolders
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
             .map(folder => (
-              <div
-                key={folder.id}
-                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover-elevate"
-                onClick={() => navigateToFolder(folder.id)}
-                data-testid={`folder-item-${folder.id}`}
-              >
-                <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                  <Folder className="w-5 h-5 text-primary" />
+              <DroppableFolder key={folder.id} folder={folder}>
+                <div
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover-elevate"
+                  onClick={() => navigateToFolder(folder.id)}
+                  data-testid={`folder-item-${folder.id}`}
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <Folder className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" data-testid={`text-folder-name-${folder.id}`}>
+                      {folder.name}
+                    </p>
+                  </div>
+                  <FolderActionMenu
+                    folder={folder}
+                    onRename={openRenameFolder}
+                    onDelete={(id) => setDeleteFolderId(id)}
+                  />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" data-testid={`text-folder-name-${folder.id}`}>
-                    {folder.name}
-                  </p>
-                </div>
-                <FolderActionMenu
-                  folder={folder}
-                  onRename={openRenameFolder}
-                  onDelete={(id) => setDeleteFolderId(id)}
-                />
-              </div>
+              </DroppableFolder>
             ))}
           {/* Resources */}
           {[...filtered]
@@ -636,14 +732,15 @@ export default function ResourceLibrary() {
             .map(resource => {
               const linkedProps = properties.filter(p => resource.propertyIds.includes(p.id));
               return (
-                <ResourceCard
-                  key={resource.id}
-                  resource={resource}
-                  variant="list"
-                  onEdit={() => openEdit(resource)}
-                  onDelete={() => setDeleteId(resource.id)}
-                  linkedProperties={linkedProps.map(p => p.name)}
-                />
+                <DraggableResource key={resource.id} resource={resource}>
+                  <ResourceCard
+                    resource={resource}
+                    variant="list"
+                    onEdit={() => openEdit(resource)}
+                    onDelete={() => setDeleteId(resource.id)}
+                    linkedProperties={linkedProps.map(p => p.name)}
+                  />
+                </DraggableResource>
               );
             })}
         </div>
@@ -1125,6 +1222,16 @@ export default function ResourceLibrary() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DragOverlay>
+        {activeDrag && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-card border rounded-md shadow-lg text-sm font-medium max-w-xs truncate">
+            <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <span className="truncate">{activeDrag.title}</span>
+          </div>
+        )}
+      </DragOverlay>
     </div>
+    </DndContext>
   );
 }
