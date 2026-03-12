@@ -9,8 +9,10 @@ import {
   useDraggable,
   useDroppable,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
+  closestCenter,
 } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -243,7 +245,10 @@ export default function ResourceLibrary() {
   const [pasteUrlMode, setPasteUrlMode] = useState(false);
 
   const [activeDrag, setActiveDrag] = useState<{ id: string; title: string } | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
+  );
 
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
@@ -577,7 +582,7 @@ export default function ResourceLibrary() {
   const needsUpload = (form.type === "document" || form.type === "image") && !pasteUrlMode;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
