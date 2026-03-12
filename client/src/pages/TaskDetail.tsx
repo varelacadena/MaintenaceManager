@@ -724,6 +724,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       toast({ title: "Message deleted" });
     },
+    onError: () => toast({ title: "Failed to delete message", variant: "destructive" }),
   });
 
   useEffect(() => {
@@ -745,12 +746,8 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Status updated" });
     },
-    onError: async (error: any) => {
-      let message = "Failed to update status";
-      try {
-        if (error?.message) message = error.message;
-      } catch {}
-      toast({ title: "Error", description: message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to update status", variant: "destructive" });
     },
   });
 
@@ -764,12 +761,8 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Task updated" });
     },
-    onError: async (error: any) => {
-      let message = "Failed to update task";
-      try {
-        if (error?.message) message = error.message;
-      } catch {}
-      toast({ title: "Error", description: message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to update task", variant: "destructive" });
     },
   });
 
@@ -855,12 +848,8 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       toast({ title: "Timer stopped" });
     },
-    onError: async (error: any) => {
-      let message = "Failed to stop timer";
-      try {
-        if (error?.message) message = error.message;
-      } catch {}
-      toast({ title: "Error", description: message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to stop timer", variant: "destructive" });
     },
   });
 
