@@ -52,6 +52,8 @@ import {
   Pencil,
   Trash2,
   FolderPlus,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -167,7 +169,7 @@ export default function ResourceLibrary() {
     queryKey: ["/api/resource-categories"],
   });
 
-  const { data: resourceList = [], isLoading } = useQuery<Resource[]>({
+  const { data: resourceList = [], isLoading, isError: isResourcesError, refetch: refetchResources } = useQuery<Resource[]>({
     queryKey: ["/api/resources", currentFolderId],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -182,7 +184,7 @@ export default function ResourceLibrary() {
     },
   });
 
-  const { data: folders = [] } = useQuery<ResourceFolder[]>({
+  const { data: folders = [], isLoading: isFoldersLoading, isError: isFoldersError, refetch: refetchFolders } = useQuery<ResourceFolder[]>({
     queryKey: ["/api/resource-folders", currentFolderId],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -279,12 +281,12 @@ export default function ResourceLibrary() {
   const createFolderMutation = useMutation({
     mutationFn: (data: { name: string; parentId: string | null }) =>
       apiRequest("POST", "/api/resource-folders", data),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+    onSuccess: () => {
       setFolderDialogOpen(false);
       setFolderName("");
       setEditingFolder(null);
       toast({ title: "Folder created" });
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
     },
     onError: () => toast({ title: "Failed to create folder", variant: "destructive" }),
   });
@@ -292,23 +294,23 @@ export default function ResourceLibrary() {
   const updateFolderMutation = useMutation({
     mutationFn: (data: { id: string; name: string }) =>
       apiRequest("PATCH", `/api/resource-folders/${data.id}`, { name: data.name }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+    onSuccess: () => {
       setFolderDialogOpen(false);
       setFolderName("");
       setEditingFolder(null);
       toast({ title: "Folder renamed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
     },
     onError: () => toast({ title: "Failed to rename folder", variant: "destructive" }),
   });
 
   const deleteFolderMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/resource-folders/${id}`),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+    onSuccess: () => {
       setDeleteFolderId(null);
       toast({ title: "Folder deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
     },
     onError: () => toast({ title: "Failed to delete folder", variant: "destructive" }),
   });
@@ -525,7 +527,22 @@ export default function ResourceLibrary() {
       </div>
 
       {/* Folders + Resource List */}
-      {isLoading ? (
+      {(isResourcesError || isFoldersError) ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-40 text-destructive" />
+          <p className="font-medium text-foreground">Failed to load resources</p>
+          <p className="text-sm mt-1">Something went wrong while loading this page.</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => { refetchFolders(); refetchResources(); }}
+            data-testid="button-retry-load"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      ) : (isLoading || isFoldersLoading) ? (
         <div className="border rounded-md divide-y">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-14 bg-muted animate-pulse" />
@@ -562,7 +579,7 @@ export default function ResourceLibrary() {
                   </p>
                 </div>
                 <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button size="icon" variant="ghost" data-testid={`button-folder-menu-${folder.id}`}>
                         <MoreVertical className="w-4 h-4" />
@@ -570,14 +587,20 @@ export default function ResourceLibrary() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => openRenameFolder(folder)}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setTimeout(() => openRenameFolder(folder), 0);
+                        }}
                         data-testid={`button-rename-folder-${folder.id}`}
                       >
                         <Pencil className="w-4 h-4 mr-2" />
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => setDeleteFolderId(folder.id)}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setTimeout(() => setDeleteFolderId(folder.id), 0);
+                        }}
                         className="text-destructive"
                         data-testid={`button-delete-folder-${folder.id}`}
                       >
