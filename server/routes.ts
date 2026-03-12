@@ -696,8 +696,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const passwordChangeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many password change attempts. Please try again in 15 minutes." },
+  });
+
   // Change password (self-service for all authenticated users)
-  app.post("/api/users/change-password", isAuthenticated, async (req: any, res) => {
+  app.post("/api/users/change-password", isAuthenticated, passwordChangeLimiter, async (req: any, res) => {
     try {
       const userId = req.userId;
       const { currentPassword, newPassword } = req.body;
@@ -1975,6 +1983,22 @@ Be concise and practical. Do not use markdown formatting.`;
   app.post("/api/messages", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) return res.status(401).json({ message: "User not found" });
+
+      if (req.body.taskId) {
+        const hasAccess = await canAccessTask(userId, req.body.taskId);
+        if (!hasAccess && currentUser.role !== "admin") {
+          return res.status(403).json({ message: "You don't have access to this task" });
+        }
+      } else if (req.body.requestId) {
+        const request = await storage.getServiceRequest(req.body.requestId);
+        if (!request) return res.status(404).json({ message: "Service request not found" });
+        if (request.requesterId !== userId && request.assignedTo !== userId && currentUser.role !== "admin") {
+          return res.status(403).json({ message: "You don't have access to this request" });
+        }
+      }
+
       const messageData = insertMessageSchema.parse({
         ...req.body,
         senderId: userId,
@@ -2136,6 +2160,21 @@ Be concise and practical. Do not use markdown formatting.`;
   app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) return res.status(401).json({ message: "User not found" });
+
+      if (req.body.taskId) {
+        const hasAccess = await canAccessTask(userId, req.body.taskId);
+        if (!hasAccess && currentUser.role !== "admin") {
+          return res.status(403).json({ message: "You don't have access to this task" });
+        }
+      } else if (req.body.requestId) {
+        const request = await storage.getServiceRequest(req.body.requestId);
+        if (!request) return res.status(404).json({ message: "Service request not found" });
+        if (request.requesterId !== userId && request.assignedTo !== userId && currentUser.role !== "admin") {
+          return res.status(403).json({ message: "You don't have access to this request" });
+        }
+      }
 
       // Validate required fields with detailed error messages
       const errors = [];
@@ -2401,8 +2440,19 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
-  app.delete("/api/uploads/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/uploads/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      const upload = await storage.getUpload(req.params.id);
+      if (!upload) return res.status(404).json({ message: "Upload not found" });
+
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) return res.status(401).json({ message: "User not found" });
+
+      if (upload.uploadedById !== userId && currentUser.role !== "admin") {
+        return res.status(403).json({ message: "You can only delete your own uploads" });
+      }
+
       await storage.deleteUpload(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -3359,12 +3409,16 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.patch("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const vehicle = await storage.updateVehicle(req.params.id, req.body);
+      const validated = insertVehicleSchema.partial().parse(req.body);
+      const vehicle = await storage.updateVehicle(req.params.id, validated);
       if (!vehicle) {
         return res.status(404).json({ message: "Vehicle not found" });
       }
       res.json(vehicle);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid vehicle data", errors: error.errors });
+      }
       console.error("Error updating vehicle:", error);
       res.status(500).json({ message: "Failed to update vehicle" });
     }
@@ -4693,12 +4747,16 @@ Be concise and practical. Do not use markdown formatting.`;
   // Update emergency contact (admin only)
   app.patch("/api/emergency-contacts/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const contact = await storage.updateEmergencyContact(req.params.id, req.body);
+      const validated = insertEmergencyContactSchema.partial().parse(req.body);
+      const contact = await storage.updateEmergencyContact(req.params.id, validated);
       if (!contact) {
         return res.status(404).json({ message: "Emergency contact not found" });
       }
       res.json(contact);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
+      }
       console.error("Error updating emergency contact:", error);
       res.status(500).json({ message: "Failed to update emergency contact" });
     }
