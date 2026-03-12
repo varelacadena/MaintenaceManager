@@ -195,7 +195,7 @@ export default function ResourceLibrary() {
     },
   });
 
-  const { data: currentFolderData, isError: isFolderDetailError } = useQuery<ResourceFolder>({
+  const { data: currentFolderData, isError: isFolderDetailError, refetch: refetchFolderDetail } = useQuery<ResourceFolder>({
     queryKey: ["/api/resource-folders", "detail", currentFolderId],
     queryFn: async () => {
       const res = await fetch(`/api/resource-folders/${currentFolderId}`, { credentials: "include" });
@@ -535,7 +535,7 @@ export default function ResourceLibrary() {
           <Button
             variant="outline"
             className="mt-4"
-            onClick={() => { refetchFolders(); refetchResources(); }}
+            onClick={() => { refetchFolders(); refetchResources(); if (currentFolderId) refetchFolderDetail(); }}
             data-testid="button-retry-load"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
