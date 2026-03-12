@@ -587,8 +587,7 @@ export default function ResourceLibrary() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onSelect={(e) => {
-                          e.preventDefault();
+                        onSelect={() => {
                           setTimeout(() => openRenameFolder(folder), 0);
                         }}
                         data-testid={`button-rename-folder-${folder.id}`}
@@ -597,8 +596,7 @@ export default function ResourceLibrary() {
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onSelect={(e) => {
-                          e.preventDefault();
+                        onSelect={() => {
                           setTimeout(() => setDeleteFolderId(folder.id), 0);
                         }}
                         className="text-destructive"
