@@ -44,6 +44,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,7 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { statusColors, priorityColors, taskStatusColors } from "@/lib/constants";
 import type { Project, Task, Property, Area } from "@shared/schema";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 
 const GANTT_STATUS_COLORS: Record<string, string> = {
   not_started: "#6b7280",
@@ -600,9 +601,12 @@ export default function ProjectDetail() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="date" data-testid="input-edit-project-start-date" />
-                      </FormControl>
+                      <DatePicker
+                        value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : undefined}
+                        onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                        placeholder="mm/dd/yyyy"
+                        data-testid="input-edit-project-start-date"
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -613,9 +617,12 @@ export default function ProjectDetail() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Target End Date</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="date" data-testid="input-edit-project-end-date" />
-                      </FormControl>
+                      <DatePicker
+                        value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : undefined}
+                        onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                        placeholder="mm/dd/yyyy"
+                        data-testid="input-edit-project-end-date"
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
