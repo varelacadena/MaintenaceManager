@@ -47,6 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import type { Task, User, Property, Upload } from "@shared/schema";
+import { TaskEditMode } from "./TaskEditMode";
 
 const panelStatusDotStyle: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -128,6 +129,7 @@ export function TaskDetailPanel({
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -286,14 +288,14 @@ export function TaskDetailPanel({
   const mainContent = (
     <div className="flex-1 overflow-y-auto" data-testid="panel-main-content">
       {/* Admin bar */}
-      {isAdmin && !isFullscreen && (
+      {isAdmin && (
         <div className="flex items-center justify-end gap-2 px-5 py-3" style={{ borderBottom: "1px solid #EEEEEE" }}>
           <Button
             variant="outline"
             size="sm"
             data-testid="button-panel-edit"
             style={{ backgroundColor: "#FFFFFF", borderColor: "#EEEEEE", color: "#1A1A1A" }}
-            onClick={() => navigate(`/tasks/${taskId}/edit`)}
+            onClick={() => setIsEditMode(true)}
           >
             <Pencil className="w-3.5 h-3.5 mr-1.5" />
             Edit
@@ -839,6 +841,26 @@ export function TaskDetailPanel({
       )}
     </div>
   ) : null;
+
+  if (isEditMode && task) {
+    return (
+      <div
+        className="h-full flex flex-col"
+        style={{ backgroundColor: "#FFFFFF" }}
+        data-testid="task-detail-panel"
+      >
+        <TaskEditMode
+          taskId={taskId}
+          task={task}
+          subtasks={subtasks || []}
+          onCancel={() => setIsEditMode(false)}
+          onSaved={() => setIsEditMode(false)}
+          onDeleted={onClose}
+          variant="desktop"
+        />
+      </div>
+    );
+  }
 
   return (
     <div

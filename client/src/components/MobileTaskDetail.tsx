@@ -39,6 +39,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Task, TaskNote, User, Property, Upload } from "@shared/schema";
+import { TaskEditMode } from "./TaskEditMode";
 
 const statusDotColors: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -86,6 +87,7 @@ export default function MobileTaskDetail() {
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -222,6 +224,22 @@ export default function MobileTaskDetail() {
     );
   }
 
+  if (isEditMode) {
+    return (
+      <div className="flex flex-col min-h-screen" data-testid="mobile-task-detail">
+        <TaskEditMode
+          taskId={id!}
+          task={task}
+          subtasks={subtasks || []}
+          onCancel={() => setIsEditMode(false)}
+          onSaved={() => setIsEditMode(false)}
+          onDeleted={() => navigate("/work")}
+          variant="mobile"
+        />
+      </div>
+    );
+  }
+
   const statusStyle = statusPillStyles[task.status] || statusPillStyles.not_started;
   const taskTypeLabel = task.taskType === "one_time" ? "One Time" : task.taskType === "recurring" ? "Recurring" : task.taskType;
   const poolLabel = task.assignedPool === "student_pool" ? "Student Pool" : task.assignedPool === "technician_pool" ? "Technician Pool" : "";
@@ -288,7 +306,7 @@ export default function MobileTaskDetail() {
                 size="sm"
                 data-testid="button-mobile-edit"
                 style={{ backgroundColor: "#FFFFFF", borderColor: "#EEEEEE", color: "#1A1A1A" }}
-                onClick={() => navigate(`/tasks/${id}/edit`)}
+                onClick={() => setIsEditMode(true)}
               >
                 <Pencil className="w-3.5 h-3.5 mr-1.5" />
                 Edit
