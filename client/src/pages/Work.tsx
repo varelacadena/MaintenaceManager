@@ -619,7 +619,24 @@ export default function Work() {
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
+  const [panelMounted, setPanelMounted] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
   const isMobile = useIsMobile();
+
+  const panelOpen = !!selectedTaskId && !isMobile;
+
+  useEffect(() => {
+    if (panelOpen) {
+      setPanelMounted(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPanelVisible(true));
+      });
+    } else {
+      setPanelVisible(false);
+      const timer = setTimeout(() => setPanelMounted(false), 280);
+      return () => clearTimeout(timer);
+    }
+  }, [panelOpen]);
 
   const { data: tasks, isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -1313,23 +1330,6 @@ export default function Work() {
   const onProjectSubmit = (data: ProjectFormValues) => {
     createProjectMutation.mutate(data);
   };
-
-  const panelOpen = !!selectedTaskId && !isMobile;
-  const [panelMounted, setPanelMounted] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(false);
-
-  useEffect(() => {
-    if (panelOpen) {
-      setPanelMounted(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setPanelVisible(true));
-      });
-    } else {
-      setPanelVisible(false);
-      const timer = setTimeout(() => setPanelMounted(false), 280);
-      return () => clearTimeout(timer);
-    }
-  }, [panelOpen]);
 
   return (
     <>

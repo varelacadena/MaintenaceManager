@@ -46,7 +46,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import type { Task, User, Property } from "@shared/schema";
+import type { Task, User, Property, Upload } from "@shared/schema";
 
 const panelStatusDotStyle: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -148,6 +148,20 @@ export function TaskDetailPanel({
     },
     enabled: !!taskId,
   });
+
+  const { data: uploads } = useQuery<Upload[]>({
+    queryKey: ["/api/uploads/task", taskId],
+    queryFn: async () => {
+      const res = await fetch(`/api/uploads/task/${taskId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!taskId,
+  });
+
+  const docCount = uploads?.filter(u => !u.fileType.startsWith("image/") && !u.fileType.startsWith("video/")).length || 0;
+  const imgCount = uploads?.filter(u => u.fileType.startsWith("image/")).length || 0;
+  const vidCount = uploads?.filter(u => u.fileType.startsWith("video/")).length || 0;
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -423,19 +437,19 @@ export function TaskDetailPanel({
               className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ backgroundColor: "#EDE9FE", color: "#7C3AED" }}
             >
-              0 docs
+              {docCount} docs
             </span>
             <span
               className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}
             >
-              0 img
+              {imgCount} img
             </span>
             <span
               className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ backgroundColor: "#FFF1F2", color: "#F43F5E" }}
             >
-              0 vid
+              {vidCount} vid
             </span>
             {resourcesExpanded ? (
               <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
@@ -446,9 +460,42 @@ export function TaskDetailPanel({
         </div>
         {resourcesExpanded && (
           <div className="mt-3 space-y-1" onClick={(e) => e.stopPropagation()}>
-            <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>
-              No resources attached
-            </p>
+            {(!uploads || uploads.length === 0) ? (
+              <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>
+                No resources attached
+              </p>
+            ) : (
+              uploads.map((upload) => {
+                const isImage = upload.fileType.startsWith("image/");
+                const isVideo = upload.fileType.startsWith("video/");
+                const TypeIcon = isImage ? ImageIcon : isVideo ? Video : FileText;
+                const badgeBg = isImage ? "#F3F4F6" : isVideo ? "#FFF1F2" : "#EDE9FE";
+                const badgeColor = isImage ? "#6B7280" : isVideo ? "#F43F5E" : "#7C3AED";
+                const typeLabel = isImage ? "IMG" : isVideo ? "VID" : "DOC";
+                return (
+                  <a
+                    key={upload.id}
+                    href={upload.objectUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 py-1.5 px-1 rounded hover-elevate"
+                    data-testid={`resource-item-${upload.id}`}
+                  >
+                    <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                      style={{ backgroundColor: badgeBg, color: badgeColor }}
+                    >
+                      {typeLabel}
+                    </span>
+                    <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>
+                      {upload.fileName}
+                    </span>
+                    <ChevronRight className="w-3 h-3 shrink-0" style={{ color: "#9CA3AF" }} />
+                  </a>
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -504,7 +551,8 @@ export function TaskDetailPanel({
               return (
                 <div key={subtask.id} data-testid={`panel-subtask-${subtask.id}`}>
                   <div
-                    className={`flex items-center gap-3 py-2.5 px-2 rounded cursor-pointer transition-opacity ${isLocked ? "opacity-45" : ""}`}
+                    className="flex items-center gap-3 py-2.5 px-2 rounded cursor-pointer transition-opacity"
+                    style={isLocked ? { opacity: 0.45 } : undefined}
                     onClick={() => !isLocked && toggleSubtaskExpanded(subtask.id)}
                   >
                     <button
