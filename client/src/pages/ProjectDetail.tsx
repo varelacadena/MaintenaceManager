@@ -446,10 +446,11 @@ export default function ProjectDetail() {
       )}
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
           </DialogHeader>
+          <div className="flex-1 overflow-y-auto pr-1">
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit((data) => updateProjectMutation.mutate(data))} className="space-y-4">
               <FormField
@@ -651,6 +652,7 @@ export default function ProjectDetail() {
               </div>
             </form>
           </Form>
+          </div>
         </DialogContent>
       </Dialog>
 
