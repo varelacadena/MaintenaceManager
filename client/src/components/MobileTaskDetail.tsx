@@ -405,10 +405,17 @@ export default function MobileTaskDetail() {
                   uploads.map((upload) => {
                     const isImage = upload.fileType.startsWith("image/");
                     const isVideo = upload.fileType.startsWith("video/");
-                    const TypeIcon = isImage ? ImageIcon : isVideo ? Video : FileText;
-                    const badgeBg = isImage ? "#F3F4F6" : isVideo ? "#FFF1F2" : "#EDE9FE";
-                    const badgeColor = isImage ? "#6B7280" : isVideo ? "#F43F5E" : "#7C3AED";
                     const ext = upload.fileName.split(".").pop()?.toLowerCase() || "";
+                    const TypeIcon = isImage ? ImageIcon : isVideo ? Video : FileText;
+                    const getDocColors = () => {
+                      if (ext === "pdf") return { bg: "#FEF2F2", color: "#DC2626" };
+                      if (ext === "xls" || ext === "xlsx") return { bg: "#F0FDF4", color: "#16A34A" };
+                      if (ext === "doc" || ext === "docx") return { bg: "#EFF6FF", color: "#2563EB" };
+                      return { bg: "#EDE9FE", color: "#7C3AED" };
+                    };
+                    const docColors = !isImage && !isVideo ? getDocColors() : null;
+                    const badgeBg = isImage ? "#F3F4F6" : isVideo ? "#FFF1F2" : docColors!.bg;
+                    const badgeColor = isImage ? "#6B7280" : isVideo ? "#F43F5E" : docColors!.color;
                     const typeLabel = isImage ? "IMG" : isVideo ? "VID"
                       : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
                       : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
