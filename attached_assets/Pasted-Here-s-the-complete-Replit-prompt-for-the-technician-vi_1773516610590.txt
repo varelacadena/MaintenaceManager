@@ -1,0 +1,121 @@
+Here's the complete Replit prompt for the technician view:
+
+---
+
+> **CMMS Technician Task View — Mobile (Separate from Admin View)**
+>
+> Implement a dedicated technician task detail screen for mobile. This is completely separate from the admin view — technicians have no access to Edit, Delete, subtask management, or any admin controls. Route to this view when the logged-in user has a technician role. The screen is full-height, single-column, and scrollable with a sticky bottom bar.
+>
+> ---
+>
+> ## COLOR SYSTEM
+>
+> - Page background: `#F8F8F8`
+> - Card background: `#FFFFFF`
+> - Card border: `#EEEEEE`, border-radius 12px
+> - Primary text: `#1A1A1A`
+> - Secondary text: `#6B7280`
+> - Hint/label text: `#9CA3AF`
+> - Section label: 10px, uppercase, letter-spacing 0.05em, color `#9CA3AF`
+> - Row dividers: `#EEEEEE`
+> - Primary action (Start Task / Mark Complete): background `#4338CA`, white text, border-radius 10px
+> - Priority High badge: background `#FEF2F2`, text `#D94F4F`, border `rgba(217,79,79,0.4)`
+> - In Progress status badge: `rgba(255,255,255,0.25)` background, white text
+> - Not Started status badge: `rgba(255,255,255,0.15)` background, white text
+> - Completed screen background: `#F0FDF4`
+> - Completed icon circle: `#15803D`
+> - Completed title text: `#15803D`
+> - Completed body text: `#166534`
+> - Timer text: `rgba(255,255,255,0.8)`
+> - Photo add button border/icon: `#4338CA` when task started, `#9CA3AF` when not started
+>
+> ---
+>
+> ## SCREEN STRUCTURE (top to bottom)
+>
+> ### 1. Top navigation bar
+> - Left: back chevron `←` + "Ibeiza Maintenance" (or property name) in `#6B7280`
+> - Right: notification bell icon + "Sign Out" in `#6B7280`
+> - White background, `#EEEEEE` bottom border, height 44px
+>
+> ### 2. Hero header
+> - Background: gradient `linear-gradient(135deg, #3730A3 0%, #4338CA 60%, #6366F1 100%)`
+> - Top row: status badge (pill, semi-transparent white) + priority badge (colored) + due date text
+> - Task title: 16px, font-weight 700, white, line-height 1.3
+> - Bottom row: location pin icon + "Property · Room/Area" in `rgba(255,255,255,0.65)` on the left; live elapsed timer in `rgba(255,255,255,0.8)` on the right (timer only visible after Start Task is pressed)
+> - Padding: 16px sides, 16px top, 18px bottom
+>
+> ### 3. Scrollable body (between hero and photo strip)
+> All content in this area scrolls. Contains the following cards stacked with 8px gap and 10px horizontal padding:
+>
+> **Description card**
+> - Section label "DESCRIPTION"
+> - Body text 12px, `#1A1A1A`, line-height 1.55
+>
+> **Links card**
+> - "Previous Work Here" row: history icon (`#4338CA`), label, count badge (`#EEF2FF` background, `#4338CA` text), chevron. Taps through to previous work records for this location.
+> - "Parts Used" row: parts icon (`#4338CA`), label, chevron. Taps through to parts used entry page.
+> - Both rows: 13px text, `#EEEEEE` divider between them, 11px vertical padding
+>
+> **Notes card**
+> - Section label "NOTES"
+> - Open `<textarea>` — always visible, no tap required to reveal. Placeholder: "Add a note about this task…". No border, transparent background, 13px, `#1A1A1A`, line-height 1.55, min 3 rows, auto-expands with content. Saves on blur.
+>
+> ### 4. Photo strip (pinned above bottom bar, not scrollable)
+> - White background, `#EEEEEE` top border, padding 10px 14px
+> - Section label "PHOTOS" above the strip
+> - Horizontal scrolling row of 52×52px photo thumbnails, 8px gap
+> - First item is always the Add button: dashed border, `#F8F8F8` background, camera icon + "Add" label (10px). Icon and border color `#4338CA` when task started, `#9CA3AF` when not started (non-interactive before start)
+> - Added photos appear as colored thumbnails (use distinct pastel fills: `#BFDBFE`, `#BBF7D0`, `#FED7AA`, `#FECDD3`, `#DDD6FE` cycling) with a white camera icon inside
+> - When no photos yet: show "Tap to add photos" helper text in `#9CA3AF` next to the add button. Remove once first photo is added.
+> - Photos are only addable after Start Task is pressed
+>
+> ### 5. Sticky bottom bar
+> - White background, `#EEEEEE` top border, padding 10px 14px 16px
+> - Left: scan/QR icon button (44×44px, `#EEEEEE` border, white background)
+> - Center/right: primary CTA button (flex: 1)
+>   - Before start: "▶ Start Task", background `#4338CA`
+>   - After start: "✓ Mark Complete", background `#4338CA`
+>   - Mark Complete is always enabled for technicians (no subtask gate in this simplified view)
+>
+> ---
+>
+> ## STATE MACHINE
+>
+> ### NOT STARTED
+> - Hero badges: "Not Started" (white semi-transparent) + priority + due date
+> - Notes textarea: active and typeable
+> - Photo strip: add button shown but non-interactive (gray), "No photos yet" label
+> - CTA: "▶ Start Task"
+> - Timer: hidden
+>
+> ### IN PROGRESS (after Start Task pressed)
+> - Hero status badge updates to "In Progress" (brighter white)
+> - Due date badge removed from hero; live elapsed timer appears on the right of the location row (format: M:SS, updates every second)
+> - Photo strip: add button becomes active (`#4338CA` color), tappable. Each tap adds a thumbnail.
+> - Notes: still editable
+> - CTA: changes to "✓ Mark Complete"
+>
+> ### COMPLETED (after Mark Complete pressed)
+> - Stop the timer
+> - Full-screen overlay replaces the entire view with `#F0FDF4` background
+> - Center-aligned content:
+>   - Large circle (`#15803D` background, 56px) with white checkmark icon
+>   - "Task Complete" title: 17px, font-weight 700, `#15803D`
+>   - Task name: 13px, `#166534`
+>   - Time logged: 12px, `#4ADE80` (e.g. "Time logged: 4m 32s")
+>   - "Back to Tasks" button: `#15803D` background, white text, border-radius 10px — navigates back to the task list
+>
+> ---
+>
+> ## BEHAVIOR RULES
+>
+> - Technician cannot see or access: Edit, Delete, subtask management, admin bar, AI scheduling, or any dropdown controls
+> - Notes auto-save on blur (debounce 500ms)
+> - Timer starts immediately when Start Task is pressed and counts up in M:SS format
+> - Timer value is submitted with task completion as "time logged"
+> - Tapping "Previous Work Here" navigates to the work history page for that property/location
+> - Tapping "Parts Used" navigates to the parts entry page for this task
+> - Back button in the top nav navigates back to the task list without losing note/photo state until the page is unmounted
+> - The photo strip scrolls horizontally if more than 4 photos are added
+> - This view is only rendered for users with the `technician` role. Admin users always see the admin task detail view (desktop panel or mobile admin view). Never mix the two.

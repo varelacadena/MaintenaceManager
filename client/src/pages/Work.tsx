@@ -69,6 +69,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { TaskDetailPanel } from "@/components/TaskDetailPanel";
 
 const urgencyConfig: Record<string, { color: string; label: string }> = {
   low: { color: "text-muted-foreground", label: "Low" },
@@ -353,6 +355,8 @@ function TaskTableRow({
   onReviewEstimates,
   isAdmin,
   onViewSummary,
+  onSelectTask,
+  selectedTaskId,
 }: {
   task: Task;
   userGroups: { label: string; items: User[] }[];
@@ -369,6 +373,8 @@ function TaskTableRow({
   onReviewEstimates?: (taskId: string) => void;
   isAdmin?: boolean;
   onViewSummary?: (taskId: string) => void;
+  onSelectTask?: (taskId: string) => void;
+  selectedTaskId?: string | null;
 }) {
   const isOverdue = task.estimatedCompletionDate
     && task.status !== "completed"
@@ -387,6 +393,11 @@ function TaskTableRow({
     <TableRow
       key={task.id}
       data-testid={`row-task-${task.id}`}
+      className={`cursor-pointer ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""}`}
+      onClick={() => onSelectTask?.(task.id)}
+      tabIndex={onSelectTask ? 0 : undefined}
+      onKeyDown={onSelectTask ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectTask(task.id); } } : undefined}
+      role={onSelectTask ? "button" : undefined}
     >
       <TableCell className="py-2.5">
         <div className={`flex items-center gap-2 ${isChildTask ? "pl-8" : ""}`}>
@@ -396,7 +407,7 @@ function TaskTableRow({
             taskId={task.id}
             field="name"
             onSave={handleInlineEdit}
-            linkTo={`/tasks/${task.id}`}
+            linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
           />
           {isOverdue && (
             <span className="shrink-0" title="Overdue">
@@ -606,6 +617,9 @@ export default function Work() {
   } | null>(null);
   const [reviewEstimatesTaskId, setReviewEstimatesTaskId] = useState<string | null>(null);
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: tasks, isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -829,6 +843,14 @@ export default function Work() {
 
   const handleInlineEdit = (taskId: string, field: string, value: string) => {
     updateTaskMutation.mutate({ taskId, data: { [field]: value } });
+  };
+
+  const handleSelectTask = (taskId: string) => {
+    if (isMobile) {
+      navigate(`/tasks/${taskId}`);
+    } else {
+      setSelectedTaskId((prev) => (prev === taskId ? prev : taskId));
+    }
   };
 
   const handleUrgencyChange = (taskId: string, urgency: string) => {
@@ -1292,125 +1314,201 @@ export default function Work() {
     createProjectMutation.mutate(data);
   };
 
+  const panelOpen = !!selectedTaskId && !isMobile;
+  const [panelMounted, setPanelMounted] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
+
+  useEffect(() => {
+    if (panelOpen) {
+      setPanelMounted(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPanelVisible(true));
+      });
+    } else {
+      setPanelVisible(false);
+      const timer = setTimeout(() => setPanelMounted(false), 280);
+      return () => clearTimeout(timer);
+    }
+  }, [panelOpen]);
+
   return (
     <>
-      <div className="p-4 md:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
-              {user?.role === "admin" ? "Work" : "My Tasks"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {user?.role === "admin"
-                ? "Manage tasks and projects in one place"
-                : "View and manage your assigned tasks"}
-            </p>
-          </div>
-          {user?.role === "admin" && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link href="/tasks/new">
-                <Button data-testid="button-create-task">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Task
-                </Button>
-              </Link>
-              <Button
-                variant="outline"
-                onClick={() => setProjectDialogOpen(true)}
-                data-testid="button-new-project"
-              >
-                <FolderKanban className="w-4 h-4 mr-2" />
-                New Project
-              </Button>
-            </div>
-          )}
-          {user?.role !== "admin" && (
-            <Link href="/tasks/new">
-              <Button data-testid="button-create-task" className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Task
-              </Button>
-            </Link>
-          )}
-        </div>
-
-        {user?.role === "admin" && (
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tasks and projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                data-testid="input-search-work"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[160px]" data-testid="select-type-filter">
-                <SelectValue placeholder="Filter type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="tasks">Tasks Only</SelectItem>
-                <SelectItem value="projects">Projects Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          {unifiedStatusConfig.map((status) => {
-            const itemsInGroup = unifiedGroups[status.key] || [];
-            const isEmpty = itemsInGroup.length === 0;
-            const isCollapsed = collapsedGroups[status.key] ?? true;
-
-            return (
-              <Card key={status.key} data-testid={`group-${status.key}`}>
-                <div
-                  className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer select-none ${isEmpty ? "opacity-40" : ""}`}
-                  onClick={() => toggleGroup(status.key)}
-                  data-testid={`toggle-group-${status.key}`}
-                >
-                  {isCollapsed ? (
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  )}
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColors[status.key]}`} />
-                  <span className="text-sm font-medium">{status.label}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {itemsInGroup.length}
-                  </span>
+      <div className={`flex ${panelMounted ? "-mx-8 -mt-6 overflow-hidden" : ""}`} style={panelMounted ? { height: "calc(100vh - 49px)" } : undefined}>
+        {/* Task list area */}
+        <div
+          className={`flex-1 min-w-0 overflow-y-auto ${panelMounted && isPanelFullscreen ? "hidden" : ""}`}
+          style={{ transition: "all 280ms cubic-bezier(0.4, 0, 0.2, 1)" }}
+        >
+          <div className="p-4 md:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
+                  {user?.role === "admin" ? "Work" : "My Tasks"}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {user?.role === "admin"
+                    ? "Manage tasks and projects in one place"
+                    : "View and manage your assigned tasks"}
+                </p>
+              </div>
+              {user?.role === "admin" && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link href="/tasks/new">
+                    <Button data-testid="button-create-task">
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Task
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    onClick={() => setProjectDialogOpen(true)}
+                    data-testid="button-new-project"
+                  >
+                    <FolderKanban className="w-4 h-4 mr-2" />
+                    New Project
+                  </Button>
                 </div>
+              )}
+              {user?.role !== "admin" && (
+                <Link href="/tasks/new">
+                  <Button data-testid="button-create-task" className="w-full sm:w-auto">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Task
+                  </Button>
+                </Link>
+              )}
+            </div>
 
-                {!isCollapsed && !isEmpty && (
-                  <div className="border-t">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>
-                          <TableHead className="w-[60px] text-xs font-medium text-muted-foreground">Assignee</TableHead>
-                          <TableHead className="w-[120px] text-xs font-medium text-muted-foreground">Start Date</TableHead>
-                          <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Due Date</TableHead>
-                          <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Status</TableHead>
-                          <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
-                          <TableHead className="w-[150px] hidden md:table-cell text-xs font-medium text-muted-foreground">Property</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {itemsInGroup.map((item, idx) => {
-                          if (item.type === "task") {
-                            const task = item.data as Task;
-                            const childSubTasks = subTasksMap[task.id] || [];
-                            if (childSubTasks.length > 0) {
+            {user?.role === "admin" && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search tasks and projects..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-work"
+                  />
+                </div>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-full sm:w-[160px]" data-testid="select-type-filter">
+                    <SelectValue placeholder="Filter type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="tasks">Tasks Only</SelectItem>
+                    <SelectItem value="projects">Projects Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {unifiedStatusConfig.map((status) => {
+                const itemsInGroup = unifiedGroups[status.key] || [];
+                const isEmpty = itemsInGroup.length === 0;
+                const isCollapsed = collapsedGroups[status.key] ?? true;
+
+                return (
+                  <Card key={status.key} data-testid={`group-${status.key}`}>
+                    <div
+                      className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer select-none ${isEmpty ? "opacity-40" : ""}`}
+                      onClick={() => toggleGroup(status.key)}
+                      data-testid={`toggle-group-${status.key}`}
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      )}
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColors[status.key]}`} />
+                      <span className="text-sm font-medium">{status.label}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {itemsInGroup.length}
+                      </span>
+                    </div>
+
+                    {!isCollapsed && !isEmpty && (
+                      <div className="border-t">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>
+                              <TableHead className="w-[60px] text-xs font-medium text-muted-foreground">Assignee</TableHead>
+                              <TableHead className="w-[120px] text-xs font-medium text-muted-foreground">Start Date</TableHead>
+                              <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Due Date</TableHead>
+                              <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Status</TableHead>
+                              <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
+                              <TableHead className="w-[150px] hidden md:table-cell text-xs font-medium text-muted-foreground">Property</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {itemsInGroup.map((item, idx) => {
+                              if (item.type === "task") {
+                                const task = item.data as Task;
+                                const childSubTasks = subTasksMap[task.id] || [];
+                                if (childSubTasks.length > 0) {
+                                  return (
+                                    <ParentTaskRowGroup
+                                      key={task.id}
+                                      task={task}
+                                      childSubTasks={childSubTasks}
+                                      isExpanded={expandedParentTasks.has(task.id)}
+                                      onToggleExpand={() => toggleParentTaskExpanded(task.id)}
+                                      userGroups={userGroups}
+                                      allUsers={allUsers}
+                                      properties={properties}
+                                      handleStatusChange={handleStatusChange}
+                                      handleUrgencyChange={handleUrgencyChange}
+                                      handleAssigneeChange={handleAssigneeChange}
+                                      handlePropertyChange={handlePropertyChange}
+                                      handleTaskTypeChange={handleTaskTypeChange}
+                                      handleInlineEdit={handleInlineEdit}
+                                      isAdmin={isAdmin}
+                                      onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
+                                      onViewSummary={(taskId) => setSummaryTaskId(taskId)}
+                                      onSelectTask={handleSelectTask}
+                                      selectedTaskId={selectedTaskId}
+                                    />
+                                  );
+                                }
+                                return (
+                                  <TaskTableRow
+                                    key={task.id}
+                                    task={task}
+                                    userGroups={userGroups}
+                                    allUsers={allUsers}
+                                    properties={properties}
+                                    handleStatusChange={handleStatusChange}
+                                    handleUrgencyChange={handleUrgencyChange}
+                                    handleAssigneeChange={handleAssigneeChange}
+                                    handlePropertyChange={handlePropertyChange}
+                                    handleTaskTypeChange={handleTaskTypeChange}
+                                    handleInlineEdit={handleInlineEdit}
+                                    rowIndex={idx}
+                                    isAdmin={isAdmin}
+                                    onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
+                                    onViewSummary={(taskId) => setSummaryTaskId(taskId)}
+                                    onSelectTask={handleSelectTask}
+                                    selectedTaskId={selectedTaskId}
+                                  />
+                                );
+                              }
+
+                              const project = item.data as Project;
+                              const childTasks = projectTasksMap[project.id] || [];
+                              const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
+                              const isExpanded = expandedProjects.has(project.id);
+
                               return (
-                                <ParentTaskRowGroup
-                                  key={task.id}
-                                  task={task}
-                                  childSubTasks={childSubTasks}
-                                  isExpanded={expandedParentTasks.has(task.id)}
-                                  onToggleExpand={() => toggleParentTaskExpanded(task.id)}
+                                <ProjectRowGroup
+                                  key={project.id}
+                                  project={project}
+                                  childTasks={childTasks}
+                                  completedChildTasks={completedChildTasks}
+                                  isExpanded={isExpanded}
+                                  onToggleExpand={() => toggleProjectExpanded(project.id)}
                                   userGroups={userGroups}
                                   allUsers={allUsers}
                                   properties={properties}
@@ -1420,71 +1518,53 @@ export default function Work() {
                                   handlePropertyChange={handlePropertyChange}
                                   handleTaskTypeChange={handleTaskTypeChange}
                                   handleInlineEdit={handleInlineEdit}
+                                  getPropertyName={getPropertyName}
+                                  handleProjectStatusChange={handleProjectStatusChange}
                                   isAdmin={isAdmin}
                                   onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
                                   onViewSummary={(taskId) => setSummaryTaskId(taskId)}
+                                  onSelectTask={handleSelectTask}
+                                  selectedTaskId={selectedTaskId}
                                 />
                               );
-                            }
-                            return (
-                              <TaskTableRow
-                                key={task.id}
-                                task={task}
-                                userGroups={userGroups}
-                                allUsers={allUsers}
-                                properties={properties}
-                                handleStatusChange={handleStatusChange}
-                                handleUrgencyChange={handleUrgencyChange}
-                                handleAssigneeChange={handleAssigneeChange}
-                                handlePropertyChange={handlePropertyChange}
-                                handleTaskTypeChange={handleTaskTypeChange}
-                                handleInlineEdit={handleInlineEdit}
-                                rowIndex={idx}
-                                isAdmin={isAdmin}
-                                onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
-                                onViewSummary={(taskId) => setSummaryTaskId(taskId)}
-                              />
-                            );
-                          }
-
-                          const project = item.data as Project;
-                          const childTasks = projectTasksMap[project.id] || [];
-                          const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
-                          const isExpanded = expandedProjects.has(project.id);
-
-                          return (
-                            <ProjectRowGroup
-                              key={project.id}
-                              project={project}
-                              childTasks={childTasks}
-                              completedChildTasks={completedChildTasks}
-                              isExpanded={isExpanded}
-                              onToggleExpand={() => toggleProjectExpanded(project.id)}
-                              userGroups={userGroups}
-                              allUsers={allUsers}
-                              properties={properties}
-                              handleStatusChange={handleStatusChange}
-                              handleUrgencyChange={handleUrgencyChange}
-                              handleAssigneeChange={handleAssigneeChange}
-                              handlePropertyChange={handlePropertyChange}
-                              handleTaskTypeChange={handleTaskTypeChange}
-                              handleInlineEdit={handleInlineEdit}
-                              getPropertyName={getPropertyName}
-                              handleProjectStatusChange={handleProjectStatusChange}
-                              isAdmin={isAdmin}
-                              onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
-                              onViewSummary={(taskId) => setSummaryTaskId(taskId)}
-                            />
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </div>
+
+        {/* Slide-in panel */}
+        {panelMounted && (
+          <div
+            className="shrink-0 overflow-hidden border-l"
+            style={{
+              width: isPanelFullscreen ? "100%" : panelVisible ? "380px" : "0px",
+              borderColor: "#EEEEEE",
+              transition: "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+            data-testid="task-detail-slide-panel"
+          >
+            <div style={{ width: isPanelFullscreen ? "100%" : "380px", height: "100%" }}>
+              <TaskDetailPanel
+                taskId={selectedTaskId!}
+                isFullscreen={isPanelFullscreen}
+                onClose={() => {
+                  setSelectedTaskId(null);
+                  setIsPanelFullscreen(false);
+                }}
+                onToggleFullscreen={() => setIsPanelFullscreen((prev) => !prev)}
+                allUsers={allUsers}
+                properties={properties}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={isHoldReasonDialogOpen} onOpenChange={setIsHoldReasonDialogOpen}>
@@ -1789,6 +1869,8 @@ function ParentTaskRowGroup({
   isAdmin,
   onReviewEstimates,
   onViewSummary,
+  onSelectTask,
+  selectedTaskId,
 }: {
   task: Task;
   childSubTasks: Task[];
@@ -1806,6 +1888,8 @@ function ParentTaskRowGroup({
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
   onViewSummary?: (taskId: string) => void;
+  onSelectTask?: (taskId: string) => void;
+  selectedTaskId?: string | null;
 }) {
   const completedSubTasks = childSubTasks.filter((t) => t.status === "completed").length;
   const isOverdue = task.estimatedCompletionDate
@@ -1823,7 +1907,11 @@ function ParentTaskRowGroup({
     <>
       <TableRow
         data-testid={`row-parent-task-${task.id}`}
-        className={isExpanded ? "bg-muted/20" : ""}
+        className={`cursor-pointer ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : isExpanded ? "bg-muted/20" : ""}`}
+        onClick={() => onSelectTask?.(task.id)}
+        tabIndex={onSelectTask ? 0 : undefined}
+        onKeyDown={onSelectTask ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectTask(task.id); } } : undefined}
+        role={onSelectTask ? "button" : undefined}
       >
         <TableCell className="py-2.5">
           <div className="flex items-center gap-2">
@@ -1849,7 +1937,7 @@ function ParentTaskRowGroup({
               taskId={task.id}
               field="name"
               onSave={handleInlineEdit}
-              linkTo={`/tasks/${task.id}`}
+              linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
             />
             <Badge
               variant="outline"
@@ -2046,6 +2134,8 @@ function ParentTaskRowGroup({
             isAdmin={isAdmin}
             onReviewEstimates={onReviewEstimates}
             onViewSummary={onViewSummary}
+            onSelectTask={onSelectTask}
+            selectedTaskId={selectedTaskId}
           />
         ))}
     </>
@@ -2072,6 +2162,8 @@ function ProjectRowGroup({
   isAdmin,
   onReviewEstimates,
   onViewSummary,
+  onSelectTask,
+  selectedTaskId,
 }: {
   project: Project;
   childTasks: Task[];
@@ -2092,6 +2184,8 @@ function ProjectRowGroup({
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
   onViewSummary?: (taskId: string) => void;
+  onSelectTask?: (taskId: string) => void;
+  selectedTaskId?: string | null;
 }) {
   const propertyName = getPropertyName(project.propertyId);
   const projectStatusToUnified = projectStatusMapping[project.status] || "not_started";
@@ -2210,6 +2304,8 @@ function ProjectRowGroup({
             isAdmin={isAdmin}
             onReviewEstimates={onReviewEstimates}
             onViewSummary={onViewSummary}
+            onSelectTask={onSelectTask}
+            selectedTaskId={selectedTaskId}
           />
         ))}
     </>
