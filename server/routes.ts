@@ -5043,14 +5043,15 @@ Be concise and practical. Do not use markdown formatting.`;
   // Update project
   app.patch("/api/projects/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const validated = insertProjectSchema.partial().parse(req.body);
+      const rawBody = { ...req.body };
+      if (rawBody.startDate && typeof rawBody.startDate === "string") {
+        rawBody.startDate = new Date(rawBody.startDate);
+      }
+      if (rawBody.targetEndDate && typeof rawBody.targetEndDate === "string") {
+        rawBody.targetEndDate = new Date(rawBody.targetEndDate);
+      }
+      const validated = insertProjectSchema.partial().parse(rawBody);
       const body: any = { ...validated };
-      if (body.startDate && typeof body.startDate === "string") {
-        body.startDate = new Date(body.startDate);
-      }
-      if (body.targetEndDate && typeof body.targetEndDate === "string") {
-        body.targetEndDate = new Date(body.targetEndDate);
-      }
       const project = await storage.updateProject(req.params.id, body);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
