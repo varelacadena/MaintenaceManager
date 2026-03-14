@@ -278,7 +278,8 @@ function AuthenticatedApp() {
 
 function TaskDetailResponsive() {
   const isMobile = useIsMobile();
-  if (isMobile) return <MobileTaskDetail />;
+  const hasFullView = typeof window !== "undefined" && window.location.search.includes("view=full");
+  if (isMobile && !hasFullView) return <MobileTaskDetail />;
   return <TaskDetail />;
 }
 

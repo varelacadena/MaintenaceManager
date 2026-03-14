@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   Flag,
   Calendar,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +86,8 @@ export default function MobileTaskDetail() {
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [subtaskNotes, setSubtaskNotes] = useState<Record<string, string>>({});
+  const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -172,6 +175,15 @@ export default function MobileTaskDetail() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete task", variant: "destructive" });
+    },
+  });
+
+  const saveSubtaskNoteMutation = useMutation({
+    mutationFn: async ({ subtaskId, notes }: { subtaskId: string; notes: string }) => {
+      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { notes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
     },
   });
 
@@ -455,8 +467,8 @@ export default function MobileTaskDetail() {
             </div>
           )}
 
-          {/* Subtask warning */}
-          {taskStarted && !isCompleted && !allSubtasksDone && (
+          {/* Subtask warning - only shown when user attempts to complete with incomplete subtasks */}
+          {showIncompleteWarning && taskStarted && !isCompleted && !allSubtasksDone && (
             <div
               className="mx-4 mt-3 mb-1 px-3 py-2 rounded text-xs"
               style={{ backgroundColor: "#FEF2F2", borderLeft: "3px solid #D94F4F", color: "#D94F4F" }}
@@ -542,6 +554,14 @@ export default function MobileTaskDetail() {
                           className="text-xs resize-none border focus-visible:ring-1 focus-visible:ring-[#4338CA]"
                           style={{ borderColor: "#EEEEEE", minHeight: "60px" }}
                           disabled={isCompleted}
+                          value={subtaskNotes[subtask.id] ?? subtask.notes ?? ""}
+                          onChange={(e) => setSubtaskNotes(prev => ({ ...prev, [subtask.id]: e.target.value }))}
+                          onBlur={() => {
+                            const val = subtaskNotes[subtask.id];
+                            if (val !== undefined && val !== (subtask.notes ?? "")) {
+                              saveSubtaskNoteMutation.mutate({ subtaskId: subtask.id, notes: val });
+                            }
+                          }}
                           data-testid={`mobile-subtask-note-${subtask.id}`}
                         />
                       </div>
@@ -646,8 +666,14 @@ export default function MobileTaskDetail() {
                   backgroundColor: allSubtasksDone ? "#4338CA" : "#9CA3AF",
                   color: "#FFFFFF",
                 }}
-                onClick={() => updateStatusMutation.mutate("completed")}
-                disabled={!allSubtasksDone || updateStatusMutation.isPending}
+                onClick={() => {
+                  if (!allSubtasksDone) {
+                    setShowIncompleteWarning(true);
+                    return;
+                  }
+                  updateStatusMutation.mutate("completed");
+                }}
+                disabled={updateStatusMutation.isPending}
                 data-testid="button-mobile-mark-complete"
               >
                 Mark Complete
@@ -693,6 +719,10 @@ export default function MobileTaskDetail() {
 }
 
 function SubtaskPhotos({ subtaskId, disabled }: { subtaskId: string; disabled: boolean }) {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const { data: uploads } = useQuery<Upload[]>({
     queryKey: ["/api/uploads/task", subtaskId],
     queryFn: async () => {
@@ -704,6 +734,46 @@ function SubtaskPhotos({ subtaskId, disabled }: { subtaskId: string; disabled: b
   });
 
   const photos = uploads?.filter(u => u.fileType.startsWith("image/")) || [];
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const paramRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
+      if (!paramRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL } = await paramRes.json();
+
+      const isMock = uploadURL.startsWith("https://mock-storage.local/");
+      let objectUrl = uploadURL;
+
+      if (!isMock) {
+        const uploadRes = await fetch(uploadURL, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        objectUrl = uploadURL.split("?")[0];
+      }
+
+      await apiRequest("PUT", "/api/uploads", {
+        taskId: subtaskId,
+        fileName: file.name,
+        fileType: file.type || "image/jpeg",
+        objectUrl,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", subtaskId] });
+      toast({ title: "Photo uploaded" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <>
@@ -724,17 +794,31 @@ function SubtaskPhotos({ subtaskId, disabled }: { subtaskId: string; disabled: b
         </a>
       ))}
       {!disabled && (
-        <div
-          className="flex items-center justify-center rounded cursor-pointer"
-          style={{
-            width: "54px",
-            height: "54px",
-            border: "2px dashed #D1D5DB",
-          }}
-          data-testid={`mobile-subtask-add-photo-${subtaskId}`}
-        >
-          <Camera className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-        </div>
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
+          <div
+            className="flex items-center justify-center rounded cursor-pointer"
+            style={{
+              width: "54px",
+              height: "54px",
+              border: "2px dashed #D1D5DB",
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            data-testid={`mobile-subtask-add-photo-${subtaskId}`}
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#9CA3AF" }} />
+            ) : (
+              <Camera className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+            )}
+          </div>
+        </>
       )}
     </>
   );
