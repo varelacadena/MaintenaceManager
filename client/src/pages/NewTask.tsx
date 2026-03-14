@@ -47,7 +47,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
 import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle } from "@shared/schema";
 import { z } from "zod";
-import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save, Upload, Paperclip, Trash2 } from "lucide-react";
+import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save, Upload, Paperclip, Trash2, Layers } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { TaskLocationFields, type SelectedAsset } from "@/components/task-form/TaskLocationFields";
@@ -217,6 +217,13 @@ export default function NewTask() {
   const [saveTemplateName, setSaveTemplateName] = useState("");
   const [saveTemplateDescription, setSaveTemplateDescription] = useState("");
   const [isTemplatePopoverOpen, setIsTemplatePopoverOpen] = useState(false);
+
+  type PendingSubTask = {
+    name: string;
+    description: string;
+  };
+  const [pendingSubTasks, setPendingSubTasks] = useState<PendingSubTask[]>([]);
+  const [isSubTasksOpen, setIsSubTasksOpen] = useState(false);
 
   const { data: checklistTemplates = [] } = useQuery<ChecklistTemplate[]>({
     queryKey: ["/api/checklist-templates"],
@@ -582,6 +589,16 @@ export default function NewTask() {
         }
       }
 
+      const validSubTasks = pendingSubTasks.filter(st => st.name.trim());
+      if (validSubTasks.length > 0) {
+        for (const subTask of validSubTasks) {
+          await apiRequest("POST", `/api/tasks/${parentTask.id}/subtasks`, {
+            name: subTask.name.trim(),
+            description: subTask.description.trim() || undefined,
+          });
+        }
+      }
+
       return parentTask;
     },
     onSuccess: async (data) => {
@@ -601,10 +618,12 @@ export default function NewTask() {
         });
       } else {
         const assetCount = selectedAssets.length;
+        const manualSubTaskCount = pendingSubTasks.filter(st => st.name.trim()).length;
+        const totalSubTasks = (assetCount > 1 ? assetCount : 0) + manualSubTaskCount;
         toast({
           title: "Task Created",
-          description: assetCount > 1
-            ? `Parent task created with ${assetCount} sub-tasks.`
+          description: totalSubTasks > 0
+            ? `Task created with ${totalSubTasks} sub-task${totalSubTasks !== 1 ? "s" : ""}.`
             : "The task has been created successfully.",
         });
       }
@@ -1241,7 +1260,83 @@ export default function NewTask() {
             </div>
           </Card>
 
-          {/* Section 5: Checklists - Optional */}
+          {/* Section 5: Sub-Tasks - Optional */}
+          <Card className="p-5">
+            <Collapsible open={isSubTasksOpen} onOpenChange={setIsSubTasksOpen}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" type="button" className="p-0 h-auto hover:bg-transparent gap-2" data-testid="button-toggle-subtasks">
+                    <Layers className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Sub-Tasks</span>
+                    <Badge variant="secondary" className="text-xs">Optional</Badge>
+                    {pendingSubTasks.length > 0 && (
+                      <Badge variant="default" className="text-xs">{pendingSubTasks.length}</Badge>
+                    )}
+                    <ChevronDown className={cn("h-4 w-4 transition-transform text-muted-foreground", isSubTasksOpen && "rotate-180")} />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent>
+                <div className="mt-4 space-y-3">
+                  {pendingSubTasks.map((subTask, index) => (
+                    <div key={index} className="p-3 border rounded-md space-y-2" data-testid={`subtask-item-${index}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            placeholder="Sub-task name *"
+                            value={subTask.name}
+                            onChange={(e) => {
+                              setPendingSubTasks(prev => prev.map((st, i) =>
+                                i === index ? { ...st, name: e.target.value } : st
+                              ));
+                            }}
+                            data-testid={`input-subtask-name-${index}`}
+                          />
+                          <Textarea
+                            placeholder="Description (optional)"
+                            className="min-h-[60px] resize-none"
+                            value={subTask.description}
+                            onChange={(e) => {
+                              setPendingSubTasks(prev => prev.map((st, i) =>
+                                i === index ? { ...st, description: e.target.value } : st
+                              ));
+                            }}
+                            data-testid={`textarea-subtask-description-${index}`}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setPendingSubTasks(prev => prev.filter((_, i) => i !== index));
+                          }}
+                          data-testid={`button-remove-subtask-${index}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPendingSubTasks(prev => [...prev, { name: "", description: "" }]);
+                      if (!isSubTasksOpen) setIsSubTasksOpen(true);
+                    }}
+                    data-testid="button-add-subtask"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Sub-Task
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
+
+          {/* Section 6: Checklists - Optional */}
           <Card className="p-5 mb-8">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">

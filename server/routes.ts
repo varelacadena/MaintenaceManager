@@ -1585,10 +1585,11 @@ Be concise and practical. Do not use markdown formatting.`;
         return res.status(403).json({ message: "Only admins and technicians can create sub-tasks" });
       }
 
-      const { equipmentId, vehicleId, name, description } = req.body;
+      const { equipmentId, vehicleId, description } = req.body;
+      const name = typeof req.body.name === "string" ? req.body.name.trim() : undefined;
 
-      if (!equipmentId && !vehicleId) {
-        return res.status(400).json({ message: "Either equipmentId or vehicleId is required" });
+      if (!equipmentId && !vehicleId && !name) {
+        return res.status(400).json({ message: "Either equipmentId, vehicleId, or name is required" });
       }
 
       let assetName = "";
