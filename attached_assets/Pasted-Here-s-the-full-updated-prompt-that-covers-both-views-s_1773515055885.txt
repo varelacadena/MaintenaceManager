@@ -1,0 +1,160 @@
+Here's the full updated prompt that covers both views separately, with the mobile redesign fully specified:
+
+---
+
+> **CMMS Task Detail — Desktop Slide-In Panel + Mobile Redesign (Two Separate Views)**
+>
+> Implement two separate task detail views for the CMMS work orders page — one for desktop and one for mobile. Both share the same data and logic but have completely different layouts. Use responsive breakpoints: mobile below 768px, desktop at 768px and above. All existing navigation, buttons, and links must continue to work.
+>
+> ---
+>
+> ## COLOR SYSTEM — apply to both views
+>
+> - Page/panel background: `#FFFFFF`
+> - App background: `#F8F8F8`
+> - Section borders: `#EEEEEE`
+> - Primary text: `#1A1A1A`
+> - Secondary/muted text: `#6B7280`
+> - Tertiary/hint text: `#9CA3AF`
+> - "NOT STARTED" pill: background `#4A4A4A`, text `#FFFFFF`, border-radius 4px
+> - "IN PROGRESS" pill: background `#EEF2FF`, text `#4338CA`
+> - "COMPLETED" pill: background `#F0FDF4`, text `#15803D`
+> - Priority High flag + text: `#D94F4F`
+> - Priority Medium flag + text: `#E6A817`
+> - Priority Low flag + text: `#9CA3AF`
+> - Overdue label: `#D94F4F`
+> - Warning triangle: `#E6A817`
+> - Avatar "IM": background `#3DAB8E`, white text
+> - Avatar "S": background `#F07A30`, white text
+> - Primary CTA (Start Task / Mark Complete): background `#4338CA`, white text
+> - Edit button: `#FFFFFF` background, `#EEEEEE` border, `#1A1A1A` text
+> - Delete button: `#FEF2F2` background, `#FECACA` border, `#D94F4F` text
+> - Active/selected row: `#EEF2FF`
+> - Progress bar fill: `#4338CA`
+> - Success state: background `#F0FDF4`, text `#15803D`, border `#BBF7D0`
+> - Section card background: `#FFFFFF`, border `#EEEEEE`, border-radius 12px
+>
+> ---
+>
+> ## DESKTOP VIEW (768px and above)
+>
+> The existing task list table remains unchanged. When a user clicks any row, a slide-in detail panel animates in from the right.
+>
+> **Task list table — keep exactly as-is:**
+> - White background, `#F8F8F8` header row, `#EEEEEE` row borders
+> - Columns: Name, Assignee, Start Date, Due Date, Status, Priority, Property
+> - Group headers for Not Started / In Progress / Completed with colored status dots
+> - Subtask parent rows show expand arrow and "0/2 complete" chip
+> - Overdue dates in `#D94F4F`
+> - Warning triangle `#E6A817` next to overdue task names
+> - Status pills, priority flags, assignee avatars all styled per color system above
+> - All existing row dropdowns (status, priority, assignee) remain fully functional
+>
+> **Slide-in panel — 380px, animates from right:**
+> - Smooth open: `transition: width 280ms cubic-bezier(0.4,0,0.2,1)`
+> - Task list compresses to fill remaining width; active row highlighted `#EEF2FF`
+> - Clicking a different row updates panel content in place
+> - Close `←` button top-left dismisses panel and deselects row
+> - Expand `⤢` button top-right enters fullscreen mode
+>
+> **Fullscreen mode:**
+> - Panel expands to 100% of content area (excluding left icon sidebar); list hidden
+> - Two-column layout: scrollable main content left + fixed 240px right sidebar
+> - Right sidebar sections: Status + Start Task button, Actions (Photos/Docs, Scan, Add Note, Log Time), Details (priority, due date, type, assigned), AI Scheduling (Suggest Schedule button styled with `#4338CA` text and star icon)
+> - Expand icon toggles to collapse `⤡`; clicking returns to panel mode with list visible
+>
+> **Panel content sections (same in panel and fullscreen main column):**
+> 1. Top bar: `←` close, status dot + label, `⤢/⤡` expand toggle, priority badge, due date
+> 2. Admin bar (admin-only): Edit button, Delete button, Start Task button (hidden in fullscreen — moved to sidebar)
+> 3. Task section: title (16px, weight 500), type + pool (12px muted)
+> 4. Meta grid: 2-col in panel mode (Location, Time Logged), 4-col in fullscreen (+ Assigned To, Type)
+> 5. Description text (12px, line-height 1.55)
+> 6. Resources row: collapsed single line showing badge counts (purple "N docs", gray "N img", coral "N vid"). Tap/click to expand a compact list — each file shows a colored type badge (PDF purple, XLS blue, DOC green, IMG gray, VID coral) + truncated filename + chevron
+> 7. Subtasks: section label + "X / N" counter, progress bar (4px height, `#4338CA` fill). Each subtask row has a circle checkbox on the left and a chevron on the right. Locked and dimmed (opacity 0.45) until Start Task pressed. On expand: photo thumbnail row (54×54px, dashed + border add button) and a plain textarea note field. Cannot mark complete until all checked — show red-left-border warning.
+> 8. Messages, Parts Used, History — tappable rows linking to their pages
+>
+> **Edit mode (admin only):**
+> - Replaces view content with inline fields: title input, location input, sub-area input, due date picker, priority select (Low/Medium/High), description textarea
+> - Subtask list: each item has a text input + red ✕ remove button; Add Subtask button below
+> - Save Changes / Cancel buttons at bottom of edit section
+>
+> **Delete (admin only):**
+> - Confirmation modal overlay: "Delete this task?" title, warning copy mentioning permanent removal, red "Delete task" confirm button, Cancel button
+> - On confirm: remove task row from list, close panel
+>
+> ---
+>
+> ## MOBILE VIEW (below 768px)
+>
+> Accessed by tapping a task row in the mobile task list. Navigates to a dedicated full-screen task detail page (not a panel). Back navigation returns to the list.
+>
+> **Page structure — single scrollable column:**
+>
+> **Status bar (top, full width):**
+> - Rounded card, `#F8F8F8` background
+> - Left: status dot (gray `#9CA3AF` = Not Started, `#4338CA` = In Progress, `#15803D` = Completed) + status label text
+> - Right: priority badge + due date
+> - Status dot and label update live as task progresses
+>
+> **Main task card:**
+> - White background, `#EEEEEE` border, 12px border-radius
+> - Admin bar (admin-only, `#F8F8F8` background strip): Edit button (small, with pencil icon) + Delete button (small, danger styled) aligned right
+> - Task section: title (16px, weight 500), type + pool (12px muted)
+> - Meta grid (2-column): Location (name + sub-area) | Time Logged
+> - Description (12px, line-height 1.55)
+> - Resources row (collapsed): single tap-to-expand row showing doc/img/vid badge counts. Expanded: compact file list with type badges and filenames, same styling as desktop
+>
+> **Subtasks card:**
+> - Separate card below the main task card
+> - Header: "Subtasks" label + "X / N" count right-aligned
+> - Progress bar appears below header only after Start Task is pressed (hidden before)
+> - Subtask rows locked and dimmed before Start Task. After: tap chevron to expand each subtask, revealing photo add area (54×54px thumbnails, dashed add button) + note textarea
+> - Circle checkbox on left: tap to check off (filled `#4338CA` with white checkmark)
+> - Checked items show strikethrough title and faded styling
+> - Red-left-border warning message while unchecked subtasks remain
+>
+> **Secondary links card:**
+> - Messages, Parts Used, History — each a full-width tappable row with chevron, separated by `#EEEEEE` borders
+>
+> **Sticky bottom bar (fixed to bottom of viewport):**
+> - White background, `#EEEEEE` top border
+> - Left side: three icon ghost buttons — Photos/Docs (camera icon), Scan (scan icon), Note (document icon) — each with `#EEEEEE` border and `#6B7280` icon
+> - Right side: primary CTA button taking remaining width — reads "Start Task" before started, "Mark Complete" after started (disabled until all subtasks checked), disappears and replaced by green success banner on completion
+>
+> **Task state machine (both views):**
+> - NOT STARTED → status dot gray, subtasks locked, CTA = "Start Task"
+> - IN PROGRESS → status dot `#4338CA`, subtasks unlocked, progress bar visible, CTA = "Mark Complete" (disabled until all subtasks done)
+> - COMPLETED → status dot `#15803D`, subtasks frozen, CTA hidden, green success banner shown ("Task completed · All subtasks done · evidence captured")
+>
+> ---
+>
+> ## SHARED LOGIC (both views)
+>
+> **Subtask rules:**
+> - Created by manager/admin only via Edit mode; technicians cannot add, remove, or rename
+> - Technician can only interact (check off, add photos, add notes) after pressing Start Task
+> - Each subtask photo added appears as a colored 54×54px thumbnail in the row
+> - Task cannot be marked complete with any unchecked subtask
+>
+> **Admin Edit mode:**
+> - Editable fields: title, location, sub-area, due date, priority, description, subtask list (rename + delete each, add new)
+> - Save applies changes to both the panel/page and the task list row
+> - Cancel discards all unsaved changes
+>
+> **Admin Delete:**
+> - Always requires confirmation modal/dialog before executing
+> - On confirm: task is removed from list, detail view closes/navigates back
+>
+> **Resources:**
+> - Supports mixed file types: PDF, DOC, XLS, IMG, VID
+> - Always collapsed by default — one tap/click to expand full list
+> - Each file row is tappable and opens the file
+>
+> **Ensure the following remain fully functional at all times:**
+> - Left icon sidebar navigation (desktop)
+> - Back button / back navigation (mobile)
+> - Notification bell with badge
+> - Dark mode toggle
+> - Sign Out
+> - All row-level dropdowns in the task list (status, priority, assignee)
+> - All existing routing — no page breaks or blank states
