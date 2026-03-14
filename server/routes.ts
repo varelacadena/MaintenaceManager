@@ -1481,6 +1481,14 @@ Be concise and practical. Do not use markdown formatting.`;
           return res.status(404).json({ message: "Task not found" });
         }
         
+        // Subtask structural edits (name, description for subtasks) are admin-only
+        if (task.parentTaskId) {
+          const isStructuralEdit = req.body.name !== undefined || req.body.description !== undefined;
+          if (isStructuralEdit) {
+            return res.status(403).json({ message: "Only admins can rename or modify subtasks" });
+          }
+        }
+
         // Technicians can only update tasks directly assigned to them, or technician-type tasks in the technician pool
         if (currentUser.role === "technician") {
           const directlyAssigned = task.assignedToId === userId;

@@ -24,7 +24,7 @@ import {
 import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task } from "@shared/schema";
+import type { Task, InsertTask } from "@shared/schema";
 
 interface Area {
   id: string;
@@ -178,10 +178,10 @@ export function TaskEditMode({
 
     setIsSaving(true);
     try {
-      const patchData: Record<string, any> = {};
+      const patchData: Partial<InsertTask> = {};
       if (name !== task.name) patchData.name = name;
       if (description !== (task.description || "")) patchData.description = description;
-      if (urgency !== task.urgency) patchData.urgency = urgency;
+      if (urgency !== task.urgency) patchData.urgency = urgency as InsertTask["urgency"];
 
       const origAreaId = task.areaId || "";
       if (areaId !== origAreaId) patchData.areaId = areaId || null;
@@ -193,7 +193,7 @@ export function TaskEditMode({
         ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
         : "";
       if (estimatedCompletionDate !== origDate) {
-        patchData.estimatedCompletionDate = estimatedCompletionDate || null;
+        patchData.estimatedCompletionDate = estimatedCompletionDate ? new Date(estimatedCompletionDate) : null;
       }
 
       if (Object.keys(patchData).length > 0) {
