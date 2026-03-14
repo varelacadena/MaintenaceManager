@@ -1581,8 +1581,8 @@ Be concise and practical. Do not use markdown formatting.`;
       }
 
       const currentUser = await storage.getUser(req.userId);
-      if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "technician")) {
-        return res.status(403).json({ message: "Only admins and technicians can create sub-tasks" });
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Only admins can create sub-tasks" });
       }
 
       const { equipmentId, vehicleId, description } = req.body;

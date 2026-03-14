@@ -26,6 +26,17 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Task } from "@shared/schema";
 
+interface Area {
+  id: string;
+  name: string;
+}
+
+interface Subdivision {
+  id: string;
+  name: string;
+  areaId: string;
+}
+
 interface SubtaskEdit {
   id?: string;
   name: string;
@@ -63,6 +74,8 @@ export function TaskEditMode({
       ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
       : ""
   );
+  const [areaId, setAreaId] = useState<string>(task.areaId || "");
+  const [subdivisionId, setSubdivisionId] = useState<string>(task.subdivisionId || "");
 
   const [editSubtasks, setEditSubtasks] = useState<SubtaskEdit[]>(
     subtasks.map((s) => ({
@@ -77,6 +90,21 @@ export function TaskEditMode({
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const { data: areas } = useQuery<Area[]>({
+    queryKey: ["/api/areas"],
+  });
+
+  const { data: subdivisions } = useQuery<Subdivision[]>({
+    queryKey: ["/api/subdivisions", areaId],
+    queryFn: async () => {
+      if (!areaId) return [];
+      const res = await fetch(`/api/subdivisions/${areaId}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!areaId,
+  });
+
   useEffect(() => {
     setName(task.name);
     setDescription(task.description || "");
@@ -86,6 +114,8 @@ export function TaskEditMode({
         ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
         : ""
     );
+    setAreaId(task.areaId || "");
+    setSubdivisionId(task.subdivisionId || "");
   }, [task.id]);
 
   useEffect(() => {
@@ -134,6 +164,12 @@ export function TaskEditMode({
     );
   };
 
+  const updateSubtaskDescription = (index: number, newDesc: string) => {
+    setEditSubtasks((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, description: newDesc } : s))
+    );
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       toast({ title: "Title is required", variant: "destructive" });
@@ -146,6 +182,12 @@ export function TaskEditMode({
       if (name !== task.name) patchData.name = name;
       if (description !== (task.description || "")) patchData.description = description;
       if (urgency !== task.urgency) patchData.urgency = urgency;
+
+      const origAreaId = task.areaId || "";
+      if (areaId !== origAreaId) patchData.areaId = areaId || null;
+
+      const origSubdivisionId = task.subdivisionId || "";
+      if (subdivisionId !== origSubdivisionId) patchData.subdivisionId = subdivisionId || null;
 
       const origDate = task.estimatedCompletionDate
         ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
@@ -164,7 +206,7 @@ export function TaskEditMode({
         } else if (sub.isNew && !sub.isRemoved && sub.name.trim()) {
           await apiRequest("POST", `/api/tasks/${taskId}/subtasks`, {
             name: sub.name.trim(),
-            description: sub.description.trim() || task.description,
+            description: sub.description.trim() || undefined,
           });
         } else if (!sub.isNew && !sub.isRemoved && sub.id) {
           const original = subtasks.find((s) => s.id === sub.id);
@@ -196,7 +238,6 @@ export function TaskEditMode({
 
   return (
     <div className={containerClass} style={{ backgroundColor: bgColor }} data-testid="task-edit-mode">
-      {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"
         style={{ borderBottom: "1px solid #EEEEEE", backgroundColor: "#FFFFFF" }}
@@ -242,9 +283,7 @@ export function TaskEditMode({
         </div>
       </div>
 
-      {/* Scrollable form content */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {/* Title */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Title
@@ -257,7 +296,6 @@ export function TaskEditMode({
           />
         </div>
 
-        {/* Priority */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Priority
@@ -274,7 +312,51 @@ export function TaskEditMode({
           </Select>
         </div>
 
-        {/* Due Date */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+            Location
+          </Label>
+          <Select
+            value={areaId || "__none__"}
+            onValueChange={(v) => {
+              setAreaId(v === "__none__" ? "" : v);
+              setSubdivisionId("");
+            }}
+          >
+            <SelectTrigger data-testid="select-edit-location">
+              <SelectValue placeholder="Select location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">No location</SelectItem>
+              {(areas || []).map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {areaId && (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+              Sub-area
+            </Label>
+            <Select
+              value={subdivisionId || "__none__"}
+              onValueChange={(v) => setSubdivisionId(v === "__none__" ? "" : v)}
+            >
+              <SelectTrigger data-testid="select-edit-subarea">
+                <SelectValue placeholder="Select sub-area" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No sub-area</SelectItem>
+                {(subdivisions || []).map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Due Date
@@ -287,7 +369,6 @@ export function TaskEditMode({
           />
         </div>
 
-        {/* Description */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Description
@@ -302,7 +383,6 @@ export function TaskEditMode({
           />
         </div>
 
-        {/* Subtask Management */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
@@ -324,31 +404,43 @@ export function TaskEditMode({
               No subtasks
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {editSubtasks.map((sub, index) => {
                 if (sub.isRemoved) return null;
                 return (
                   <div
                     key={sub.id || `new-${index}`}
-                    className="flex items-center gap-2"
+                    className="space-y-1.5 rounded p-2"
+                    style={{ backgroundColor: isMobile ? "#FFFFFF" : "#F9FAFB" }}
                     data-testid={`edit-subtask-row-${sub.id || index}`}
                   >
-                    <Input
-                      value={sub.name}
-                      onChange={(e) => updateSubtaskName(index, e.target.value)}
-                      placeholder={sub.isNew ? "New subtask name" : "Subtask name"}
-                      className="flex-1"
-                      data-testid={`input-edit-subtask-${sub.id || index}`}
-                    />
-                    <button
-                      onClick={() => removeSubtask(index)}
-                      className="shrink-0 p-1.5 rounded"
-                      style={{ color: "#D94F4F" }}
-                      data-testid={`button-remove-subtask-${sub.id || index}`}
-                      aria-label={`Remove subtask ${sub.name}`}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={sub.name}
+                        onChange={(e) => updateSubtaskName(index, e.target.value)}
+                        placeholder={sub.isNew ? "New subtask name" : "Subtask name"}
+                        className="flex-1"
+                        data-testid={`input-edit-subtask-${sub.id || index}`}
+                      />
+                      <button
+                        onClick={() => removeSubtask(index)}
+                        className="shrink-0 p-1.5 rounded"
+                        style={{ color: "#D94F4F" }}
+                        data-testid={`button-remove-subtask-${sub.id || index}`}
+                        aria-label={`Remove subtask ${sub.name}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {sub.isNew && (
+                      <Input
+                        value={sub.description}
+                        onChange={(e) => updateSubtaskDescription(index, e.target.value)}
+                        placeholder="Description (optional)"
+                        className="text-xs"
+                        data-testid={`input-edit-subtask-desc-${index}`}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -356,7 +448,6 @@ export function TaskEditMode({
           )}
         </div>
 
-        {/* Delete section */}
         <div
           className="pt-4 mt-4"
           style={{ borderTop: "1px solid #EEEEEE" }}
@@ -373,7 +464,6 @@ export function TaskEditMode({
         </div>
       </div>
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -391,7 +481,7 @@ export function TaskEditMode({
               style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
               data-testid="button-delete-confirm"
             >
-              Delete task
+              {deleteTaskMutation.isPending ? "Deleting..." : "Delete task"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
