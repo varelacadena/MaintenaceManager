@@ -17,6 +17,8 @@ import RequestDetail from "@/pages/RequestDetail";
 import NewRequest from "@/pages/NewRequest";
 import Work from "@/pages/Work";
 import TaskDetail from "@/pages/TaskDetail";
+import MobileTaskDetail from "@/components/MobileTaskDetail";
+import { useIsMobile } from "@/hooks/use-mobile";
 import NewTask from "@/pages/NewTask";
 import EditTask from "@/pages/EditTask";
 import Messages from "@/pages/Messages";
@@ -51,6 +53,8 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const isMobileView = useIsMobile();
+  const [currentPath] = useLocation();
 
   const style = {
     "--sidebar-width": "13rem",
@@ -71,6 +75,7 @@ function AuthenticatedApp() {
     if (path === "/reset-password") return <ResetPassword />;
     return <Landing />;
   }
+  const isMobileTaskDetail = isMobileView && /^\/tasks\/[^/]+$/.test(currentPath) && !currentPath.endsWith("/edit") && !currentPath.endsWith("/new") && !window.location.search.includes("view=full");
 
   const userName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
@@ -79,6 +84,10 @@ function AuthenticatedApp() {
   const userInitials = user?.firstName && user?.lastName
     ? `${user.firstName[0]}${user.lastName[0]}`
     : user?.email?.[0]?.toUpperCase() || "U";
+
+  if (isMobileTaskDetail) {
+    return <MobileTaskDetail />;
+  }
 
   return (
     <>
@@ -165,7 +174,7 @@ function AuthenticatedApp() {
                 <Route path="/tasks/:id/edit" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><EditTask /></RoleGuard>
                 )} />
-                <Route path="/tasks/:id" component={TaskDetail} />
+                <Route path="/tasks/:id" component={TaskDetailResponsive} />
                 <Route path="/messages" component={Messages} />
                 <Route path="/settings" component={Settings} />
 
@@ -265,6 +274,12 @@ function AuthenticatedApp() {
       <Toaster />
     </>
   );
+}
+
+function TaskDetailResponsive() {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileTaskDetail />;
+  return <TaskDetail />;
 }
 
 function App() {
