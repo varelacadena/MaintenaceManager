@@ -530,12 +530,12 @@ export default function MobileTaskDetail() {
                       </span>
 
                       {/* Chevron */}
-                      {!isLocked && (
-                        isSubExpanded ? (
-                          <ChevronDown className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                        )
+                      {isLocked ? (
+                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#D1D5DB" }} />
+                      ) : isSubExpanded ? (
+                        <ChevronDown className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
                       )}
                     </div>
 
@@ -604,7 +604,7 @@ export default function MobileTaskDetail() {
             <div>
               <p className="text-sm font-medium" style={{ color: "#15803D" }}>Task completed</p>
               <p className="text-xs mt-0.5" style={{ color: "#16A34A" }}>
-                All subtasks done{totalSubtasks > 0 ? ` (${totalSubtasks}/${totalSubtasks})` : ""}
+                All subtasks done{totalSubtasks > 0 ? ` (${totalSubtasks}/${totalSubtasks})` : ""} — evidence captured
               </p>
             </div>
           </div>
