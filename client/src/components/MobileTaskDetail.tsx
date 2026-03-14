@@ -38,7 +38,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload } from "@shared/schema";
+import type { Task, TaskNote, User, Property, Upload } from "@shared/schema";
 
 const statusDotColors: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -86,7 +86,6 @@ export default function MobileTaskDetail() {
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [subtaskNotes, setSubtaskNotes] = useState<Record<string, string>>({});
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -177,14 +176,6 @@ export default function MobileTaskDetail() {
     },
   });
 
-  const saveSubtaskNoteMutation = useMutation({
-    mutationFn: async ({ subtaskId, notes }: { subtaskId: string; notes: string }) => {
-      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { notes });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
-    },
-  });
 
   const toggleSubtaskExpanded = (subtaskId: string) => {
     setExpandedSubtasks(prev => {
@@ -555,21 +546,7 @@ export default function MobileTaskDetail() {
                         </div>
 
                         {/* Note textarea */}
-                        <Textarea
-                          placeholder="Add a note..."
-                          className="text-xs resize-none border focus-visible:ring-1 focus-visible:ring-[#4338CA]"
-                          style={{ borderColor: "#EEEEEE", minHeight: "60px" }}
-                          disabled={isCompleted}
-                          value={subtaskNotes[subtask.id] ?? subtask.notes ?? ""}
-                          onChange={(e) => setSubtaskNotes(prev => ({ ...prev, [subtask.id]: e.target.value }))}
-                          onBlur={() => {
-                            const val = subtaskNotes[subtask.id];
-                            if (val !== undefined && val !== (subtask.notes ?? "")) {
-                              saveSubtaskNoteMutation.mutate({ subtaskId: subtask.id, notes: val });
-                            }
-                          }}
-                          data-testid={`mobile-subtask-note-${subtask.id}`}
-                        />
+                        <SubtaskNote subtaskId={subtask.id} disabled={isCompleted} />
                       </div>
                     )}
                   </div>
@@ -714,6 +691,71 @@ export default function MobileTaskDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function SubtaskNote({ subtaskId, disabled }: { subtaskId: string; disabled: boolean }) {
+  const { toast } = useToast();
+  const [noteText, setNoteText] = useState("");
+  const [isSaved, setIsSaved] = useState(true);
+
+  const { data: notes } = useQuery<TaskNote[]>({
+    queryKey: ["/api/task-notes/task", subtaskId],
+    queryFn: async () => {
+      const res = await fetch(`/api/task-notes/task/${subtaskId}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!subtaskId,
+  });
+
+  const latestNote = notes?.[notes.length - 1];
+
+  const saveNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", "/api/task-notes", {
+        taskId: subtaskId,
+        content,
+        noteType: "job_note",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", subtaskId] });
+      setIsSaved(true);
+    },
+    onError: () => {
+      toast({ title: "Failed to save note", variant: "destructive" });
+    },
+  });
+
+  const displayValue = !isSaved ? noteText : (latestNote?.content ?? "");
+
+  return (
+    <div className="relative">
+      <Textarea
+        placeholder="Add a note..."
+        className="text-xs resize-none border focus-visible:ring-1 focus-visible:ring-[#4338CA]"
+        style={{ borderColor: "#EEEEEE", minHeight: "60px" }}
+        disabled={disabled}
+        value={displayValue}
+        onChange={(e) => {
+          setNoteText(e.target.value);
+          setIsSaved(false);
+        }}
+        onBlur={() => {
+          const val = noteText.trim();
+          if (!isSaved && val && val !== (latestNote?.content ?? "")) {
+            saveNoteMutation.mutate(val);
+          } else {
+            setIsSaved(true);
+          }
+        }}
+        data-testid={`mobile-subtask-note-${subtaskId}`}
+      />
+      {saveNoteMutation.isPending && (
+        <span className="absolute bottom-1 right-2 text-[10px]" style={{ color: "#9CA3AF" }}>Saving...</span>
+      )}
     </div>
   );
 }
