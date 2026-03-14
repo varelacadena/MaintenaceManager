@@ -643,6 +643,15 @@ export default function NewTask() {
   });
 
   const handleSubmit = (data: FormData) => {
+    const hasInvalidSubTasks = pendingSubTasks.some(st => st.name.length > 0 && !st.name.trim());
+    if (hasInvalidSubTasks) {
+      toast({
+        title: "Invalid Sub-Tasks",
+        description: "Please fix or remove sub-tasks with blank names before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
     createTaskMutation.mutate(data);
   };
 
