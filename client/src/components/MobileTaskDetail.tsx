@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -33,13 +33,14 @@ import {
   CheckCircle2,
   Flag,
   Calendar,
-  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, TaskNote, User, Property, Upload } from "@shared/schema";
+import type { Task, User, Property, Upload } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
+import { SubtaskNote } from "./SubtaskNote";
+import { SubtaskPhotos } from "./SubtaskPhotos";
 
 const statusDotColors: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -560,11 +561,10 @@ export default function MobileTaskDetail() {
                       <div className="px-4 pb-3 pl-12 space-y-3" onClick={(e) => e.stopPropagation()}>
                         {/* Photo thumbnails area */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <SubtaskPhotos subtaskId={subtask.id} disabled={isCompleted} />
+                          <SubtaskPhotos subtaskId={subtask.id} disabled={isCompleted} testIdPrefix="mobile-subtask" />
                         </div>
 
-                        {/* Note textarea */}
-                        <SubtaskNote subtaskId={subtask.id} disabled={isCompleted} />
+                        <SubtaskNote subtaskId={subtask.id} disabled={isCompleted} testIdPrefix="mobile-subtask" />
                       </div>
                     )}
                   </div>
@@ -713,173 +713,3 @@ export default function MobileTaskDetail() {
   );
 }
 
-function SubtaskNote({ subtaskId, disabled }: { subtaskId: string; disabled: boolean }) {
-  const { toast } = useToast();
-  const [noteText, setNoteText] = useState("");
-  const [isSaved, setIsSaved] = useState(true);
-
-  const { data: notes } = useQuery<TaskNote[]>({
-    queryKey: ["/api/task-notes/task", subtaskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/task-notes/task/${subtaskId}`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!subtaskId,
-  });
-
-  const latestNote = notes?.[notes.length - 1];
-
-  const saveNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return apiRequest("POST", "/api/task-notes", {
-        taskId: subtaskId,
-        content,
-        noteType: "job_note",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", subtaskId] });
-      setIsSaved(true);
-    },
-    onError: () => {
-      toast({ title: "Failed to save note", variant: "destructive" });
-    },
-  });
-
-  const displayValue = !isSaved ? noteText : (latestNote?.content ?? "");
-
-  return (
-    <div className="relative">
-      <Textarea
-        placeholder="Add a note..."
-        className="text-xs resize-none border focus-visible:ring-1 focus-visible:ring-[#4338CA]"
-        style={{ borderColor: "#EEEEEE", minHeight: "60px" }}
-        disabled={disabled}
-        value={displayValue}
-        onChange={(e) => {
-          setNoteText(e.target.value);
-          setIsSaved(false);
-        }}
-        onBlur={() => {
-          const val = noteText.trim();
-          if (!isSaved && val && val !== (latestNote?.content ?? "")) {
-            saveNoteMutation.mutate(val);
-          } else {
-            setIsSaved(true);
-          }
-        }}
-        data-testid={`mobile-subtask-note-${subtaskId}`}
-      />
-      {saveNoteMutation.isPending && (
-        <span className="absolute bottom-1 right-2 text-[10px]" style={{ color: "#9CA3AF" }}>Saving...</span>
-      )}
-    </div>
-  );
-}
-
-function SubtaskPhotos({ subtaskId, disabled }: { subtaskId: string; disabled: boolean }) {
-  const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const { data: uploads } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/task", subtaskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/uploads/task/${subtaskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!subtaskId,
-  });
-
-  const photos = uploads?.filter(u => u.fileType.startsWith("image/")) || [];
-
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const paramRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-      if (!paramRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL } = await paramRes.json();
-
-      const isMock = uploadURL.startsWith("https://mock-storage.local/");
-      let objectUrl = uploadURL;
-
-      if (!isMock) {
-        const uploadRes = await fetch(uploadURL, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
-        });
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        objectUrl = uploadURL.split("?")[0];
-      }
-
-      await apiRequest("PUT", "/api/uploads", {
-        taskId: subtaskId,
-        fileName: file.name,
-        fileType: file.type || "image/jpeg",
-        objectUrl,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", subtaskId] });
-      toast({ title: "Photo uploaded" });
-    } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  return (
-    <>
-      {photos.map(photo => (
-        <a
-          key={photo.id}
-          href={photo.objectUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid={`mobile-subtask-photo-${photo.id}`}
-        >
-          <img
-            src={photo.objectUrl}
-            alt={photo.fileName}
-            className="rounded object-cover"
-            style={{ width: "54px", height: "54px", border: "1px solid #EEEEEE" }}
-          />
-        </a>
-      ))}
-      {!disabled && (
-        <>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handlePhotoUpload}
-          />
-          <div
-            className="flex items-center justify-center rounded cursor-pointer"
-            style={{
-              width: "54px",
-              height: "54px",
-              border: "2px dashed #D1D5DB",
-            }}
-            onClick={() => fileInputRef.current?.click()}
-            data-testid={`mobile-subtask-add-photo-${subtaskId}`}
-          >
-            {isUploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#9CA3AF" }} />
-            ) : (
-              <Camera className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-            )}
-          </div>
-        </>
-      )}
-    </>
-  );
-}

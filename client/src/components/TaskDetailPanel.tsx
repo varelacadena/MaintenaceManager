@@ -48,6 +48,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import type { Task, User, Property, Upload } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
+import { SubtaskNote } from "./SubtaskNote";
+import { SubtaskPhotos } from "./SubtaskPhotos";
 
 const panelStatusDotStyle: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -596,24 +598,9 @@ export function TaskDetailPanel({
                   {isExpanded && !isLocked && (
                     <div className="ml-8 pb-3 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          className="flex items-center justify-center rounded"
-                          style={{
-                            width: "54px",
-                            height: "54px",
-                            border: "2px dashed #D1D5DB",
-                          }}
-                          data-testid={`button-add-photo-${subtask.id}`}
-                        >
-                          <Camera className="w-5 h-5" style={{ color: "#9CA3AF" }} />
-                        </button>
+                        <SubtaskPhotos subtaskId={subtask.id} disabled={isCompleted} testIdPrefix="panel-subtask" />
                       </div>
-                      <Textarea
-                        placeholder="Add a note..."
-                        className="text-xs resize-none border"
-                        style={{ borderColor: "#EEEEEE", minHeight: "60px" }}
-                        data-testid={`textarea-subtask-note-${subtask.id}`}
-                      />
+                      <SubtaskNote subtaskId={subtask.id} disabled={isCompleted} testIdPrefix="panel-subtask" />
                     </div>
                   )}
                 </div>
