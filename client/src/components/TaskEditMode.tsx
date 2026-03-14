@@ -210,8 +210,8 @@ export function TaskEditMode({
           });
         } else if (!sub.isNew && !sub.isRemoved && sub.id) {
           const original = subtasks.find((s) => s.id === sub.id);
-          if (original && original.name !== sub.name) {
-            await apiRequest("PATCH", `/api/tasks/${sub.id}`, { name: sub.name });
+          if (original && original.name !== sub.name && sub.name.trim()) {
+            await apiRequest("PATCH", `/api/tasks/${sub.id}`, { name: sub.name.trim() });
           }
         }
       }
