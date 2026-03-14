@@ -87,7 +87,6 @@ export default function MobileTaskDetail() {
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subtaskNotes, setSubtaskNotes] = useState<Record<string, string>>({});
-  const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -467,8 +466,8 @@ export default function MobileTaskDetail() {
             </div>
           )}
 
-          {/* Subtask warning - only shown when user attempts to complete with incomplete subtasks */}
-          {showIncompleteWarning && taskStarted && !isCompleted && !allSubtasksDone && (
+          {/* Subtask warning - shown when task is in progress with incomplete subtasks */}
+          {taskStarted && !isCompleted && !allSubtasksDone && (
             <div
               className="mx-4 mt-3 mb-1 px-3 py-2 rounded text-xs"
               style={{ backgroundColor: "#FEF2F2", borderLeft: "3px solid #D94F4F", color: "#D94F4F" }}
@@ -666,14 +665,8 @@ export default function MobileTaskDetail() {
                   backgroundColor: allSubtasksDone ? "#4338CA" : "#9CA3AF",
                   color: "#FFFFFF",
                 }}
-                onClick={() => {
-                  if (!allSubtasksDone) {
-                    setShowIncompleteWarning(true);
-                    return;
-                  }
-                  updateStatusMutation.mutate("completed");
-                }}
-                disabled={updateStatusMutation.isPending}
+                onClick={() => updateStatusMutation.mutate("completed")}
+                disabled={!allSubtasksDone || updateStatusMutation.isPending}
                 data-testid="button-mobile-mark-complete"
               >
                 Mark Complete
