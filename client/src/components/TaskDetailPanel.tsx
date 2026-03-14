@@ -293,6 +293,7 @@ export function TaskDetailPanel({
             size="sm"
             data-testid="button-panel-edit"
             style={{ backgroundColor: "#FFFFFF", borderColor: "#EEEEEE", color: "#1A1A1A" }}
+            onClick={() => navigate(`/tasks/${taskId}/edit`)}
           >
             <Pencil className="w-3.5 h-3.5 mr-1.5" />
             Edit
@@ -471,7 +472,10 @@ export function TaskDetailPanel({
                 const TypeIcon = isImage ? ImageIcon : isVideo ? Video : FileText;
                 const badgeBg = isImage ? "#F3F4F6" : isVideo ? "#FFF1F2" : "#EDE9FE";
                 const badgeColor = isImage ? "#6B7280" : isVideo ? "#F43F5E" : "#7C3AED";
-                const typeLabel = isImage ? "IMG" : isVideo ? "VID" : "DOC";
+                const ext = upload.fileName.split(".").pop()?.toLowerCase() || "";
+                const typeLabel = isImage ? "IMG" : isVideo ? "VID"
+                  : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
+                  : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
                 return (
                   <a
                     key={upload.id}
@@ -814,6 +818,7 @@ export function TaskDetailPanel({
               className="w-full"
               data-testid="button-sidebar-edit"
               style={{ backgroundColor: "#FFFFFF", borderColor: "#EEEEEE", color: "#1A1A1A" }}
+              onClick={() => navigate(`/tasks/${taskId}/edit`)}
             >
               <Pencil className="w-3.5 h-3.5 mr-1.5" />
               Edit
