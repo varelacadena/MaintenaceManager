@@ -752,6 +752,17 @@ export default function TaskDetail() {
     },
   });
 
+  const updateSubtaskStatusMutation = useMutation({
+    mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
+      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
+    },
+  });
+
   const updateTaskMutation = useMutation({
     mutationFn: async (data: Partial<Task>) => {
       const response = await apiRequest("PATCH", `/api/tasks/${id}`, data);
@@ -1775,6 +1786,7 @@ export default function TaskDetail() {
         toggleChecklistItemMutation={toggleChecklistItemMutation}
         createQuoteMutation={createQuoteMutation}
         deleteQuoteMutation={deleteQuoteMutation}
+        updateSubtaskStatusMutation={updateSubtaskStatusMutation}
         safeNavigate={safeNavigate}
         handleStartOrPause={handleStartOrPause}
         handleComplete={handleComplete}

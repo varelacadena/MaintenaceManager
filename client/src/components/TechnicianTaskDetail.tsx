@@ -102,6 +102,7 @@ interface TechnicianTaskDetailProps {
   toggleChecklistItemMutation: any;
   createQuoteMutation: any;
   deleteQuoteMutation: any;
+  updateSubtaskStatusMutation: any;
   safeNavigate: (path: string) => void;
   handleStartOrPause: () => void;
   handleComplete: () => void;
@@ -390,28 +391,26 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     const secs = displaySecs % 60;
     return (
       <div
-        className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
-        style={{ backgroundColor: "#F0FDF4" }}
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-green-50 dark:bg-green-950"
         data-testid="completion-overlay"
       >
         <div
-          className="flex items-center justify-center rounded-full mb-6"
-          style={{ width: 62, height: 62, backgroundColor: "#15803D" }}
+          className="flex items-center justify-center rounded-full mb-6 bg-green-700"
+          style={{ width: 62, height: 62 }}
         >
           <Check className="w-8 h-8 text-white" />
         </div>
-        <p className="text-lg font-bold mb-1" style={{ color: "#15803D" }}>
+        <p className="text-lg font-bold mb-1 text-green-700 dark:text-green-400">
           Task Complete
         </p>
-        <p className="text-sm mb-2" style={{ color: "#166534" }}>
+        <p className="text-sm mb-2 text-green-800 dark:text-green-300">
           {task.name}
         </p>
-        <p className="text-sm mb-8" style={{ color: "#4ADE80" }}>
+        <p className="text-sm mb-8 text-green-400 dark:text-green-500">
           Time logged: {mins}m {secs}s
         </p>
         <button
-          className="px-8 py-3 rounded-lg text-white font-medium text-sm"
-          style={{ backgroundColor: "#15803D" }}
+          className="px-8 py-3 rounded-lg text-white font-medium text-sm bg-green-700 dark:bg-green-600"
           onClick={() => navigate("/work")}
           data-testid="button-back-to-tasks"
         >
@@ -422,7 +421,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] md:min-h-full" style={{ backgroundColor: "#F8F8F8" }}>
+    <div className="flex flex-col min-h-[100dvh] md:min-h-full bg-muted/30 dark:bg-background">
       {/* Hero Header */}
       <div
         className="px-4 pt-4 pb-5 shrink-0"
@@ -435,11 +434,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         <div className="flex items-center justify-between flex-wrap gap-1 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              className="flex items-center justify-center shrink-0"
+              className="flex items-center justify-center shrink-0 rounded-full"
               style={{
                 width: 28,
                 height: 28,
-                borderRadius: "50%",
                 backgroundColor: "rgba(255,255,255,0.18)",
               }}
               onClick={() => {
@@ -462,12 +460,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </span>
             {task.urgency === "high" && (
               <span
-                className="px-2 py-0.5 rounded-full text-xs font-medium"
-                style={{
-                  backgroundColor: "#FEF2F2",
-                  color: "#D94F4F",
-                  border: "1px solid rgba(217,79,79,0.35)",
-                }}
+                className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-500 border border-red-500/35"
                 data-testid="badge-priority"
               >
                 High
@@ -475,12 +468,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             )}
             {task.urgency === "medium" && (
               <span
-                className="px-2 py-0.5 rounded-full text-xs font-medium"
-                style={{
-                  backgroundColor: "#FEF9EC",
-                  color: "#D97706",
-                  border: "1px solid rgba(217,119,6,0.35)",
-                }}
+                className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-600/35"
                 data-testid="badge-priority"
               >
                 Medium
@@ -508,16 +496,16 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         </h1>
         {locationText && (
           <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
-            <span className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+            <MapPin className="w-3.5 h-3.5 shrink-0 text-white/70" />
+            <span className="text-sm text-white/70">
               {locationText}
             </span>
           </div>
         )}
         {task.dueDate && (
           <div className="flex items-center gap-1.5 mt-1.5">
-            <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
-            <span className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+            <Clock className="w-3.5 h-3.5 shrink-0 text-white/70" />
+            <span className="text-sm text-white/70">
               Due {format(new Date(task.dueDate), "MMM d, yyyy")}
             </span>
           </div>
@@ -526,21 +514,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       {/* Two-Tab Navigation */}
       <div
-        className="flex shrink-0"
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderBottom: "1px solid #EEEEEE",
-        }}
+        className="flex shrink-0 bg-card border-b border-border"
         data-testid="tech-tabs"
       >
         {(["task", "more"] as const).map((tab) => (
           <button
             key={tab}
-            className="flex-1 py-3 text-sm font-medium text-center"
-            style={{
-              color: activeTab === tab ? "#4338CA" : "#9CA3AF",
-              borderBottom: activeTab === tab ? "2px solid #4338CA" : "2px solid transparent",
-            }}
+            className={`flex-1 py-3 text-sm font-medium text-center border-b-2 ${activeTab === tab ? "text-indigo-700 dark:text-indigo-400 border-indigo-700 dark:border-indigo-400" : "text-muted-foreground border-transparent"}`}
             onClick={() => setActiveTab(tab)}
             data-testid={`tab-${tab}`}
           >
@@ -550,26 +530,22 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className="flex-1 overflow-y-auto pb-36">
         <div className="px-2.5 py-2 space-y-2">
           {activeTab === "task" ? (
             <>
               {/* Estimate pending banner */}
               {estimateBlocksCompletion && (
                 <div
-                  className="flex items-start gap-2.5 p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FEF9EC",
-                    border: "1px solid #FDE68A",
-                  }}
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700"
                   data-testid="banner-estimate-pending"
                 >
-                  <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
+                  <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                   <div>
-                    <p className="text-xs font-medium" style={{ color: "#92400E" }}>
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
                       Estimate pending approval
                     </p>
-                    <p className="text-[11px] mt-0.5" style={{ color: "#B45309" }}>
+                    <p className="text-[11px] mt-0.5 text-amber-700 dark:text-amber-400">
                       This task cannot be completed until the estimate is approved by an admin.
                     </p>
                   </div>
@@ -579,31 +555,14 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Card 1 — Instructions */}
               {task.instructions && (
                 <div
-                  className="p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="p-3 rounded-xl bg-card border border-border"
                   data-testid="card-instructions"
                 >
-                  <p
-                    className="text-[10px] uppercase font-medium mb-2"
-                    style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                  >
+                  <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
                     Instructions
                   </p>
-                  <div
-                    className="p-3 rounded-lg"
-                    style={{
-                      backgroundColor: "#EEF2FF",
-                      border: "1px solid #C7D2FE",
-                      borderRadius: 9,
-                    }}
-                  >
-                    <p
-                      className="text-xs whitespace-pre-wrap"
-                      style={{ color: "#3730A3", lineHeight: 1.65 }}
-                    >
+                  <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800" style={{ borderRadius: 9 }}>
+                    <p className="text-xs whitespace-pre-wrap text-indigo-800 dark:text-indigo-300" style={{ lineHeight: 1.65 }}>
                       {task.instructions}
                     </p>
                   </div>
@@ -612,20 +571,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               {task.description && !task.instructions && (
                 <div
-                  className="p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="p-3 rounded-xl bg-card border border-border"
                   data-testid="card-description"
                 >
-                  <p
-                    className="text-[10px] uppercase font-medium mb-2"
-                    style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                  >
+                  <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
                     Description
                   </p>
-                  <p className="text-sm" style={{ color: "#1A1A1A", lineHeight: 1.65 }}>
+                  <p className="text-sm text-foreground" style={{ lineHeight: 1.65 }}>
                     {task.description}
                   </p>
                 </div>
@@ -634,34 +586,21 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Card 2 — Subtasks */}
               {subTasks.length > 0 && (
                 <div
-                  className="p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="p-3 rounded-xl bg-card border border-border"
                   data-testid="card-subtasks"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <p
-                      className="text-[10px] uppercase font-medium"
-                      style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                    >
+                    <p className="text-[10px] uppercase font-medium text-muted-foreground tracking-wide">
                       Subtasks
                     </p>
-                    <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                    <span className="text-xs text-muted-foreground">
                       {completedSubTasks} / {subTasks.length}
                     </span>
                   </div>
-                  <div
-                    className="rounded-full mb-3 overflow-hidden"
-                    style={{ height: 3, backgroundColor: "#EEEEEE" }}
-                  >
+                  <div className="rounded-full mb-3 overflow-hidden bg-muted" style={{ height: 3 }}>
                     <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${subTaskProgress}%`,
-                        backgroundColor: "#4338CA",
-                      }}
+                      className="h-full rounded-full transition-all bg-indigo-700 dark:bg-indigo-500"
+                      style={{ width: `${subTaskProgress}%` }}
                     />
                   </div>
                   <div
@@ -677,28 +616,22 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                         <div
                           key={st.id}
                           className="flex items-center gap-3 py-2 cursor-pointer"
-                          onClick={() => taskStarted && safeNavigate(`/tasks/${st.id}`)}
+                          onClick={() => {
+                            if (!taskStarted) return;
+                            const newStatus = isDone ? "not_started" : "completed";
+                            props.updateSubtaskStatusMutation.mutate({ subtaskId: st.id, status: newStatus });
+                          }}
                           data-testid={`subtask-row-${st.id}`}
                         >
                           <div
-                            className="flex items-center justify-center shrink-0"
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: 6,
-                              backgroundColor: isDone ? "#4338CA" : "transparent",
-                              border: isDone ? "none" : "2px solid #D1D5DB",
-                            }}
+                            className={`flex items-center justify-center shrink-0 rounded-md ${isDone ? "bg-indigo-700 dark:bg-indigo-500" : "border-2 border-gray-300 dark:border-gray-600"}`}
+                            style={{ width: 22, height: 22 }}
                           >
                             {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                           </div>
                           <span
-                            className="text-sm flex-1"
-                            style={{
-                              color: isDone ? "#9CA3AF" : "#1A1A1A",
-                              textDecoration: isDone ? "line-through" : "none",
-                              fontSize: 13,
-                            }}
+                            className={`flex-1 ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}
+                            style={{ fontSize: 13 }}
                           >
                             {st.name}
                           </span>
@@ -708,15 +641,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   </div>
                   {!taskStarted && (
                     <div
-                      className="flex items-center justify-center gap-2 py-2.5 mt-2 rounded-lg"
-                      style={{
-                        backgroundColor: "#F8F8F8",
-                        borderTop: "1px solid #EEEEEE",
-                      }}
+                      className="flex items-center justify-center gap-2 py-2.5 mt-2 rounded-lg bg-muted/50 border-t border-border"
                       data-testid="lock-banner-subtasks"
                     >
-                      <Lock className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                      <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
                         Start the task to unlock subtasks
                       </span>
                     </div>
@@ -727,35 +656,24 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Card 3 — Checklist */}
               {checklistGroups.length > 0 && (
                 <div
-                  className="p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="p-3 rounded-xl bg-card border border-border"
                   data-testid="card-checklist"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <p
-                      className="text-[10px] uppercase font-medium"
-                      style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                    >
+                    <p className="text-[10px] uppercase font-medium text-muted-foreground tracking-wide">
                       Checklist
                     </p>
-                    <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                    <span className="text-xs text-muted-foreground">
                       {completedChecklistItems} / {totalChecklistItems}
                     </span>
                   </div>
-                  <div
-                    className="rounded-full mb-3 overflow-hidden"
-                    style={{ height: 3, backgroundColor: "#EEEEEE" }}
-                  >
+                  <div className="rounded-full mb-3 overflow-hidden bg-muted" style={{ height: 3 }}>
                     <div
-                      className="h-full rounded-full transition-all"
+                      className="h-full rounded-full transition-all bg-indigo-700 dark:bg-indigo-500"
                       style={{
                         width: totalChecklistItems > 0
                           ? `${(completedChecklistItems / totalChecklistItems) * 100}%`
                           : "0%",
-                        backgroundColor: "#4338CA",
                       }}
                     />
                   </div>
@@ -776,24 +694,14 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                             data-testid={`checklist-item-${item.id}`}
                           >
                             <div
-                              className="flex items-center justify-center shrink-0"
-                              style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: 11,
-                                backgroundColor: isDone ? "#4338CA" : "transparent",
-                                border: isDone ? "none" : "2px solid #D1D5DB",
-                              }}
+                              className={`flex items-center justify-center shrink-0 rounded-full ${isDone ? "bg-indigo-700 dark:bg-indigo-500" : "border-2 border-gray-300 dark:border-gray-600"}`}
+                              style={{ width: 22, height: 22 }}
                             >
                               {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                             </div>
                             <span
-                              className="flex-1"
-                              style={{
-                                color: isDone ? "#9CA3AF" : "#1A1A1A",
-                                textDecoration: isDone ? "line-through" : "none",
-                                fontSize: 13,
-                              }}
+                              className={`flex-1 ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}
+                              style={{ fontSize: 13 }}
                             >
                               {item.text}
                             </span>
@@ -807,27 +715,20 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               {/* Card 4 — Notes + Photos */}
               <div
-                className="p-3 rounded-xl"
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #EEEEEE",
-                }}
+                className="p-3 rounded-xl bg-card border border-border"
                 data-testid="card-notes-photos"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <p
-                    className="text-[10px] uppercase font-medium"
-                    style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                  >
+                  <p className="text-[10px] uppercase font-medium text-muted-foreground tracking-wide">
                     Notes
                   </p>
                   {saveIndicator === "saving" && (
-                    <span className="text-[10px]" style={{ color: "#4338CA" }}>
+                    <span className="text-[10px] text-indigo-700 dark:text-indigo-400">
                       Saving...
                     </span>
                   )}
                   {saveIndicator === "saved" && (
-                    <span className="text-[10px]" style={{ color: "#15803D" }}>
+                    <span className="text-[10px] text-green-700 dark:text-green-400">
                       Saved
                     </span>
                   )}
@@ -837,11 +738,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   onChange={(e) => handleNoteChange(e.target.value)}
                   placeholder="Type your observations... auto-saved as you type"
                   rows={3}
-                  className="w-full resize-none bg-transparent outline-none"
+                  className="w-full resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                   style={{
                     border: "none",
                     fontSize: 13,
-                    color: "#1A1A1A",
                     lineHeight: 1.5,
                     minHeight: 72,
                   }}
@@ -855,17 +755,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                       .map((note) => (
                         <div
                           key={note.id}
-                          className="px-2.5 py-2 rounded-lg"
-                          style={{
-                            backgroundColor: "#F8F8F8",
-                            borderRadius: 8,
-                          }}
+                          className="px-2.5 py-2 rounded-lg bg-muted/50"
                           data-testid={`saved-note-${note.id}`}
                         >
-                          <p className="text-xs" style={{ color: "#1A1A1A" }}>
+                          <p className="text-xs text-foreground">
                             {note.content}
                           </p>
-                          <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>
+                          <p className="text-[10px] mt-1 text-muted-foreground">
                             {note.createdAt && format(new Date(note.createdAt), "h:mm a")}
                           </p>
                         </div>
@@ -875,21 +771,17 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
                 {uploads.length > 0 && (
                   <div className="mt-3">
-                    <p
-                      className="text-[10px] uppercase font-medium mb-2"
-                      style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                    >
+                    <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
                       Photos
                     </p>
                     <div className="flex flex-wrap gap-[5px]">
                       {uploads.map((upload, i) => (
                         <div
                           key={upload.id}
-                          className="flex items-center justify-center"
+                          className="flex items-center justify-center rounded-md"
                           style={{
                             width: 36,
                             height: 36,
-                            borderRadius: 6,
                             backgroundColor: PASTEL_COLORS[i % PASTEL_COLORS.length],
                           }}
                           data-testid={`photo-thumb-${upload.id}`}
@@ -907,30 +799,22 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* More Tab — Contact Card */}
               {(contactName || contactPhone) && (
                 <div
-                  className="p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="p-3 rounded-xl bg-card border border-border"
                   data-testid="card-contact"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex items-center justify-center shrink-0 text-white text-xs font-medium rounded-full"
-                      style={{
-                        width: 34,
-                        height: 34,
-                        backgroundColor: "#3DAB8E",
-                      }}
+                      className="flex items-center justify-center shrink-0 text-white text-xs font-medium rounded-full bg-emerald-600"
+                      style={{ width: 34, height: 34 }}
                     >
                       {contactInitials || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium" style={{ color: "#1A1A1A" }}>
+                      <p className="text-xs font-medium text-foreground">
                         {contactName}
                       </p>
                       {contactPhone && (
-                        <p className="text-[11px]" style={{ color: "#6B7280" }}>
+                        <p className="text-[11px] text-muted-foreground">
                           Tap to call &middot; {contactPhone}
                         </p>
                       )}
@@ -938,15 +822,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     {contactPhone && (
                       <a
                         href={`tel:${contactPhone}`}
-                        className="flex items-center justify-center shrink-0 rounded-full"
-                        style={{
-                          width: 30,
-                          height: 30,
-                          backgroundColor: "#EEF2FF",
-                        }}
+                        className="flex items-center justify-center shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950/40"
+                        style={{ width: 30, height: 30 }}
                         data-testid="button-call-contact"
                       >
-                        <Phone className="w-3.5 h-3.5" style={{ color: "#4338CA" }} />
+                        <Phone className="w-3.5 h-3.5 text-indigo-700 dark:text-indigo-400" />
                       </a>
                     )}
                   </div>
@@ -955,38 +835,28 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               {/* More Tab — Actions Card */}
               <div
-                className="p-3 rounded-xl"
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #EEEEEE",
-                }}
+                className="p-3 rounded-xl bg-card border border-border"
                 data-testid="card-actions"
               >
                 {/* Estimate / Quote */}
                 {task.requiresEstimate && (
                   <button
-                    className="flex items-center gap-3 w-full py-3 text-left"
-                    style={{ borderBottom: "1px solid #EEEEEE" }}
+                    className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
                     onClick={() => setIsEstimateSheetOpen(true)}
                     data-testid="action-estimate"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0"
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        backgroundColor: "#FEF9EC",
-                      }}
+                      className="flex items-center justify-center shrink-0 rounded-lg bg-amber-50 dark:bg-amber-950/40"
+                      style={{ width: 32, height: 32 }}
                     >
-                      <CircleDollarSign className="w-4 h-4" style={{ color: "#D97706" }} />
+                      <CircleDollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                      <p className="text-sm font-medium text-foreground">
                         Estimate / Quote
                       </p>
                       {existingQuote && (
-                        <p className="text-[11px]" style={{ color: "#6B7280" }}>
+                        <p className="text-[11px] text-muted-foreground">
                           {task.estimateStatus === "waiting_approval"
                             ? `Pending approval \u00B7 $${(existingQuote.estimatedCost || 0).toFixed(2)}`
                             : task.estimateStatus === "approved"
@@ -995,76 +865,55 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                         </p>
                       )}
                     </div>
-                    <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+                    <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
                   </button>
                 )}
 
                 {/* Parts Used */}
                 <button
-                  className="flex items-center gap-3 w-full py-3 text-left"
-                  style={{ borderBottom: "1px solid #EEEEEE" }}
+                  className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
                   onClick={() => setIsPartModalOpen(true)}
                   data-testid="action-parts"
                 >
                   <div
-                    className="flex items-center justify-center shrink-0"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      backgroundColor: "#EEEDFE",
-                    }}
+                    className="flex items-center justify-center shrink-0 rounded-lg bg-indigo-50 dark:bg-indigo-950/40"
+                    style={{ width: 32, height: 32 }}
                   >
-                    <Star className="w-4 h-4" style={{ color: "#4338CA" }} />
+                    <Star className="w-4 h-4 text-indigo-700 dark:text-indigo-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                    <p className="text-sm font-medium text-foreground">
                       Parts Used
                     </p>
                   </div>
-                  <span
-                    className="text-xs shrink-0"
-                    style={{ color: parts.length > 0 ? "#4338CA" : "#9CA3AF" }}
-                  >
+                  <span className={`text-xs shrink-0 ${parts.length > 0 ? "text-indigo-700 dark:text-indigo-400" : "text-muted-foreground"}`}>
                     {parts.length > 0 ? `${parts.length} added` : "None"}
                   </span>
-                  <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+                  <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
                 </button>
 
                 {/* Previous Work */}
                 {previousWork.length > 0 && (
                   <button
-                    className="flex items-center gap-3 w-full py-3 text-left"
-                    style={{ borderBottom: "1px solid #EEEEEE" }}
+                    className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
                     onClick={() => setIsPreviousWorkOpen(true)}
                     data-testid="action-previous-work"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0"
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        backgroundColor: "#F0FDF4",
-                      }}
+                      className="flex items-center justify-center shrink-0 rounded-lg bg-green-50 dark:bg-green-950/40"
+                      style={{ width: 32, height: 32 }}
                     >
-                      <History className="w-4 h-4" style={{ color: "#15803D" }} />
+                      <History className="w-4 h-4 text-green-700 dark:text-green-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                      <p className="text-sm font-medium text-foreground">
                         Previous Work
                       </p>
                     </div>
-                    <span
-                      className="flex items-center justify-center text-xs font-medium shrink-0 px-2 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: "#EEF2FF",
-                        color: "#4338CA",
-                      }}
-                    >
+                    <span className="flex items-center justify-center text-xs font-medium shrink-0 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400">
                       {previousWork.length}
                     </span>
-                    <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+                    <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
                   </button>
                 )}
 
@@ -1076,27 +925,22 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     data-testid="action-resources"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0"
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        backgroundColor: "#F8F8F8",
-                      }}
+                      className="flex items-center justify-center shrink-0 rounded-lg bg-muted/50"
+                      style={{ width: 32, height: 32 }}
                     >
-                      <FileText className="w-4 h-4" style={{ color: "#6B7280" }} />
+                      <FileText className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                      <p className="text-sm font-medium text-foreground">
                         Resources
                       </p>
                     </div>
-                    <span className="text-xs shrink-0" style={{ color: "#9CA3AF" }}>
+                    <span className="text-xs shrink-0 text-muted-foreground">
                       {resourceDocs > 0 && `${resourceDocs} doc${resourceDocs !== 1 ? "s" : ""}`}
                       {resourceDocs > 0 && resourceVids > 0 && " \u00B7 "}
                       {resourceVids > 0 && `${resourceVids} vid`}
                     </span>
-                    <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+                    <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
                   </button>
                 )}
               </div>
@@ -1104,41 +948,33 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Show existing parts if any */}
               {parts.length > 0 && (
                 <div
-                  className="p-3 rounded-xl"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="p-3 rounded-xl bg-card border border-border"
                   data-testid="card-parts-list"
                 >
-                  <p
-                    className="text-[10px] uppercase font-medium mb-2"
-                    style={{ color: "#9CA3AF", letterSpacing: "0.05em" }}
-                  >
+                  <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
                     Parts Added
                   </p>
                   <div className="space-y-2">
                     {parts.map((part) => (
                       <div
                         key={part.id}
-                        className="flex items-center justify-between py-1.5"
-                        style={{ borderBottom: "1px solid #F3F4F6" }}
+                        className="flex items-center justify-between py-1.5 border-b border-border/50"
                       >
                         <div>
-                          <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                          <p className="text-sm font-medium text-foreground">
                             {part.partName}
                           </p>
                           {part.notes && (
-                            <p className="text-[11px]" style={{ color: "#6B7280" }}>
+                            <p className="text-[11px] text-muted-foreground">
                               {part.notes}
                             </p>
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="text-sm" style={{ color: "#1A1A1A" }}>
+                          <p className="text-sm text-foreground">
                             Qty: {part.quantity}
                           </p>
-                          <p className="text-[11px]" style={{ color: "#6B7280" }}>
+                          <p className="text-[11px] text-muted-foreground">
                             ${Number(part.cost).toFixed(2)}
                           </p>
                         </div>
@@ -1154,47 +990,33 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       {/* Sticky Bottom Bar */}
       <div
-        className="sticky bottom-0 left-0 right-0 z-50"
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderTop: "1px solid #EEEEEE",
-          padding: "8px 14px 16px",
-        }}
+        className="sticky bottom-0 left-0 right-0 z-50 bg-card border-t border-border"
+        style={{ padding: "8px 14px calc(16px + env(safe-area-inset-bottom, 0px))" }}
         data-testid="tech-bottom-bar"
       >
         <div className="flex items-center gap-3">
           {/* Scan Button */}
           <button
-            className="flex items-center justify-center shrink-0"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              border: "1px solid #EEEEEE",
-            }}
+            className="flex items-center justify-center shrink-0 rounded-[10px] border border-border"
+            style={{ width: 44, height: 44 }}
             onClick={() => setIsScanEquipmentOpen(true)}
             disabled={isEquipmentLoading}
             data-testid="bottom-button-scan"
           >
-            <QrCode className="w-5 h-5" style={{ color: "#6B7280" }} />
+            <QrCode className="w-5 h-5 text-muted-foreground" />
           </button>
 
           {/* Primary CTA */}
           {task.status === "completed" ? (
             <div
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm"
-              style={{ backgroundColor: "#15803D" }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-green-700"
             >
               <Check className="w-4 h-4" />
               Completed
             </div>
           ) : !taskStarted ? (
             <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm"
-              style={{
-                backgroundColor: "#4338CA",
-                transition: "background 0.2s",
-              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-indigo-700 dark:bg-indigo-600 transition-colors"
               onClick={handleStartTask}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-start"
@@ -1204,11 +1026,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </button>
           ) : isPaused ? (
             <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm"
-              style={{
-                backgroundColor: "#4338CA",
-                transition: "background 0.2s",
-              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-indigo-700 dark:bg-indigo-600 transition-colors"
               onClick={handleResume}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-resume"
@@ -1218,11 +1036,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </button>
           ) : (
             <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm"
-              style={{
-                backgroundColor: "#4B5563",
-                transition: "background 0.2s",
-              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-gray-600 dark:bg-gray-500 transition-colors"
               onClick={handlePauseTap}
               disabled={stopTimerMutation.isPending}
               data-testid="bottom-button-pause"
@@ -1257,18 +1071,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               isLoading={addUploadMutation.isPending}
             >
               <div
-                className="flex items-center justify-center"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  border: taskStarted ? "1px solid #4338CA" : "1px solid #EEEEEE",
-                  backgroundColor: taskStarted ? "#EEF2FF" : "transparent",
-                }}
+                className={`flex items-center justify-center rounded-[10px] ${taskStarted ? "border-indigo-700 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40" : "border-border bg-transparent"}`}
+                style={{ width: 44, height: 44, borderWidth: 1 }}
               >
                 <Camera
-                  className="w-5 h-5"
-                  style={{ color: taskStarted ? "#4338CA" : "#6B7280" }}
+                  className={`w-5 h-5 ${taskStarted ? "text-indigo-700 dark:text-indigo-400" : "text-muted-foreground"}`}
                 />
               </div>
             </ObjectUploader>
@@ -1282,30 +1089,21 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsPauseDialogOpen(false)}
         >
+          <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          <div
-            className="relative w-full sm:max-w-lg"
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px 16px 0 0",
-              padding: "20px 16px 26px",
-            }}
+            className="relative w-full sm:max-w-lg bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="dialog-pause-complete"
           >
-            <p className="text-sm font-semibold mb-1" style={{ color: "#1A1A1A" }}>
+            <p className="text-sm font-semibold mb-1 text-foreground">
               Timer running
             </p>
-            <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
+            <p className="text-xs mb-4 text-muted-foreground">
               What would you like to do?
             </p>
             <div className="space-y-2">
               <button
-                className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
-                style={{ backgroundColor: "#4B5563" }}
+                className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 bg-gray-600 dark:bg-gray-500"
                 onClick={handlePauseConfirm}
                 disabled={stopTimerMutation.isPending}
                 data-testid="button-pause-confirm"
@@ -1314,11 +1112,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 Pause — resume later
               </button>
               <button
-                className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
-                style={{
-                  backgroundColor: estimateBlocksCompletion ? "#9CA3AF" : "#15803D",
-                  opacity: estimateBlocksCompletion ? 0.7 : 1,
-                }}
+                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion ? "bg-gray-400 opacity-70" : "bg-green-700 dark:bg-green-600"}`}
                 onClick={handleMarkComplete}
                 disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
                 data-testid="button-mark-complete"
@@ -1327,17 +1121,12 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 Mark as complete
               </button>
               {estimateBlocksCompletion && (
-                <p className="text-[11px] text-center mt-1" style={{ color: "#D97706" }} data-testid="text-estimate-block-reason">
+                <p className="text-[11px] text-center mt-1 text-amber-600 dark:text-amber-400" data-testid="text-estimate-block-reason">
                   Estimate must be approved before completing
                 </p>
               )}
               <button
-                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center"
-                style={{
-                  backgroundColor: "#F8F8F8",
-                  border: "1px solid #EEEEEE",
-                  color: "#6B7280",
-                }}
+                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center bg-muted border border-border text-muted-foreground"
                 onClick={() => setIsPauseDialogOpen(false)}
                 data-testid="button-pause-cancel"
               >
@@ -1354,26 +1143,18 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsEstimateSheetOpen(false)}
         >
+          <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px 16px 0 0",
-              padding: "20px 16px 26px",
-            }}
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="sheet-estimate"
           >
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+              <p className="text-sm font-semibold text-foreground">
                 Estimates
               </p>
               <button onClick={() => setIsEstimateSheetOpen(false)}>
-                <X className="w-5 h-5" style={{ color: "#9CA3AF" }} />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             {quotes.length > 0 && (
@@ -1381,24 +1162,20 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 {quotes.map((quote) => (
                   <div
                     key={quote.id}
-                    className="p-3 rounded-lg"
-                    style={{
-                      backgroundColor: "#FEF9EC",
-                      border: "1px solid #FDE68A",
-                    }}
+                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700"
                     data-testid={`estimate-row-${quote.id}`}
                   >
                     {quote.vendorName && (
-                      <p className="text-xs" style={{ color: "#6B7280" }}>
+                      <p className="text-xs text-muted-foreground">
                         {quote.vendorName}
                       </p>
                     )}
-                    <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+                    <p className="text-sm font-semibold text-foreground">
                       ${(quote.estimatedCost || 0).toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                       })}
                     </p>
-                    <p className="text-[11px]" style={{ color: "#D97706" }}>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
                       {quote.status === "approved" ? "Approved" : "Pending approval"}
                     </p>
                   </div>
@@ -1407,12 +1184,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             )}
             {task.estimateStatus !== "approved" && (
               <button
-                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                style={{
-                  border: "2px dashed #D97706",
-                  color: "#D97706",
-                  backgroundColor: "transparent",
-                }}
+                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 border-2 border-dashed border-amber-600 dark:border-amber-400 text-amber-600 dark:text-amber-400 bg-transparent"
                 onClick={() => {
                   setIsEstimateSheetOpen(false);
                   props.setIsAddQuoteDialogOpen(true);
@@ -1433,35 +1205,24 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsPartModalOpen(false)}
         >
+          <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px 16px 0 0",
-              padding: "20px 16px 26px",
-            }}
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="modal-add-part"
           >
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+              <p className="text-sm font-semibold text-foreground">
                 Add Part
               </p>
               <button onClick={() => setIsPartModalOpen(false)}>
-                <X className="w-5 h-5" style={{ color: "#9CA3AF" }} />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             <div className="space-y-3">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                    style={{ color: "#9CA3AF" }}
-                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search inventory..."
                     value={inventorySearchQuery}
@@ -1474,25 +1235,20 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   />
                 </div>
                 <button
-                  className="flex items-center justify-center shrink-0"
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 8,
-                    border: "1px solid #EEEEEE",
-                  }}
+                  className="flex items-center justify-center shrink-0 rounded-lg border border-border"
+                  style={{ width: 40, height: 40 }}
                   onClick={() => {
                     setIsPartModalOpen(false);
                     setIsScanPartOpen(true);
                   }}
                   data-testid="button-scan-part-qr"
                 >
-                  <QrCode className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <QrCode className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
               {inventorySearchQuery && !selectedInventoryItemId && (
-                <div className="border rounded-md max-h-40 overflow-y-auto">
+                <div className="border border-border rounded-md max-h-40 overflow-y-auto">
                   {inventoryItems
                     ?.filter((item) =>
                       item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
@@ -1500,8 +1256,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     .map((item) => (
                       <div
                         key={item.id}
-                        className="px-3 py-2 cursor-pointer text-sm"
-                        style={{ borderBottom: "1px solid #F3F4F6" }}
+                        className="px-3 py-2 cursor-pointer text-sm text-foreground border-b border-border/50 hover:bg-muted/50"
                         onClick={() => {
                           setSelectedInventoryItemId(item.id);
                           setInventorySearchQuery(item.name);
@@ -1514,17 +1269,14 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               )}
 
               {selectedInventoryItemId && (
-                <div
-                  className="p-2 rounded-md text-sm font-medium"
-                  style={{ backgroundColor: "#F3F4F6" }}
-                >
+                <div className="p-2 rounded-md text-sm font-medium bg-muted text-foreground">
                   {inventoryItems.find((i) => i.id === selectedInventoryItemId)?.name}
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+                  <Label className="text-xs font-medium text-muted-foreground">
                     QTY
                   </Label>
                   <Input
@@ -1538,7 +1290,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+                  <Label className="text-xs font-medium text-muted-foreground">
                     COST
                   </Label>
                   <Input
@@ -1564,8 +1316,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               <div className="flex gap-2 pt-2">
                 <button
-                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium"
-                  style={{ backgroundColor: "#4338CA" }}
+                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-indigo-700 dark:bg-indigo-600"
                   onClick={() => {
                     addPartMutation.mutate();
                     setIsPartModalOpen(false);
@@ -1580,12 +1331,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   Add Part
                 </button>
                 <button
-                  className="px-6 py-3 rounded-lg text-sm font-medium"
-                  style={{
-                    backgroundColor: "#F8F8F8",
-                    border: "1px solid #EEEEEE",
-                    color: "#6B7280",
-                  }}
+                  className="px-6 py-3 rounded-lg text-sm font-medium bg-muted border border-border text-muted-foreground"
                   onClick={() => {
                     setIsPartModalOpen(false);
                     setSelectedInventoryItemId("");
@@ -1608,26 +1354,18 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsResourcesOpen(false)}
         >
+          <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          <div
-            className="relative w-full sm:max-w-lg max-h-[70vh] overflow-y-auto"
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px 16px 0 0",
-              padding: "20px 16px 26px",
-            }}
+            className="relative w-full sm:max-w-lg max-h-[70vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="sheet-resources"
           >
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+              <p className="text-sm font-semibold text-foreground">
                 Resources
               </p>
               <button onClick={() => setIsResourcesOpen(false)}>
-                <X className="w-5 h-5" style={{ color: "#9CA3AF" }} />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             <div className="space-y-1">
@@ -1638,21 +1376,16 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   return (
                     <button
                       key={resource.id}
-                      className="flex items-center gap-3 w-full py-3 text-left"
-                      style={{ borderBottom: "1px solid #EEEEEE" }}
+                      className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
                       onClick={() => window.open(toDisplayUrl(resource.url), "_blank")}
                       data-testid={`resource-row-${resource.id}`}
                     >
                       <span
-                        className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0"
-                        style={{
-                          backgroundColor: isVideo ? "#FEE2E2" : "#EDE9FE",
-                          color: isVideo ? "#DC2626" : "#7C3AED",
-                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${isVideo ? "bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400" : "bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400"}`}
                       >
                         {isVideo ? "VID" : "PDF"}
                       </span>
-                      <span className="text-sm flex-1 truncate" style={{ color: "#1A1A1A" }}>
+                      <span className="text-sm flex-1 truncate text-foreground">
                         {resource.title}
                       </span>
                     </button>
@@ -1669,38 +1402,27 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => props.setIsAddQuoteDialogOpen(false)}
         >
+          <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px 16px 0 0",
-              padding: "20px 16px 26px",
-            }}
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="modal-add-estimate"
           >
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+              <p className="text-sm font-semibold text-foreground">
                 Add Estimate
               </p>
               <button onClick={() => props.setIsAddQuoteDialogOpen(false)}>
-                <X className="w-5 h-5" style={{ color: "#9CA3AF" }} />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+                <Label className="text-xs font-medium text-muted-foreground">
                   Estimated Cost
                 </Label>
                 <div className="relative">
-                  <DollarSign
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                    style={{ color: "#9CA3AF" }}
-                  />
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="number"
                     step="0.01"
@@ -1714,7 +1436,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 </div>
               </div>
               <div>
-                <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+                <Label className="text-xs font-medium text-muted-foreground">
                   Vendor (Optional)
                 </Label>
                 <Select
@@ -1744,7 +1466,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+                <Label className="text-xs font-medium text-muted-foreground">
                   Notes (Optional)
                 </Label>
                 <Textarea
@@ -1756,8 +1478,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               </div>
               <div className="flex gap-2 pt-2">
                 <button
-                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium"
-                  style={{ backgroundColor: "#4338CA" }}
+                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-indigo-700 dark:bg-indigo-600"
                   onClick={() =>
                     createQuoteMutation.mutate({
                       vendorName: newQuoteVendorName,
@@ -1772,12 +1493,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   Add Estimate
                 </button>
                 <button
-                  className="px-6 py-3 rounded-lg text-sm"
-                  style={{
-                    backgroundColor: "#F8F8F8",
-                    border: "1px solid #EEEEEE",
-                    color: "#6B7280",
-                  }}
+                  className="px-6 py-3 rounded-lg text-sm bg-muted border border-border text-muted-foreground"
                   onClick={() => props.setIsAddQuoteDialogOpen(false)}
                 >
                   Cancel
@@ -1794,26 +1510,18 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsPreviousWorkOpen(false)}
         >
+          <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px 16px 0 0",
-              padding: "20px 16px 26px",
-            }}
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="sheet-previous-work"
           >
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+              <p className="text-sm font-semibold text-foreground">
                 Previous Work
               </p>
               <button onClick={() => setIsPreviousWorkOpen(false)}>
-                <X className="w-5 h-5" style={{ color: "#9CA3AF" }} />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             <div className="space-y-2">
@@ -1822,8 +1530,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 return (
                   <button
                     key={prevTask.id}
-                    className="w-full text-left p-3 rounded-lg"
-                    style={{ backgroundColor: "#F8F8F8", border: "1px solid #EEEEEE" }}
+                    className="w-full text-left p-3 rounded-lg bg-muted/50 border border-border"
                     onClick={() => {
                       setIsPreviousWorkOpen(false);
                       safeNavigate(`/tasks/${prevTask.id}`);
@@ -1832,28 +1539,28 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: "#1A1A1A" }}>
+                        <p className="text-sm font-medium truncate text-foreground">
                           {prevTask.name}
                         </p>
                         {prevTask.description && (
-                          <p className="text-xs mt-0.5 line-clamp-2" style={{ color: "#6B7280" }}>
+                          <p className="text-xs mt-0.5 line-clamp-2 text-muted-foreground">
                             {prevTask.description}
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {completedBy && (
-                            <span className="text-xs flex items-center gap-1" style={{ color: "#6B7280" }}>
+                            <span className="text-xs flex items-center gap-1 text-muted-foreground">
                               {completedBy.firstName} {completedBy.lastName}
                             </span>
                           )}
                           {prevTask.updatedAt && (
-                            <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                            <span className="text-xs text-muted-foreground/70">
                               {format(new Date(prevTask.updatedAt), "MMM d, yyyy")}
                             </span>
                           )}
                         </div>
                       </div>
-                      <Check className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803D" }} />
+                      <Check className="w-4 h-4 shrink-0 mt-0.5 text-green-700 dark:text-green-400" />
                     </div>
                   </button>
                 );
