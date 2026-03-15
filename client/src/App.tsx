@@ -87,7 +87,7 @@ function AuthenticatedApp() {
 
   if (isMobileTaskDetail) {
     if (user?.role === "technician") {
-      return <TaskDetail />;
+      return <Route path="/tasks/:id" component={TaskDetail} />;
     }
     return <MobileTaskDetail />;
   }

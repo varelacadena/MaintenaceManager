@@ -39,7 +39,6 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import ResourceCard from "@/components/ResourceCard";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import type {
   Task,
@@ -206,6 +205,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
+  const [isPreviousWorkOpen, setIsPreviousWorkOpen] = useState(false);
 
   const [noteText, setNoteText] = useState("");
   const [saveIndicator, setSaveIndicator] = useState<"idle" | "saving" | "saved">("idle");
@@ -329,16 +329,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await apiRequest("POST", "/api/logout");
-      queryClient.clear();
-      navigate("/");
-    } catch {
-      toast({ title: "Logout failed", variant: "destructive" });
-    }
-  };
-
   const locationText = [
     property?.name,
     space?.name,
@@ -403,40 +393,28 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
   return (
     <div className="flex flex-col min-h-[100dvh] md:min-h-full" style={{ backgroundColor: "#F8F8F8" }}>
-      {/* Top Navigation Bar */}
-      <div
-        className="flex items-center justify-between px-4 shrink-0"
-        style={{
-          height: 44,
-          backgroundColor: "#FFFFFF",
-          borderBottom: "1px solid #EEEEEE",
-        }}
-        data-testid="tech-top-nav"
-      >
-        <div className="flex items-center gap-1">
-          {isSubTask && parentTask ? (
-            <button
-              className="flex items-center gap-1 text-sm font-medium"
-              style={{ color: "#4338CA" }}
-              onClick={() => safeNavigate(`/tasks/${task.parentTaskId}`)}
-              data-testid="link-back-to-parent"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="truncate max-w-[200px]">{parentTask.name}</span>
-            </button>
-          ) : (
-            <div style={{ width: 24 }} />
-          )}
-        </div>
-        <button
-          className="text-sm"
-          style={{ color: "#9CA3AF" }}
-          onClick={handleLogout}
-          data-testid="button-sign-out"
+      {/* Top Navigation Bar — back button only, Sign Out is in the global header */}
+      {isSubTask && parentTask && (
+        <div
+          className="flex items-center px-4 shrink-0"
+          style={{
+            height: 44,
+            backgroundColor: "#FFFFFF",
+            borderBottom: "1px solid #EEEEEE",
+          }}
+          data-testid="tech-top-nav"
         >
-          Sign Out
-        </button>
-      </div>
+          <button
+            className="flex items-center gap-1 text-sm font-medium"
+            style={{ color: "#4338CA" }}
+            onClick={() => safeNavigate(`/tasks/${task.parentTaskId}`)}
+            data-testid="link-back-to-parent"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="truncate max-w-[200px]">{parentTask.name}</span>
+          </button>
+        </div>
+      )}
 
       {/* Hero Header */}
       <div
@@ -1004,16 +982,12 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
                 </button>
 
-                {/* Previous Work Here */}
+                {/* Previous Work */}
                 {previousWork.length > 0 && (
                   <button
                     className="flex items-center gap-3 w-full py-3 text-left"
                     style={{ borderBottom: "1px solid #EEEEEE" }}
-                    onClick={() =>
-                      property
-                        ? safeNavigate(`/properties/${property.id}`)
-                        : null
-                    }
+                    onClick={() => setIsPreviousWorkOpen(true)}
                     data-testid="action-previous-work"
                   >
                     <div
@@ -1029,7 +1003,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                        Previous Work Here
+                        Previous Work
                       </p>
                     </div>
                     <span
@@ -1256,7 +1230,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       {/* Pause / Complete Dialog */}
       {isPauseDialogOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsPauseDialogOpen(false)}
         >
           <div
@@ -1264,7 +1238,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           />
           <div
-            className="relative w-full max-w-lg"
+            className="relative w-full sm:max-w-lg"
             style={{
               backgroundColor: "#FFFFFF",
               borderRadius: "16px 16px 0 0",
@@ -1320,7 +1294,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       {/* Estimate / Quote Sheet */}
       {isEstimateSheetOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsEstimateSheetOpen(false)}
         >
           <div
@@ -1328,7 +1302,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           />
           <div
-            className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
             style={{
               backgroundColor: "#FFFFFF",
               borderRadius: "16px 16px 0 0",
@@ -1399,7 +1373,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       {/* Add Part Modal */}
       {isPartModalOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsPartModalOpen(false)}
         >
           <div
@@ -1407,7 +1381,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           />
           <div
-            className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
             style={{
               backgroundColor: "#FFFFFF",
               borderRadius: "16px 16px 0 0",
@@ -1574,7 +1548,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       {/* Resources Sheet */}
       {isResourcesOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => setIsResourcesOpen(false)}
         >
           <div
@@ -1582,7 +1556,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           />
           <div
-            className="relative w-full max-w-lg max-h-[70vh] overflow-y-auto"
+            className="relative w-full sm:max-w-lg max-h-[70vh] overflow-y-auto"
             style={{
               backgroundColor: "#FFFFFF",
               borderRadius: "16px 16px 0 0",
@@ -1635,7 +1609,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       {/* Add Estimate Dialog */}
       {props.isAddQuoteDialogOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
           onClick={() => props.setIsAddQuoteDialogOpen(false)}
         >
           <div
@@ -1643,7 +1617,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           />
           <div
-            className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
             style={{
               backgroundColor: "#FFFFFF",
               borderRadius: "16px 16px 0 0",
@@ -1752,6 +1726,81 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Previous Work Sheet */}
+      {isPreviousWorkOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+          onClick={() => setIsPreviousWorkOpen(false)}
+        >
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+          />
+          <div
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto"
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px 16px 0 0",
+              padding: "20px 16px 26px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            data-testid="sheet-previous-work"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
+                Previous Work
+              </p>
+              <button onClick={() => setIsPreviousWorkOpen(false)}>
+                <X className="w-5 h-5" style={{ color: "#9CA3AF" }} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {previousWork.map((prevTask) => {
+                const completedBy = users.find(u => u.id === prevTask.assignedToId);
+                return (
+                  <button
+                    key={prevTask.id}
+                    className="w-full text-left p-3 rounded-lg"
+                    style={{ backgroundColor: "#F8F8F8", border: "1px solid #EEEEEE" }}
+                    onClick={() => {
+                      setIsPreviousWorkOpen(false);
+                      safeNavigate(`/tasks/${prevTask.id}`);
+                    }}
+                    data-testid={`previous-work-item-${prevTask.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: "#1A1A1A" }}>
+                          {prevTask.name}
+                        </p>
+                        {prevTask.description && (
+                          <p className="text-xs mt-0.5 line-clamp-2" style={{ color: "#6B7280" }}>
+                            {prevTask.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {completedBy && (
+                            <span className="text-xs flex items-center gap-1" style={{ color: "#6B7280" }}>
+                              {completedBy.firstName} {completedBy.lastName}
+                            </span>
+                          )}
+                          {prevTask.updatedAt && (
+                            <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                              {format(new Date(prevTask.updatedAt), "MMM d, yyyy")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Check className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803D" }} />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
