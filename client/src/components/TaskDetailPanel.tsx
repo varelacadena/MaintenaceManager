@@ -49,7 +49,6 @@ import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useLocation } from "wouter";
 import type { Task, User, Property, Upload, Message, PartUsed } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
@@ -129,7 +128,6 @@ export function TaskDetailPanel({
 }: TaskDetailPanelProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
   const isAdmin = user?.role === "admin";
 
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
@@ -211,7 +209,13 @@ export function TaskDetailPanel({
   });
 
   const totalMinutes = useMemo(() => {
-    return timeEntries.reduce((sum: number, e: any) => sum + (e.durationMinutes || 0), 0);
+    return timeEntries.reduce((sum: number, e: any) => {
+      if (e.durationMinutes) return sum + e.durationMinutes;
+      if (e.startTime && e.endTime) {
+        return sum + Math.round((new Date(e.endTime).getTime() - new Date(e.startTime).getTime()) / 60000);
+      }
+      return sum;
+    }, 0);
   }, [timeEntries]);
 
   const docCount = uploads?.filter(u => !u.fileType.startsWith("image/") && !u.fileType.startsWith("video/")).length || 0;
@@ -260,7 +264,10 @@ export function TaskDetailPanel({
 
   useEffect(() => {
     if (isMessagesOpen && taskMessages.length > 0) {
-      markMessagesReadMutation.mutate();
+      const hasUnread = taskMessages.some((m: Message) => !m.read && m.senderId !== user?.id);
+      if (hasUnread) {
+        markMessagesReadMutation.mutate();
+      }
     }
   }, [isMessagesOpen, taskMessages.length]);
 

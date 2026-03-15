@@ -226,7 +226,10 @@ export default function MobileTaskDetail() {
 
   useEffect(() => {
     if (isMessagesSheetOpen && taskMessages.length > 0) {
-      markMessagesReadMutation.mutate();
+      const hasUnread = taskMessages.some((m: Message) => !m.read && m.senderId !== user?.id);
+      if (hasUnread) {
+        markMessagesReadMutation.mutate();
+      }
     }
   }, [isMessagesSheetOpen, taskMessages.length]);
 
