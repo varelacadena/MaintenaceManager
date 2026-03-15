@@ -36,6 +36,7 @@ import {
   Calendar,
   X,
   Send,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -105,6 +106,12 @@ export default function MobileTaskDetail() {
   const [isPartsSheetOpen, setIsPartsSheetOpen] = useState(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
+  const [newPartName, setNewPartName] = useState("");
+  const [newPartQuantity, setNewPartQuantity] = useState("1");
+  const [newPartNotes, setNewPartNotes] = useState("");
+  const [newPartCost, setNewPartCost] = useState("");
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -198,6 +205,23 @@ export default function MobileTaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
     },
+  });
+
+  const addPartMutation = useMutation({
+    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string }) => {
+      const res = await apiRequest("POST", "/api/parts", partData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
+      setNewPartName("");
+      setNewPartQuantity("1");
+      setNewPartNotes("");
+      setNewPartCost("");
+      setIsAddPartFormOpen(false);
+      toast({ title: "Part added" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to add part.", variant: "destructive" }),
   });
 
   useEffect(() => {
@@ -1131,7 +1155,7 @@ export default function MobileTaskDetail() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3">
-              {taskParts.length === 0 ? (
+              {taskParts.length === 0 && !isAddPartFormOpen ? (
                 <p className="text-xs text-center py-8" style={{ color: "#9CA3AF" }}>No parts used yet</p>
               ) : (
                 <div className="space-y-2">
@@ -1161,6 +1185,88 @@ export default function MobileTaskDetail() {
                     </div>
                   ))}
                 </div>
+              )}
+              {isAddPartFormOpen ? (
+                <div className="mt-2 p-3 rounded-lg space-y-2" style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}>
+                  <Input
+                    value={newPartName}
+                    onChange={(e) => setNewPartName(e.target.value)}
+                    placeholder="Part name"
+                    data-testid="input-mobile-part-name"
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={newPartQuantity}
+                      onChange={(e) => setNewPartQuantity(e.target.value)}
+                      placeholder="Qty"
+                      type="number"
+                      min="1"
+                      className="w-20"
+                      data-testid="input-mobile-part-quantity"
+                    />
+                    <Input
+                      value={newPartCost}
+                      onChange={(e) => setNewPartCost(e.target.value)}
+                      placeholder="Cost ($)"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-24"
+                      data-testid="input-mobile-part-cost"
+                    />
+                  </div>
+                  <Input
+                    value={newPartNotes}
+                    onChange={(e) => setNewPartNotes(e.target.value)}
+                    placeholder="Notes (optional)"
+                    data-testid="input-mobile-part-notes"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsAddPartFormOpen(false);
+                        setNewPartName("");
+                        setNewPartQuantity("1");
+                        setNewPartCost("");
+                        setNewPartNotes("");
+                      }}
+                      data-testid="button-mobile-cancel-part"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+                      disabled={!newPartName.trim() || addPartMutation.isPending}
+                      onClick={() => {
+                        addPartMutation.mutate({
+                          taskId: id!,
+                          partName: newPartName.trim(),
+                          quantity: newPartQuantity || "1",
+                          cost: newPartCost ? parseFloat(newPartCost) : 0,
+                          notes: newPartNotes.trim() || undefined,
+                        });
+                      }}
+                      data-testid="button-mobile-save-part"
+                    >
+                      {addPartMutation.isPending ? "Adding..." : "Add"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                isAdmin && (
+                  <button
+                    className="w-full flex items-center justify-center gap-1.5 py-2 mt-2 rounded-lg text-xs font-medium transition-colors"
+                    style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}
+                    onClick={() => setIsAddPartFormOpen(true)}
+                    data-testid="button-mobile-add-part"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Part
+                  </button>
+                )
               )}
             </div>
           </div>

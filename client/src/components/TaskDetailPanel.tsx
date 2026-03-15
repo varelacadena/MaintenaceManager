@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -41,12 +42,15 @@ import {
   CheckCircle2,
   AlertTriangle,
   Play,
+  Send,
+  Plus,
 } from "lucide-react";
+import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import type { Task, User, Property, Upload } from "@shared/schema";
+import type { Task, User, Property, Upload, Message, PartUsed } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
@@ -133,6 +137,18 @@ export function TaskDetailPanel({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isPartsOpen, setIsPartsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [newMessageText, setNewMessageText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
+  const [newPartName, setNewPartName] = useState("");
+  const [newPartQuantity, setNewPartQuantity] = useState("1");
+  const [newPartNotes, setNewPartNotes] = useState("");
+  const [newPartCost, setNewPartCost] = useState("");
+
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
     queryFn: async () => {
@@ -163,9 +179,96 @@ export function TaskDetailPanel({
     enabled: !!taskId,
   });
 
+  const { data: taskMessages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages/task", taskId],
+    queryFn: async () => {
+      const res = await fetch(`/api/messages/task/${taskId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!taskId,
+    refetchInterval: isMessagesOpen ? 5000 : false,
+  });
+
+  const { data: taskParts = [] } = useQuery<PartUsed[]>({
+    queryKey: ["/api/parts/task", taskId],
+    queryFn: async () => {
+      const res = await fetch(`/api/parts/task/${taskId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!taskId,
+  });
+
+  const { data: timeEntries = [] } = useQuery<any[]>({
+    queryKey: ["/api/time-entries/task", taskId],
+    queryFn: async () => {
+      const res = await fetch(`/api/time-entries/task/${taskId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!taskId,
+  });
+
+  const totalMinutes = useMemo(() => {
+    return timeEntries.reduce((sum: number, e: any) => sum + (e.durationMinutes || 0), 0);
+  }, [timeEntries]);
+
   const docCount = uploads?.filter(u => !u.fileType.startsWith("image/") && !u.fileType.startsWith("video/")).length || 0;
   const imgCount = uploads?.filter(u => u.fileType.startsWith("image/")).length || 0;
   const vidCount = uploads?.filter(u => u.fileType.startsWith("video/")).length || 0;
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await apiRequest("POST", "/api/messages", { taskId, content });
+      return res.json();
+    },
+    onSuccess: () => {
+      setNewMessageText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", taskId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to send message.", variant: "destructive" }),
+  });
+
+  const markMessagesReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/messages/task/${taskId}/mark-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", taskId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
+  const addPartMutation = useMutation({
+    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string }) => {
+      const res = await apiRequest("POST", "/api/parts", partData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/parts/task", taskId] });
+      setNewPartName("");
+      setNewPartQuantity("1");
+      setNewPartNotes("");
+      setNewPartCost("");
+      setIsAddPartFormOpen(false);
+      toast({ title: "Part added" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to add part.", variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (isMessagesOpen && taskMessages.length > 0) {
+      markMessagesReadMutation.mutate();
+    }
+  }, [isMessagesOpen, taskMessages.length]);
+
+  useEffect(() => {
+    if (isMessagesOpen) {
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    }
+  }, [isMessagesOpen, taskMessages.length]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -377,7 +480,7 @@ export function TaskDetailPanel({
             TIME LOGGED
           </p>
           <p className="text-sm font-medium mt-1" style={{ color: "#1A1A1A" }}>
-            0h 0m
+            {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
           </p>
         </div>
         {isFullscreen && (
@@ -622,44 +725,293 @@ export function TaskDetailPanel({
         </div>
       )}
 
-      {/* Secondary links */}
-      <div>
+      {/* Messages section */}
+      <div style={{ borderBottom: "1px solid #EEEEEE" }}>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
-          style={{ borderBottom: "1px solid #EEEEEE", color: "#1A1A1A" }}
-          onClick={() => navigate(`/tasks/${taskId}`)}
+          style={{ color: "#1A1A1A" }}
+          onClick={() => setIsMessagesOpen(!isMessagesOpen)}
           data-testid="link-panel-messages"
         >
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
             Messages
+            {taskMessages.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
+                {taskMessages.length}
+              </span>
+            )}
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          {isMessagesOpen ? (
+            <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          ) : (
+            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          )}
         </button>
+        {isMessagesOpen && (
+          <div className="px-5 pb-4">
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #EEEEEE" }}>
+              <div className="overflow-y-auto space-y-3 p-3" style={{ maxHeight: "250px" }}>
+                {taskMessages.length === 0 ? (
+                  <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>No messages yet</p>
+                ) : (
+                  taskMessages.map((msg) => {
+                    const sender = allUsers?.find(u => u.id === msg.senderId);
+                    const isOwnMessage = msg.senderId === user?.id;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}
+                        data-testid={`panel-message-${msg.id}`}
+                      >
+                        <p className="text-[11px] font-medium mb-0.5" style={{ color: "#6B7280" }}>
+                          {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
+                        </p>
+                        <div
+                          className="rounded-xl px-3 py-2 max-w-[80%]"
+                          style={{
+                            backgroundColor: isOwnMessage ? "#4338CA" : "#F3F4F6",
+                            color: isOwnMessage ? "#FFFFFF" : "#1A1A1A",
+                          }}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                        <p className="text-[10px] mt-0.5" style={{ color: "#9CA3AF" }}>
+                          {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              <div className="flex gap-2 p-2" style={{ borderTop: "1px solid #EEEEEE" }}>
+                <Input
+                  value={newMessageText}
+                  onChange={(e) => setNewMessageText(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && newMessageText.trim()) {
+                      e.preventDefault();
+                      sendMessageMutation.mutate(newMessageText.trim());
+                    }
+                  }}
+                  data-testid="input-panel-message"
+                />
+                <Button
+                  size="icon"
+                  style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+                  onClick={() => newMessageText.trim() && sendMessageMutation.mutate(newMessageText.trim())}
+                  disabled={!newMessageText.trim() || sendMessageMutation.isPending}
+                  data-testid="button-panel-send-message"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Parts Used section */}
+      <div style={{ borderBottom: "1px solid #EEEEEE" }}>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
-          style={{ borderBottom: "1px solid #EEEEEE", color: "#1A1A1A" }}
-          onClick={() => navigate(`/tasks/${taskId}`)}
+          style={{ color: "#1A1A1A" }}
+          onClick={() => setIsPartsOpen(!isPartsOpen)}
           data-testid="link-panel-parts"
         >
           <div className="flex items-center gap-2">
             <Package className="w-4 h-4" style={{ color: "#6B7280" }} />
             Parts Used
+            {taskParts.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+                {taskParts.length}
+              </span>
+            )}
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          {isPartsOpen ? (
+            <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          ) : (
+            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          )}
         </button>
+        {isPartsOpen && (
+          <div className="px-5 pb-4 space-y-2">
+            {taskParts.length === 0 && !isAddPartFormOpen ? (
+              <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>No parts used yet</p>
+            ) : (
+              taskParts.map((part) => (
+                <div
+                  key={part.id}
+                  className="flex items-center justify-between p-3 rounded-lg"
+                  style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}
+                  data-testid={`panel-part-${part.id}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: "#1A1A1A" }}>{part.partName}</p>
+                    {part.notes && <p className="text-xs mt-0.5 truncate" style={{ color: "#6B7280" }}>{part.notes}</p>}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
+                    <span className="text-xs font-medium" style={{ color: "#6B7280" }}>x{part.quantity}</span>
+                    {part.cost !== null && part.cost !== undefined && Number(part.cost) > 0 && (
+                      <span className="text-xs font-medium" style={{ color: "#15803D" }}>${Number(part.cost).toFixed(2)}</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            {isAddPartFormOpen ? (
+              <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}>
+                <Input
+                  value={newPartName}
+                  onChange={(e) => setNewPartName(e.target.value)}
+                  placeholder="Part name"
+                  data-testid="input-panel-part-name"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    value={newPartQuantity}
+                    onChange={(e) => setNewPartQuantity(e.target.value)}
+                    placeholder="Qty"
+                    type="number"
+                    min="1"
+                    className="w-20"
+                    data-testid="input-panel-part-quantity"
+                  />
+                  <Input
+                    value={newPartCost}
+                    onChange={(e) => setNewPartCost(e.target.value)}
+                    placeholder="Cost ($)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-24"
+                    data-testid="input-panel-part-cost"
+                  />
+                </div>
+                <Input
+                  value={newPartNotes}
+                  onChange={(e) => setNewPartNotes(e.target.value)}
+                  placeholder="Notes (optional)"
+                  data-testid="input-panel-part-notes"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsAddPartFormOpen(false);
+                      setNewPartName("");
+                      setNewPartQuantity("1");
+                      setNewPartCost("");
+                      setNewPartNotes("");
+                    }}
+                    data-testid="button-panel-cancel-part"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+                    disabled={!newPartName.trim() || addPartMutation.isPending}
+                    onClick={() => {
+                      addPartMutation.mutate({
+                        taskId,
+                        partName: newPartName.trim(),
+                        quantity: newPartQuantity || "1",
+                        cost: newPartCost ? parseFloat(newPartCost) : 0,
+                        notes: newPartNotes.trim() || undefined,
+                      });
+                    }}
+                    data-testid="button-panel-save-part"
+                  >
+                    {addPartMutation.isPending ? "Adding..." : "Add"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              isAdmin && (
+                <button
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors"
+                  style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}
+                  onClick={() => setIsAddPartFormOpen(true)}
+                  data-testid="button-panel-add-part"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Part
+                </button>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* History section */}
+      <div>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
           style={{ color: "#1A1A1A" }}
-          onClick={() => navigate(`/tasks/${taskId}`)}
+          onClick={() => setIsHistoryOpen(!isHistoryOpen)}
           data-testid="link-panel-history"
         >
           <div className="flex items-center gap-2">
             <History className="w-4 h-4" style={{ color: "#6B7280" }} />
             History
+            {timeEntries.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
+                {timeEntries.length}
+              </span>
+            )}
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          {isHistoryOpen ? (
+            <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          ) : (
+            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          )}
         </button>
+        {isHistoryOpen && (
+          <div className="px-5 pb-4 space-y-2">
+            {timeEntries.length === 0 ? (
+              <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>No time entries yet</p>
+            ) : (
+              timeEntries.map((entry: any) => {
+                const entryUser = allUsers?.find(u => u.id === entry.userId);
+                const isRunning = entry.startTime && !entry.endTime;
+                const duration = entry.durationMinutes
+                  ? `${Math.floor(entry.durationMinutes / 60)}h ${entry.durationMinutes % 60}m`
+                  : isRunning ? "Running" : "—";
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-3 rounded-lg"
+                    style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}
+                    data-testid={`panel-history-${entry.id}`}
+                  >
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                        {entryUser ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username : "Unknown"}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
+                        {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : "No start time"}
+                      </p>
+                    </div>
+                    <span
+                      className="text-xs font-medium px-2 py-1 rounded"
+                      style={{
+                        backgroundColor: isRunning ? "#EEF2FF" : "#F3F4F6",
+                        color: isRunning ? "#4338CA" : "#6B7280",
+                      }}
+                    >
+                      {duration}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -807,7 +1159,7 @@ export function TaskDetailPanel({
               className="w-full"
               data-testid="button-sidebar-edit"
               style={{ backgroundColor: "#FFFFFF", borderColor: "#EEEEEE", color: "#1A1A1A" }}
-              onClick={() => navigate(`/tasks/${taskId}/edit`)}
+              onClick={() => setIsEditMode(true)}
             >
               <Pencil className="w-3.5 h-3.5 mr-1.5" />
               Edit
