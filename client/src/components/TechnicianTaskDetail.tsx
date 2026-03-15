@@ -421,7 +421,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] md:min-h-full bg-muted/30 dark:bg-background">
+    <div className="fixed inset-0 z-40 flex flex-col bg-muted/40 md:relative md:inset-auto md:z-auto md:min-h-full">
       {/* Hero Header */}
       <div
         className="px-4 pt-4 pb-5 shrink-0"
@@ -460,7 +460,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </span>
             {task.urgency === "high" && (
               <span
-                className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-500 border border-red-500/35"
+                className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-500 border border-red-500/35 dark:bg-red-950/50 dark:text-red-400 dark:border-red-400/35"
                 data-testid="badge-priority"
               >
                 High
@@ -468,7 +468,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             )}
             {task.urgency === "medium" && (
               <span
-                className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-600/35"
+                className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-600/35 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-400/35"
                 data-testid="badge-priority"
               >
                 Medium
@@ -514,13 +514,17 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       {/* Two-Tab Navigation */}
       <div
-        className="flex shrink-0 bg-card border-b border-border"
+        className="flex shrink-0 bg-background border-b border-border"
         data-testid="tech-tabs"
       >
         {(["task", "more"] as const).map((tab) => (
           <button
             key={tab}
-            className={`flex-1 py-3 text-sm font-medium text-center border-b-2 ${activeTab === tab ? "text-indigo-700 dark:text-indigo-400 border-indigo-700 dark:border-indigo-400" : "text-muted-foreground border-transparent"}`}
+            className={`flex-1 py-3 text-sm font-medium text-center border-b-2 ${
+              activeTab === tab
+                ? "text-primary border-primary"
+                : "text-muted-foreground border-transparent"
+            }`}
             onClick={() => setActiveTab(tab)}
             data-testid={`tab-${tab}`}
           >
@@ -530,14 +534,14 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-36">
+      <div className="flex-1 overflow-y-auto pb-36" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
         <div className="px-2.5 py-2 space-y-2">
           {activeTab === "task" ? (
             <>
               {/* Estimate pending banner */}
               {estimateBlocksCompletion && (
                 <div
-                  className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700"
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
                   data-testid="banner-estimate-pending"
                 >
                   <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
@@ -555,14 +559,23 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Card 1 — Instructions */}
               {task.instructions && (
                 <div
-                  className="p-3 rounded-xl bg-card border border-border"
+                  className="p-3 rounded-xl bg-background border border-border"
                   data-testid="card-instructions"
                 >
-                  <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
+                  <p
+                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    style={{ letterSpacing: "0.05em" }}
+                  >
                     Instructions
                   </p>
-                  <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800" style={{ borderRadius: 9 }}>
-                    <p className="text-xs whitespace-pre-wrap text-indigo-800 dark:text-indigo-300" style={{ lineHeight: 1.65 }}>
+                  <div
+                    className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800"
+                    style={{ borderRadius: 9 }}
+                  >
+                    <p
+                      className="text-xs whitespace-pre-wrap text-indigo-900 dark:text-indigo-200"
+                      style={{ lineHeight: 1.65 }}
+                    >
                       {task.instructions}
                     </p>
                   </div>
@@ -571,10 +584,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               {task.description && !task.instructions && (
                 <div
-                  className="p-3 rounded-xl bg-card border border-border"
+                  className="p-3 rounded-xl bg-background border border-border"
                   data-testid="card-description"
                 >
-                  <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
+                  <p
+                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    style={{ letterSpacing: "0.05em" }}
+                  >
                     Description
                   </p>
                   <p className="text-sm text-foreground" style={{ lineHeight: 1.65 }}>
@@ -586,20 +602,26 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Card 2 — Subtasks */}
               {subTasks.length > 0 && (
                 <div
-                  className="p-3 rounded-xl bg-card border border-border"
+                  className="p-3 rounded-xl bg-background border border-border"
                   data-testid="card-subtasks"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] uppercase font-medium text-muted-foreground tracking-wide">
+                    <p
+                      className="text-[10px] uppercase font-medium text-muted-foreground"
+                      style={{ letterSpacing: "0.05em" }}
+                    >
                       Subtasks
                     </p>
                     <span className="text-xs text-muted-foreground">
                       {completedSubTasks} / {subTasks.length}
                     </span>
                   </div>
-                  <div className="rounded-full mb-3 overflow-hidden bg-muted" style={{ height: 3 }}>
+                  <div
+                    className="rounded-full mb-3 overflow-hidden bg-muted"
+                    style={{ height: 3 }}
+                  >
                     <div
-                      className="h-full rounded-full transition-all bg-indigo-700 dark:bg-indigo-500"
+                      className="h-full rounded-full transition-all bg-primary"
                       style={{ width: `${subTaskProgress}%` }}
                     />
                   </div>
@@ -615,17 +637,19 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                       return (
                         <div
                           key={st.id}
-                          className="flex items-center gap-3 py-2 cursor-pointer"
-                          onClick={() => {
-                            if (!taskStarted) return;
-                            const newStatus = isDone ? "not_started" : "completed";
-                            props.updateSubtaskStatusMutation.mutate({ subtaskId: st.id, status: newStatus });
-                          }}
+                          className="flex items-center gap-3 py-2 cursor-pointer rounded-md hover-elevate"
+                          onClick={() => taskStarted && safeNavigate(`/tasks/${st.id}`)}
                           data-testid={`subtask-row-${st.id}`}
                         >
                           <div
-                            className={`flex items-center justify-center shrink-0 rounded-md ${isDone ? "bg-indigo-700 dark:bg-indigo-500" : "border-2 border-gray-300 dark:border-gray-600"}`}
+                            className={`flex items-center justify-center shrink-0 rounded-md ${isDone ? "bg-primary" : "border-2 border-muted-foreground/30"}`}
                             style={{ width: 22, height: 22 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!taskStarted) return;
+                              const newStatus = isDone ? "not_started" : "completed";
+                              props.updateSubtaskStatusMutation.mutate({ subtaskId: st.id, status: newStatus });
+                            }}
                           >
                             {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                           </div>
@@ -635,6 +659,9 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                           >
                             {st.name}
                           </span>
+                          {taskStarted && (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                          )}
                         </div>
                       );
                     })}
@@ -656,20 +683,26 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Card 3 — Checklist */}
               {checklistGroups.length > 0 && (
                 <div
-                  className="p-3 rounded-xl bg-card border border-border"
+                  className="p-3 rounded-xl bg-background border border-border"
                   data-testid="card-checklist"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] uppercase font-medium text-muted-foreground tracking-wide">
+                    <p
+                      className="text-[10px] uppercase font-medium text-muted-foreground"
+                      style={{ letterSpacing: "0.05em" }}
+                    >
                       Checklist
                     </p>
                     <span className="text-xs text-muted-foreground">
                       {completedChecklistItems} / {totalChecklistItems}
                     </span>
                   </div>
-                  <div className="rounded-full mb-3 overflow-hidden bg-muted" style={{ height: 3 }}>
+                  <div
+                    className="rounded-full mb-3 overflow-hidden bg-muted"
+                    style={{ height: 3 }}
+                  >
                     <div
-                      className="h-full rounded-full transition-all bg-indigo-700 dark:bg-indigo-500"
+                      className="h-full rounded-full transition-all bg-primary"
                       style={{
                         width: totalChecklistItems > 0
                           ? `${(completedChecklistItems / totalChecklistItems) * 100}%`
@@ -694,8 +727,12 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                             data-testid={`checklist-item-${item.id}`}
                           >
                             <div
-                              className={`flex items-center justify-center shrink-0 rounded-full ${isDone ? "bg-indigo-700 dark:bg-indigo-500" : "border-2 border-gray-300 dark:border-gray-600"}`}
-                              style={{ width: 22, height: 22 }}
+                              className={`flex items-center justify-center shrink-0 ${isDone ? "bg-primary" : "border-2 border-muted-foreground/30"}`}
+                              style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: 11,
+                              }}
                             >
                               {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                             </div>
@@ -715,20 +752,23 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               {/* Card 4 — Notes + Photos */}
               <div
-                className="p-3 rounded-xl bg-card border border-border"
+                className="p-3 rounded-xl bg-background border border-border"
                 data-testid="card-notes-photos"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] uppercase font-medium text-muted-foreground tracking-wide">
+                  <p
+                    className="text-[10px] uppercase font-medium text-muted-foreground"
+                    style={{ letterSpacing: "0.05em" }}
+                  >
                     Notes
                   </p>
                   {saveIndicator === "saving" && (
-                    <span className="text-[10px] text-indigo-700 dark:text-indigo-400">
+                    <span className="text-[10px] text-primary">
                       Saving...
                     </span>
                   )}
                   {saveIndicator === "saved" && (
-                    <span className="text-[10px] text-green-700 dark:text-green-400">
+                    <span className="text-[10px] text-green-600 dark:text-green-400">
                       Saved
                     </span>
                   )}
@@ -738,7 +778,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   onChange={(e) => handleNoteChange(e.target.value)}
                   placeholder="Type your observations... auto-saved as you type"
                   rows={3}
-                  className="w-full resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                  className="w-full resize-none bg-transparent outline-none text-foreground"
                   style={{
                     border: "none",
                     fontSize: 13,
@@ -771,7 +811,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
                 {uploads.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
+                    <p
+                      className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                      style={{ letterSpacing: "0.05em" }}
+                    >
                       Photos
                     </p>
                     <div className="flex flex-wrap gap-[5px]">
@@ -799,7 +842,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* More Tab — Contact Card */}
               {(contactName || contactPhone) && (
                 <div
-                  className="p-3 rounded-xl bg-card border border-border"
+                  className="p-3 rounded-xl bg-background border border-border"
                   data-testid="card-contact"
                 >
                   <div className="flex items-center gap-3">
@@ -822,11 +865,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     {contactPhone && (
                       <a
                         href={`tel:${contactPhone}`}
-                        className="flex items-center justify-center shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950/40"
+                        className="flex items-center justify-center shrink-0 rounded-full bg-primary/10"
                         style={{ width: 30, height: 30 }}
                         data-testid="button-call-contact"
                       >
-                        <Phone className="w-3.5 h-3.5 text-indigo-700 dark:text-indigo-400" />
+                        <Phone className="w-3.5 h-3.5 text-primary" />
                       </a>
                     )}
                   </div>
@@ -835,7 +878,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               {/* More Tab — Actions Card */}
               <div
-                className="p-3 rounded-xl bg-card border border-border"
+                className="p-3 rounded-xl bg-background border border-border"
                 data-testid="card-actions"
               >
                 {/* Estimate / Quote */}
@@ -846,7 +889,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     data-testid="action-estimate"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0 rounded-lg bg-amber-50 dark:bg-amber-950/40"
+                      className="flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/30 rounded-lg"
                       style={{ width: 32, height: 32 }}
                     >
                       <CircleDollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -876,17 +919,19 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   data-testid="action-parts"
                 >
                   <div
-                    className="flex items-center justify-center shrink-0 rounded-lg bg-indigo-50 dark:bg-indigo-950/40"
+                    className="flex items-center justify-center shrink-0 bg-primary/10 rounded-lg"
                     style={{ width: 32, height: 32 }}
                   >
-                    <Star className="w-4 h-4 text-indigo-700 dark:text-indigo-400" />
+                    <Star className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">
                       Parts Used
                     </p>
                   </div>
-                  <span className={`text-xs shrink-0 ${parts.length > 0 ? "text-indigo-700 dark:text-indigo-400" : "text-muted-foreground"}`}>
+                  <span
+                    className={`text-xs shrink-0 ${parts.length > 0 ? "text-primary" : "text-muted-foreground"}`}
+                  >
                     {parts.length > 0 ? `${parts.length} added` : "None"}
                   </span>
                   <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
@@ -900,7 +945,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     data-testid="action-previous-work"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0 rounded-lg bg-green-50 dark:bg-green-950/40"
+                      className="flex items-center justify-center shrink-0 bg-green-50 dark:bg-green-950/30 rounded-lg"
                       style={{ width: 32, height: 32 }}
                     >
                       <History className="w-4 h-4 text-green-700 dark:text-green-400" />
@@ -910,7 +955,9 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                         Previous Work
                       </p>
                     </div>
-                    <span className="flex items-center justify-center text-xs font-medium shrink-0 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400">
+                    <span
+                      className="flex items-center justify-center text-xs font-medium shrink-0 px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                    >
                       {previousWork.length}
                     </span>
                     <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
@@ -925,7 +972,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     data-testid="action-resources"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0 rounded-lg bg-muted/50"
+                      className="flex items-center justify-center shrink-0 bg-muted rounded-lg"
                       style={{ width: 32, height: 32 }}
                     >
                       <FileText className="w-4 h-4 text-muted-foreground" />
@@ -948,10 +995,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               {/* Show existing parts if any */}
               {parts.length > 0 && (
                 <div
-                  className="p-3 rounded-xl bg-card border border-border"
+                  className="p-3 rounded-xl bg-background border border-border"
                   data-testid="card-parts-list"
                 >
-                  <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
+                  <p
+                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    style={{ letterSpacing: "0.05em" }}
+                  >
                     Parts Added
                   </p>
                   <div className="space-y-2">
@@ -988,16 +1038,16 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         </div>
       </div>
 
-      {/* Sticky Bottom Bar */}
+      {/* Fixed Bottom Bar */}
       <div
-        className="sticky bottom-0 left-0 right-0 z-50 bg-card border-t border-border"
-        style={{ padding: "8px 14px calc(16px + env(safe-area-inset-bottom, 0px))" }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-inset-bottom"
+        style={{ padding: "8px 14px 16px" }}
         data-testid="tech-bottom-bar"
       >
         <div className="flex items-center gap-3">
           {/* Scan Button */}
           <button
-            className="flex items-center justify-center shrink-0 rounded-[10px] border border-border"
+            className="flex items-center justify-center shrink-0 border border-border rounded-[10px]"
             style={{ width: 44, height: 44 }}
             onClick={() => setIsScanEquipmentOpen(true)}
             disabled={isEquipmentLoading}
@@ -1016,7 +1066,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </div>
           ) : !taskStarted ? (
             <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-indigo-700 dark:bg-indigo-600 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
               onClick={handleStartTask}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-start"
@@ -1026,7 +1076,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </button>
           ) : isPaused ? (
             <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-indigo-700 dark:bg-indigo-600 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
               onClick={handleResume}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-resume"
@@ -1071,11 +1121,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               isLoading={addUploadMutation.isPending}
             >
               <div
-                className={`flex items-center justify-center rounded-[10px] ${taskStarted ? "border-indigo-700 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40" : "border-border bg-transparent"}`}
-                style={{ width: 44, height: 44, borderWidth: 1 }}
+                className={`flex items-center justify-center rounded-[10px] ${taskStarted ? "border-primary bg-primary/10" : "border-border"}`}
+                style={{ width: 44, height: 44, borderWidth: 1, borderStyle: "solid" }}
               >
                 <Camera
-                  className={`w-5 h-5 ${taskStarted ? "text-indigo-700 dark:text-indigo-400" : "text-muted-foreground"}`}
+                  className={`w-5 h-5 ${taskStarted ? "text-primary" : "text-muted-foreground"}`}
                 />
               </div>
             </ObjectUploader>
@@ -1091,7 +1141,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="dialog-pause-complete"
           >
@@ -1112,7 +1162,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 Pause — resume later
               </button>
               <button
-                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion ? "bg-gray-400 opacity-70" : "bg-green-700 dark:bg-green-600"}`}
+                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion ? "bg-muted-foreground opacity-70" : "bg-green-700 dark:bg-green-600"}`}
                 onClick={handleMarkComplete}
                 disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
                 data-testid="button-mark-complete"
@@ -1145,7 +1195,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="sheet-estimate"
           >
@@ -1162,7 +1212,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 {quotes.map((quote) => (
                   <div
                     key={quote.id}
-                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700"
+                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
                     data-testid={`estimate-row-${quote.id}`}
                   >
                     {quote.vendorName && (
@@ -1184,7 +1234,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             )}
             {task.estimateStatus !== "approved" && (
               <button
-                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 border-2 border-dashed border-amber-600 dark:border-amber-400 text-amber-600 dark:text-amber-400 bg-transparent"
+                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 border-2 border-dashed border-amber-600 text-amber-600 dark:text-amber-400 dark:border-amber-400 bg-transparent"
                 onClick={() => {
                   setIsEstimateSheetOpen(false);
                   props.setIsAddQuoteDialogOpen(true);
@@ -1207,7 +1257,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="modal-add-part"
           >
@@ -1222,7 +1272,9 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             <div className="space-y-3">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  />
                   <Input
                     placeholder="Search inventory..."
                     value={inventorySearchQuery}
@@ -1235,7 +1287,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   />
                 </div>
                 <button
-                  className="flex items-center justify-center shrink-0 rounded-lg border border-border"
+                  className="flex items-center justify-center shrink-0 border border-border rounded-lg"
                   style={{ width: 40, height: 40 }}
                   onClick={() => {
                     setIsPartModalOpen(false);
@@ -1256,7 +1308,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     .map((item) => (
                       <div
                         key={item.id}
-                        className="px-3 py-2 cursor-pointer text-sm text-foreground border-b border-border/50 hover:bg-muted/50"
+                        className="px-3 py-2 cursor-pointer text-sm border-b border-border/50 text-foreground hover-elevate"
                         onClick={() => {
                           setSelectedInventoryItemId(item.id);
                           setInventorySearchQuery(item.name);
@@ -1269,7 +1321,9 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               )}
 
               {selectedInventoryItemId && (
-                <div className="p-2 rounded-md text-sm font-medium bg-muted text-foreground">
+                <div
+                  className="p-2 rounded-md text-sm font-medium bg-muted text-foreground"
+                >
                   {inventoryItems.find((i) => i.id === selectedInventoryItemId)?.name}
                 </div>
               )}
@@ -1316,7 +1370,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
               <div className="flex gap-2 pt-2">
                 <button
-                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-indigo-700 dark:bg-indigo-600"
+                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-primary"
                   onClick={() => {
                     addPartMutation.mutate();
                     setIsPartModalOpen(false);
@@ -1356,7 +1410,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg max-h-[70vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg max-h-[70vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="sheet-resources"
           >
@@ -1381,7 +1435,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                       data-testid={`resource-row-${resource.id}`}
                     >
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${isVideo ? "bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400" : "bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400"}`}
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${isVideo ? "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400" : "bg-violet-100 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400"}`}
                       >
                         {isVideo ? "VID" : "PDF"}
                       </span>
@@ -1404,7 +1458,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="modal-add-estimate"
           >
@@ -1422,7 +1476,9 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   Estimated Cost
                 </Label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <DollarSign
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  />
                   <Input
                     type="number"
                     step="0.01"
@@ -1478,7 +1534,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               </div>
               <div className="flex gap-2 pt-2">
                 <button
-                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-indigo-700 dark:bg-indigo-600"
+                  className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-primary"
                   onClick={() =>
                     createQuoteMutation.mutate({
                       vendorName: newQuoteVendorName,
@@ -1512,7 +1568,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="sheet-previous-work"
           >
@@ -1554,13 +1610,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                             </span>
                           )}
                           {prevTask.updatedAt && (
-                            <span className="text-xs text-muted-foreground/70">
+                            <span className="text-xs text-muted-foreground">
                               {format(new Date(prevTask.updatedAt), "MMM d, yyyy")}
                             </span>
                           )}
                         </div>
                       </div>
-                      <Check className="w-4 h-4 shrink-0 mt-0.5 text-green-700 dark:text-green-400" />
+                      <Check className="w-4 h-4 shrink-0 mt-0.5 text-green-600 dark:text-green-400" />
                     </div>
                   </button>
                 );

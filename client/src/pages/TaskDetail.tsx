@@ -560,7 +560,8 @@ export default function TaskDetail() {
   }, [location, activeTimer, allowNavigation, id, isLeaveConfirmDialogOpen, navigate]);
 
   const safeNavigate = (path: string) => {
-    if (activeTimer) {
+    const isSubtaskNav = subTasks?.some(st => path === `/tasks/${st.id}`);
+    if (activeTimer && !isSubtaskNav) {
       setPendingNavigation(path);
       setIsLeaveConfirmDialogOpen(true);
     } else {
@@ -1263,7 +1264,7 @@ export default function TaskDetail() {
 
   if (isStudent) {
     return (
-      <div className="flex flex-col min-h-screen bg-background pb-28">
+      <div className="flex flex-col h-full bg-background pb-28">
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
             {isSubTask && parentTask && (
@@ -1840,7 +1841,7 @@ export default function TaskDetail() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-24">
+    <div className="flex flex-col h-full bg-background" style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}>
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">

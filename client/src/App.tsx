@@ -151,7 +151,7 @@ function AuthenticatedApp() {
                 )}
               </div>
             </header>
-            <main className={`flex-1 overflow-auto bg-muted/20 ${(user?.role === "student" || user?.role === "technician") ? "px-0 py-0" : "px-8 py-6"}`}>
+            <main className={`flex-1 bg-muted/20 ${(user?.role === "student" || user?.role === "technician") ? "px-0 py-0" : "px-8 py-6"} ${/^\/tasks\/[a-f0-9-]+$/i.test(currentPath) ? "overflow-hidden" : "overflow-auto"}`}>
               {(user?.role === "student" || user?.role === "technician") && (
                 <PwaInstallBanner />
               )}
