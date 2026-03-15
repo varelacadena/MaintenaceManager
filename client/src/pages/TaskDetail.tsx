@@ -489,22 +489,6 @@ export default function TaskDetail() {
   }, [task, allTasks]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const section = params.get("section");
-    if (!section) return;
-
-    if (section === "messages") {
-      setMessagesExpanded(true);
-      setTimeout(() => messagesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } else if (section === "parts") {
-      setPartsExpanded(true);
-      setTimeout(() => partsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } else if (section === "history") {
-      setIsHistorySheetOpen(true);
-    }
-  }, []);
-
-  useEffect(() => {
     const runningEntry = timeEntries.find((e) => e.startTime && !e.endTime);
     if (runningEntry) {
       setActiveTimer(runningEntry.id);
@@ -1867,16 +1851,6 @@ export default function TaskDetail() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
-          {window.location.search.includes("view=full") && (
-            <button
-              className="flex items-center gap-1.5 text-sm text-primary"
-              onClick={() => navigate(`/tasks/${id}`)}
-              data-testid="link-back-to-mobile"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to task
-            </button>
-          )}
           {isSubTask && parentTask && (
             <button
               className="flex items-center gap-1.5 text-sm text-primary"

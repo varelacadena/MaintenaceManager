@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,17 +35,19 @@ import {
   Flag,
   Calendar,
   X,
+  Send,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload } from "@shared/schema";
+import type { Task, User, Property, Upload, Message, PartUsed } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
 import { ObjectUploader } from "./ObjectUploader";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { format } from "date-fns";
 
 const statusDotColors: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -97,6 +100,11 @@ export default function MobileTaskDetail() {
   const [noteText, setNoteText] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
+  const [isMessagesSheetOpen, setIsMessagesSheetOpen] = useState(false);
+  const [newMessageText, setNewMessageText] = useState("");
+  const [isPartsSheetOpen, setIsPartsSheetOpen] = useState(false);
+  const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -146,6 +154,63 @@ export default function MobileTaskDetail() {
     queryKey: ["/api/time-entries/task", id],
     enabled: !!id,
   });
+
+  const { data: taskMessages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages/task", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/messages/task/${id}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!id,
+    refetchInterval: isMessagesSheetOpen ? 5000 : false,
+  });
+
+  const { data: taskParts = [] } = useQuery<PartUsed[]>({
+    queryKey: ["/api/parts/task", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/parts/task/${id}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!id,
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", "/api/messages", { taskId: id, content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      setNewMessageText("");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  const markMessagesReadMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/messages/task/${id}/mark-read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
+  useEffect(() => {
+    if (isMessagesSheetOpen && taskMessages.length > 0) {
+      markMessagesReadMutation.mutate();
+    }
+  }, [isMessagesSheetOpen, taskMessages.length]);
+
+  useEffect(() => {
+    if (isMessagesSheetOpen) {
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    }
+  }, [isMessagesSheetOpen, taskMessages.length]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -668,23 +733,50 @@ export default function MobileTaskDetail() {
 
         {/* Secondary links card */}
         <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#FFFFFF", border: "1px solid #EEEEEE" }}>
-          {[
-            { label: "Messages", icon: MessageSquare, testId: "link-mobile-messages", section: "messages" },
-            { label: "Parts Used", icon: Package, testId: "link-mobile-parts", section: "parts" },
-            { label: "History", icon: History, testId: "link-mobile-history", section: "history" },
-          ].map((link, idx) => (
-            <button
-              key={link.label}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
-              style={idx < 2 ? { borderBottom: "1px solid #EEEEEE" } : undefined}
-              onClick={() => navigate(`/tasks/${id}?section=${link.section}&view=full`)}
-              data-testid={link.testId}
-            >
-              <link.icon className="w-4 h-4" style={{ color: "#6B7280" }} />
-              <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>{link.label}</span>
-              <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-            </button>
-          ))}
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+            style={{ borderBottom: "1px solid #EEEEEE" }}
+            onClick={() => setIsMessagesSheetOpen(true)}
+            data-testid="link-mobile-messages"
+          >
+            <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
+            <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>Messages</span>
+            {taskMessages.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
+                {taskMessages.length}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          </button>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+            style={{ borderBottom: "1px solid #EEEEEE" }}
+            onClick={() => setIsPartsSheetOpen(true)}
+            data-testid="link-mobile-parts"
+          >
+            <Package className="w-4 h-4" style={{ color: "#6B7280" }} />
+            <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>Parts Used</span>
+            {taskParts.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+                {taskParts.length}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          </button>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+            onClick={() => setIsHistorySheetOpen(true)}
+            data-testid="link-mobile-history"
+          >
+            <History className="w-4 h-4" style={{ color: "#6B7280" }} />
+            <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>History</span>
+            {(timeEntries?.length || 0) > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
+                {timeEntries?.length}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+          </button>
         </div>
 
         {/* Completed success banner */}
@@ -921,6 +1013,226 @@ export default function MobileTaskDetail() {
         title="Scan Equipment"
         description="Scan a QR code or barcode"
       />
+
+      {/* Messages Sheet */}
+      {isMessagesSheetOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center"
+          onClick={() => setIsMessagesSheetOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-card rounded-t-2xl flex flex-col"
+            style={{ height: "80vh", maxHeight: "80vh" }}
+            onClick={(e) => e.stopPropagation()}
+            data-testid="sheet-messages"
+          >
+            <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid #EEEEEE" }}>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
+                <p className="text-sm font-semibold text-foreground">Messages</p>
+                {taskMessages.length > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
+                    {taskMessages.length}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setIsMessagesSheetOpen(false)} data-testid="button-close-messages">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {taskMessages.length === 0 ? (
+                <p className="text-xs text-center py-8" style={{ color: "#9CA3AF" }}>No messages yet</p>
+              ) : (
+                taskMessages.map((msg) => {
+                  const sender = allUsers?.find(u => u.id === msg.senderId);
+                  const isOwnMessage = msg.senderId === user?.id;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}
+                      data-testid={`message-item-${msg.id}`}
+                    >
+                      <p className="text-[11px] font-medium mb-0.5" style={{ color: "#6B7280" }}>
+                        {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
+                      </p>
+                      <div
+                        className="rounded-xl px-3 py-2 max-w-[80%]"
+                        style={{
+                          backgroundColor: isOwnMessage ? "#4338CA" : "#F3F4F6",
+                          color: isOwnMessage ? "#FFFFFF" : "#1A1A1A",
+                        }}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                      <p className="text-[10px] mt-0.5" style={{ color: "#9CA3AF" }}>
+                        {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="shrink-0 px-4 py-3 flex gap-2" style={{ borderTop: "1px solid #EEEEEE" }}>
+              <Input
+                value={newMessageText}
+                onChange={(e) => setNewMessageText(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && newMessageText.trim()) {
+                    e.preventDefault();
+                    sendMessageMutation.mutate(newMessageText.trim());
+                  }
+                }}
+                data-testid="input-mobile-message"
+              />
+              <Button
+                size="icon"
+                style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+                onClick={() => newMessageText.trim() && sendMessageMutation.mutate(newMessageText.trim())}
+                disabled={!newMessageText.trim() || sendMessageMutation.isPending}
+                data-testid="button-send-message"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parts Used Sheet */}
+      {isPartsSheetOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center"
+          onClick={() => setIsPartsSheetOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-card rounded-t-2xl flex flex-col"
+            style={{ maxHeight: "70vh" }}
+            onClick={(e) => e.stopPropagation()}
+            data-testid="sheet-parts"
+          >
+            <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid #EEEEEE" }}>
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4" style={{ color: "#6B7280" }} />
+                <p className="text-sm font-semibold text-foreground">Parts Used</p>
+                {taskParts.length > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+                    {taskParts.length}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setIsPartsSheetOpen(false)} data-testid="button-close-parts">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              {taskParts.length === 0 ? (
+                <p className="text-xs text-center py-8" style={{ color: "#9CA3AF" }}>No parts used yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {taskParts.map((part) => (
+                    <div
+                      key={part.id}
+                      className="flex items-center justify-between p-3 rounded-lg"
+                      style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}
+                      data-testid={`part-item-${part.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: "#1A1A1A" }}>{part.partName}</p>
+                        {part.notes && (
+                          <p className="text-xs mt-0.5 truncate" style={{ color: "#6B7280" }}>{part.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-3">
+                        <span className="text-xs font-medium" style={{ color: "#6B7280" }}>
+                          x{part.quantity}
+                        </span>
+                        {part.cost !== null && part.cost !== undefined && Number(part.cost) > 0 && (
+                          <span className="text-xs font-medium" style={{ color: "#15803D" }}>
+                            ${Number(part.cost).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Sheet */}
+      {isHistorySheetOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center"
+          onClick={() => setIsHistorySheetOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-card rounded-t-2xl flex flex-col"
+            style={{ maxHeight: "70vh" }}
+            onClick={(e) => e.stopPropagation()}
+            data-testid="sheet-history"
+          >
+            <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid #EEEEEE" }}>
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4" style={{ color: "#6B7280" }} />
+                <p className="text-sm font-semibold text-foreground">Time History</p>
+              </div>
+              <button onClick={() => setIsHistorySheetOpen(false)} data-testid="button-close-history">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              {(!timeEntries || timeEntries.length === 0) ? (
+                <p className="text-xs text-center py-8" style={{ color: "#9CA3AF" }}>No time entries yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {timeEntries.map((entry: any) => {
+                    const entryUser = allUsers?.find(u => u.id === entry.userId);
+                    const isRunning = entry.startTime && !entry.endTime;
+                    const duration = entry.durationMinutes
+                      ? `${Math.floor(entry.durationMinutes / 60)}h ${entry.durationMinutes % 60}m`
+                      : isRunning ? "Running" : "—";
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-center justify-between p-3 rounded-lg"
+                        style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}
+                        data-testid={`history-entry-${entry.id}`}
+                      >
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                            {entryUser ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username : "Unknown"}
+                          </p>
+                          <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
+                            {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : "No start time"}
+                          </p>
+                        </div>
+                        <span
+                          className="text-xs font-medium px-2 py-1 rounded"
+                          style={{
+                            backgroundColor: isRunning ? "#EEF2FF" : "#F3F4F6",
+                            color: isRunning ? "#4338CA" : "#6B7280",
+                          }}
+                        >
+                          {duration}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

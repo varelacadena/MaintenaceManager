@@ -56,6 +56,7 @@ export async function applyMigrations() {
     { file: "042_add_subtasks_and_task_log_link.sql", name: "042_add_subtasks_and_task_log_link" },
     { file: "043_add_lockboxes_and_codes.sql", name: "043_add_lockboxes_and_codes" },
     { file: "044_add_resource_folders.sql", name: "044_add_resource_folders" },
+    { file: "045_nullable_message_request_id.sql", name: "045_nullable_message_request_id" },
   ];
 
   try {
