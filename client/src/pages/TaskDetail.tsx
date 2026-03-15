@@ -779,7 +779,7 @@ export default function TaskDetail() {
     onSuccess: async (data: TimeEntry) => {
       setActiveTimer(data.id);
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
-      if (task?.status === "not_started") {
+      if (task?.status === "not_started" || task?.status === "waiting_approval") {
         try {
           await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: "in_progress" });
           queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
@@ -923,6 +923,17 @@ export default function TaskDetail() {
       toast({ title: "Note added" });
     },
     onError: () => toast({ title: "Failed to add note", variant: "destructive" }),
+  });
+
+  const updateNoteMutation = useMutation({
+    mutationFn: async ({ noteId, content }: { noteId: string, content: string }) => {
+      const response = await apiRequest("PATCH", `/api/task-notes/${noteId}`, { content });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
+    },
+    onError: () => toast({ title: "Failed to update note", variant: "destructive" }),
   });
 
   const deleteNoteMutation = useMutation({
@@ -1758,6 +1769,7 @@ export default function TaskDetail() {
         stopTimerMutation={stopTimerMutation}
         updateStatusMutation={updateStatusMutation}
         addNoteMutation={addNoteMutation}
+        updateNoteMutation={updateNoteMutation}
         addUploadMutation={addUploadMutation}
         addPartMutation={addPartMutation}
         toggleChecklistItemMutation={toggleChecklistItemMutation}

@@ -256,6 +256,7 @@ export interface IStorage {
   createTaskNote(note: InsertTaskNote): Promise<TaskNote>;
   getTaskNote(id: string): Promise<TaskNote | undefined>;
   getNotesByTask(taskId: string): Promise<TaskNote[]>;
+  updateTaskNote(id: string, content: string): Promise<TaskNote>;
   deleteTaskNote(id: string): Promise<void>;
 
   // Task checklist operations (legacy flat model)
@@ -1141,6 +1142,15 @@ export class DatabaseStorage implements IStorage {
       .from(taskNotes)
       .where(eq(taskNotes.taskId, taskId))
       .orderBy(taskNotes.createdAt);
+  }
+
+  async updateTaskNote(id: string, content: string): Promise<TaskNote> {
+    const [note] = await this.db
+      .update(taskNotes)
+      .set({ content })
+      .where(eq(taskNotes.id, id))
+      .returning();
+    return note;
   }
 
   async deleteTaskNote(id: string): Promise<void> {

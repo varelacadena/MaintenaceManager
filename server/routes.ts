@@ -2612,6 +2612,41 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   );
 
+  app.patch("/api/task-notes/:id", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const noteId = req.params.id;
+      const { content } = req.body;
+
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ message: "Content is required" });
+      }
+
+      const note = await storage.getTaskNote(noteId);
+      if (!note) {
+        return res.status(404).json({ message: "Task note not found" });
+      }
+
+      const currentUser = await storage.getUser(userId);
+      if (note.userId !== userId && currentUser?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: You can only update your own notes" });
+      }
+
+      if (note.taskId) {
+        const hasAccess = await canAccessTask(userId, note.taskId);
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+        }
+      }
+
+      const updated = await storage.updateTaskNote(noteId, content);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating task note:", error);
+      res.status(500).json({ message: "Failed to update task note" });
+    }
+  });
+
   app.delete("/api/task-notes/:id", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;

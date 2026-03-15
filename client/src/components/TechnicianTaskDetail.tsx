@@ -23,6 +23,8 @@ import {
   ScanLine,
   Plus,
   DollarSign,
+  Info,
+  ArrowLeft,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +39,7 @@ import {
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import ResourceCard from "@/components/ResourceCard";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -93,6 +96,7 @@ interface TechnicianTaskDetailProps {
   stopTimerMutation: any;
   updateStatusMutation: any;
   addNoteMutation: any;
+  updateNoteMutation?: any;
   addUploadMutation: any;
   addPartMutation: any;
   toggleChecklistItemMutation: any;
@@ -153,6 +157,7 @@ const PASTEL_COLORS = ["#BFDBFE", "#BBF7D0", "#FED7AA", "#FECDD3", "#DDD6FE"];
 function getGradient(status: string, isPaused: boolean): string {
   if (isPaused) return "linear-gradient(135deg, #374151 0%, #4B5563 100%)";
   if (status === "in_progress") return "linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 55%, #3b82f6 100%)";
+  if (status === "waiting_approval") return "linear-gradient(135deg, #92400E 0%, #D97706 60%, #F59E0B 100%)";
   return "linear-gradient(135deg, #3730A3 0%, #4338CA 60%, #6366F1 100%)";
 }
 
@@ -160,6 +165,7 @@ function getStatusLabel(status: string, isPaused: boolean): string {
   if (isPaused) return "Paused";
   if (status === "in_progress") return "In Progress";
   if (status === "completed") return "Completed";
+  if (status === "waiting_approval") return "Waiting Approval";
   return "Not Started";
 }
 
@@ -177,7 +183,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     allTaskResources, previousWork, users,
     isParentTask, isSubTask, completedSubTasks, subTaskProgress,
     totalChecklistItems, completedChecklistItems, estimateBlocksCompletion,
-    startTimerMutation, stopTimerMutation, addNoteMutation, addUploadMutation,
+    startTimerMutation, stopTimerMutation, addNoteMutation, updateNoteMutation, addUploadMutation,
     addPartMutation, toggleChecklistItemMutation, createQuoteMutation, deleteQuoteMutation,
     safeNavigate, getUploadParameters, handleAutoSaveUpload,
     handleEquipmentScan, handleScanPart,
@@ -207,16 +213,19 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isPreviousWorkOpen, setIsPreviousWorkOpen] = useState(false);
 
-  const [noteText, setNoteText] = useState("");
+  const existingJobNote = notes.find((n) => n.noteType === "job_note");
+  const [noteText, setNoteText] = useState(existingJobNote?.content || "");
+  const [currentNoteId, setCurrentNoteId] = useState<string | null>(existingJobNote?.id || null);
   const [saveIndicator, setSaveIndicator] = useState<"idle" | "saving" | "saved">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteInitializedRef = useRef(false);
 
-  const taskStarted = task.status === "in_progress" || task.status === "completed";
+  const taskStarted = task.status === "in_progress" || task.status === "completed" || task.status === "waiting_approval";
   const isRunning = !!activeTimer && !isPaused;
 
   useEffect(() => {
-    if (task.status === "in_progress" && !activeTimer) {
+    if ((task.status === "in_progress" || task.status === "waiting_approval") && !activeTimer) {
       setIsPaused(true);
     } else if (activeTimer) {
       setIsPaused(false);
@@ -252,7 +261,22 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     }
   }, [isPaused, activeTimer, timeEntries]);
 
-  const pendingSaveRef = useRef<string>("");
+  useEffect(() => {
+    noteInitializedRef.current = false;
+  }, [task.id]);
+
+  useEffect(() => {
+    if (!noteInitializedRef.current) {
+      if (existingJobNote) {
+        setNoteText(existingJobNote.content || "");
+        setCurrentNoteId(existingJobNote.id);
+      } else {
+        setNoteText("");
+        setCurrentNoteId(null);
+      }
+      noteInitializedRef.current = true;
+    }
+  }, [existingJobNote, task.id]);
 
   const handleNoteChange = useCallback((value: string) => {
     setNoteText(value);
@@ -264,14 +288,20 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     setSaveIndicator("saving");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const trimmed = value.trim();
-    pendingSaveRef.current = trimmed;
     debounceRef.current = setTimeout(async () => {
       try {
-        await addNoteMutation.mutateAsync({ content: trimmed, noteType: "job_note" });
-        setNoteText((current) => {
-          if (current.trim() === trimmed || current.trim() === "") return "";
-          return current;
-        });
+        if (currentNoteId) {
+          await apiRequest("PATCH", `/api/task-notes/${currentNoteId}`, { content: trimmed });
+        } else {
+          const response = await apiRequest("POST", "/api/task-notes", {
+            taskId: task.id,
+            content: trimmed,
+            noteType: "job_note",
+          });
+          const created = await response.json();
+          if (created?.id) setCurrentNoteId(created.id);
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", task.id] });
         setSaveIndicator("saved");
         if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current);
         savedIndicatorRef.current = setTimeout(() => setSaveIndicator("idle"), 2000);
@@ -279,7 +309,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         setSaveIndicator("idle");
       }
     }, 1200);
-  }, [addNoteMutation]);
+  }, [currentNoteId, task.id]);
 
   const handleStartTask = () => {
     startTimerMutation.mutate();
@@ -393,29 +423,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
   return (
     <div className="flex flex-col min-h-[100dvh] md:min-h-full" style={{ backgroundColor: "#F8F8F8" }}>
-      {/* Top Navigation Bar — back button only, Sign Out is in the global header */}
-      {isSubTask && parentTask && (
-        <div
-          className="flex items-center px-4 shrink-0"
-          style={{
-            height: 44,
-            backgroundColor: "#FFFFFF",
-            borderBottom: "1px solid #EEEEEE",
-          }}
-          data-testid="tech-top-nav"
-        >
-          <button
-            className="flex items-center gap-1 text-sm font-medium"
-            style={{ color: "#4338CA" }}
-            onClick={() => safeNavigate(`/tasks/${task.parentTaskId}`)}
-            data-testid="link-back-to-parent"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="truncate max-w-[200px]">{parentTask.name}</span>
-          </button>
-        </div>
-      )}
-
       {/* Hero Header */}
       <div
         className="px-4 pt-4 pb-5 shrink-0"
@@ -427,6 +434,25 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       >
         <div className="flex items-center justify-between flex-wrap gap-1 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              className="flex items-center justify-center shrink-0"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                backgroundColor: "rgba(255,255,255,0.18)",
+              }}
+              onClick={() => {
+                if (isSubTask && task.parentTaskId) {
+                  safeNavigate(`/tasks/${task.parentTaskId}`);
+                } else {
+                  safeNavigate("/work");
+                }
+              }}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-white" />
+            </button>
             <span
               className="px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
               style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
@@ -528,6 +554,28 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         <div className="px-2.5 py-2 space-y-2">
           {activeTab === "task" ? (
             <>
+              {/* Estimate pending banner */}
+              {estimateBlocksCompletion && (
+                <div
+                  className="flex items-start gap-2.5 p-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#FEF9EC",
+                    border: "1px solid #FDE68A",
+                  }}
+                  data-testid="banner-estimate-pending"
+                >
+                  <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
+                  <div>
+                    <p className="text-xs font-medium" style={{ color: "#92400E" }}>
+                      Estimate pending approval
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "#B45309" }}>
+                      This task cannot be completed until the estimate is approved by an admin.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Card 1 — Instructions */}
               {task.instructions && (
                 <div
@@ -799,9 +847,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   }}
                   data-testid="textarea-auto-note"
                 />
-                {notes.length > 0 && (
+                {notes.filter((n) => n.id !== currentNoteId).length > 0 && (
                   <div className="space-y-2 mt-3">
                     {[...notes]
+                      .filter((n) => n.id !== currentNoteId)
                       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
                       .map((note) => (
                         <div
@@ -1266,7 +1315,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               </button>
               <button
                 className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
-                style={{ backgroundColor: "#15803D" }}
+                style={{
+                  backgroundColor: estimateBlocksCompletion ? "#9CA3AF" : "#15803D",
+                  opacity: estimateBlocksCompletion ? 0.7 : 1,
+                }}
                 onClick={handleMarkComplete}
                 disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
                 data-testid="button-mark-complete"
@@ -1274,6 +1326,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 <Check className="w-4 h-4" />
                 Mark as complete
               </button>
+              {estimateBlocksCompletion && (
+                <p className="text-[11px] text-center mt-1" style={{ color: "#D97706" }} data-testid="text-estimate-block-reason">
+                  Estimate must be approved before completing
+                </p>
+              )}
               <button
                 className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center"
                 style={{
