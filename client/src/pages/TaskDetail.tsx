@@ -318,6 +318,8 @@ export default function TaskDetail() {
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesSectionRef = useRef<HTMLDivElement>(null);
+  const partsSectionRef = useRef<HTMLDivElement>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -485,6 +487,22 @@ export default function TaskDetail() {
       })
       .slice(0, 10);
   }, [task, allTasks]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get("section");
+    if (!section) return;
+
+    if (section === "messages") {
+      setMessagesExpanded(true);
+      setTimeout(() => messagesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    } else if (section === "parts") {
+      setPartsExpanded(true);
+      setTimeout(() => partsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    } else if (section === "history") {
+      setIsHistorySheetOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     const runningEntry = timeEntries.find((e) => e.startTime && !e.endTime);
@@ -1849,6 +1867,16 @@ export default function TaskDetail() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
+          {window.location.search.includes("view=full") && (
+            <button
+              className="flex items-center gap-1.5 text-sm text-primary"
+              onClick={() => navigate(`/tasks/${id}`)}
+              data-testid="link-back-to-mobile"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to task
+            </button>
+          )}
           {isSubTask && parentTask && (
             <button
               className="flex items-center gap-1.5 text-sm text-primary"
@@ -2541,7 +2569,7 @@ export default function TaskDetail() {
           {isTechnicianOrAdmin && (
             <Collapsible open={messagesExpanded} onOpenChange={setMessagesExpanded}>
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-messages">
+                <div ref={messagesSectionRef} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-messages">
                   <div className="flex items-center gap-3">
                     <MessageSquare className="w-5 h-5 text-primary" />
                     <span className="font-medium">Messages</span>
@@ -2845,7 +2873,7 @@ export default function TaskDetail() {
           {isTechnicianOrAdmin && (
             <Collapsible open={partsExpanded} onOpenChange={setPartsExpanded}>
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-parts">
+                <div ref={partsSectionRef} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-parts">
                   <div className="flex items-center gap-3">
                     <Package className="w-5 h-5 text-primary" />
                     <span className="font-medium">Parts Used</span>
