@@ -420,14 +420,15 @@ export default function MobileTaskDetail() {
 
   const totalTime = useMemo(() => {
     if (!timeEntries?.length) return "0h 0m";
-    const totalMs = timeEntries.reduce((acc: number, te: any) => {
+    const totalMinutes = timeEntries.reduce((acc: number, te: any) => {
+      if (te.durationMinutes) return acc + te.durationMinutes;
       if (te.startTime && te.endTime) {
-        return acc + (new Date(te.endTime).getTime() - new Date(te.startTime).getTime());
+        return acc + Math.round((new Date(te.endTime).getTime() - new Date(te.startTime).getTime()) / 60000);
       }
       return acc;
     }, 0);
-    const hours = Math.floor(totalMs / 3600000);
-    const mins = Math.floor((totalMs % 3600000) / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
     return `${hours}h ${mins}m`;
   }, [timeEntries]);
 
