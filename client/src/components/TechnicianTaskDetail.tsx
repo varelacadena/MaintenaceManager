@@ -440,15 +440,15 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       {/* Hero Header */}
       <div
-        className="px-4 py-4 shrink-0"
+        className="px-4 pt-4 pb-5 shrink-0"
         style={{
           background: getGradient(task.status, isPaused),
           transition: "background 0.4s",
         }}
         data-testid="tech-hero"
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-1 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <span
               className="px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
               style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
@@ -497,16 +497,24 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           )}
         </div>
         <h1
-          className="text-base font-bold text-white leading-tight mb-1"
+          className="text-lg font-bold text-white leading-snug mb-1.5"
           data-testid="text-task-name"
         >
           {task.name}
         </h1>
         {locationText && (
           <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.6)" }} />
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
+            <span className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
               {locationText}
+            </span>
+          </div>
+        )}
+        {task.dueDate && (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.7)" }} />
+            <span className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+              Due {format(new Date(task.dueDate), "MMM d, yyyy")}
             </span>
           </div>
         )}
