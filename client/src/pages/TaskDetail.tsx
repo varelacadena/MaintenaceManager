@@ -1084,6 +1084,9 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
       toast({ title: "Attachment deleted" });
     },
+    onError: () => {
+      toast({ title: "Delete failed", description: "Could not remove attachment", variant: "destructive" });
+    },
   });
 
   const toggleChecklistItemMutation = useMutation({
@@ -1783,6 +1786,7 @@ export default function TaskDetail() {
         addNoteMutation={addNoteMutation}
         updateNoteMutation={updateNoteMutation}
         addUploadMutation={addUploadMutation}
+        deleteUploadMutation={deleteUploadMutation}
         addPartMutation={addPartMutation}
         toggleChecklistItemMutation={toggleChecklistItemMutation}
         createQuoteMutation={createQuoteMutation}

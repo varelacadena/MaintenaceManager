@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   Flag,
   Calendar,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +42,9 @@ import type { Task, User, Property, Upload } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
+import { ObjectUploader } from "./ObjectUploader";
+import { BarcodeScanner } from "./BarcodeScanner";
+import { toDisplayUrl } from "@/lib/imageUtils";
 
 const statusDotColors: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -89,6 +93,10 @@ export default function MobileTaskDetail() {
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isNoteSheetOpen, setIsNoteSheetOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -179,6 +187,86 @@ export default function MobileTaskDetail() {
     },
   });
 
+
+  const addUploadMutation = useMutation({
+    mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
+      const response = await apiRequest("PUT", "/api/uploads", {
+        taskId: id,
+        fileName,
+        fileType,
+        objectUrl,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
+      toast({ title: "File uploaded" });
+    },
+    onError: () => {
+      toast({ title: "Upload failed", description: "Could not save attachment", variant: "destructive" });
+    },
+  });
+
+  const deleteUploadMutation = useMutation({
+    mutationFn: async (uploadId: string) => {
+      return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
+      toast({ title: "Attachment deleted" });
+    },
+    onError: () => {
+      toast({ title: "Delete failed", description: "Could not remove attachment", variant: "destructive" });
+    },
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", "/api/task-notes", {
+        taskId: id,
+        content,
+        noteType: "job_note",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
+      toast({ title: "Note added" });
+      setNoteText("");
+      setIsNoteSheetOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add note", variant: "destructive" });
+    },
+  });
+
+  const getUploadParameters = async () => {
+    const response = await fetch("/api/objects/upload", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to get upload parameters");
+    }
+    const { uploadURL } = await response.json();
+    return { method: "PUT" as const, url: uploadURL };
+  };
+
+  const handleAutoSaveUpload = async (result: any) => {
+    if (result.successful?.length > 0) {
+      for (const file of result.successful) {
+        await addUploadMutation.mutateAsync({
+          fileName: file.name,
+          fileType: file.type || "application/octet-stream",
+          objectUrl: file.uploadURL || file.url,
+        });
+      }
+    }
+  };
+
+  const handleEquipmentScan = (value: string) => {
+    setIsScannerOpen(false);
+    toast({ title: "Scanned", description: `Code: ${value}` });
+  };
 
   const toggleSubtaskExpanded = (subtaskId: string) => {
     setExpandedSubtasks(prev => {
@@ -430,12 +518,16 @@ export default function MobileTaskDetail() {
                       : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
                       : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
                     return (
-                      <a
+                      <button
                         key={upload.id}
-                        href={upload.objectUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 py-1.5 px-1 rounded hover-elevate"
+                        onClick={() => {
+                          if (isImage) {
+                            setPreviewUpload(upload);
+                          } else {
+                            window.open(toDisplayUrl(upload.objectUrl), "_blank");
+                          }
+                        }}
+                        className="flex items-center gap-2 py-1.5 px-1 rounded hover-elevate w-full text-left"
                         data-testid={`mobile-resource-item-${upload.id}`}
                       >
                         <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
@@ -446,7 +538,7 @@ export default function MobileTaskDetail() {
                           {upload.fileName}
                         </span>
                         <ChevronRight className="w-3 h-3 shrink-0" style={{ color: "#9CA3AF" }} />
-                      </a>
+                      </button>
                     );
                   })
                 )}
@@ -621,19 +713,26 @@ export default function MobileTaskDetail() {
           data-testid="mobile-bottom-bar"
         >
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              style={{ borderColor: "#EEEEEE", color: "#6B7280" }}
-              data-testid="button-mobile-photos"
-              aria-label="Photos"
+            <ObjectUploader
+              maxNumberOfFiles={5}
+              maxFileSize={10485760}
+              onGetUploadParameters={getUploadParameters}
+              onComplete={handleAutoSaveUpload}
+              onError={(error) => {
+                toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+              }}
+              buttonVariant="outline"
+              buttonClassName=""
+              buttonTestId="button-mobile-photos"
+              isLoading={addUploadMutation.isPending}
             >
               <Camera className="w-4 h-4" />
-            </Button>
+            </ObjectUploader>
             <Button
               variant="outline"
               size="icon"
               style={{ borderColor: "#EEEEEE", color: "#6B7280" }}
+              onClick={() => setIsScannerOpen(true)}
               data-testid="button-mobile-scan"
               aria-label="Scan"
             >
@@ -643,6 +742,7 @@ export default function MobileTaskDetail() {
               variant="outline"
               size="icon"
               style={{ borderColor: "#EEEEEE", color: "#6B7280" }}
+              onClick={() => setIsNoteSheetOpen(true)}
               data-testid="button-mobile-note"
               aria-label="Note"
             >
@@ -709,6 +809,118 @@ export default function MobileTaskDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Note Sheet */}
+      {isNoteSheetOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+          onClick={() => setIsNoteSheetOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full sm:max-w-lg bg-card rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="sheet-add-note"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-foreground">Add Note</p>
+              <button onClick={() => setIsNoteSheetOpen(false)}>
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <Textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Type your note..."
+              rows={4}
+              className="mb-3"
+              data-testid="input-mobile-note"
+            />
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+                onClick={() => noteText.trim() && addNoteMutation.mutate(noteText.trim())}
+                disabled={!noteText.trim() || addNoteMutation.isPending}
+                data-testid="button-submit-note"
+              >
+                Save Note
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setIsNoteSheetOpen(false); setNoteText(""); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Preview Modal */}
+      {previewUpload && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center"
+          onClick={() => setPreviewUpload(null)}
+        >
+          <div className="absolute inset-0 bg-black/70" />
+          <div
+            className="relative w-full max-w-lg mx-4"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="modal-photo-preview"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-white truncate flex-1 mr-4">
+                {previewUpload.fileName}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600"
+                  style={{ width: 32, height: 32 }}
+                  onClick={async () => {
+                    try {
+                      await deleteUploadMutation.mutateAsync(previewUpload.id);
+                      setPreviewUpload(null);
+                    } catch {}
+                  }}
+                  data-testid="button-delete-photo"
+                >
+                  <Trash2 className="w-4 h-4 text-white" />
+                </button>
+                <button
+                  className="flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30"
+                  style={{ width: 32, height: 32 }}
+                  onClick={() => setPreviewUpload(null)}
+                  data-testid="button-close-photo-preview"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+            {previewUpload.fileType?.startsWith("image/") ? (
+              <img
+                src={toDisplayUrl(previewUpload.objectUrl)}
+                alt={previewUpload.fileName}
+                className="w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 bg-card rounded-lg">
+                <FileText className="w-12 h-12 text-muted-foreground mb-2" />
+                <p className="text-sm text-foreground">{previewUpload.fileName}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={isScannerOpen}
+        onOpenChange={setIsScannerOpen}
+        onScan={handleEquipmentScan}
+        title="Scan Equipment"
+        description="Scan a QR code or barcode"
+      />
     </div>
   );
 }

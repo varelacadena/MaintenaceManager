@@ -25,6 +25,7 @@ import {
   DollarSign,
   Info,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -98,6 +99,7 @@ interface TechnicianTaskDetailProps {
   addNoteMutation: any;
   updateNoteMutation?: any;
   addUploadMutation: any;
+  deleteUploadMutation: any;
   addPartMutation: any;
   toggleChecklistItemMutation: any;
   createQuoteMutation: any;
@@ -184,7 +186,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     allTaskResources, previousWork, users,
     isParentTask, isSubTask, completedSubTasks, subTaskProgress,
     totalChecklistItems, completedChecklistItems, estimateBlocksCompletion,
-    startTimerMutation, stopTimerMutation, addNoteMutation, updateNoteMutation, addUploadMutation,
+    startTimerMutation, stopTimerMutation, addNoteMutation, updateNoteMutation, addUploadMutation, deleteUploadMutation,
     addPartMutation, toggleChecklistItemMutation, createQuoteMutation, deleteQuoteMutation,
     safeNavigate, getUploadParameters, handleAutoSaveUpload,
     handleEquipmentScan, handleScanPart,
@@ -211,6 +213,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
+  const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isPreviousWorkOpen, setIsPreviousWorkOpen] = useState(false);
 
@@ -811,27 +814,34 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
                 {uploads.length > 0 && (
                   <div className="mt-3">
-                    <p
-                      className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
-                      style={{ letterSpacing: "0.05em" }}
-                    >
-                      Photos
+                    <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
+                      Photos ({uploads.length})
                     </p>
-                    <div className="flex flex-wrap gap-[5px]">
-                      {uploads.map((upload, i) => (
-                        <div
-                          key={upload.id}
-                          className="flex items-center justify-center rounded-md"
-                          style={{
-                            width: 36,
-                            height: 36,
-                            backgroundColor: PASTEL_COLORS[i % PASTEL_COLORS.length],
-                          }}
-                          data-testid={`photo-thumb-${upload.id}`}
-                        >
-                          <Camera className="w-3.5 h-3.5 text-white" />
-                        </div>
-                      ))}
+                    <div className="flex flex-wrap gap-1.5">
+                      {uploads.map((upload) => {
+                        const isImage = upload.fileType?.startsWith("image/");
+                        return (
+                          <button
+                            key={upload.id}
+                            className="relative rounded-md overflow-hidden shrink-0 group"
+                            style={{ width: 56, height: 56 }}
+                            onClick={() => setPreviewUpload(upload)}
+                            data-testid={`photo-thumb-${upload.id}`}
+                          >
+                            {isImage ? (
+                              <img
+                                src={toDisplayUrl(upload.objectUrl)}
+                                alt={upload.fileName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-muted">
+                                <FileText className="w-5 h-5 text-muted-foreground" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1622,6 +1632,71 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Preview Modal */}
+      {previewUpload && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center"
+          onClick={() => setPreviewUpload(null)}
+        >
+          <div className="absolute inset-0 bg-black/70" />
+          <div
+            className="relative w-full max-w-lg mx-4"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="modal-photo-preview"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-white truncate flex-1 mr-4">
+                {previewUpload.fileName}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600"
+                  style={{ width: 32, height: 32 }}
+                  onClick={async () => {
+                    try {
+                      await deleteUploadMutation.mutateAsync(previewUpload.id);
+                      setPreviewUpload(null);
+                    } catch {}
+                  }}
+                  data-testid="button-delete-photo"
+                >
+                  <Trash2 className="w-4 h-4 text-white" />
+                </button>
+                <button
+                  className="flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30"
+                  style={{ width: 32, height: 32 }}
+                  onClick={() => setPreviewUpload(null)}
+                  data-testid="button-close-photo-preview"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+            {previewUpload.fileType?.startsWith("image/") ? (
+              <img
+                src={toDisplayUrl(previewUpload.objectUrl)}
+                alt={previewUpload.fileName}
+                className="w-full max-h-[70vh] object-contain rounded-lg"
+                data-testid="img-photo-preview"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 bg-card rounded-lg">
+                <FileText className="w-12 h-12 text-muted-foreground mb-2" />
+                <p className="text-sm text-foreground">{previewUpload.fileName}</p>
+                <a
+                  href={toDisplayUrl(previewUpload.objectUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 underline"
+                >
+                  Open file
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
