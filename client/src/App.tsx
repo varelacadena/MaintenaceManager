@@ -86,6 +86,9 @@ function AuthenticatedApp() {
     : user?.email?.[0]?.toUpperCase() || "U";
 
   if (isMobileTaskDetail) {
+    if (user?.role === "technician") {
+      return <TaskDetail />;
+    }
     return <MobileTaskDetail />;
   }
 
@@ -278,8 +281,9 @@ function AuthenticatedApp() {
 
 function TaskDetailResponsive() {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const hasFullView = typeof window !== "undefined" && window.location.search.includes("view=full");
-  if (isMobile && !hasFullView) return <MobileTaskDetail />;
+  if (isMobile && !hasFullView && user?.role !== "technician") return <MobileTaskDetail />;
   return <TaskDetail />;
 }
 

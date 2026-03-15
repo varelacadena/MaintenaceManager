@@ -402,7 +402,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ backgroundColor: "#F8F8F8" }}>
+    <div className="flex flex-col min-h-[100dvh] md:min-h-full" style={{ backgroundColor: "#F8F8F8" }}>
       {/* Top Navigation Bar */}
       <div
         className="flex items-center justify-between px-4 shrink-0"
@@ -1123,7 +1123,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       {/* Sticky Bottom Bar */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50"
+        className="sticky bottom-0 left-0 right-0 z-50"
         style={{
           backgroundColor: "#FFFFFF",
           borderTop: "1px solid #EEEEEE",
