@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -337,11 +339,16 @@ export function TaskEditMode({
               {(["admin", "technician", "staff", "student"] as const).map((role) => {
                 const roleUsers = (allUsers || []).filter((u) => u.role === role);
                 if (roleUsers.length === 0) return null;
-                return roleUsers.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username} ({role})
-                  </SelectItem>
-                ));
+                return (
+                  <SelectGroup key={role}>
+                    <SelectLabel className="capitalize">{role}s</SelectLabel>
+                    {roleUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                );
               })}
             </SelectContent>
           </Select>
