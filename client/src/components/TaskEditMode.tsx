@@ -24,7 +24,7 @@ import {
 import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, InsertTask } from "@shared/schema";
+import type { Task, InsertTask, User } from "@shared/schema";
 
 interface Area {
   id: string;
@@ -76,6 +76,7 @@ export function TaskEditMode({
   );
   const [areaId, setAreaId] = useState<string>(task.areaId || "");
   const [subdivisionId, setSubdivisionId] = useState<string>(task.subdivisionId || "");
+  const [assignedToId, setAssignedToId] = useState<string>(task.assignedToId || "");
 
   const [editSubtasks, setEditSubtasks] = useState<SubtaskEdit[]>(
     subtasks.map((s) => ({
@@ -89,6 +90,10 @@ export function TaskEditMode({
 
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const { data: allUsers } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+  });
 
   const { data: areas } = useQuery<Area[]>({
     queryKey: ["/api/areas"],
@@ -116,6 +121,7 @@ export function TaskEditMode({
     );
     setAreaId(task.areaId || "");
     setSubdivisionId(task.subdivisionId || "");
+    setAssignedToId(task.assignedToId || "");
   }, [task.id]);
 
   useEffect(() => {
@@ -188,6 +194,9 @@ export function TaskEditMode({
 
       const origSubdivisionId = task.subdivisionId || "";
       if (subdivisionId !== origSubdivisionId) patchData.subdivisionId = subdivisionId || null;
+
+      const origAssignedToId = task.assignedToId || "";
+      if (assignedToId !== origAssignedToId) patchData.assignedToId = assignedToId || null;
 
       const origDate = task.estimatedCompletionDate
         ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
@@ -308,6 +317,32 @@ export function TaskEditMode({
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="high">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+            Assignee
+          </Label>
+          <Select
+            value={assignedToId || "__none__"}
+            onValueChange={(v) => setAssignedToId(v === "__none__" ? "" : v)}
+          >
+            <SelectTrigger data-testid="select-edit-assignee">
+              <SelectValue placeholder="Select assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Unassigned</SelectItem>
+              {(["admin", "technician", "staff", "student"] as const).map((role) => {
+                const roleUsers = (allUsers || []).filter((u) => u.role === role);
+                if (roleUsers.length === 0) return null;
+                return roleUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username} ({role})
+                  </SelectItem>
+                ));
+              })}
             </SelectContent>
           </Select>
         </div>

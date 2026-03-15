@@ -37,6 +37,8 @@ import {
   X,
   Send,
   Plus,
+  Play,
+  Square,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -222,6 +224,53 @@ export default function MobileTaskDetail() {
       toast({ title: "Part added" });
     },
     onError: () => toast({ title: "Error", description: "Failed to add part.", variant: "destructive" }),
+  });
+
+  const activeTimerEntry = useMemo(() => {
+    if (!timeEntries || !user) return null;
+    return timeEntries.find((e: any) => e.startTime && !e.endTime && e.userId === user.id) || null;
+  }, [timeEntries, user]);
+
+  const startTimerMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/time-entries", {
+        taskId: id,
+        userId: user?.id,
+        startTime: new Date().toISOString(),
+      });
+      return res.json();
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+      if (task?.status === "not_started" || task?.status === "waiting_approval") {
+        try {
+          await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: "in_progress" });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        } catch {}
+      }
+      toast({ title: "Timer started" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to start timer", variant: "destructive" }),
+  });
+
+  const stopTimerMutation = useMutation({
+    mutationFn: async (timerId: string) => {
+      const entry = timeEntries?.find((e: any) => e.id === timerId);
+      if (!entry?.startTime) return;
+      const endTime = new Date();
+      const startTime = new Date(entry.startTime);
+      const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+      await apiRequest("PATCH", `/api/time-entries/${timerId}`, {
+        endTime: endTime.toISOString(),
+        durationMinutes,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+      toast({ title: "Timer stopped" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to stop timer", variant: "destructive" }),
   });
 
   useEffect(() => {
@@ -540,9 +589,43 @@ export default function MobileTaskDetail() {
               <p className="text-[11px] font-medium tracking-wider uppercase mb-1" style={{ color: "#9CA3AF" }}>
                 TIME LOGGED
               </p>
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
-                <p className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{totalTime}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
+                  <p className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{totalTime}</p>
+                  {activeTimerEntry && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium animate-pulse" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
+                      Running
+                    </span>
+                  )}
+                </div>
+                {!isCompleted && (
+                  activeTimerEntry ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => stopTimerMutation.mutate(activeTimerEntry.id)}
+                      disabled={stopTimerMutation.isPending}
+                      style={{ borderColor: "#FECACA", color: "#DC2626" }}
+                      data-testid="button-mobile-stop-timer"
+                    >
+                      <Square className="w-3.5 h-3.5 mr-1" />
+                      Stop
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startTimerMutation.mutate()}
+                      disabled={startTimerMutation.isPending}
+                      style={{ borderColor: "#D1D5DB", color: "#4338CA" }}
+                      data-testid="button-mobile-start-timer"
+                    >
+                      <Play className="w-3.5 h-3.5 mr-1" />
+                      Start
+                    </Button>
+                  )
+                )}
               </div>
             </div>
           </div>
