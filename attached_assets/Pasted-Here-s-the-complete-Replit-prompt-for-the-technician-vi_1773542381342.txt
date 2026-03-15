@@ -1,0 +1,222 @@
+Here's the complete Replit prompt for the technician view:
+
+---
+
+> **CMMS Technician Task View — Complete Mobile Screen**
+>
+> Implement a dedicated mobile task detail screen for technicians. This is a completely separate view from the admin task detail — technicians have no access to Edit, Delete, subtask management, or any admin controls. Route to this screen when the logged-in user has the `technician` role. The screen is full-height, single-column, and scrollable with a sticky bottom bar.
+>
+> ---
+>
+> ## COLOR SYSTEM
+>
+> - Page background: `#F8F8F8`
+> - Card background: `#FFFFFF`
+> - Card border: `1px solid #EEEEEE`, border-radius 12px
+> - Primary text: `#1A1A1A`
+> - Secondary text: `#6B7280`
+> - Label/hint text: `#9CA3AF`
+> - Section label: 10px uppercase, letter-spacing 0.05em, color `#9CA3AF`
+> - Row dividers: `#EEEEEE`
+> - Primary CTA: background `#4338CA`, white text, border-radius 10px
+> - Pause CTA: background `#4B5563`, white text
+> - Priority High badge: `#FEF2F2` bg, `#D94F4F` text, `rgba(217,79,79,0.35)` border
+> - Status badge (Not Started): `rgba(255,255,255,0.18)` bg, white text
+> - Status badge (In Progress): `rgba(255,255,255,0.25)` bg, white text, font-weight 500
+> - Status badge (Paused): same as Not Started
+> - Instructions box: `#EEF2FF` bg, `#C7D2FE` border, `#3730A3` text
+> - Lock banner: `#F8F8F8` bg, `#EEEEEE` top border
+> - Save indicator — Saving: `#4338CA` | Saved: `#15803D` | idle: hidden
+> - Checklist circle checkbox (done): `#4338CA` bg + border
+> - Subtask square checkbox (done): `#4338CA` bg + border, border-radius 6px
+> - Progress bar fill: `#4338CA`
+> - Photo thumbnail: 36×36px, border-radius 6px, pastel fills cycling: `#BFDBFE`, `#BBF7D0`, `#FED7AA`, `#FECDD3`, `#DDD6FE`
+> - Completion screen bg: `#F0FDF4`, icon circle: `#15803D`, title: `#15803D`, body: `#166534`, timer: `#4ADE80`
+>
+> ---
+>
+> ## SCREEN STRUCTURE
+>
+> ### 1. Top navigation bar
+> - Left: back chevron + parent task name in `#4338CA` (only shown if this task has a parent — taps to navigate up to the parent task)
+> - Right: "Sign Out" in `#9CA3AF`
+> - White background, `#EEEEEE` bottom border, 44px height
+>
+> ### 2. Hero header
+> - Not Started gradient: `linear-gradient(135deg, #3730A3 0%, #4338CA 60%, #6366F1 100%)`
+> - In Progress gradient: `linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 55%, #3b82f6 100%)`
+> - Paused gradient: `linear-gradient(135deg, #374151 0%, #4B5563 100%)`
+> - All transitions: `transition: background 0.4s`
+> - Top row: status badge + priority badge (left) + live elapsed timer (right, hidden until Start Task)
+> - Timer format: M:SS, `rgba(255,255,255,0.85)`, tabular-nums, font-weight 500
+> - Task title: 16px, font-weight 700, white, line-height 1.3
+> - Bottom row: pin icon + "Property · Room · Equipment" in `rgba(255,255,255,0.6)`
+>
+> ### 3. Two-tab navigation
+> - Tabs: **Task** | **More**
+> - Active tab: `#4338CA` text + 2px bottom border
+> - Inactive: `#9CA3AF`
+> - White background, `#EEEEEE` bottom border
+>
+> ---
+>
+> ## TASK TAB (default)
+>
+> All content in cards with 8px gap and 10px horizontal padding. Scrollable.
+>
+> ### Card 1 — Instructions
+> - Section label "INSTRUCTIONS"
+> - Blue highlighted box (`#EEF2FF` bg, `#C7D2FE` border, border-radius 9px)
+> - Numbered step text in `#3730A3`, 12px, line-height 1.65
+> - Only shown if admin has written instructions for this task
+>
+> ### Card 2 — Subtasks
+> - Section label "SUBTASKS" + "X / N" count right-aligned
+> - 3px progress bar below label row (`#4338CA` fill, transitions)
+> - Subtask rows: square checkbox (border-radius 6px) on left, task name 13px
+> - Checked state: `#4338CA` filled square with white checkmark, name gets strikethrough + `#9CA3AF` color
+> - **Locked state** (before Start Task): entire list at opacity 0.4, pointer-events none
+> - Lock banner at bottom of card: lock icon + "Start the task to unlock subtasks" in `#9CA3AF`, `#F8F8F8` bg
+> - Lock banner disappears and list activates on Start Task
+>
+> ### Card 3 — Checklist
+> - Section label "CHECKLIST" + "X / N" count right-aligned
+> - 3px progress bar below label row
+> - Checklist rows: round circle checkbox on left, item name 13px
+> - Checked state: `#4338CA` filled circle with white checkmark, name gets strikethrough + `#9CA3AF`
+> - Checklist is always interactive (not locked)
+>
+> ### Card 4 — Notes + Photos (single card)
+> - **Notes section:**
+>   - Section label "NOTES" on left. Auto-save indicator on right — shows "Saving…" in `#4338CA` while debounce is pending, then "Saved" in `#15803D` for 2 seconds, then disappears. Both are 10px.
+>   - Open `<textarea>`: no border, transparent bg, 13px, `#1A1A1A`, placeholder `#C4C9D4`. Placeholder text: "Type your observations… auto-saved as you type". Min 3 rows, auto-expands.
+>   - **Auto-save behavior**: debounce 1200ms after last keystroke. On save: capture current textarea value + timestamp, clear textarea, insert saved note as a `#F8F8F8` rounded card (8px border-radius, padding 8px 10px) below the textarea showing the note text (12px, `#1A1A1A`) and timestamp (10px, `#9CA3AF`). Multiple notes stack newest-first. No save button — saving is fully automatic.
+>
+> - **Photos section** (within the same card, below notes):
+>   - Photos only appear after the first one is taken — no placeholder, no empty state shown
+>   - Each photo: 36×36px rounded square (border-radius 6px), pastel fill cycling through `#BFDBFE` → `#BBF7D0` → `#FED7AA` → `#FECDD3` → `#DDD6FE`, white camera SVG icon inside (14×14px)
+>   - Photos wrap in a flex-wrap row with 5px gap
+>   - Photos are added by tapping the camera button in the bottom bar (see below)
+>
+> ---
+>
+> ## MORE TAB
+>
+> All secondary content. Single scrollable column, same card style.
+>
+> ### Contact card
+> - Avatar circle (34×34px): initials, background `#3DAB8E`, white text
+> - Name (12px, weight 500, `#1A1A1A`) + "Tap to call · [phone number]" (11px, `#6B7280`)
+> - Right side: phone icon in a 30×30px `#EEF2FF` circle, `#4338CA` icon
+> - Tapping navigates to device phone dialer
+>
+> ### Actions card (all rows with colored icon squares 32×32px, border-radius 8px)
+> - **Estimate / Quote** (`#FEF9EC` icon bg, `#D97706` icon): shows sub-label "Pending approval · $X.XX" if a quote exists. Taps to open estimate sheet (see modal below). If estimate requires approval and is not yet approved, this is flagged but does not block navigation.
+> - **Parts Used** (`#EEEDFE` icon bg, `#4338CA` icon): right side shows "N added" in `#4338CA` if parts exist, else "None" in `#9CA3AF`. Taps to open add part modal.
+> - **Previous Work Here** (`#F0FDF4` icon bg, `#15803D` icon): right side shows count badge (`#EEF2FF` bg, `#4338CA` text). Taps to navigate to work history for this location.
+> - **Resources** (`#F8F8F8` icon bg, `#6B7280` icon): right side shows "N docs · N vid" in `#9CA3AF`. Taps to open resources sheet.
+>
+> ---
+>
+> ## STICKY BOTTOM BAR
+>
+> White background, `#EEEEEE` top border, padding 8px 14px 16px. Three elements:
+>
+> **Left — Scan button** (44×44px icon button, `#EEEEEE` border):
+> - QR/barcode scan icon in `#6B7280`
+> - Taps to open scan modal
+>
+> **Center — Primary CTA** (flex: 1, takes remaining width):
+> - **Not Started**: "▶ Start Task", `#4338CA` bg
+> - **In Progress**: "⏸ Pause", `#4B5563` bg → taps to open pause/complete dialog
+> - **Paused**: "▶ Resume", `#4338CA` bg
+> - Icon and label update on each state change with smooth `transition: background 0.2s`
+>
+> **Right — Camera button** (44×44px icon button):
+> - **Before Start Task**: `#EEEEEE` border, `#6B7280` icon, opacity 0.35, cursor not-allowed, non-interactive
+> - **After Start Task**: `#4338CA` border + `#EEF2FF` bg (`.active` class), `#4338CA` icon, fully interactive
+> - Each tap adds one photo thumbnail to the photo row in Card 4
+>
+> ---
+>
+> ## MODALS / SHEETS
+>
+> All modals slide up from the bottom. Backdrop: `rgba(0,0,0,0.4)`. Sheet: white bg, `border-radius: 16px 16px 0 0`, padding 20px 16px 26px.
+>
+> ### Pause / Complete dialog
+> - Title: "Timer running" (14px, weight 600)
+> - Subtitle: "What would you like to do?" (12px, `#6B7280`)
+> - Button 1: "⏸ Pause — resume later", `#4B5563` bg, white text
+> - Button 2: "✓ Mark as complete", `#15803D` bg, white text → triggers completion flow
+> - Button 3: "Cancel", `#F8F8F8` bg, `#EEEEEE` border, `#6B7280` text
+>
+> ### Estimate / Quote sheet
+> - Shows existing quotes in `#FEF9EC` box with `#FDE68A` border
+> - Each quote: vendor name (12px) + amount (13px, weight 600) + "Pending approval" label
+> - "+ Add another quote" dashed button in `#D97706`
+> - Close button
+>
+> ### Add Part modal
+> - Search input + QR scan icon button
+> - QTY and COST inputs in 2-column grid
+> - "Add Part" button (`#4338CA`) + Cancel
+> - On confirm: part added to parts list, parts count badge updates in More tab
+>
+> ### Scan modal
+> - Placeholder viewfinder area (`#F8F8F8`, dashed border, 110px height, QR grid icon)
+> - Cancel button
+>
+> ### Resources sheet
+> - File list: type badge (PDF purple, VID coral) + filename
+> - Each row tappable to open file
+> - Close button
+>
+> ---
+>
+> ## STATE MACHINE
+>
+> ### NOT STARTED
+> - Hero: Not Started gradient + "Not Started" badge
+> - Timer: hidden
+> - Subtasks: locked, dimmed, lock banner visible
+> - Camera button: disabled, gray, non-interactive
+> - CTA: "▶ Start Task"
+>
+> ### IN PROGRESS (after Start Task)
+> - Hero: In Progress gradient, badge updates to "In Progress"
+> - Timer: appears top-right of hero, starts counting up from 0:00
+> - Subtasks: unlocked, full opacity, interactive, lock banner hidden
+> - Camera: enabled, `#4338CA` color
+> - CTA: "⏸ Pause"
+>
+> ### PAUSED (after Pause)
+> - Hero: Paused gradient, badge updates to "Paused"
+> - Timer: stops counting, keeps current value
+> - CTA: "▶ Resume"
+> - Camera: stays enabled
+>
+> ### RESUMED (after Resume)
+> - Returns to IN PROGRESS state, timer continues from where it paused
+>
+> ### COMPLETED (after Mark as complete)
+> - Timer stops
+> - Full-screen overlay replaces entire view:
+>   - `#F0FDF4` background
+>   - 62×62px green circle (`#15803D`) with white checkmark
+>   - "Task Complete" 18px weight 700 `#15803D`
+>   - Task name 13px `#166534`
+>   - "Time logged: Xm Xs" in `#4ADE80`
+>   - "Back to Tasks" button (`#15803D` bg) — navigates to task list
+>
+> ---
+>
+> ## BEHAVIOR RULES
+>
+> - Notes auto-save with 1200ms debounce — no save button. Each saved note appends to history below textarea with timestamp. Textarea clears after save.
+> - Timer starts on Start Task, pauses on Pause, resumes on Resume. Final elapsed time submitted on completion as "time logged."
+> - Photos are only addable after Start Task. Each camera tap adds one 36×36px thumbnail inline in the notes card.
+> - Subtasks locked until Start Task. Technician cannot add or rename subtasks.
+> - Checklist always interactive regardless of task state.
+> - Parent task back-link only shown if this task has a parent. Taps navigate up to the parent task detail screen.
+> - This screen is only rendered for `technician` role. Admin users always see the admin task detail view. Never mix the two views.
+> - All existing routing, back navigation, and session management must remain intact.
