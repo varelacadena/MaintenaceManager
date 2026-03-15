@@ -569,7 +569,7 @@ export default function MobileTaskDetail() {
           </div>
 
           {/* Meta grid */}
-          <div className="grid grid-cols-2 divide-x" style={{ borderBottom: "1px solid #EEEEEE", divideColor: "#EEEEEE" }}>
+          <div className="grid grid-cols-2 divide-x divide-[#EEEEEE]" style={{ borderBottom: "1px solid #EEEEEE" }}>
             <div className="px-4 py-3">
               <p className="text-[11px] font-medium tracking-wider uppercase mb-1" style={{ color: "#9CA3AF" }}>
                 LOCATION
@@ -763,7 +763,7 @@ export default function MobileTaskDetail() {
           )}
 
           {/* Subtask rows */}
-          <div className="divide-y" style={{ divideColor: "#EEEEEE" }}>
+          <div className="divide-y divide-[#EEEEEE]">
             {(!subtasks || subtasks.length === 0) ? (
               <p className="text-xs text-center py-6" style={{ color: "#9CA3AF" }}>
                 No subtasks
