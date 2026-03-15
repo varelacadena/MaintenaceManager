@@ -336,12 +336,12 @@ export function TaskEditMode({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Unassigned</SelectItem>
-              {(["admin", "technician", "staff", "student"] as const).map((role) => {
+              {([["admin", "Admins"], ["technician", "Technicians"], ["staff", "Staff"], ["student", "Students"]] as const).map(([role, label]) => {
                 const roleUsers = (allUsers || []).filter((u) => u.role === role);
                 if (roleUsers.length === 0) return null;
                 return (
                   <SelectGroup key={role}>
-                    <SelectLabel className="capitalize">{role}s</SelectLabel>
+                    <SelectLabel>{label}</SelectLabel>
                     {roleUsers.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username}
