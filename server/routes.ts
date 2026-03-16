@@ -6,11 +6,12 @@ import { requireRole, getCurrentUser, requireAdmin, requireTechnicianOrAdmin, re
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 
 import { seedDatabase } from "./seed";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned, notifyNewServiceRequest, notifyNewVehicleReservation, notifyVehicleReservationApproved, notifyVehicleReservationDenied } from "./notifications";
 import {
+  partsUsed,
   insertServiceRequestSchema,
   insertTaskSchema,
   insertPartUsedSchema,
@@ -1968,7 +1969,7 @@ Be concise and practical. Do not use markdown formatting.`;
   );
 
   // Parts routes (for tasks)
-  app.post("/api/parts", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/parts", isAuthenticated, requireTaskExecutorOrAdmin, requireTaskAccess(), async (req, res) => {
     try {
       const partData = insertPartUsedSchema.parse(req.body);
       const part = await storage.createPartUsed(partData);
@@ -1979,8 +1980,16 @@ Be concise and practical. Do not use markdown formatting.`;
     }
   });
 
-  app.delete("/api/parts/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/parts/:id", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
     try {
+      const [part] = await db.select().from(partsUsed).where(eq(partsUsed.id, req.params.id));
+      if (!part) {
+        return res.status(404).json({ message: "Part not found" });
+      }
+      const hasAccess = await canAccessTask(req.currentUser?.id || req.userId, part.taskId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
       await storage.deletePartUsed(req.params.id);
       res.json({ success: true });
     } catch (error) {

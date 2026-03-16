@@ -1432,9 +1432,12 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               <div className="flex gap-2 pt-2">
                 <button
                   className="flex-1 py-3 rounded-lg text-white text-sm font-medium bg-primary"
-                  onClick={() => {
-                    addPartMutation.mutate();
-                    setIsPartModalOpen(false);
+                  onClick={async () => {
+                    try {
+                      await addPartMutation.mutateAsync();
+                      setIsPartModalOpen(false);
+                    } catch {
+                    }
                   }}
                   disabled={
                     !selectedInventoryItemId ||
