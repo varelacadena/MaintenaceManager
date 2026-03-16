@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Car, User, Search, Edit, ClipboardCheck } from "lucide-react";
 import { Link } from "wouter";
-import type { VehicleCheckInLog } from "@shared/schema";
+import type { VehicleCheckInLog, Lockbox } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -59,6 +59,7 @@ export function VehicleReservationsContent() {
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
   const [selectedReservationForHandoff, setSelectedReservationForHandoff] = useState<string | null>(null);
   const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
+  const [handoffLockboxId, setHandoffLockboxId] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState<string>("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReservationForEdit, setSelectedReservationForEdit] = useState<VehicleReservation | null>(null);
@@ -71,6 +72,7 @@ export function VehicleReservationsContent() {
   const [editEndDate, setEditEndDate] = useState<string>("");
   const [editEndTime, setEditEndTime] = useState<string>("");
   const [editKeyPickupMethod, setEditKeyPickupMethod] = useState<string>("");
+  const [editLockboxId, setEditLockboxId] = useState<string>("");
   const [editAdminNotes, setEditAdminNotes] = useState<string>("");
   const { toast } = useToast();
 
@@ -178,6 +180,7 @@ export function VehicleReservationsContent() {
       if (!selectedReservationForHandoff) return;
       return await apiRequest("PATCH", `/api/vehicle-reservations/${selectedReservationForHandoff}`, {
         keyPickupMethod,
+        lockboxId: keyPickupMethod === "key_box" ? handoffLockboxId || null : null,
         adminNotes,
       });
     },
@@ -189,6 +192,7 @@ export function VehicleReservationsContent() {
       });
       setHandoffDialogOpen(false);
       setKeyPickupMethod("");
+      setHandoffLockboxId("");
       setAdminNotes("");
       setSelectedReservationForHandoff(null);
     },
@@ -217,6 +221,7 @@ export function VehicleReservationsContent() {
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
         keyPickupMethod: editKeyPickupMethod && editKeyPickupMethod !== "not_specified" ? editKeyPickupMethod : null,
+        lockboxId: editKeyPickupMethod === "key_box" ? editLockboxId || null : null,
         adminNotes: editAdminNotes || null,
       });
     },
@@ -237,6 +242,7 @@ export function VehicleReservationsContent() {
       setEditEndDate("");
       setEditEndTime("");
       setEditKeyPickupMethod("");
+      setEditLockboxId("");
       setEditAdminNotes("");
     },
     onError: (error: Error) => {
@@ -250,6 +256,10 @@ export function VehicleReservationsContent() {
 
   const { data: vehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+
+  const { data: lockboxes } = useQuery<Lockbox[]>({
+    queryKey: ["/api/lockboxes"],
   });
 
   const { data: checkInLogs } = useQuery<VehicleCheckInLog[]>({
@@ -485,6 +495,7 @@ export function VehicleReservationsContent() {
                       setEditEndTime(format(endDate, "HH:mm"));
                       
                       setEditKeyPickupMethod(reservation.keyPickupMethod || "");
+                      setEditLockboxId(reservation.lockboxId || "");
                       setEditAdminNotes(reservation.adminNotes || "");
                       setEditDialogOpen(true);
                     }}
@@ -573,17 +584,33 @@ export function VehicleReservationsContent() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="key-pickup">Key Pickup Method</Label>
-              <Select value={keyPickupMethod} onValueChange={setKeyPickupMethod}>
-                <SelectTrigger id="key-pickup">
+              <Select value={keyPickupMethod} onValueChange={(val) => { setKeyPickupMethod(val); if (val !== "key_box") setHandoffLockboxId(""); }}>
+                <SelectTrigger id="key-pickup" data-testid="select-key-pickup-method">
                   <SelectValue placeholder="Select pickup method" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="in_person">In Person</SelectItem>
                   <SelectItem value="mailbox">Mailbox</SelectItem>
                   <SelectItem value="inside_vehicle">Inside the Vehicle</SelectItem>
+                  <SelectItem value="key_box">Key Box</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {keyPickupMethod === "key_box" && lockboxes && lockboxes.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="handoff-lockbox">Select Lockbox</Label>
+                <Select value={handoffLockboxId} onValueChange={setHandoffLockboxId}>
+                  <SelectTrigger id="handoff-lockbox" data-testid="select-handoff-lockbox">
+                    <SelectValue placeholder="Select a lockbox" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lockboxes.filter(lb => lb.status === "active").map(lb => (
+                      <SelectItem key={lb.id} value={lb.id}>{lb.name} — {lb.location}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="admin-notes">Additional Details</Label>
               <Textarea
@@ -601,6 +628,7 @@ export function VehicleReservationsContent() {
               onClick={() => {
                 setHandoffDialogOpen(false);
                 setKeyPickupMethod("");
+                setHandoffLockboxId("");
                 setAdminNotes("");
                 setSelectedReservationForHandoff(null);
               }}
@@ -609,7 +637,8 @@ export function VehicleReservationsContent() {
             </Button>
             <Button
               onClick={() => saveHandoffDetailsMutation.mutate()}
-              disabled={saveHandoffDetailsMutation.isPending}
+              disabled={saveHandoffDetailsMutation.isPending || (keyPickupMethod === "key_box" && !handoffLockboxId)}
+              data-testid="button-save-handoff"
             >
               {saveHandoffDetailsMutation.isPending ? "Saving..." : "Save Details"}
             </Button>
@@ -717,8 +746,8 @@ export function VehicleReservationsContent() {
 
             <div className="grid gap-2">
               <Label htmlFor="edit-key-pickup">Key Pickup Method</Label>
-              <Select value={editKeyPickupMethod} onValueChange={setEditKeyPickupMethod}>
-                <SelectTrigger id="edit-key-pickup">
+              <Select value={editKeyPickupMethod} onValueChange={(val) => { setEditKeyPickupMethod(val); if (val !== "key_box") setEditLockboxId(""); }}>
+                <SelectTrigger id="edit-key-pickup" data-testid="select-edit-key-pickup">
                   <SelectValue placeholder="Select pickup method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -726,9 +755,25 @@ export function VehicleReservationsContent() {
                   <SelectItem value="in_person">In Person</SelectItem>
                   <SelectItem value="mailbox">Mailbox</SelectItem>
                   <SelectItem value="inside_vehicle">Inside the Vehicle</SelectItem>
+                  <SelectItem value="key_box">Key Box</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {editKeyPickupMethod === "key_box" && lockboxes && lockboxes.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="edit-lockbox">Select Lockbox</Label>
+                <Select value={editLockboxId} onValueChange={setEditLockboxId}>
+                  <SelectTrigger id="edit-lockbox" data-testid="select-edit-lockbox">
+                    <SelectValue placeholder="Select a lockbox" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lockboxes.filter(lb => lb.status === "active").map(lb => (
+                      <SelectItem key={lb.id} value={lb.id}>{lb.name} — {lb.location}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="edit-admin-notes">Key Location Details</Label>
@@ -764,7 +809,7 @@ export function VehicleReservationsContent() {
             </Button>
             <Button
               onClick={() => editReservationMutation.mutate()}
-              disabled={editReservationMutation.isPending || !editStartDate || !editStartTime || !editEndDate || !editEndTime}
+              disabled={editReservationMutation.isPending || !editStartDate || !editStartTime || !editEndDate || !editEndTime || (editKeyPickupMethod === "key_box" && !editLockboxId)}
             >
               {editReservationMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>

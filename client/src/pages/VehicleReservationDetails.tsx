@@ -169,6 +169,7 @@ export default function VehicleReservationDetails() {
       "in_person": "In Person Pickup",
       "mailbox": "Mailbox Pickup",
       "inside_vehicle": "Inside the Vehicle",
+      "key_box": "Key Box Pickup",
     };
     return labels[method] || method;
   };

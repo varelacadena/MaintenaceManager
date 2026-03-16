@@ -3488,17 +3488,11 @@ Be concise and practical. Do not use markdown formatting.`;
       const lockboxId = req.params.lockboxId;
 
       if (user.role !== "admin") {
-        const vehicles = await storage.getVehicles();
-        const matchingVehicle = vehicles.find((v: any) => v.lockboxId === lockboxId);
-        if (!matchingVehicle) {
-          return res.status(403).json({ message: "No vehicle associated with this lockbox" });
-        }
-
         const reservations = await storage.getVehicleReservations();
         const now = new Date();
         const hasValidReservation = reservations.some((r: any) => {
           if (r.userId !== user.id) return false;
-          if (r.vehicleId !== matchingVehicle.id) return false;
+          if (r.lockboxId !== lockboxId) return false;
           if (r.status !== "approved") return false;
           const startTime = new Date(r.startDate).getTime();
           const oneHourBefore = startTime - 60 * 60 * 1000;
@@ -3506,7 +3500,7 @@ Be concise and practical. Do not use markdown formatting.`;
         });
 
         if (!hasValidReservation) {
-          return res.status(403).json({ message: "No valid reservation for this vehicle" });
+          return res.status(403).json({ message: "No valid reservation with this lockbox" });
         }
       }
 
@@ -3790,6 +3784,24 @@ Be concise and practical. Do not use markdown formatting.`;
       if ((currentUser.role === "admin" || currentUser.role === "technician") && 
           reservation.userId !== userId) {
         updates.lastViewedStatus = "pending"; // Force notification
+      }
+
+      // Enforce lockboxId consistency: if key_box method, require lockboxId; otherwise clear it
+      const effectiveKeyPickup = updates.keyPickupMethod ?? reservation.keyPickupMethod;
+      if (effectiveKeyPickup === "key_box") {
+        const effectiveLockboxId = updates.lockboxId ?? reservation.lockboxId;
+        if (!effectiveLockboxId) {
+          return res.status(400).json({ message: "A lockbox must be selected when using Key Box pickup method" });
+        }
+      } else if (updates.keyPickupMethod && updates.keyPickupMethod !== "key_box") {
+        updates.lockboxId = null;
+      }
+
+      // Only allow admin/technician to set lockboxId and handoff fields
+      if (currentUser.role !== "admin" && currentUser.role !== "technician") {
+        delete updates.lockboxId;
+        delete updates.keyPickupMethod;
+        delete updates.adminNotes;
       }
 
       // Handle potential vehicle status changes if vehicleId is updated

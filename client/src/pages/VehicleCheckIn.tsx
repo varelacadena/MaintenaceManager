@@ -199,11 +199,11 @@ export default function VehicleCheckIn() {
   });
 
   const { data: lockbox } = useQuery<Lockbox>({
-    queryKey: ["/api/lockboxes", vehicle?.lockboxId],
-    enabled: !!vehicle?.lockboxId,
+    queryKey: ["/api/lockboxes", reservation?.lockboxId],
+    enabled: !!reservation?.lockboxId,
   });
 
-  const hasLockbox = !!vehicle?.lockboxId;
+  const hasLockbox = !!reservation?.lockboxId;
 
   useEffect(() => {
     if (checkOutLog?.startMileage) setCiMileage(checkOutLog.startMileage);

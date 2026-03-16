@@ -158,6 +158,7 @@ const getKeyPickupMethodLabel = (method: string | null) => {
     "in_person": "In Person Pickup",
     "mailbox": "Mailbox Pickup",
     "inside_vehicle": "Inside the Vehicle",
+    "key_box": "Key Box Pickup",
   };
   return labels[method] || method;
 };
@@ -256,11 +257,11 @@ export default function VehicleCheckOut() {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
       setAdvisoryAccepted(true);
 
-      if (vehicle?.lockboxId) {
+      if (reservation?.lockboxId) {
         setCodeLoading(true);
         setCodeError(false);
         try {
-          const codeRes = await fetch(`/api/lockboxes/${vehicle.lockboxId}/assign-code`, {
+          const codeRes = await fetch(`/api/lockboxes/${reservation.lockboxId}/assign-code`, {
             method: "POST",
             credentials: "include",
           });
@@ -280,7 +281,7 @@ export default function VehicleCheckOut() {
         }
       }
 
-      if (!reservation?.keyPickupMethod && !vehicle?.lockboxId) {
+      if (!reservation?.keyPickupMethod && !reservation?.lockboxId) {
         advanceStep("safety");
       } else {
         setAdvisoryJustAccepted(true);
@@ -586,7 +587,7 @@ export default function VehicleCheckOut() {
                 <Button
                   onClick={() => { setAdvisoryJustAccepted(false); advanceStep("safety"); }}
                   className="w-full"
-                  disabled={codeLoading || (!!vehicle?.lockboxId && codeError)}
+                  disabled={codeLoading || (!!reservation?.lockboxId && codeError)}
                   data-testid="button-have-keys-continue"
                 >
                   <Key className="h-4 w-4 mr-2" />

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertVehicleSchema, type InsertVehicle, type Vehicle, type Lockbox } from "@shared/schema";
+import { insertVehicleSchema, type InsertVehicle, type Vehicle } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,10 +20,6 @@ export default function VehicleEdit() {
 
   const { data: vehicle, isLoading } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${id}`],
-  });
-
-  const { data: lockboxes } = useQuery<Lockbox[]>({
-    queryKey: ["/api/lockboxes"],
   });
 
   const form = useForm<InsertVehicle>({
@@ -41,7 +37,6 @@ export default function VehicleEdit() {
       fuelType: vehicle.fuelType,
       passengerCapacity: vehicle.passengerCapacity || 5,
       color: vehicle.color || "",
-      lockboxId: vehicle.lockboxId || null,
       notes: vehicle.notes || "",
     } : undefined,
   });
@@ -315,31 +310,6 @@ export default function VehicleEdit() {
                     </FormItem>
                   )}
                 />
-                {lockboxes && lockboxes.length > 0 && (
-                  <FormField
-                    control={form.control}
-                    name="lockboxId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lockbox</FormLabel>
-                        <Select onValueChange={(val) => field.onChange(val === "none" ? null : val)} value={field.value || "none"}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-lockbox">
-                              <SelectValue placeholder="No lockbox" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No lockbox</SelectItem>
-                            {lockboxes.filter(lb => lb.status === "active").map(lb => (
-                              <SelectItem key={lb.id} value={lb.id}>{lb.name} — {lb.location}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
                 <FormField
                   control={form.control}
                   name="notes"

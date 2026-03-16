@@ -1,0 +1,2 @@
+ALTER TABLE vehicle_reservations ADD COLUMN IF NOT EXISTS lockbox_id VARCHAR REFERENCES lockboxes(id) ON DELETE SET NULL;
+ALTER TABLE vehicles DROP COLUMN IF EXISTS lockbox_id;
