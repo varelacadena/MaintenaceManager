@@ -543,14 +543,28 @@ async function notifyAdminsOfPendingAction(log: AiAgentLog): Promise<void> {
       message = `AI triaged "${reqTitle}" as ${value?.suggestedUrgency || "unknown"} urgency${value?.suggestedAssigneeName ? `, suggested assigning to ${value.suggestedAssigneeName}` : ""}.`;
     } else if (log.action === "schedule") {
       const assignee = value?.suggestedAssigneeName || value?.assigneeName;
+      let taskTitle = "";
+      if (log.entityId) {
+        try {
+          const task = await storage.getTask(log.entityId);
+          if (task) taskTitle = ` for "${task.name}"`;
+        } catch {}
+      }
       title = "AI scheduling suggestion";
-      message = `AI suggests${assignee ? ` assigning to ${assignee}` : ""}${value?.suggestedStartDate ? `, starting ${value.suggestedStartDate}` : ""}${value?.suggestedDueDate || value?.dueDate ? `, due ${value.suggestedDueDate || value.dueDate}` : ""}.`;
+      message = `AI suggests${taskTitle}${assignee ? ` assigning to ${assignee}` : ""}${value?.suggestedStartDate ? `, starting ${value.suggestedStartDate}` : ""}${value?.suggestedDueDate || value?.dueDate ? `, due ${value.suggestedDueDate || value.dueDate}` : ""}.`;
     } else if (log.action === "assign") {
       const topRec = value?.recommendations?.[0];
+      let taskTitle = "";
+      if (log.entityId) {
+        try {
+          const task = await storage.getTask(log.entityId);
+          if (task) taskTitle = ` for "${task.name}"`;
+        } catch {}
+      }
       title = "AI assignment suggestion";
       message = topRec
-        ? `AI recommends assigning to ${topRec.studentName}${value.recommendations.length > 1 ? ` (+${value.recommendations.length - 1} alternatives)` : ""}.`
-        : "AI has new assignment recommendations for your review.";
+        ? `AI recommends${taskTitle} assigning to ${topRec.studentName}${value.recommendations.length > 1 ? ` (+${value.recommendations.length - 1} alternatives)` : ""}.`
+        : `AI has new assignment recommendations${taskTitle} for your review.`;
     }
 
     for (const admin of admins) {
