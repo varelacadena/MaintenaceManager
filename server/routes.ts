@@ -3789,7 +3789,7 @@ Be concise and practical. Do not use markdown formatting.`;
       // Enforce lockboxId consistency: if key_box method, require lockboxId; otherwise clear it
       const effectiveKeyPickup = updates.keyPickupMethod ?? reservation.keyPickupMethod;
       if (effectiveKeyPickup === "key_box") {
-        const effectiveLockboxId = updates.lockboxId ?? reservation.lockboxId;
+        const effectiveLockboxId = ("lockboxId" in updates) ? updates.lockboxId : reservation.lockboxId;
         if (!effectiveLockboxId) {
           return res.status(400).json({ message: "A lockbox must be selected when using Key Box pickup method" });
         }
