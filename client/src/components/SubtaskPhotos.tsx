@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import type { Upload } from "@shared/schema";
 
 interface SubtaskPhotosProps {
@@ -73,13 +74,13 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
       {photos.map(photo => (
         <a
           key={photo.id}
-          href={photo.objectUrl}
+          href={toDisplayUrl(photo.objectUrl)}
           target="_blank"
           rel="noopener noreferrer"
           data-testid={`${testIdPrefix}-photo-${photo.id}`}
         >
           <img
-            src={photo.objectUrl}
+            src={toDisplayUrl(photo.objectUrl)}
             alt={photo.fileName}
             className="rounded object-cover"
             style={{ width: "54px", height: "54px", border: "1px solid #EEEEEE" }}

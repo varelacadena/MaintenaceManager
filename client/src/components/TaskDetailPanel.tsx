@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +44,7 @@ import {
   Send,
   Plus,
   Search,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +54,22 @@ import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem } f
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
+import { BarcodeScanner } from "./BarcodeScanner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const panelStatusDotStyle: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -148,6 +164,16 @@ export function TaskDetailPanel({
   const [inventorySearchQuery, setInventorySearchQuery] = useState("");
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState("");
 
+  const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
+  const [isLogTimeDialogOpen, setIsLogTimeDialogOpen] = useState(false);
+  const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNoteType, setNewNoteType] = useState("job_note");
+  const [logTimeDuration, setLogTimeDuration] = useState("");
+  const [logTimeDescription, setLogTimeDescription] = useState("");
+  const [isFileUploading, setIsFileUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
     queryFn: async () => {
@@ -169,9 +195,9 @@ export function TaskDetailPanel({
   });
 
   const { data: uploads } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/task", taskId],
+    queryKey: ["/api/uploads/task", taskId, "includeSubtasks"],
     queryFn: async () => {
-      const res = await fetch(`/api/uploads/task/${taskId}`);
+      const res = await fetch(`/api/uploads/task/${taskId}?includeSubtasks=true`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -321,6 +347,68 @@ export function TaskDetailPanel({
       toast({ title: "Error", description: "Failed to delete task.", variant: "destructive" });
     },
   });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async ({ content, noteType }: { content: string; noteType: string }) => {
+      return apiRequest("POST", "/api/task-notes", { taskId, content, noteType });
+    },
+    onSuccess: () => {
+      setNewNoteContent("");
+      setNewNoteType("job_note");
+      setIsAddNoteDialogOpen(false);
+      toast({ title: "Note added" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to add note.", variant: "destructive" }),
+  });
+
+  const logTimeMutation = useMutation({
+    mutationFn: async ({ durationMinutes, description }: { durationMinutes: number; description: string }) => {
+      return apiRequest("POST", "/api/time-entries", { taskId, durationMinutes, description });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
+      setLogTimeDuration("");
+      setLogTimeDescription("");
+      setIsLogTimeDialogOpen(false);
+      toast({ title: "Time logged" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to log time.", variant: "destructive" }),
+  });
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsFileUploading(true);
+    try {
+      const paramRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
+      if (!paramRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL } = await paramRes.json();
+      const isMock = uploadURL.startsWith("https://mock-storage.local/");
+      let objectUrl = uploadURL;
+      if (!isMock) {
+        const uploadRes = await fetch(uploadURL, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        objectUrl = uploadURL.split("?")[0];
+      }
+      await apiRequest("PUT", "/api/uploads", {
+        taskId,
+        fileName: file.name,
+        fileType: file.type || "application/octet-stream",
+        objectUrl,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
+      toast({ title: "File uploaded" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setIsFileUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const property = task?.propertyId
     ? properties?.find((p) => p.id === task.propertyId)
@@ -1128,21 +1216,32 @@ export function TaskDetailPanel({
         </p>
         <div className="space-y-1">
           {[
-            { icon: Camera, label: "Photos / Docs" },
-            { icon: ScanLine, label: "Scan" },
-            { icon: StickyNote, label: "Add Note" },
-            { icon: Clock, label: "Log Time" },
-          ].map(({ icon: Icon, label }) => (
+            { icon: Camera, label: "Photos / Docs", onClick: () => fileInputRef.current?.click() },
+            { icon: ScanLine, label: "Scan", onClick: () => setIsScanDialogOpen(true) },
+            { icon: StickyNote, label: "Add Note", onClick: () => setIsAddNoteDialogOpen(true) },
+            { icon: Clock, label: "Log Time", onClick: () => setIsLogTimeDialogOpen(true) },
+          ].map(({ icon: Icon, label, onClick }) => (
             <button
               key={label}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors hover-elevate"
               style={{ color: "#1A1A1A" }}
+              onClick={onClick}
               data-testid={`button-action-${label.toLowerCase().replace(/\s+/g, "-")}`}
             >
               <Icon className="w-4 h-4" style={{ color: "#6B7280" }} />
               {label}
+              {label === "Photos / Docs" && isFileUploading && (
+                <Loader2 className="w-3 h-3 ml-auto animate-spin" style={{ color: "#6B7280" }} />
+              )}
             </button>
           ))}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileUpload}
+            data-testid="input-file-upload"
+          />
         </div>
       </div>
 
@@ -1347,6 +1446,114 @@ export function TaskDetailPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Note Dialog */}
+      <Dialog open={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen}>
+        <DialogContent data-testid="dialog-add-note">
+          <DialogHeader>
+            <DialogTitle>Add Note</DialogTitle>
+            <DialogDescription>Add a note to this task.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select value={newNoteType} onValueChange={setNewNoteType}>
+              <SelectTrigger data-testid="select-note-type">
+                <SelectValue placeholder="Note type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="job_note">Job Note</SelectItem>
+                <SelectItem value="recommendation">Recommendation</SelectItem>
+              </SelectContent>
+            </Select>
+            <Textarea
+              placeholder="Write your note..."
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              rows={4}
+              data-testid="input-note-content"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsAddNoteDialogOpen(false)}
+              data-testid="button-cancel-note"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => addNoteMutation.mutate({ content: newNoteContent, noteType: newNoteType })}
+              disabled={!newNoteContent.trim() || addNoteMutation.isPending}
+              data-testid="button-save-note"
+            >
+              {addNoteMutation.isPending ? "Saving..." : "Save Note"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Log Time Dialog */}
+      <Dialog open={isLogTimeDialogOpen} onOpenChange={setIsLogTimeDialogOpen}>
+        <DialogContent data-testid="dialog-log-time">
+          <DialogHeader>
+            <DialogTitle>Log Time</DialogTitle>
+            <DialogDescription>Record time spent on this task.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (minutes)</label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="e.g. 30"
+                value={logTimeDuration}
+                onChange={(e) => setLogTimeDuration(e.target.value)}
+                data-testid="input-time-duration"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Description</label>
+              <Textarea
+                placeholder="What did you work on?"
+                value={logTimeDescription}
+                onChange={(e) => setLogTimeDescription(e.target.value)}
+                rows={3}
+                data-testid="input-time-description"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsLogTimeDialogOpen(false)}
+              data-testid="button-cancel-time"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => logTimeMutation.mutate({
+                durationMinutes: parseInt(logTimeDuration, 10),
+                description: logTimeDescription,
+              })}
+              disabled={!logTimeDuration || parseInt(logTimeDuration, 10) <= 0 || logTimeMutation.isPending}
+              data-testid="button-save-time"
+            >
+              {logTimeMutation.isPending ? "Saving..." : "Log Time"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scan Dialog */}
+      <BarcodeScanner
+        open={isScanDialogOpen}
+        onOpenChange={setIsScanDialogOpen}
+        onScan={(code) => {
+          setIsScanDialogOpen(false);
+          toast({ title: "Scanned", description: `Code: ${code}` });
+        }}
+        title="Scan Barcode / QR Code"
+        description="Scan an equipment or inventory barcode to look it up."
+      />
     </div>
   );
 }

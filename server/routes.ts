@@ -2462,8 +2462,18 @@ Be concise and practical. Do not use markdown formatting.`;
 
   app.get("/api/uploads/task/:taskId", isAuthenticated, async (req, res) => {
     try {
-      const uploads = await storage.getUploadsByTask(req.params.taskId);
-      res.json(uploads);
+      const taskUploads = await storage.getUploadsByTask(req.params.taskId);
+
+      if (req.query.includeSubtasks === "true") {
+        const subTasks = await storage.getSubTasks(req.params.taskId);
+        const subtaskUploadArrays = await Promise.all(
+          subTasks.map(st => storage.getUploadsByTask(st.id))
+        );
+        const allUploads = [...taskUploads, ...subtaskUploadArrays.flat()];
+        return res.json(allUploads);
+      }
+
+      res.json(taskUploads);
     } catch (error) {
       console.error("Error fetching task uploads:", error);
       res.status(500).json({ message: "Failed to fetch uploads" });

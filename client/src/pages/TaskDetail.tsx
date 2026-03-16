@@ -353,7 +353,12 @@ export default function TaskDetail() {
   });
 
   const { data: uploads = [] } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/task", id],
+    queryKey: ["/api/uploads/task", id, "includeSubtasks"],
+    queryFn: async () => {
+      const res = await fetch(`/api/uploads/task/${id}?includeSubtasks=true`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch uploads");
+      return res.json();
+    },
     enabled: !!id,
   });
 
@@ -1083,7 +1088,7 @@ export default function TaskDetail() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id, "includeSubtasks"] });
       toast({ title: "File uploaded" });
     },
   });
@@ -1093,7 +1098,7 @@ export default function TaskDetail() {
       return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id, "includeSubtasks"] });
       toast({ title: "Attachment deleted" });
     },
     onError: () => {
