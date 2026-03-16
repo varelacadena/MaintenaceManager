@@ -1437,6 +1437,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                       await addPartMutation.mutateAsync();
                       setIsPartModalOpen(false);
                     } catch {
+                      // Error handled by mutation's onError (shows toast)
                     }
                   }}
                   disabled={
