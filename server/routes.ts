@@ -3757,7 +3757,10 @@ Be concise and practical. Do not use markdown formatting.`;
       }
 
       const { id } = req.params;
-      const validated = insertVehicleReservationSchema.partial().parse(req.body);
+      const body = { ...req.body };
+      if (body.startDate && typeof body.startDate === "string") body.startDate = new Date(body.startDate);
+      if (body.endDate && typeof body.endDate === "string") body.endDate = new Date(body.endDate);
+      const validated = insertVehicleReservationSchema.partial().parse(body);
       const updates: any = { ...validated };
 
       const reservation = await storage.getVehicleReservation(id);
