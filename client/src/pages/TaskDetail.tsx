@@ -588,11 +588,21 @@ export default function TaskDetail() {
   };
 
   const handleScanPart = async (barcodeValue: string) => {
-    const res = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(barcodeValue)}`, {
+    const byBarcode = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(barcodeValue)}`, {
       credentials: "include",
     });
-    if (res.ok) {
-      const item: InventoryItem = await res.json();
+    let item: InventoryItem | null = null;
+    if (byBarcode.ok) {
+      item = await byBarcode.json();
+    } else {
+      const byId = await fetch(`/api/inventory/${encodeURIComponent(barcodeValue)}`, {
+        credentials: "include",
+      });
+      if (byId.ok) {
+        item = await byId.json();
+      }
+    }
+    if (item) {
       setSelectedInventoryItemId(item.id);
       setInventorySearchQuery(item.name);
       setIsAddPartDialogOpen(true);
