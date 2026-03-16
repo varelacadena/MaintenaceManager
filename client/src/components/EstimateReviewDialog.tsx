@@ -131,7 +131,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
     },
   });
 
-  const draftQuotes = quotes.filter(q => q.status === "draft" || q.status === "requested");
+  const draftQuotes = quotes.filter(q => q.status === "draft");
   const hasActionableQuotes = draftQuotes.length > 0;
 
   return (
@@ -204,7 +204,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
                 <div className="space-y-3">
                   {quotes.map((quote) => {
                     const quoteCreator = allUsers.find(u => u.id === quote.createdById);
-                    const isActionable = (quote.status === "draft" || quote.status === "requested") && task.estimateStatus !== "approved";
+                    const isActionable = quote.status === "draft" && task.estimateStatus !== "approved";
 
                     return (
                       <div
@@ -227,7 +227,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
                               {quote.status === "approved" && (
                                 <CheckCircle2 className="w-5 h-5 text-green-500" />
                               )}
-                              {quote.status !== "draft" && quote.status !== "requested" && (
+                              {quote.status !== "draft" && (
                                 <Badge
                                   variant="outline"
                                   className={

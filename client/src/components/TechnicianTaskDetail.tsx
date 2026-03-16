@@ -556,11 +556,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             </span>
           </div>
         )}
-        {task.dueDate && (
+        {task.estimatedCompletionDate && (
           <div className="flex items-center gap-1.5 mt-1.5">
             <Clock className="w-3.5 h-3.5 shrink-0 text-white/70" />
             <span className="text-sm text-white/70">
-              Due {format(new Date(task.dueDate), "MMM d, yyyy")}
+              Due {format(new Date(task.estimatedCompletionDate), "MMM d, yyyy")}
             </span>
           </div>
         )}

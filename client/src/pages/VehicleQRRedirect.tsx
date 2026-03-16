@@ -162,10 +162,10 @@ export default function VehicleQRRedirect() {
                   <p className="text-sm font-semibold" data-testid="text-license-plate">{vehicle.licensePlate}</p>
                 </div>
               )}
-              {vehicle.displayId && (
+              {vehicle.vehicleId && (
                 <div>
                   <p className="text-xs text-muted-foreground">Vehicle ID</p>
-                  <p className="text-sm" data-testid="text-display-id">{vehicle.displayId}</p>
+                  <p className="text-sm" data-testid="text-display-id">{vehicle.vehicleId}</p>
                 </div>
               )}
               {vehicle.currentMileage != null && (

@@ -2799,7 +2799,7 @@ export default function TaskDetail() {
                               )}
                               {quoteCreator && (
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Submitted by {quoteCreator.fullName || quoteCreator.username}
+                                  Submitted by {quoteCreator.firstName && quoteCreator.lastName ? `${quoteCreator.firstName} ${quoteCreator.lastName}` : quoteCreator.username}
                                 </p>
                               )}
                               {quote.notes && (
