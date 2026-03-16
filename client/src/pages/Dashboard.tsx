@@ -103,6 +103,7 @@ export default function Dashboard() {
     autoApplied: number;
     total: number;
     acceptanceRate: number;
+    pendingByAction?: Record<string, number>;
   };
 
   const { data: aiStats } = useQuery<AiStats>({
@@ -853,7 +854,11 @@ export default function Dashboard() {
       </Card>
 
       {aiStats && aiStats.total > 0 && (
-        <Card className="bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/20 dark:to-fuchsia-950/20 border-violet-200 dark:border-violet-800" data-testid="card-ai-recommendations">
+        <Card
+          className="bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/20 dark:to-fuchsia-950/20 border-violet-200 dark:border-violet-800 hover-elevate cursor-pointer"
+          data-testid="card-ai-recommendations"
+          onClick={() => setLocation("/ai-agent")}
+        >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
@@ -865,12 +870,10 @@ export default function Dashboard() {
                   </Badge>
                 )}
               </div>
-              <Link href="/ai-agent">
-                <Button variant="outline" size="sm" data-testid="button-review-ai">
-                  Review
-                  <ArrowUpRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
+              <Button variant="outline" size="sm" data-testid="button-review-ai">
+                Review
+                <ArrowUpRight className="w-4 h-4 ml-1" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -895,7 +898,26 @@ export default function Dashboard() {
             {(aiStats.pending ?? 0) > 0 && (
               <div className="mt-3 flex items-center gap-2 text-sm text-violet-700 dark:text-violet-300">
                 <Sparkles className="w-4 h-4" />
-                <span>{aiStats.pending} AI {aiStats.pending === 1 ? "recommendation needs" : "recommendations need"} your review</span>
+                <span data-testid="text-ai-breakdown">
+                  {(() => {
+                    const actionLabels: Record<string, string> = {
+                      triage: "triage",
+                      schedule: "scheduling",
+                      assign: "assignment",
+                      suggest_date: "date suggestion",
+                      pm_trigger: "PM trigger",
+                      fleet_maintenance: "fleet maintenance",
+                      dependency_check: "dependency check",
+                    };
+                    const byAction = aiStats.pendingByAction || {};
+                    const parts = Object.entries(byAction)
+                      .filter(([, count]) => count > 0)
+                      .map(([action, count]) => `${count} ${actionLabels[action] || action}`);
+                    return parts.length > 0
+                      ? `${parts.join(", ")} ${aiStats.pending === 1 ? "needs" : "need"} review`
+                      : `${aiStats.pending} ${aiStats.pending === 1 ? "recommendation needs" : "recommendations need"} review`;
+                  })()}
+                </span>
               </div>
             )}
           </CardContent>

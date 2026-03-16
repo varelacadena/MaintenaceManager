@@ -530,24 +530,35 @@ Include up to 3 recommendations, ranked best to worst.`;
 async function notifyAdminsOfPendingAction(log: AiAgentLog): Promise<void> {
   try {
     const admins = await storage.getUsersByRoles(["admin"]);
-    const actionLabel: Record<string, string> = {
-      triage: "Triage recommendation",
-      schedule: "Schedule suggestion",
-      assign: "Assignment recommendation",
-      suggest_date: "Date suggestion",
-      pm_trigger: "PM trigger",
-      fleet_maintenance: "Fleet maintenance alert",
-      dependency_check: "Dependency check",
-    };
-    const title = actionLabel[log.action] || "AI recommendation";
     const already = await storage.hasNotificationForRelatedItem(log.id, "system");
     if (already) return;
+
+    const value = log.proposedValue as any;
+    let title = "New AI recommendation";
+    let message = "A new AI suggestion needs your review.";
+
+    if (log.action === "triage") {
+      const reqTitle = value?.draftTaskTitle || "a service request";
+      title = "AI triage suggestion";
+      message = `AI triaged "${reqTitle}" as ${value?.suggestedUrgency || "unknown"} urgency${value?.suggestedAssigneeName ? `, suggested assigning to ${value.suggestedAssigneeName}` : ""}.`;
+    } else if (log.action === "schedule") {
+      const assignee = value?.suggestedAssigneeName || value?.assigneeName;
+      title = "AI scheduling suggestion";
+      message = `AI suggests${assignee ? ` assigning to ${assignee}` : ""}${value?.suggestedStartDate ? `, starting ${value.suggestedStartDate}` : ""}${value?.suggestedDueDate || value?.dueDate ? `, due ${value.suggestedDueDate || value.dueDate}` : ""}.`;
+    } else if (log.action === "assign") {
+      const topRec = value?.recommendations?.[0];
+      title = "AI assignment suggestion";
+      message = topRec
+        ? `AI recommends assigning to ${topRec.studentName}${value.recommendations.length > 1 ? ` (+${value.recommendations.length - 1} alternatives)` : ""}.`
+        : "AI has new assignment recommendations for your review.";
+    }
+
     for (const admin of admins) {
       await storage.createNotification({
         userId: admin.id,
         type: "system",
-        title: `AI: ${title}`,
-        message: log.reasoning || "New AI recommendation requires your review",
+        title,
+        message,
         link: "/ai-agent",
         relatedId: log.id,
         relatedType: "ai_recommendation",

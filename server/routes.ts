@@ -5979,7 +5979,13 @@ Be concise and practical. Do not use markdown formatting.`;
       const autoApplied = allLogs.filter((l: any) => l.status === "auto_applied").length;
       const total = allLogs.length;
       const acceptanceRate = (approved + autoApplied) > 0 ? Math.round(((approved + autoApplied) / Math.max(total - pending, 1)) * 100) : 0;
-      res.json({ pending, approved, rejected, autoApplied, total, acceptanceRate });
+      const pendingLogs = allLogs.filter((l: any) => l.status === "pending_review");
+      const pendingByAction: Record<string, number> = {};
+      for (const log of pendingLogs) {
+        const action = (log as any).action || "other";
+        pendingByAction[action] = (pendingByAction[action] || 0) + 1;
+      }
+      res.json({ pending, approved, rejected, autoApplied, total, acceptanceRate, pendingByAction });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch AI stats" });
     }
