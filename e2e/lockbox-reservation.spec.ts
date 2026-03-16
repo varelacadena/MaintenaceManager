@@ -1,6 +1,8 @@
-import { describe, it, expect } from "vitest";
+import assert from "node:assert";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:5000";
+let passed = 0;
+let failed = 0;
 
 async function login(username: string, password: string): Promise<string> {
   const res = await fetch(`${BASE_URL}/api/login`, {
@@ -38,7 +40,26 @@ async function apiPost(path: string, body: any, cookie: string) {
   return { status: res.status, data: await res.json() };
 }
 
-describe("Lockbox per-reservation: full E2E tests across roles", () => {
+async function test(name: string, fn: () => Promise<void>) {
+  try {
+    await fn();
+    passed++;
+    console.log(`  ✓ ${name}`);
+  } catch (err: any) {
+    failed++;
+    console.log(`  ✗ ${name}`);
+    console.log(`    ${err.message}`);
+  }
+}
+
+async function run() {
+  /**
+   * Credential mapping (verified against database):
+   *   admin      -> role: admin,      password: 123456
+   *   maintenance -> role: technician, password: 123456
+   *   Norberto   -> role: staff,      password: norberto123
+   *   Sebastian  -> role: student,    password: 123456
+   */
   let adminCookie: string;
   let techCookie: string;
   let studentCookie: string;
@@ -47,270 +68,277 @@ describe("Lockbox per-reservation: full E2E tests across roles", () => {
   let testReservationId: string;
   let testVehicleId: string;
 
-  describe("Authentication across all roles", () => {
-    it("authenticates admin (admin/123456)", async () => {
-      adminCookie = await login("admin", "123456");
-      expect(adminCookie).toBeTruthy();
-    });
+  console.log("\n=== Authentication across all roles ===");
 
-    it("authenticates technician (maintenance/123456)", async () => {
-      techCookie = await login("maintenance", "123456");
-      expect(techCookie).toBeTruthy();
-    });
-
-    it("authenticates student (Sebastian/123456)", async () => {
-      studentCookie = await login("Sebastian", "123456");
-      expect(studentCookie).toBeTruthy();
-    });
-
-    it("authenticates staff (Norberto/norberto123)", async () => {
-      staffCookie = await login("Norberto", "norberto123");
-      expect(staffCookie).toBeTruthy();
-    });
+  await test("authenticates admin (admin/123456)", async () => {
+    adminCookie = await login("admin", "123456");
+    assert.ok(adminCookie, "Admin cookie should be set");
   });
 
-  describe("Setup: locate lockbox and reservation", () => {
-    it("has at least one active lockbox", async () => {
-      const { data: lockboxes } = await apiGet("/api/lockboxes", techCookie);
-      const active = lockboxes.filter((lb: any) => lb.status === "active");
-      expect(active.length).toBeGreaterThan(0);
-      lockboxId = active[0].id;
-    });
-
-    it("finds an approved/active reservation", async () => {
-      const { data: reservations } = await apiGet("/api/vehicle-reservations", techCookie);
-      const eligible = reservations.filter(
-        (r: any) => r.status === "approved" || r.status === "active"
-      );
-      expect(eligible.length).toBeGreaterThan(0);
-      testReservationId = eligible[0].id;
-      if (eligible[0].vehicleId) testVehicleId = eligible[0].vehicleId;
-    });
+  await test("authenticates technician (maintenance/123456)", async () => {
+    techCookie = await login("maintenance", "123456");
+    assert.ok(techCookie, "Tech cookie should be set");
   });
 
-  describe("Technician: assign Key Box lockbox to reservation", () => {
-    it("accepts lockboxId with key_box method", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { keyPickupMethod: "key_box", lockboxId },
-        techCookie
-      );
-      expect(result.status).toBe(200);
-      expect(result.data.lockboxId).toBe(lockboxId);
-      expect(result.data.keyPickupMethod).toBe("key_box");
-    });
-
-    it("rejects key_box when lockboxId is explicitly null", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { keyPickupMethod: "key_box", lockboxId: null },
-        techCookie
-      );
-      expect(result.status).toBe(400);
-    });
-
-    it("clears lockboxId when switching away from key_box", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { keyPickupMethod: "in_person" },
-        techCookie
-      );
-      expect(result.status).toBe(200);
-      expect(result.data.lockboxId).toBeNull();
-      expect(result.data.keyPickupMethod).toBe("in_person");
-    });
-
-    it("restores key_box with lockboxId for subsequent tests", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { keyPickupMethod: "key_box", lockboxId },
-        techCookie
-      );
-      expect(result.status).toBe(200);
-      expect(result.data.lockboxId).toBe(lockboxId);
-    });
+  await test("authenticates student (Sebastian/123456)", async () => {
+    studentCookie = await login("Sebastian", "123456");
+    assert.ok(studentCookie, "Student cookie should be set");
   });
 
-  describe("Admin: can also assign Key Box lockbox to reservation", () => {
-    it("accepts lockboxId with key_box method via admin", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { keyPickupMethod: "key_box", lockboxId },
-        adminCookie
-      );
-      expect(result.status).toBe(200);
-      expect(result.data.lockboxId).toBe(lockboxId);
-      expect(result.data.keyPickupMethod).toBe("key_box");
-    });
+  await test("authenticates staff (Norberto/norberto123)", async () => {
+    staffCookie = await login("Norberto", "norberto123");
+    assert.ok(staffCookie, "Staff cookie should be set");
   });
 
-  describe("Role-based access control for lockbox/handoff fields", () => {
-    it("student PATCH does not modify lockbox fields", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { lockboxId: null, keyPickupMethod: "mailbox" },
-        studentCookie
-      );
-      if (result.status === 200) {
-        expect(result.data.lockboxId).toBe(lockboxId);
-        expect(result.data.keyPickupMethod).toBe("key_box");
-      } else {
-        expect(result.status).toBe(403);
-      }
-    });
+  console.log("\n=== Setup: locate lockbox and reservation ===");
 
-    it("staff PATCH does not modify lockbox fields", async () => {
-      const result = await apiPatch(
-        `/api/vehicle-reservations/${testReservationId}`,
-        { lockboxId: null, keyPickupMethod: "mailbox" },
-        staffCookie
-      );
-      if (result.status === 200) {
-        expect(result.data.lockboxId).toBe(lockboxId);
-        expect(result.data.keyPickupMethod).toBe("key_box");
-      } else {
-        expect(result.status).toBe(403);
-      }
-    });
+  await test("has at least one active lockbox", async () => {
+    const { data: lockboxes } = await apiGet("/api/lockboxes", techCookie);
+    const active = lockboxes.filter((lb: any) => lb.status === "active");
+    assert.ok(active.length > 0, "Should have at least one active lockbox");
+    lockboxId = active[0].id;
   });
 
-  describe("Vehicle API no longer exposes lockboxId", () => {
-    it("vehicle response excludes lockboxId (technician)", async () => {
-      const { data: vehicles } = await apiGet("/api/vehicles", techCookie);
-      expect(vehicles.length).toBeGreaterThan(0);
-      for (const v of vehicles) {
-        expect(v).not.toHaveProperty("lockboxId");
-      }
-    });
-
-    it("vehicle response excludes lockboxId (admin)", async () => {
-      const { data: vehicles } = await apiGet("/api/vehicles", adminCookie);
-      expect(vehicles.length).toBeGreaterThan(0);
-      expect(vehicles[0]).not.toHaveProperty("lockboxId");
-    });
-
-    it("single vehicle GET excludes lockboxId", async () => {
-      if (!testVehicleId) return;
-      const { data: vehicle } = await apiGet(`/api/vehicles/${testVehicleId}`, adminCookie);
-      expect(vehicle).not.toHaveProperty("lockboxId");
-    });
+  await test("finds an approved/active reservation", async () => {
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", techCookie);
+    const eligible = reservations.filter(
+      (r: any) => r.status === "approved" || r.status === "active"
+    );
+    assert.ok(eligible.length > 0, "Should have at least one eligible reservation");
+    testReservationId = eligible[0].id;
+    if (eligible[0].vehicleId) testVehicleId = eligible[0].vehicleId;
   });
 
-  describe("Checkout flow: reservation lockboxId used for code assignment", () => {
-    it("reservation with key_box has lockboxId accessible for checkout", async () => {
-      const { data: reservation } = await apiGet(
-        `/api/vehicle-reservations/${testReservationId}`,
-        techCookie
-      );
-      expect(reservation.keyPickupMethod).toBe("key_box");
-      expect(reservation.lockboxId).toBe(lockboxId);
-    });
+  console.log("\n=== Technician: assign Key Box lockbox to reservation ===");
 
-    it("student can read their own reservation lockboxId for checkout", async () => {
-      const { data: reservations } = await apiGet("/api/vehicle-reservations", studentCookie);
-      const withLockbox = reservations.find((r: any) => r.lockboxId);
-      if (withLockbox) {
-        expect(withLockbox.lockboxId).toBeTruthy();
-        expect(withLockbox.keyPickupMethod).toBe("key_box");
-      }
-    });
-
-    it("staff can read reservation lockboxId for checkout", async () => {
-      const { data: reservations } = await apiGet("/api/vehicle-reservations", staffCookie);
-      const withLockbox = reservations.find((r: any) => r.lockboxId);
-      if (withLockbox) {
-        expect(withLockbox.lockboxId).toBeTruthy();
-      }
-    });
-
-    it("lockbox code assignment works using reservation lockboxId", async () => {
-      const { data: reservations } = await apiGet("/api/vehicle-reservations", techCookie);
-      const withLockbox = reservations.find(
-        (r: any) => r.lockboxId && (r.status === "approved" || r.status === "active")
-      );
-      if (!withLockbox) return;
-
-      const result = await apiPost(
-        `/api/lockboxes/${withLockbox.lockboxId}/assign-code`,
-        {},
-        techCookie
-      );
-      expect([200, 403]).toContain(result.status);
-      if (result.status === 200) {
-        expect(result.data).toHaveProperty("code");
-        expect(result.data.code).toBeTruthy();
-      }
-    });
+  await test("tech accepts lockboxId with key_box method", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { keyPickupMethod: "key_box", lockboxId },
+      techCookie
+    );
+    assert.strictEqual(result.status, 200, `Expected 200 got ${result.status}`);
+    assert.strictEqual(result.data.lockboxId, lockboxId);
+    assert.strictEqual(result.data.keyPickupMethod, "key_box");
   });
 
-  describe("Checkin flow: reservation lockboxId used for key return", () => {
-    it("reservation lockboxId resolves to valid lockbox for key return (tech)", async () => {
-      const { data: reservation } = await apiGet(
-        `/api/vehicle-reservations/${testReservationId}`,
-        techCookie
-      );
-      expect(reservation.lockboxId).toBe(lockboxId);
-      const { data: lockbox } = await apiGet(
-        `/api/lockboxes/${reservation.lockboxId}`,
-        techCookie
-      );
-      expect(lockbox).toHaveProperty("name");
-      expect(lockbox).toHaveProperty("location");
-      expect(lockbox.status).toBe("active");
-    });
-
-    it("reservation lockboxId resolves to valid lockbox for key return (admin)", async () => {
-      const { data: reservation } = await apiGet(
-        `/api/vehicle-reservations/${testReservationId}`,
-        adminCookie
-      );
-      expect(reservation.lockboxId).toBe(lockboxId);
-      const { data: lockbox } = await apiGet(
-        `/api/lockboxes/${reservation.lockboxId}`,
-        adminCookie
-      );
-      expect(lockbox).toHaveProperty("name");
-      expect(lockbox.status).toBe("active");
-    });
+  await test("tech rejects key_box when lockboxId is null", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { keyPickupMethod: "key_box", lockboxId: null },
+      techCookie
+    );
+    assert.strictEqual(result.status, 400, `Expected 400 got ${result.status}`);
   });
 
-  describe("QR scan path: vehicle detail leads to checkout using reservation lockbox", () => {
-    it("vehicle detail accessible via vehicle ID (QR scan URL pattern)", async () => {
-      if (!testVehicleId) return;
-      const { status, data: vehicle } = await apiGet(`/api/vehicles/${testVehicleId}`, adminCookie);
-      expect(status).toBe(200);
-      expect(vehicle).toHaveProperty("id");
-      expect(vehicle).not.toHaveProperty("lockboxId");
-    });
-
-    it("reservation for vehicle has lockboxId for checkout after QR scan", async () => {
-      if (!testVehicleId) return;
-      const { data: reservations } = await apiGet("/api/vehicle-reservations", adminCookie);
-      const vehicleReservation = reservations.find(
-        (r: any) => r.vehicleId === testVehicleId && r.lockboxId
-      );
-      if (vehicleReservation) {
-        expect(vehicleReservation.lockboxId).toBeTruthy();
-        expect(vehicleReservation.keyPickupMethod).toBe("key_box");
-      }
-    });
+  await test("tech clears lockboxId when switching away from key_box", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { keyPickupMethod: "in_person" },
+      techCookie
+    );
+    assert.strictEqual(result.status, 200);
+    assert.strictEqual(result.data.lockboxId, null, "lockboxId should be null");
+    assert.strictEqual(result.data.keyPickupMethod, "in_person");
   });
 
-  describe("Reservation response includes lockboxId in all contexts", () => {
-    it("single reservation GET includes lockboxId (tech)", async () => {
-      const { data: reservation } = await apiGet(
-        `/api/vehicle-reservations/${testReservationId}`,
-        techCookie
-      );
-      expect(reservation).toHaveProperty("lockboxId");
-      expect(reservation).toHaveProperty("keyPickupMethod");
-    });
-
-    it("reservation list includes lockboxId (admin)", async () => {
-      const { data: reservations } = await apiGet("/api/vehicle-reservations", adminCookie);
-      expect(reservations.length).toBeGreaterThan(0);
-      const withLockbox = reservations.find((r: any) => r.lockboxId === lockboxId);
-      expect(withLockbox).toBeTruthy();
-    });
+  await test("tech restores key_box with lockboxId", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { keyPickupMethod: "key_box", lockboxId },
+      techCookie
+    );
+    assert.strictEqual(result.status, 200);
+    assert.strictEqual(result.data.lockboxId, lockboxId);
   });
+
+  console.log("\n=== Admin: assign Key Box lockbox to reservation ===");
+
+  await test("admin accepts lockboxId with key_box method", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { keyPickupMethod: "key_box", lockboxId },
+      adminCookie
+    );
+    assert.strictEqual(result.status, 200);
+    assert.strictEqual(result.data.lockboxId, lockboxId);
+    assert.strictEqual(result.data.keyPickupMethod, "key_box");
+  });
+
+  console.log("\n=== Role-based access control for lockbox fields ===");
+
+  await test("student PATCH does not modify lockbox fields", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { lockboxId: null, keyPickupMethod: "mailbox" },
+      studentCookie
+    );
+    if (result.status === 200) {
+      assert.strictEqual(result.data.lockboxId, lockboxId, "lockboxId should be unchanged");
+      assert.strictEqual(result.data.keyPickupMethod, "key_box", "keyPickupMethod should be unchanged");
+    } else {
+      assert.strictEqual(result.status, 403, `Expected 200 or 403 got ${result.status}`);
+    }
+  });
+
+  await test("staff PATCH does not modify lockbox fields", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { lockboxId: null, keyPickupMethod: "mailbox" },
+      staffCookie
+    );
+    if (result.status === 200) {
+      assert.strictEqual(result.data.lockboxId, lockboxId, "lockboxId should be unchanged");
+      assert.strictEqual(result.data.keyPickupMethod, "key_box", "keyPickupMethod should be unchanged");
+    } else {
+      assert.strictEqual(result.status, 403, `Expected 200 or 403 got ${result.status}`);
+    }
+  });
+
+  console.log("\n=== Vehicle API no longer exposes lockboxId ===");
+
+  await test("vehicle list excludes lockboxId (technician)", async () => {
+    const { data: vehicles } = await apiGet("/api/vehicles", techCookie);
+    assert.ok(vehicles.length > 0, "Should have vehicles");
+    for (const v of vehicles) {
+      assert.ok(!("lockboxId" in v), `Vehicle ${v.id} should not have lockboxId`);
+    }
+  });
+
+  await test("vehicle list excludes lockboxId (admin)", async () => {
+    const { data: vehicles } = await apiGet("/api/vehicles", adminCookie);
+    assert.ok(vehicles.length > 0);
+    assert.ok(!("lockboxId" in vehicles[0]), "Vehicle should not have lockboxId");
+  });
+
+  await test("single vehicle GET excludes lockboxId", async () => {
+    if (!testVehicleId) { console.log("    (skipped - no vehicleId)"); return; }
+    const { data: vehicle } = await apiGet(`/api/vehicles/${testVehicleId}`, adminCookie);
+    assert.ok(!("lockboxId" in vehicle), "Vehicle should not have lockboxId");
+  });
+
+  console.log("\n=== Checkout flow: reservation lockboxId for code assignment ===");
+
+  await test("reservation with key_box has lockboxId for checkout (tech)", async () => {
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${testReservationId}`,
+      techCookie
+    );
+    assert.strictEqual(reservation.keyPickupMethod, "key_box");
+    assert.strictEqual(reservation.lockboxId, lockboxId);
+  });
+
+  await test("student reads own reservation lockboxId for checkout", async () => {
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", studentCookie);
+    const withLockbox = reservations.find((r: any) => r.lockboxId);
+    if (withLockbox) {
+      assert.ok(withLockbox.lockboxId, "lockboxId should be present");
+      assert.strictEqual(withLockbox.keyPickupMethod, "key_box");
+    }
+  });
+
+  await test("staff reads reservation lockboxId for checkout", async () => {
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", staffCookie);
+    const withLockbox = reservations.find((r: any) => r.lockboxId);
+    if (withLockbox) {
+      assert.ok(withLockbox.lockboxId, "lockboxId should be present");
+    }
+  });
+
+  await test("lockbox code assignment works via reservation lockboxId", async () => {
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", techCookie);
+    const withLockbox = reservations.find(
+      (r: any) => r.lockboxId && (r.status === "approved" || r.status === "active")
+    );
+    if (!withLockbox) { console.log("    (skipped - no reservation with lockbox)"); return; }
+
+    const result = await apiPost(
+      `/api/lockboxes/${withLockbox.lockboxId}/assign-code`,
+      {},
+      techCookie
+    );
+    assert.ok([200, 403].includes(result.status), `Expected 200 or 403 got ${result.status}`);
+    if (result.status === 200) {
+      assert.ok(result.data.code, "Code should be assigned");
+    }
+  });
+
+  console.log("\n=== Checkin flow: reservation lockboxId for key return ===");
+
+  await test("reservation lockboxId resolves to valid lockbox (tech)", async () => {
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${testReservationId}`,
+      techCookie
+    );
+    assert.strictEqual(reservation.lockboxId, lockboxId);
+    const { data: lockbox } = await apiGet(
+      `/api/lockboxes/${reservation.lockboxId}`,
+      techCookie
+    );
+    assert.ok(lockbox.name, "Lockbox should have name");
+    assert.ok(lockbox.location, "Lockbox should have location");
+    assert.strictEqual(lockbox.status, "active");
+  });
+
+  await test("reservation lockboxId resolves to valid lockbox (admin)", async () => {
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${testReservationId}`,
+      adminCookie
+    );
+    assert.strictEqual(reservation.lockboxId, lockboxId);
+    const { data: lockbox } = await apiGet(
+      `/api/lockboxes/${reservation.lockboxId}`,
+      adminCookie
+    );
+    assert.ok(lockbox.name, "Lockbox should have name");
+    assert.strictEqual(lockbox.status, "active");
+  });
+
+  console.log("\n=== QR scan path: vehicle detail to checkout via reservation lockbox ===");
+
+  await test("vehicle detail accessible via ID (QR scan URL)", async () => {
+    if (!testVehicleId) { console.log("    (skipped - no vehicleId)"); return; }
+    const { status, data: vehicle } = await apiGet(`/api/vehicles/${testVehicleId}`, adminCookie);
+    assert.strictEqual(status, 200);
+    assert.ok(vehicle.id, "Vehicle should have id");
+    assert.ok(!("lockboxId" in vehicle), "Vehicle should not have lockboxId");
+  });
+
+  await test("reservation for vehicle has lockboxId after QR scan path", async () => {
+    if (!testVehicleId) { console.log("    (skipped - no vehicleId)"); return; }
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", adminCookie);
+    const vehicleReservation = reservations.find(
+      (r: any) => r.vehicleId === testVehicleId && r.lockboxId
+    );
+    if (vehicleReservation) {
+      assert.ok(vehicleReservation.lockboxId, "Should have lockboxId");
+      assert.strictEqual(vehicleReservation.keyPickupMethod, "key_box");
+    }
+  });
+
+  console.log("\n=== Reservation response includes lockboxId ===");
+
+  await test("single reservation GET includes lockboxId (tech)", async () => {
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${testReservationId}`,
+      techCookie
+    );
+    assert.ok("lockboxId" in reservation, "Should have lockboxId property");
+    assert.ok("keyPickupMethod" in reservation, "Should have keyPickupMethod property");
+  });
+
+  await test("reservation list includes lockboxId (admin)", async () => {
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", adminCookie);
+    assert.ok(reservations.length > 0);
+    const withLockbox = reservations.find((r: any) => r.lockboxId === lockboxId);
+    assert.ok(withLockbox, "Should find reservation with our lockboxId");
+  });
+
+  console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
+  if (failed > 0) process.exit(1);
+}
+
+run().catch((err) => {
+  console.error("Test suite failed:", err);
+  process.exit(1);
 });
