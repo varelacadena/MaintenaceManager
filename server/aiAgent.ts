@@ -364,7 +364,7 @@ async function checkVehicleCheckIn(checkInData: {
         vehicleId: checkInData.vehicleId,
       } as any);
 
-      await storage.createAiAgentLog({
+      const pmLog = await storage.createAiAgentLog({
         action: "pm_trigger",
         entityType: "vehicle",
         entityId: checkInData.vehicleId,
@@ -372,6 +372,7 @@ async function checkVehicleCheckIn(checkInData: {
         proposedValue: { taskId: task.id, maintenanceType: schedule.maintenanceType, milesUntilDue },
         status: "auto_applied",
       });
+      await notifyAdminsOfAutoAction(pmLog, `PM task auto-created for ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId}): ${schedule.maintenanceType} due in ${milesUntilDue} miles.`);
     }
   }
 
@@ -390,7 +391,7 @@ async function checkVehicleCheckIn(checkInData: {
 
     await storage.updateVehicle(checkInData.vehicleId, { status: "maintenance" } as any);
 
-    await storage.createAiAgentLog({
+    const dmgLog = await storage.createAiAgentLog({
       action: "fleet_maintenance",
       entityType: "vehicle",
       entityId: checkInData.vehicleId,
@@ -398,6 +399,7 @@ async function checkVehicleCheckIn(checkInData: {
       proposedValue: { taskId: task.id, damage: checkInData.damageDescription },
       status: "auto_applied",
     });
+    await notifyAdminsOfAutoAction(dmgLog, `Damage reported on ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId}). Repair task created and vehicle flagged for maintenance.`);
   }
 }
 
@@ -448,7 +450,7 @@ async function runEquipmentPmCheck(): Promise<void> {
         equipmentId: eq.id,
       } as any);
 
-      await storage.createAiAgentLog({
+      const eqLog = await storage.createAiAgentLog({
         action: "pm_trigger",
         entityType: "equipment",
         entityId: eq.id,
@@ -456,6 +458,7 @@ async function runEquipmentPmCheck(): Promise<void> {
         proposedValue: { equipmentName: eq.name, daysUntilDue, dueDate: nextDue.toISOString() },
         status: "auto_applied",
       });
+      await notifyAdminsOfAutoAction(eqLog, `PM task auto-created for equipment "${eq.name}": maintenance due in ${daysUntilDue} days.`);
     }
   }
 }
@@ -524,6 +527,33 @@ Include up to 3 recommendations, ranked best to worst.`;
 
   await notifyAdminsOfPendingAction(log);
   return log;
+}
+
+// ─── Notify admins about auto-applied AI actions (PM triggers, damage) ──────
+async function notifyAdminsOfAutoAction(log: AiAgentLog, message: string): Promise<void> {
+  try {
+    const admins = await storage.getUsersByRoles(["admin"]);
+    const already = await storage.hasNotificationForRelatedItem(log.id, "system");
+    if (already) return;
+    const titleMap: Record<string, string> = {
+      pm_trigger: "AI: PM task auto-created",
+      fleet_maintenance: "AI: Fleet maintenance alert",
+    };
+    const title = titleMap[log.action] || "AI: Auto-applied action";
+    for (const admin of admins) {
+      await storage.createNotification({
+        userId: admin.id,
+        type: "system",
+        title,
+        message,
+        link: "/ai-agent",
+        relatedId: log.id,
+        relatedType: "ai_auto_action",
+      });
+    }
+  } catch (err) {
+    console.error("[aiAgent] Failed to create admin notifications for auto action:", err);
+  }
 }
 
 // ─── Notify admins about pending AI recommendations ─────────────────────────
