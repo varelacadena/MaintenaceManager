@@ -39,11 +39,12 @@ import {
   Plus,
   Play,
   Square,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload, Message, PartUsed } from "@shared/schema";
+import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
@@ -110,10 +111,10 @@ export default function MobileTaskDetail() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
-  const [newPartName, setNewPartName] = useState("");
   const [newPartQuantity, setNewPartQuantity] = useState("1");
   const [newPartNotes, setNewPartNotes] = useState("");
-  const [newPartCost, setNewPartCost] = useState("");
+  const [inventorySearchQuery, setInventorySearchQuery] = useState("");
+  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState("");
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -185,6 +186,10 @@ export default function MobileTaskDetail() {
     enabled: !!id,
   });
 
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
+    queryKey: ["/api/inventory"],
+  });
+
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       return apiRequest("POST", "/api/messages", { taskId: id, content });
@@ -210,16 +215,17 @@ export default function MobileTaskDetail() {
   });
 
   const addPartMutation = useMutation({
-    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string }) => {
+    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string; inventoryItemId?: string }) => {
       const res = await apiRequest("POST", "/api/parts", partData);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
-      setNewPartName("");
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setNewPartQuantity("1");
       setNewPartNotes("");
-      setNewPartCost("");
+      setInventorySearchQuery("");
+      setSelectedInventoryItemId("");
       setIsAddPartFormOpen(false);
       toast({ title: "Part added" });
     },
@@ -1275,12 +1281,52 @@ export default function MobileTaskDetail() {
               )}
               {isAddPartFormOpen ? (
                 <div className="mt-2 p-3 rounded-lg space-y-2" style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}>
-                  <Input
-                    value={newPartName}
-                    onChange={(e) => setNewPartName(e.target.value)}
-                    placeholder="Part name"
-                    data-testid="input-mobile-part-name"
-                  />
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search inventory..."
+                      value={inventorySearchQuery}
+                      onChange={(e) => {
+                        setInventorySearchQuery(e.target.value);
+                        setSelectedInventoryItemId("");
+                      }}
+                      className="pl-9"
+                      data-testid="input-mobile-search-part"
+                    />
+                  </div>
+                  {inventorySearchQuery && !selectedInventoryItemId && (() => {
+                    const filtered = inventoryItems.filter((item) =>
+                      item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
+                    );
+                    return (
+                      <div className="border border-border rounded-md max-h-40 overflow-y-auto">
+                        {filtered.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground" data-testid="text-mobile-no-inventory-match">
+                            No matching inventory items
+                          </div>
+                        ) : (
+                          filtered.map((item) => (
+                            <div
+                              key={item.id}
+                              className="px-3 py-2 cursor-pointer text-sm border-b border-border/50 text-foreground hover-elevate"
+                              onClick={() => {
+                                setSelectedInventoryItemId(item.id);
+                                setInventorySearchQuery(item.name);
+                              }}
+                              data-testid={`mobile-inventory-item-${item.id}`}
+                            >
+                              {item.name}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {selectedInventoryItemId && (
+                    <div className="p-2 rounded-md text-sm font-medium bg-muted text-foreground" data-testid="text-mobile-selected-item">
+                      {inventoryItems.find((i) => i.id === selectedInventoryItemId)?.name}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Input
                       value={newPartQuantity}
@@ -1292,12 +1338,18 @@ export default function MobileTaskDetail() {
                       data-testid="input-mobile-part-quantity"
                     />
                     <Input
-                      value={newPartCost}
-                      onChange={(e) => setNewPartCost(e.target.value)}
+                      value={
+                        selectedInventoryItemId
+                          ? (
+                              (parseFloat(
+                                inventoryItems.find((i) => i.id === selectedInventoryItemId)?.cost || "0"
+                              ) || 0) * (parseFloat(newPartQuantity) || 1)
+                            ).toFixed(2)
+                          : ""
+                      }
+                      readOnly
                       placeholder="Cost ($)"
                       type="number"
-                      min="0"
-                      step="0.01"
                       className="w-24"
                       data-testid="input-mobile-part-cost"
                     />
@@ -1314,9 +1366,9 @@ export default function MobileTaskDetail() {
                       size="sm"
                       onClick={() => {
                         setIsAddPartFormOpen(false);
-                        setNewPartName("");
                         setNewPartQuantity("1");
-                        setNewPartCost("");
+                        setInventorySearchQuery("");
+                        setSelectedInventoryItemId("");
                         setNewPartNotes("");
                       }}
                       data-testid="button-mobile-cancel-part"
@@ -1326,14 +1378,18 @@ export default function MobileTaskDetail() {
                     <Button
                       size="sm"
                       style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                      disabled={!newPartName.trim() || addPartMutation.isPending}
+                      disabled={!selectedInventoryItemId || addPartMutation.isPending}
                       onClick={() => {
+                        const selectedItem = inventoryItems.find((i) => i.id === selectedInventoryItemId);
+                        if (!selectedItem) return;
+                        const cost = (parseFloat(selectedItem.cost || "0") || 0) * (parseFloat(newPartQuantity) || 1);
                         addPartMutation.mutate({
                           taskId: id!,
-                          partName: newPartName.trim(),
+                          partName: selectedItem.name,
                           quantity: newPartQuantity || "1",
-                          cost: newPartCost ? parseFloat(newPartCost) : 0,
+                          cost,
                           notes: newPartNotes.trim() || undefined,
+                          inventoryItemId: selectedInventoryItemId,
                         });
                       }}
                       data-testid="button-mobile-save-part"

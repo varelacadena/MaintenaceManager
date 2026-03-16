@@ -44,12 +44,13 @@ import {
   Play,
   Send,
   Plus,
+  Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload, Message, PartUsed } from "@shared/schema";
+import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
@@ -142,10 +143,10 @@ export function TaskDetailPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
-  const [newPartName, setNewPartName] = useState("");
   const [newPartQuantity, setNewPartQuantity] = useState("1");
   const [newPartNotes, setNewPartNotes] = useState("");
-  const [newPartCost, setNewPartCost] = useState("");
+  const [inventorySearchQuery, setInventorySearchQuery] = useState("");
+  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState("");
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -198,6 +199,10 @@ export function TaskDetailPanel({
     enabled: !!taskId,
   });
 
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
+    queryKey: ["/api/inventory"],
+  });
+
   const { data: timeEntries = [] } = useQuery<any[]>({
     queryKey: ["/api/time-entries/task", taskId],
     queryFn: async () => {
@@ -246,16 +251,17 @@ export function TaskDetailPanel({
   });
 
   const addPartMutation = useMutation({
-    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string }) => {
+    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string; inventoryItemId?: string }) => {
       const res = await apiRequest("POST", "/api/parts", partData);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parts/task", taskId] });
-      setNewPartName("");
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setNewPartQuantity("1");
       setNewPartNotes("");
-      setNewPartCost("");
+      setInventorySearchQuery("");
+      setSelectedInventoryItemId("");
       setIsAddPartFormOpen(false);
       toast({ title: "Part added" });
     },
@@ -871,12 +877,52 @@ export function TaskDetailPanel({
             )}
             {isAddPartFormOpen ? (
               <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: "#F9FAFB", border: "1px solid #EEEEEE" }}>
-                <Input
-                  value={newPartName}
-                  onChange={(e) => setNewPartName(e.target.value)}
-                  placeholder="Part name"
-                  data-testid="input-panel-part-name"
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search inventory..."
+                    value={inventorySearchQuery}
+                    onChange={(e) => {
+                      setInventorySearchQuery(e.target.value);
+                      setSelectedInventoryItemId("");
+                    }}
+                    className="pl-9"
+                    data-testid="input-panel-search-part"
+                  />
+                </div>
+                {inventorySearchQuery && !selectedInventoryItemId && (() => {
+                  const filtered = inventoryItems.filter((item) =>
+                    item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
+                  );
+                  return (
+                    <div className="border border-border rounded-md max-h-40 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground" data-testid="text-panel-no-inventory-match">
+                          No matching inventory items
+                        </div>
+                      ) : (
+                        filtered.map((item) => (
+                          <div
+                            key={item.id}
+                            className="px-3 py-2 cursor-pointer text-sm border-b border-border/50 text-foreground hover-elevate"
+                            onClick={() => {
+                              setSelectedInventoryItemId(item.id);
+                              setInventorySearchQuery(item.name);
+                            }}
+                            data-testid={`panel-inventory-item-${item.id}`}
+                          >
+                            {item.name}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()}
+                {selectedInventoryItemId && (
+                  <div className="p-2 rounded-md text-sm font-medium bg-muted text-foreground" data-testid="text-panel-selected-item">
+                    {inventoryItems.find((i) => i.id === selectedInventoryItemId)?.name}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     value={newPartQuantity}
@@ -888,12 +934,18 @@ export function TaskDetailPanel({
                     data-testid="input-panel-part-quantity"
                   />
                   <Input
-                    value={newPartCost}
-                    onChange={(e) => setNewPartCost(e.target.value)}
+                    value={
+                      selectedInventoryItemId
+                        ? (
+                            (parseFloat(
+                              inventoryItems.find((i) => i.id === selectedInventoryItemId)?.cost || "0"
+                            ) || 0) * (parseFloat(newPartQuantity) || 1)
+                          ).toFixed(2)
+                        : ""
+                    }
+                    readOnly
                     placeholder="Cost ($)"
                     type="number"
-                    min="0"
-                    step="0.01"
                     className="w-24"
                     data-testid="input-panel-part-cost"
                   />
@@ -910,9 +962,9 @@ export function TaskDetailPanel({
                     size="sm"
                     onClick={() => {
                       setIsAddPartFormOpen(false);
-                      setNewPartName("");
                       setNewPartQuantity("1");
-                      setNewPartCost("");
+                      setInventorySearchQuery("");
+                      setSelectedInventoryItemId("");
                       setNewPartNotes("");
                     }}
                     data-testid="button-panel-cancel-part"
@@ -922,14 +974,18 @@ export function TaskDetailPanel({
                   <Button
                     size="sm"
                     style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                    disabled={!newPartName.trim() || addPartMutation.isPending}
+                    disabled={!selectedInventoryItemId || addPartMutation.isPending}
                     onClick={() => {
+                      const selectedItem = inventoryItems.find((i) => i.id === selectedInventoryItemId);
+                      if (!selectedItem) return;
+                      const cost = (parseFloat(selectedItem.cost || "0") || 0) * (parseFloat(newPartQuantity) || 1);
                       addPartMutation.mutate({
                         taskId,
-                        partName: newPartName.trim(),
+                        partName: selectedItem.name,
                         quantity: newPartQuantity || "1",
-                        cost: newPartCost ? parseFloat(newPartCost) : 0,
+                        cost,
                         notes: newPartNotes.trim() || undefined,
+                        inventoryItemId: selectedInventoryItemId,
                       });
                     }}
                     data-testid="button-panel-save-part"
