@@ -142,6 +142,19 @@ async function run() {
     assert.strictEqual(result.data.keyPickupMethod, "in_person");
   });
 
+  await test("student cannot set key_box on reservation (unauthorized)", async () => {
+    const result = await apiPatch(
+      `/api/vehicle-reservations/${testReservationId}`,
+      { keyPickupMethod: "key_box", lockboxId },
+      studentCookie
+    );
+    if (result.status === 200) {
+      assert.strictEqual(result.data.keyPickupMethod, "in_person", "Student should not change keyPickupMethod");
+    } else {
+      assert.ok([400, 403].includes(result.status), `Expected 400 or 403 got ${result.status}`);
+    }
+  });
+
   await test("tech restores key_box with lockboxId", async () => {
     const result = await apiPatch(
       `/api/vehicle-reservations/${testReservationId}`,
