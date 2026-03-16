@@ -33,6 +33,7 @@ import PropertyDetail from "./pages/PropertyDetail";
 import EquipmentWorkHistory from "./pages/EquipmentWorkHistory";
 import Vehicles from "./pages/Vehicles";
 import VehicleDetail from "./pages/VehicleDetail";
+import VehicleQRRedirect from "./pages/VehicleQRRedirect";
 import VehicleEdit from "@/pages/VehicleEdit";
 import MyReservations from "./pages/MyReservations";
 import VehicleCheckOut from "./pages/VehicleCheckOut";
@@ -73,6 +74,10 @@ function AuthenticatedApp() {
     const path = window.location.pathname;
     if (path === "/forgot-password") return <ForgotPassword />;
     if (path === "/reset-password") return <ResetPassword />;
+    if (path && path !== "/" && path !== "/login") {
+      const fullUrl = path + window.location.search + window.location.hash;
+      sessionStorage.setItem("returnUrl", fullUrl);
+    }
     return <Landing />;
   }
   const isMobileTaskDetail = isMobileView && /^\/tasks\/[^/]+$/.test(currentPath) && !currentPath.endsWith("/edit") && !currentPath.endsWith("/new") && !window.location.search.includes("view=full");
@@ -219,9 +224,10 @@ function AuthenticatedApp() {
                 <Route path="/vehicles" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><Vehicles /></RoleGuard>
                 )} />
-                <Route path="/vehicles/:id" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><VehicleDetail /></RoleGuard>
-                )} />
+                <Route path="/vehicles/:id" component={() => {
+                  if (user?.role === "admin") return <VehicleDetail />;
+                  return <VehicleQRRedirect />;
+                }} />
                 <Route path="/vehicles/:id/edit" component={() => (
                   <RoleGuard allowedRoles={["admin"]}><VehicleEdit /></RoleGuard>
                 )} />

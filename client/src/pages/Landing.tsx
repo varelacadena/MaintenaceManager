@@ -35,7 +35,9 @@ export default function Landing() {
             duration: 5000,
           });
         }
-        window.location.href = "/";
+        const returnUrl = sessionStorage.getItem("returnUrl");
+        sessionStorage.removeItem("returnUrl");
+        window.location.href = returnUrl || "/";
       } else {
         const errorData = await response.json();
         const errorMessage = errorData.message || "Invalid username or password. Please check your credentials and try again.";

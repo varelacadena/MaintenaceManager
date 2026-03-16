@@ -2,7 +2,7 @@
 
 ## Overview
 
-This web-based platform centralizes maintenance operations for college facilities, supporting administrators, technicians, college staff, and students. It enables managing service requests, tracking tasks, and maintaining campus areas like grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions including user, vendor, inventory management, property mapping, and reporting. The platform aims to streamline facility management, improve response times, and optimize resource allocation across college campuses.
+This platform centralizes maintenance operations for college facilities, supporting administrators, technicians, college staff, and students. It enables managing service requests, tracking tasks, and maintaining campus areas like grounds, housing, and utilities. The system provides role-specific dashboards, task management with time and parts tracking, and administrative functions including user, vendor, inventory management, property mapping, and reporting. The platform aims to streamline facility management, improve response times, and optimize resource allocation across college campuses.
 
 ## User Preferences
 
@@ -12,70 +12,44 @@ Preferred communication style: Simple, everyday language.
 
 ### Core System Design
 
-The platform uses a 4-role model (Admin, Technician, Staff, Student) with role-based access control and dashboards. Tasks are assigned to specific users or pools (student_pool/technician_pool), with conditional forms for student tasks including detailed instructions and photo requirements. API routes are protected to enforce role-based authorization for task management. Vehicle fleet statuses are automatically updated based on reservations and usage logs, with manual overrides for specific maintenance needs.
+The platform employs a 4-role model (Admin, Technician, Staff, Student) with role-based access control. Tasks are assignable to specific users or pools. Vehicle fleet statuses are automatically updated based on reservations and usage logs, with manual override capabilities. It supports multi-asset tasks through sub-tasks linked to specific equipment or vehicles, which auto-complete and auto-start based on their child tasks. Internal estimates and quotes require an admin approval workflow before task completion.
 
 ### UI/UX Decisions
 
-The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui for components, styled with Tailwind CSS. Design prioritizes a mobile-first, action-focused approach. PWA support is configured for installable applications and 30-day session persistence. The dashboard is interactive, with clickable filter cards, a central task panel, and a quick view drawer. Analytics are consolidated into a single dynamic page with tab-based navigation, lazy loading, and consistent filtering and export options. Navigation has been consolidated, merging related pages and introducing tabbed interfaces for improved user experience.
-
-The student and technician experiences are simplified with "dummy-proof" interfaces, minimal headers, and full-width mobile layouts, focusing on essential task information and actions. Task detail pages include "Previous Work Here" sections for technicians.
+The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui components styled with Tailwind CSS. It features a mobile-first, action-focused design with PWA support. Dashboards are interactive with clickable filter cards and quick view drawers. Analytics are consolidated into a dynamic page with tab-based navigation, lazy loading, and consistent filtering. User experiences for students and technicians are simplified with "dummy-proof" interfaces, minimal headers, and full-width layouts. The calendar offers week and day views with an hourly time grid and assignee filters.
 
 ### Technical Implementations
 
-The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persistence is managed with Drizzle ORM for PostgreSQL. Authentication is handled via Replit Auth (OpenID Connect) with Passport.js and session management. File uploads integrate with Replit Object Storage. Database migrations are designed to be idempotent.
+The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persistence is handled by Drizzle ORM for PostgreSQL. Authentication uses Replit Auth (OpenID Connect) with Passport.js. File uploads integrate with Replit Object Storage using presigned URLs and role-based access. Database migrations are idempotent. Security features include API rate limiting, dynamic session secrets, and a health check endpoint. A React ErrorBoundary ensures graceful error handling for the frontend. Password recovery is self-service with rate-limited, single-use email tokens.
 
 ### Feature Specifications
 
--   **User Roles:** Admin, Technician, Staff, Student, each with specific permissions and dashboard views.
--   **Task Management:** Creation, assignment, tracking, status updates, time logging, parts tracking, and conditional fields.
--   **Vehicle Fleet Management:** Automatic status updates based on reservations/usage logs; manual overrides. Includes a detailed checkout/checkin flow with admin approval, safety acknowledgments, and photo/mileage/fuel logging.
-    - **Checkout Wizard (5 main steps):** Advisory (with key pickup reveal mid-wizard after acceptance) → Safety → Responsibilities → Checkout details (sub-stepped: mileage → fuel → condition → damage → photos) → Complete
-    - **Check-in Wizard (3 main steps):** Trip Summary → Inspection (sub-stepped: mileage → fuel → cleanliness → issues → photos → notes) → Complete
-    - **Vehicle Info Gating:** Non-admin users see only vehicle name (not full details) until checkout is completed; full details (make/model/year/capacity) visible to admins and after active/completed status
-    - **Key Pickup Timing:** Key pickup instructions revealed AFTER advisory acceptance in checkout wizard (mid-wizard, before checkout details), so user can retrieve key before filling out form
-    - **Time-locked Checkout Button:** Checkout button on reservation details is disabled until 1 hour before reservation start time, showing "Checkout opens [time]"; unlocks live every 30s via interval; admins can override
-    - **My Reservations Enrichment:** GET /api/vehicle-reservations/my returns vehicleName and vehicleDisplayId; approved cards show "Assigned Vehicle" badge; View Details hidden for pending/cancelled
-    - **Code Hub (Lockbox Management):** Centralized system for managing lockbox access codes used to retrieve vehicle keys. Multiple lockboxes organized by area/zone, each with multiple rotating codes. Admin-managed via "Code Hub" tab on the Vehicles page. Lockboxes are assigned per-reservation (not per-vehicle) via the "Key Box" pickup method in the handoff/edit dialog. During checkout, the system randomly assigns an active code from the reservation's lockbox and displays it in the key pickup reveal step. Assigned codes are tracked on checkout logs with usage stats (last used, use count). Tables: `lockboxes`, `lockbox_codes`. Fields: `vehicle_reservations.lockbox_id`, `vehicle_check_out_logs.assigned_code_id`. Code assignment route validates reservation ownership and time window for non-admin users. Error handling blocks checkout progress if code assignment fails. Single lockbox GET endpoint (`GET /api/lockboxes/:id`) available for any authenticated user. Server-side validation ensures lockboxId is required when keyPickupMethod is "key_box", and only admin/technician roles can set lockbox/handoff fields.
-    - **Key Return During Check-In:** For reservations with a lockbox, the check-in wizard includes a "Key Return" sub-step after the notes step. Displays the lockbox name and location, instructs the user to drop the key in the lockbox drop slot (no code needed), and requires a confirmation checkbox before completing check-in. Non-lockbox reservations skip this step entirely.
-    - **Authorization Fixes:** Admins/technicians can accept advisory and create checkout logs for any reservation (not just their own)
+-   **User Roles & Task Management:** Role-specific permissions, task creation, assignment, tracking, status updates, time/parts logging, and conditional fields.
+-   **Vehicle Fleet Management:** Detailed checkout/check-in flows with admin approval, safety acknowledgments, photo/mileage/fuel logging, and time-locked checkout buttons. Includes a "Code Hub" for managing lockbox access codes for key retrieval and a smart QR code redirect for vehicle interaction.
 -   **Service Request Management:** Staff can submit requests; students can complete assigned tasks.
--   **Inventory & Vendor Management:** Advanced hybrid inventory tracking system:
-    - **Counted mode** (Auto, Plumbing, Electrical, Repairs): decimal-precise quantities, barcode scanning, decimal-safe parts logging
-    - **Container/Unit mode** (Cleaning, Landscaping): tracks whole containers/bags with a "Used One" tap button
-    - **Status Only mode** (small consumables): Stocked/Low/Out badge that cycles on click, no counting
-    - Category filter tabs (All, Auto, Cleaning, Landscaping, Plumbing, Electrical, Repairs, General)
-    - Barcode/QR scanning via phone camera (html5-qrcode) for "Scan to Find" and "Scan to Receive" flows
-    - QR label generation per item with Print Label feature (qrcode package)
-    - Package info field (e.g., "32 oz bottle", "12-pack case") displayed in parts dialog
-    - AI-powered Insights panel: Reorder Recommendations and Usage Trends (OpenAI)
-    - Task Parts AI Suggest: suggests inventory items with quantities based on task description
--   **Notifications:** In-app (bell icon) for document expiration, task reminders, and overdue tasks; Email (via Resend) for transactional events like new service requests or reservation approvals. An admin-only email management interface allows editing templates, toggling notification types, and viewing logs.
--   **Property Mapping:** Tools for mapping and managing campus properties with a hierarchical structure supporting buildings, spaces, and flat properties. Tasks can be assigned to properties, spaces, or specific equipment.
--   **Reporting & Analytics:** Consolidated module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests) accessible via tabs, with filtering and export capabilities.
--   **Sub-Tasks for Multi-Asset Work:** Tasks can have sub-tasks, each linked to a specific piece of equipment or vehicle. Supports batch work (inspect 4 cars) and prerequisite work. Sub-task names are auto-generated as "{Parent Task Name} — {Asset Name}". Parent tasks auto-complete when all sub-tasks are done, auto-start when any sub-task starts. Sub-tasks appear as expandable rows on the Work page and as progress cards on TaskDetail. Technicians and admins can add sub-tasks via QR scan or search; students can view but not add. Vehicle QR codes (`/vehicles/{id}`) are recognized alongside equipment QR codes. Multi-asset task creation in NewTask creates parent + sub-tasks automatically. Schema: `parentTaskId` on tasks table (self-referential, cascade delete).
--   **Completed Task Summary Sheet:** Slide-out Sheet component (`CompletedTaskSummary.tsx`) accessible from Work, Tasks, TaskDetail, VehicleDetail maintenance history, and EquipmentWorkHistory pages. Shows professional work-order-receipt recap: task name, completion date, overview, time summary, parts/materials table, estimates/quotes, photos/documents, and sub-task summary. Empty sections are hidden. Includes print support via `window.print()`.
--   **Auto-Link Task Completion to Vehicle Maintenance Logs:** When a vehicle-linked task (or sub-task) is completed, a `vehicle_maintenance_log` entry is auto-created with task data (description, cost, performer, date). The `taskId` field on `vehicle_maintenance_logs` links back to the originating task. Tapping a task-linked maintenance log entry in VehicleDetail opens the Completed Task Summary sheet.
--   **Unified Work Page:** Combines tasks and projects into a single view with unified status groups, project expansion for child tasks, and integrated search/filtering.
--   **Project Management:** Simplified project detail pages as read-only organizational containers for grouping tasks.
--   **Internal Estimates/Quotes Workflow:** Task-level quote management with enforced approval workflow. Technicians can work on tasks normally but cannot mark them complete until estimates are submitted and admin-approved. Admins review and approve estimates via a "Review & Approve" popup dialog on the Work page, with an optional instructions field that updates the task. Server-side validation blocks completion on all routes. Status dropdowns across all views (Work, Tasks, TaskDetail, Dashboard/Drawer) hide the "Completed" option when estimates are pending. Rejection of all quotes returns the task to "In Progress" for resubmission. Estimate status banners guide technicians and students on all task detail views. Component: `client/src/components/EstimateReviewDialog.tsx`.
--   **File Storage Architecture:** Secure file uploads and downloads using Replit Object Storage with presigned URLs and role-based access control.
--   **User Management:** Full CRUD with admin-only access control. DELETE /api/users/:id requires admin auth, prevents self-deletion, and handles FK constraint errors for users with associated data (tasks, assignments).
--   **Security Hardening:** Login and general API rate limiting (with `trust proxy` always enabled for Replit's reverse proxy), dynamic session secret, and a health check endpoint.
--   **Error Boundary:** A React `ErrorBoundary` component wraps all routes in `App.tsx`. If any page crashes during rendering, users see a friendly "Something went wrong" card with a reload button instead of a blank white screen.
--   **Password Recovery:** Self-service "Forgot Password" flow. Users enter their username, receive a one-time reset link via email (Resend), click the link to set a new password. Tokens expire after 1 hour and are single-use. Both endpoints are rate-limited. The forgot-password response is always generic to prevent username enumeration. Pages: `/forgot-password` and `/reset-password?token=...`.
--   **Calendar (Redesigned):** Week view default on desktop, Day view default on mobile. Tasks display across their full active period (start date through due date). Day and Week views include an hourly time grid (6 AM–10 PM) with timed task blocks and an "All day" row. Per-user color coding via consistent hash. Assignee filter bar with color-coded chips. Current-time indicator line on today's grid. Tasks with a `scheduledStartTime` appear at the correct hour slot; tasks without appear in the All Day row.
--   **Scheduled Time Field:** Optional `scheduledStartTime` (varchar, format "HH:MM") added to the tasks table and task creation/edit forms. Stored as `scheduled_start_time` in the database (migration 039).
--   **One-tap Photo/Doc Upload:** TaskDetail bottom action bar has a single "Photos/Docs" button (Paperclip icon) that directly opens the file picker for both images and documents. Files upload and auto-save without an intermediate sheet or manual save step.
--   **Resource Library Folders:** Nested folder system for organizing documentation in the Resource Library. Admins can create, rename, and delete folders. Resources can be assigned to folders via the resource form. The UI shows a breadcrumb trail for navigation and displays folders above resources in a file-manager style. Table: `resource_folders` (id, name, parent_id, created_at). Resources table has `folder_id` FK. Migration: 044.
+-   **Inventory & Vendor Management:** Advanced hybrid inventory tracking (Counted, Container/Unit, Status Only modes), barcode/QR scanning, QR label generation, and AI-powered reorder recommendations. Includes AI suggestions for task parts based on descriptions.
+-   **Notifications:** In-app for reminders/overdue tasks; Email (via Resend) for transactional events, with an admin-only template management interface.
+-   **Property Mapping:** Tools for mapping campus properties with hierarchical structures, allowing tasks to be assigned to properties, spaces, or equipment.
+-   **Reporting & Analytics:** Consolidated module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests), filtering, and export capabilities.
+-   **Completed Task Summary Sheet:** Provides a professional work-order-receipt recap of completed tasks, accessible from multiple views, with print support.
+-   **Auto-Link Task Completion to Vehicle Maintenance Logs:** Vehicle-linked tasks automatically create maintenance log entries upon completion.
+-   **Unified Work Page:** Combines tasks and projects into a single view with unified status groups and integrated search/filtering.
+-   **Resource Library Folders:** Nested folder system for organizing documentation with breadcrumb navigation.
+-   **File Storage Architecture:** Secure file uploads and downloads using Replit Object Storage.
+-   **User Management:** Full CRUD with admin-only access and safeguards against self-deletion and FK constraint violations.
+-   **One-tap Photo/Doc Upload:** Streamlined file upload directly from the task detail page without intermediate steps.
+-   **Scheduled Time Field:** Optional `scheduledStartTime` for tasks, influencing calendar display.
 
 ## External Dependencies
 
 -   **Replit Authentication:** OIDC provider for user identity.
--   **Replit Object Storage:** Google Cloud Storage via sidecar endpoint for file uploads.
+-   **Replit Object Storage:** For file storage (Google Cloud Storage via sidecar).
 -   **Neon PostgreSQL:** Serverless PostgreSQL database.
 -   **Drizzle ORM:** For type-safe database interactions.
 -   **Passport.js:** Authentication middleware.
--   **React Hook Form:** For form management and validation.
--   **Uppy:** File upload UI library.
+-   **Resend:** Email delivery service.
 -   **TanStack Query:** For asynchronous state management.
+-   **OpenAI:** For AI-powered insights and suggestions.
+-   **html5-qrcode:** For barcode/QR scanning via camera.
+-   **qrcode (package):** For QR label generation.
 -   **express-rate-limit:** Rate limiting middleware.
