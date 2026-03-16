@@ -55,6 +55,7 @@ import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   Dialog,
   DialogContent,
@@ -687,7 +688,7 @@ export function TaskDetailPanel({
                 return (
                   <a
                     key={upload.id}
-                    href={upload.objectUrl}
+                    href={toDisplayUrl(upload.objectUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 py-1.5 px-1 rounded hover-elevate"
