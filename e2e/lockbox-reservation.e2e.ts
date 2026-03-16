@@ -47,17 +47,17 @@ describe("Lockbox assignment is per-reservation (not per-vehicle)", () => {
   let lockboxId: string;
   let testReservationId: string;
 
-  it("should authenticate as technician", async () => {
+  it("should authenticate as technician (maintenance/123456)", async () => {
     techCookie = await login("maintenance", "123456");
     expect(techCookie).toBeTruthy();
   });
 
-  it("should authenticate as student", async () => {
+  it("should authenticate as student (Sebastian/123456)", async () => {
     studentCookie = await login("Sebastian", "123456");
     expect(studentCookie).toBeTruthy();
   });
 
-  it("should authenticate as staff", async () => {
+  it("should authenticate as staff (Norberto/norberto123)", async () => {
     staffCookie = await login("Norberto", "norberto123");
     expect(staffCookie).toBeTruthy();
   });
@@ -69,7 +69,7 @@ describe("Lockbox assignment is per-reservation (not per-vehicle)", () => {
     lockboxId = active[0].id;
   });
 
-  it("should find an approved reservation to test with", async () => {
+  it("should find an approved/active reservation to test with", async () => {
     const reservations = await apiGet("/api/vehicle-reservations", techCookie);
     const approved = reservations.filter(
       (r: any) => r.status === "approved" || r.status === "active"
@@ -188,6 +188,35 @@ describe("Lockbox assignment is per-reservation (not per-vehicle)", () => {
         techCookie
       );
       expect(reservation).toHaveProperty("lockboxId");
+    });
+  });
+
+  describe("Checkout flow reads lockboxId from reservation", () => {
+    it("reservation with key_box should have lockboxId for checkout code assignment", async () => {
+      const reservation = await apiGet(
+        `/api/vehicle-reservations/${testReservationId}`,
+        techCookie
+      );
+      expect(reservation.keyPickupMethod).toBe("key_box");
+      expect(reservation.lockboxId).toBe(lockboxId);
+    });
+  });
+
+  describe("Checkin flow reads lockboxId from reservation", () => {
+    it("reservation lockboxId should be accessible for key return step", async () => {
+      const reservation = await apiGet(
+        `/api/vehicle-reservations/${testReservationId}`,
+        techCookie
+      );
+      if (reservation.lockboxId) {
+        const lockbox = await apiGet(
+          `/api/lockboxes/${reservation.lockboxId}`,
+          techCookie
+        );
+        expect(lockbox).toHaveProperty("name");
+        expect(lockbox).toHaveProperty("location");
+        expect(lockbox.status).toBe("active");
+      }
     });
   });
 });
