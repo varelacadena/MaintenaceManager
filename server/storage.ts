@@ -1779,6 +1779,9 @@ export class DatabaseStorage implements IStorage {
       if (logData.adminOverride !== undefined) {
         cleanData.adminOverride = Boolean(logData.adminOverride);
       }
+      if (logData.assignedCodeId !== undefined && logData.assignedCodeId !== null) {
+        cleanData.assignedCodeId = String(logData.assignedCodeId);
+      }
       
       console.log("Inserting clean data:", JSON.stringify(cleanData, null, 2));
       

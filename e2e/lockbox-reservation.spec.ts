@@ -427,6 +427,18 @@ async function run() {
     checkoutLogId = result.data.id;
     assert.strictEqual(result.data.reservationId, checkoutReservationId);
     assert.strictEqual(result.data.vehicleId, checkoutVehicleId);
+    if (assignedCodeId) {
+      assert.strictEqual(result.data.assignedCodeId, assignedCodeId, "Checkout log should persist assignedCodeId");
+    }
+  });
+
+  await test("verify assignedCodeId persisted in checkout log", async () => {
+    assert.ok(checkoutLogId, "Need checkout log from previous test");
+    const { data: logs } = await apiGet("/api/vehicle-checkout-logs", adminCookie);
+    const log = (Array.isArray(logs) ? logs : []).find((l: any) => l.id === checkoutLogId);
+    if (log && assignedCodeId) {
+      assert.strictEqual(log.assignedCodeId, assignedCodeId, "assignedCodeId should be retrievable");
+    }
   });
 
   await test("verify reservation lockbox persists after checkout", async () => {
