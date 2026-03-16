@@ -821,6 +821,10 @@ export default function ProjectDetail() {
     updateTaskMutation.mutate({ taskId, data: { propertyId: propertyId === "__none__" ? null : propertyId } });
   };
 
+  const handleTaskTypeChange = (taskId: string, taskType: string) => {
+    updateTaskMutation.mutate({ taskId, data: { taskType } });
+  };
+
   const handleInlineEdit = (taskId: string, field: string, value: string) => {
     updateTaskMutation.mutate({ taskId, data: { [field]: value } });
   };
