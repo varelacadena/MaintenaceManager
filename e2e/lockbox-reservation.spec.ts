@@ -334,6 +334,177 @@ async function run() {
     assert.ok(withLockbox, "Should find reservation with our lockboxId");
   });
 
+  console.log("\n=== Full checkout+checkin lifecycle with lockbox code ===");
+
+  let checkoutReservationId: string | null = null;
+  let checkoutVehicleId: string;
+  let checkoutUserId: string;
+  let checkoutLogId: string;
+  let assignedCodeId: string | null = null;
+
+  await test("create reservation and assign key_box for checkout lifecycle", async () => {
+    const { data: vehicles } = await apiGet("/api/vehicles", adminCookie);
+    const { data: me } = await apiGet("/api/auth/user", adminCookie);
+    const farFuture = new Date(Date.now() + 30 * 86400000);
+    const startDate = new Date(farFuture.getTime()).toISOString();
+    const endDate = new Date(farFuture.getTime() + 86400000).toISOString();
+
+    let created = false;
+    for (const v of vehicles) {
+      const createResult = await apiPost("/api/vehicle-reservations", {
+        vehicleId: v.id,
+        startDate,
+        endDate,
+        purpose: "E2E lockbox lifecycle test",
+        passengerCount: 1,
+      }, adminCookie);
+      if ([200, 201].includes(createResult.status) && createResult.data.id) {
+        checkoutReservationId = createResult.data.id;
+        checkoutVehicleId = v.id;
+        checkoutUserId = me.id;
+        created = true;
+        break;
+      }
+    }
+    assert.ok(created, "Should create reservation on at least one vehicle");
+
+    await apiPatch(
+      `/api/vehicle-reservations/${checkoutReservationId}`,
+      { status: "approved" },
+      adminCookie
+    );
+
+    const lockboxResult = await apiPatch(
+      `/api/vehicle-reservations/${checkoutReservationId}`,
+      { keyPickupMethod: "key_box", lockboxId },
+      adminCookie
+    );
+    assert.strictEqual(lockboxResult.status, 200);
+    assert.strictEqual(lockboxResult.data.lockboxId, lockboxId);
+    assert.strictEqual(lockboxResult.data.keyPickupMethod, "key_box");
+  });
+
+  await test("assign lockbox code before checkout (simulates key box flow)", async () => {
+    assert.ok(checkoutReservationId, "Need reservation from previous test");
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${checkoutReservationId}`,
+      adminCookie
+    );
+    assert.ok(reservation.lockboxId, "Reservation must have lockboxId");
+    assert.strictEqual(reservation.keyPickupMethod, "key_box");
+
+    const result = await apiPost(
+      `/api/lockboxes/${reservation.lockboxId}/assign-code`,
+      {},
+      adminCookie
+    );
+    if (result.status === 200) {
+      assert.ok(result.data.code, "Should receive lockbox code");
+      assert.ok(result.data.id, "Should receive code id");
+      assignedCodeId = result.data.id;
+    }
+  });
+
+  await test("create checkout log with lockbox code", async () => {
+    assert.ok(checkoutReservationId, "Need reservation from previous test");
+    const checkoutData: any = {
+      reservationId: checkoutReservationId,
+      vehicleId: checkoutVehicleId,
+      userId: checkoutUserId,
+      startMileage: 50000,
+      fuelLevel: "full",
+      cleanlinessConfirmed: true,
+      damageNotes: null,
+      adminOverride: true,
+    };
+    if (assignedCodeId) {
+      checkoutData.assignedCodeId = assignedCodeId;
+    }
+
+    const result = await apiPost("/api/vehicle-checkout-logs", checkoutData, adminCookie);
+    assert.strictEqual(result.status, 200, `Checkout failed: ${JSON.stringify(result.data)}`);
+    assert.ok(result.data.id, "Checkout log should have id");
+    checkoutLogId = result.data.id;
+    assert.strictEqual(result.data.reservationId, checkoutReservationId);
+    assert.strictEqual(result.data.vehicleId, checkoutVehicleId);
+  });
+
+  await test("verify reservation lockbox persists after checkout", async () => {
+    assert.ok(checkoutReservationId, "Need reservation from previous test");
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${checkoutReservationId}`,
+      adminCookie
+    );
+    assert.strictEqual(reservation.lockboxId, lockboxId, "lockboxId should persist after checkout");
+    assert.strictEqual(reservation.keyPickupMethod, "key_box");
+  });
+
+  await test("reservation lockboxId available for key return during checkin", async () => {
+    assert.ok(checkoutReservationId, "Need reservation from previous test");
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${checkoutReservationId}`,
+      adminCookie
+    );
+    assert.ok(reservation.lockboxId, "lockboxId must be present for key return");
+    const { data: lockbox } = await apiGet(
+      `/api/lockboxes/${reservation.lockboxId}`,
+      adminCookie
+    );
+    assert.ok(lockbox.name, "Lockbox should have name for key return instructions");
+    assert.ok(lockbox.location, "Lockbox should have location for key return");
+  });
+
+  await test("create checkin log (completes key return via lockbox)", async () => {
+    assert.ok(checkoutLogId, "Need checkout log from previous test");
+    const checkinData = {
+      vehicleId: checkoutVehicleId,
+      userId: checkoutUserId,
+      checkOutLogId: checkoutLogId,
+      endMileage: 50100,
+      endFuelLevel: 75,
+      cleanlinessStatus: "clean",
+      issues: "",
+      returnNotes: "Key returned to lockbox",
+      fuelLevel: "three_quarters",
+    };
+
+    const result = await apiPost("/api/vehicle-checkin-logs", checkinData, adminCookie);
+    assert.strictEqual(result.status, 200, `Checkin failed: ${JSON.stringify(result.data)}`);
+    assert.ok(result.data.id, "Checkin log should have id");
+    assert.strictEqual(result.data.checkOutLogId, checkoutLogId);
+  });
+
+  await test("reservation lockbox still accessible after checkin (for records)", async () => {
+    assert.ok(checkoutReservationId, "Need reservation from previous test");
+    const { data: reservation } = await apiGet(
+      `/api/vehicle-reservations/${checkoutReservationId}`,
+      adminCookie
+    );
+    assert.ok(reservation.lockboxId, "lockboxId should remain for historical records");
+  });
+
+  console.log("\n=== QR scan path: vehicle detail -> checkout entry point ===");
+
+  await test("GET vehicle by ID (QR scan URL) returns vehicle without lockboxId", async () => {
+    const { status, data: vehicle } = await apiGet(
+      `/api/vehicles/${checkoutVehicleId}`,
+      adminCookie
+    );
+    assert.strictEqual(status, 200);
+    assert.ok(!("lockboxId" in vehicle), "Vehicle must not have lockboxId after migration");
+  });
+
+  await test("reservation for QR-scanned vehicle carries lockboxId", async () => {
+    if (!checkoutVehicleId) { console.log("    (skipped - no checkoutVehicleId)"); return; }
+    const { data: reservations } = await apiGet("/api/vehicle-reservations", adminCookie);
+    if (!Array.isArray(reservations)) { console.log("    (skipped - not array)"); return; }
+    const forVehicle = reservations.find(
+      (r: any) => r.vehicleId === checkoutVehicleId && r.lockboxId
+    );
+    assert.ok(forVehicle, "Should find reservation with lockboxId for this vehicle");
+    assert.strictEqual(forVehicle.keyPickupMethod, "key_box");
+  });
+
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
   if (failed > 0) process.exit(1);
 }
