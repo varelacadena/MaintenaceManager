@@ -150,6 +150,7 @@ Pick the assignee whose skills best match the required skill, who is available t
     modelUsed: aiResult.model,
   });
 
+  await notifyAdminsOfPendingAction(log);
   return log;
 }
 
@@ -202,6 +203,7 @@ Return ONLY a JSON object:
     modelUsed: aiResult.model,
   });
 
+  await notifyAdminsOfPendingAction(log);
   return log;
 }
 
@@ -322,6 +324,7 @@ Respect dependencies (dependent tasks must start after their blockers are due). 
       modelUsed: aiResult.model,
     });
     logs.push(log);
+    await notifyAdminsOfPendingAction(log);
   }
 
   return logs;
@@ -519,7 +522,40 @@ Include up to 3 recommendations, ranked best to worst.`;
     modelUsed: aiResult.model,
   });
 
+  await notifyAdminsOfPendingAction(log);
   return log;
+}
+
+// ─── Notify admins about pending AI recommendations ─────────────────────────
+async function notifyAdminsOfPendingAction(log: AiAgentLog): Promise<void> {
+  try {
+    const admins = await storage.getUsersByRoles(["admin"]);
+    const actionLabel: Record<string, string> = {
+      triage: "Triage recommendation",
+      schedule: "Schedule suggestion",
+      assign: "Assignment recommendation",
+      suggest_date: "Date suggestion",
+      pm_trigger: "PM trigger",
+      fleet_maintenance: "Fleet maintenance alert",
+      dependency_check: "Dependency check",
+    };
+    const title = actionLabel[log.action] || "AI recommendation";
+    const already = await storage.hasNotificationForRelatedItem(log.id, "system");
+    if (already) return;
+    for (const admin of admins) {
+      await storage.createNotification({
+        userId: admin.id,
+        type: "system",
+        title: `AI: ${title}`,
+        message: log.reasoning || "New AI recommendation requires your review",
+        link: "/ai-agent",
+        relatedId: log.id,
+        relatedType: "ai_recommendation",
+      });
+    }
+  } catch (err) {
+    console.error("[aiAgent] Failed to create admin notifications:", err);
+  }
 }
 
 // ─── Apply Approved Actions ───────────────────────────────────────────────────

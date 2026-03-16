@@ -28,7 +28,8 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 -   **Vehicle Fleet Management:** Detailed checkout/check-in flows with admin approval, safety acknowledgments, photo/mileage/fuel logging, and time-locked checkout buttons. Includes a "Code Hub" for managing lockbox access codes for key retrieval and a smart QR code redirect for vehicle interaction.
 -   **Service Request Management:** Staff can submit requests; students can complete assigned tasks.
 -   **Inventory & Vendor Management:** Advanced hybrid inventory tracking (Counted, Container/Unit, Status Only modes), barcode/QR scanning, QR label generation, and AI-powered reorder recommendations. Includes AI suggestions for task parts based on descriptions.
--   **Notifications:** In-app for reminders/overdue tasks; Email (via Resend) for transactional events, with an admin-only template management interface.
+-   **Notifications:** In-app for reminders/overdue tasks; Email (via Resend) for transactional events, with an admin-only template management interface. AI Agent actions with `pending_review` status automatically generate system notifications for all admin users.
+-   **AI Dashboard Integration:** The admin dashboard includes an AI Recommendations summary card showing pending review count, approved, auto-applied, and acceptance rate stats, with a direct link to the AI Agent page.
 -   **Property Mapping:** Tools for mapping campus properties with hierarchical structures, allowing tasks to be assigned to properties, spaces, or equipment.
 -   **Reporting & Analytics:** Consolidated module with various reports (Work Orders, Technicians, Assets, Fleet, Service Requests), filtering, and export capabilities.
 -   **Completed Task Summary Sheet:** Provides a professional work-order-receipt recap of completed tasks, accessible from multiple views, with print support.

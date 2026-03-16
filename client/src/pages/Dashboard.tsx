@@ -20,6 +20,8 @@ import {
   EyeOff,
   FolderKanban,
   ArrowUpRight,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import type { ServiceRequest, Task, VehicleReservation, Vehicle, User as UserType, Property, Project } from "@shared/schema";
@@ -91,6 +93,20 @@ export default function Dashboard() {
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
+    enabled: user?.role === "admin",
+  });
+
+  type AiStats = {
+    pending: number;
+    approved: number;
+    rejected: number;
+    autoApplied: number;
+    total: number;
+    acceptanceRate: number;
+  };
+
+  const { data: aiStats } = useQuery<AiStats>({
+    queryKey: ["/api/ai-stats"],
     enabled: user?.role === "admin",
   });
 
@@ -835,6 +851,56 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {aiStats && aiStats.total > 0 && (
+        <Card className="bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/20 dark:to-fuchsia-950/20 border-violet-200 dark:border-violet-800" data-testid="card-ai-recommendations">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                <CardTitle className="text-lg">AI Recommendations</CardTitle>
+                {(aiStats.pending ?? 0) > 0 && (
+                  <Badge variant="secondary" className="ml-1" data-testid="badge-ai-pending-count">
+                    {aiStats.pending} pending
+                  </Badge>
+                )}
+              </div>
+              <Link href="/ai-agent">
+                <Button variant="outline" size="sm" data-testid="button-review-ai">
+                  Review
+                  <ArrowUpRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="text-ai-pending">{aiStats.pending}</p>
+                <p className="text-xs text-muted-foreground">Pending Review</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-ai-approved">{aiStats.approved}</p>
+                <p className="text-xs text-muted-foreground">Approved</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-ai-auto">{aiStats.autoApplied}</p>
+                <p className="text-xs text-muted-foreground">Auto-Applied</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-ai-rate">{aiStats.acceptanceRate}%</p>
+                <p className="text-xs text-muted-foreground">Acceptance Rate</p>
+              </div>
+            </div>
+            {(aiStats.pending ?? 0) > 0 && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-violet-700 dark:text-violet-300">
+                <Sparkles className="w-4 h-4" />
+                <span>{aiStats.pending} AI {aiStats.pending === 1 ? "recommendation needs" : "recommendations need"} your review</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
