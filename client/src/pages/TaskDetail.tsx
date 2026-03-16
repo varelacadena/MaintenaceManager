@@ -1842,6 +1842,9 @@ export default function TaskDetail() {
         setIsEquipmentInfoOpen={setIsEquipmentInfoOpen}
         equipmentInfoTab={equipmentInfoTab}
         setEquipmentInfoTab={setEquipmentInfoTab}
+        scannedVehicle={scannedVehicle}
+        isVehicleInfoOpen={isVehicleInfoOpen}
+        setIsVehicleInfoOpen={setIsVehicleInfoOpen}
       />
     );
   }
