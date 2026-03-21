@@ -187,37 +187,34 @@ export function TaskLocationFields({
     <div className="space-y-4">
       <div>
         <FormLabel>Location Scope</FormLabel>
-        <div className="flex gap-1 mt-1.5" data-testid="location-scope-selector">
+        <div className="flex gap-1.5 mt-1.5 flex-wrap" data-testid="location-scope-selector">
           <Button
             type="button"
             variant={locationScope === "single" ? "default" : "outline"}
-            size="sm"
             onClick={() => handleScopeChange("single")}
             data-testid="button-scope-single"
           >
-            <Building2 className="w-3.5 h-3.5 mr-1 sm:mr-1.5 shrink-0" />
+            <Building2 className="w-4 h-4 mr-1.5 shrink-0" />
             <span className="hidden sm:inline">Single Building</span>
             <span className="sm:hidden">Single</span>
           </Button>
           <Button
             type="button"
             variant={locationScope === "multiple" ? "default" : "outline"}
-            size="sm"
             onClick={() => handleScopeChange("multiple")}
             data-testid="button-scope-multiple"
           >
-            <Building2 className="w-3.5 h-3.5 mr-1 sm:mr-1.5 shrink-0" />
+            <Building2 className="w-4 h-4 mr-1.5 shrink-0" />
             <span className="hidden sm:inline">Multiple Buildings</span>
             <span className="sm:hidden">Multiple</span>
           </Button>
           <Button
             type="button"
             variant={locationScope === "campus" ? "default" : "outline"}
-            size="sm"
             onClick={() => handleScopeChange("campus")}
             data-testid="button-scope-campus"
           >
-            <Globe className="w-3.5 h-3.5 mr-1 sm:mr-1.5 shrink-0" />
+            <Globe className="w-4 h-4 mr-1.5 shrink-0" />
             <span className="hidden sm:inline">All Campus</span>
             <span className="sm:hidden">All</span>
           </Button>
@@ -330,6 +327,12 @@ export function TaskLocationFields({
               )}
             </PopoverContent>
           </Popover>
+
+          {selectedPropertyIds.length === 0 && form.formState.isSubmitted && (
+            <p className="text-sm text-destructive" data-testid="error-no-buildings">
+              Please select at least one building
+            </p>
+          )}
 
           {selectedPropertyIds.length > 0 && (
             <div className="flex flex-wrap gap-1.5" data-testid="selected-buildings-tags">
