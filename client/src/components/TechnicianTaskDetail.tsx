@@ -416,16 +416,21 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     }
   };
 
+  const [locationExpanded, setLocationExpanded] = useState(false);
   const locationText = (() => {
     if (task.isCampusWide) return "All Campus Buildings";
     if (multiProperties.length > 0) {
+      if (locationExpanded) {
+        return multiProperties.map((p) => p.name).join(", ");
+      }
       const maxShow = 2;
       const names = multiProperties.slice(0, maxShow).map((p) => p.name);
       const rest = multiProperties.length - maxShow;
-      return rest > 0 ? `${names.join(", ")} +${rest} more` : names.join(", ");
+      return rest > 0 ? `${names.join(", ")}` : names.join(", ");
     }
     return [property?.name, space?.name, equipment?.name].filter(Boolean).join(" \u00B7 ");
   })();
+  const hasMoreBuildings = !locationExpanded && multiProperties.length > 2;
 
   const contactName = contactStaff
     ? `${contactStaff.firstName || ""} ${contactStaff.lastName || ""}`.trim() || contactStaff.username
@@ -556,7 +561,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           {task.name}
         </h1>
         {locationText && (
-          <div className="flex items-center gap-1.5">
+          <div
+            className={`flex items-center gap-1.5 ${multiProperties.length > 2 ? "cursor-pointer" : ""}`}
+            onClick={() => multiProperties.length > 2 && setLocationExpanded(!locationExpanded)}
+            data-testid="tech-location-display"
+          >
             {task.isCampusWide ? (
               <Globe className="w-3.5 h-3.5 shrink-0 text-white/70" />
             ) : (
@@ -565,6 +574,16 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
             <span className="text-sm text-white/70">
               {locationText}
             </span>
+            {hasMoreBuildings && (
+              <span className="text-sm text-white/90 underline whitespace-nowrap" data-testid="button-expand-buildings">
+                +{multiProperties.length - 2} more
+              </span>
+            )}
+            {locationExpanded && multiProperties.length > 2 && (
+              <span className="text-sm text-white/90 underline whitespace-nowrap" data-testid="button-collapse-buildings">
+                (less)
+              </span>
+            )}
           </div>
         )}
         {task.estimatedCompletionDate && (

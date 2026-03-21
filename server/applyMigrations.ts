@@ -57,6 +57,8 @@ export async function applyMigrations() {
     { file: "043_add_lockboxes_and_codes.sql", name: "043_add_lockboxes_and_codes" },
     { file: "044_add_resource_folders.sql", name: "044_add_resource_folders" },
     { file: "045_nullable_message_request_id.sql", name: "045_nullable_message_request_id" },
+    { file: "046_move_lockbox_to_reservations.sql", name: "046_move_lockbox_to_reservations" },
+    { file: "047_add_task_location_scope.sql", name: "047_add_task_location_scope" },
   ];
 
   try {
