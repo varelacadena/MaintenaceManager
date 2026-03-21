@@ -101,6 +101,7 @@ import {
   Search,
   Layers,
   ClipboardCheck,
+  Globe,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
@@ -233,6 +234,59 @@ function QuoteAttachmentsList({ quoteId }: { quoteId: string }) {
           </Button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MultiPropertyDisplay({ properties, isTechnicianOrAdmin, safeNavigate }: {
+  properties: Property[];
+  isTechnicianOrAdmin: boolean;
+  safeNavigate: (path: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const MAX_VISIBLE = 3;
+  const visible = expanded ? properties : properties.slice(0, MAX_VISIBLE);
+  const hiddenCount = properties.length - MAX_VISIBLE;
+
+  return (
+    <div className="space-y-1.5" data-testid="display-multi-property">
+      <div className="flex items-center gap-2 mb-1">
+        <Building2 className="w-4 h-4 text-primary shrink-0" />
+        <span className="text-sm font-medium">{properties.length} Buildings</span>
+        <Badge variant="secondary" className="text-xs">Multi-Building</Badge>
+      </div>
+      {visible.map((p) => (
+        <div
+          key={p.id}
+          className={`flex items-center gap-2 p-2 bg-muted/50 rounded-md ${isTechnicianOrAdmin ? "hover-elevate active-elevate-2 cursor-pointer" : ""}`}
+          onClick={() => isTechnicianOrAdmin && safeNavigate(`/properties/${p.id}`)}
+          data-testid={`link-multi-property-${p.id}`}
+        >
+          <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span className="text-sm truncate flex-1">{p.name}</span>
+          {isTechnicianOrAdmin && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+        </div>
+      ))}
+      {!expanded && hiddenCount > 0 && (
+        <button
+          type="button"
+          className="text-sm text-primary hover:underline pl-6"
+          onClick={() => setExpanded(true)}
+          data-testid="button-show-more-buildings"
+        >
+          +{hiddenCount} more building{hiddenCount > 1 ? "s" : ""}
+        </button>
+      )}
+      {expanded && properties.length > MAX_VISIBLE && (
+        <button
+          type="button"
+          className="text-sm text-primary hover:underline pl-6"
+          onClick={() => setExpanded(false)}
+          data-testid="button-show-fewer-buildings"
+        >
+          Show fewer
+        </button>
+      )}
     </div>
   );
 }
@@ -376,6 +430,16 @@ export default function TaskDetail() {
     queryKey: ["/api/properties", task?.propertyId],
     enabled: !!task?.propertyId,
   });
+
+  const { data: allProperties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+    enabled: !!(task?.isCampusWide || (task?.propertyIds && task.propertyIds.length > 0)),
+  });
+
+  const multiProperties = useMemo(() => {
+    if (!task?.propertyIds || task.propertyIds.length === 0) return [];
+    return allProperties.filter((p) => task.propertyIds!.includes(p.id));
+  }, [task?.propertyIds, allProperties]);
 
   const { data: equipment } = useQuery<Equipment>({
     queryKey: ["/api/equipment", task?.equipmentId],
@@ -1772,6 +1836,7 @@ export default function TaskDetail() {
         task={task}
         user={user}
         property={property}
+        multiProperties={multiProperties}
         space={space}
         equipment={equipment}
         vehicle={vehicle}
@@ -1983,7 +2048,26 @@ export default function TaskDetail() {
           )}
 
           {/* Location - Clickable for admin/tech only */}
-          {property && (
+          {task?.isCampusWide && (
+            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-md border border-primary/20" data-testid="display-campus-wide">
+              <Globe className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">All Campus Buildings</p>
+                <p className="text-sm text-muted-foreground">This task applies to all campus buildings</p>
+              </div>
+              <Badge variant="secondary" className="text-xs shrink-0">Campus-Wide</Badge>
+            </div>
+          )}
+
+          {!task?.isCampusWide && multiProperties.length > 0 && (
+            <MultiPropertyDisplay
+              properties={multiProperties}
+              isTechnicianOrAdmin={isTechnicianOrAdmin}
+              safeNavigate={safeNavigate}
+            />
+          )}
+
+          {!task?.isCampusWide && multiProperties.length === 0 && property && (
             isTechnicianOrAdmin ? (
               <div 
                 onClick={() => safeNavigate(`/properties/${property.id}`)}
@@ -2013,7 +2097,7 @@ export default function TaskDetail() {
           )}
 
           {/* Space if present */}
-          {space && (
+          {!task?.isCampusWide && multiProperties.length === 0 && space && (
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-space">
               <DoorOpen className="w-5 h-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
@@ -2026,7 +2110,7 @@ export default function TaskDetail() {
           )}
 
           {/* Equipment if present */}
-          {equipment && (
+          {!task?.isCampusWide && multiProperties.length === 0 && equipment && (
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-equipment">
               <Package className="w-5 h-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">

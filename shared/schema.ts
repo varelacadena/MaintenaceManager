@@ -187,6 +187,8 @@ export const tasks = pgTable("tasks", {
   requiredSkill: varchar("required_skill", { length: 100 }),
   aiGenerated: boolean("ai_generated").default(false),
   parentTaskId: varchar("parent_task_id"),
+  isCampusWide: boolean("is_campus_wide").default(false),
+  propertyIds: text("property_ids").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

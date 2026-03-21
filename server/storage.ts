@@ -1394,7 +1394,13 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(tasks)
-      .where(eq(tasks.propertyId, propertyId))
+      .where(
+        or(
+          eq(tasks.propertyId, propertyId),
+          eq(tasks.isCampusWide, true),
+          sql`${propertyId} = ANY(${tasks.propertyIds})`
+        )
+      )
       .orderBy(desc(tasks.initialDate));
   }
 

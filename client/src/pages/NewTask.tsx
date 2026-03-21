@@ -66,7 +66,7 @@ type EquipmentFormData = z.infer<typeof equipmentFormSchema>;
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
-  propertyId: z.string().min(1, "Please select a property"),
+  propertyId: z.string().optional(),
   spaceId: z.string().optional(),
   equipmentId: z.string().optional(),
   vehicleId: z.string().optional(),
@@ -83,6 +83,8 @@ const formSchema = insertTaskSchema.extend({
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional().or(z.literal("")),
   contactPhone: z.string().optional(),
+  isCampusWide: z.boolean().optional(),
+  propertyIds: z.array(z.string()).optional(),
 }).refine((data) => {
   if (data.contactType === "staff" && !data.contactStaffId) {
     return false;
@@ -94,6 +96,14 @@ const formSchema = insertTaskSchema.extend({
 }, {
   message: "Please provide the required contact information",
   path: ["contactType"],
+}).refine((data) => {
+  if (data.isCampusWide) return true;
+  if (data.propertyIds && data.propertyIds.length > 0) return true;
+  if (data.propertyId && data.propertyId.length > 0) return true;
+  return false;
+}, {
+  message: "Please select a property, multiple buildings, or campus-wide scope",
+  path: ["propertyId"],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -118,6 +128,8 @@ export default function NewTask() {
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>("");
+  const [locationScope, setLocationScope] = useState<"single" | "multiple" | "campus">("single");
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentOption, setAssignmentOption] = useState<"student" | "technician" | "vendor" | "">("");
   const [contactType, setContactType] = useState<"requester" | "staff" | "other" | "">("");
@@ -468,6 +480,8 @@ export default function NewTask() {
       contactName: "",
       contactEmail: "",
       contactPhone: "",
+      isCampusWide: false,
+      propertyIds: [],
     },
   });
 
@@ -565,6 +579,8 @@ export default function NewTask() {
         checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
         projectId: data.projectId || projectId || undefined,
         scheduledStartTime: data.scheduledStartTime || undefined,
+        isCampusWide: data.isCampusWide || false,
+        propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : undefined,
       };
 
       if (isSingleAsset) {
@@ -903,6 +919,10 @@ export default function NewTask() {
               onAddAsset={handleAddAsset}
               onRemoveAsset={handleRemoveAsset}
               multiAssetMode={multiAssetMode}
+              locationScope={locationScope}
+              onLocationScopeChange={setLocationScope}
+              selectedPropertyIds={selectedPropertyIds}
+              onSelectedPropertyIdsChange={setSelectedPropertyIds}
             />
           </Card>
 

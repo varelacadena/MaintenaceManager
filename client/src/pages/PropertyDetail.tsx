@@ -849,6 +849,16 @@ export default function PropertyDetail() {
                         <Badge variant="outline">
                           {task.urgency}
                         </Badge>
+                        {task.isCampusWide && (
+                          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                            Campus-Wide
+                          </Badge>
+                        )}
+                        {!task.isCampusWide && task.propertyIds && task.propertyIds.length > 0 && (
+                          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                            Multi-Building
+                          </Badge>
+                        )}
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {new Date(task.initialDate).toLocaleDateString()}
                         </span>

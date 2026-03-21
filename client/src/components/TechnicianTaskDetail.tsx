@@ -37,6 +37,7 @@ import {
   Car,
   ImageIcon,
   LinkIcon,
+  Globe,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -83,6 +84,7 @@ interface TechnicianTaskDetailProps {
   task: Task;
   user: UserType;
   property?: Property;
+  multiProperties?: Property[];
   space?: Space;
   equipment?: Equipment;
   vehicle?: Vehicle;
@@ -231,7 +233,7 @@ function formatElapsed(seconds: number): string {
 
 export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
-    task, user, property, space, equipment, vehicle, contactStaff,
+    task, user, property, multiProperties = [], space, equipment, vehicle, contactStaff,
     notes, uploads, parts, quotes, vendors, inventoryItems,
     checklistGroups, subTasks, parentTask, timeEntries, activeTimer,
     allTaskResources, previousWork, users,
@@ -414,11 +416,16 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     }
   };
 
-  const locationText = [
-    property?.name,
-    space?.name,
-    equipment?.name,
-  ].filter(Boolean).join(" \u00B7 ");
+  const locationText = (() => {
+    if (task.isCampusWide) return "All Campus Buildings";
+    if (multiProperties.length > 0) {
+      const maxShow = 2;
+      const names = multiProperties.slice(0, maxShow).map((p) => p.name);
+      const rest = multiProperties.length - maxShow;
+      return rest > 0 ? `${names.join(", ")} +${rest} more` : names.join(", ");
+    }
+    return [property?.name, space?.name, equipment?.name].filter(Boolean).join(" \u00B7 ");
+  })();
 
   const contactName = contactStaff
     ? `${contactStaff.firstName || ""} ${contactStaff.lastName || ""}`.trim() || contactStaff.username
@@ -550,7 +557,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         </h1>
         {locationText && (
           <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 shrink-0 text-white/70" />
+            {task.isCampusWide ? (
+              <Globe className="w-3.5 h-3.5 shrink-0 text-white/70" />
+            ) : (
+              <MapPin className="w-3.5 h-3.5 shrink-0 text-white/70" />
+            )}
             <span className="text-sm text-white/70">
               {locationText}
             </span>
