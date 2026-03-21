@@ -39,7 +39,7 @@ import { SpaceDialog } from "@/components/task-form/SpaceDialog";
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
-  propertyId: z.string().min(1, "Please select a property"),
+  propertyId: z.string().optional(),
   spaceId: z.string().optional(),
   equipmentId: z.string().optional(),
   taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
@@ -49,6 +49,16 @@ const formSchema = insertTaskSchema.extend({
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional().or(z.literal("")),
   contactPhone: z.string().optional(),
+  isCampusWide: z.boolean().optional(),
+  propertyIds: z.array(z.string()).optional(),
+}).refine((data) => {
+  if (data.isCampusWide) return true;
+  if (data.propertyIds && data.propertyIds.length > 0) return true;
+  if (data.propertyId && data.propertyId.length > 0) return true;
+  return false;
+}, {
+  message: "Please select a property, multiple buildings, or campus-wide scope",
+  path: ["propertyId"],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -60,6 +70,8 @@ export default function EditTask() {
   const { toast } = useToast();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>("");
+  const [locationScope, setLocationScope] = useState<"single" | "multiple" | "campus">("single");
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentType, setAssignmentType] = useState<"technician" | "vendor" | "">("");
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
@@ -147,6 +159,8 @@ export default function EditTask() {
       contactName: "",
       contactEmail: "",
       contactPhone: "",
+      isCampusWide: false,
+      propertyIds: [],
     },
   });
 
@@ -176,6 +190,16 @@ export default function EditTask() {
       }
       if ((task as any).scheduledStartTime) {
         (form as any).setValue("scheduledStartTime", (task as any).scheduledStartTime);
+      }
+      if (task.isCampusWide) {
+        setLocationScope("campus");
+        form.setValue("isCampusWide", true);
+      } else if (task.propertyIds && task.propertyIds.length > 0) {
+        setLocationScope("multiple");
+        setSelectedPropertyIds(task.propertyIds);
+        form.setValue("propertyIds", task.propertyIds);
+      } else {
+        setLocationScope("single");
       }
       if (task.propertyId) {
         form.setValue("propertyId", task.propertyId);
@@ -247,9 +271,11 @@ export default function EditTask() {
         estimatedCompletionDate: data.estimatedCompletionDate 
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
-        propertyId: data.propertyId || undefined,
-        spaceId: data.spaceId || undefined,
-        equipmentId: data.equipmentId || undefined,
+        isCampusWide: data.isCampusWide || false,
+        propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : [],
+        propertyId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.propertyId || undefined) : undefined,
+        spaceId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.spaceId || undefined) : undefined,
+        equipmentId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.equipmentId || undefined) : undefined,
         assignedToId: data.assignedToId || null,
         assignedVendorId: data.assignedVendorId || null,
         taskType: data.taskType,
@@ -449,6 +475,10 @@ export default function EditTask() {
               isBuilding={isBuilding}
               selectedProperty={selectedProperty}
               onAddSpace={() => setIsSpaceDialogOpen(true)}
+              locationScope={locationScope}
+              onLocationScopeChange={setLocationScope}
+              selectedPropertyIds={selectedPropertyIds}
+              onSelectedPropertyIdsChange={setSelectedPropertyIds}
             />
 
             <TaskDateFields form={form} allowPastDates={true} />
