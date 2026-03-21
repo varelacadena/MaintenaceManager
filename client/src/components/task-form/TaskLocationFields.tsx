@@ -279,7 +279,7 @@ export function TaskLocationFields({
                     return (
                       <div
                         key={building.id}
-                        className="flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer hover-elevate"
+                        className="flex items-center gap-2 px-2 py-2 min-h-[44px] rounded-md cursor-pointer hover-elevate"
                         onClick={() => toggleBuilding(building.id)}
                         data-testid={`checkbox-building-${building.id}`}
                       >

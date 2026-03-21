@@ -255,22 +255,24 @@ function MultiPropertyDisplay({ properties, isTechnicianOrAdmin, safeNavigate }:
         <span className="text-sm font-medium">{properties.length} Buildings</span>
         <Badge variant="secondary" className="text-xs">Multi-Building</Badge>
       </div>
-      {visible.map((p) => (
-        <div
-          key={p.id}
-          className={`flex items-center gap-2 p-2 bg-muted/50 rounded-md ${isTechnicianOrAdmin ? "hover-elevate active-elevate-2 cursor-pointer" : ""}`}
-          onClick={() => isTechnicianOrAdmin && safeNavigate(`/properties/${p.id}`)}
-          data-testid={`link-multi-property-${p.id}`}
-        >
-          <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-sm truncate flex-1">{p.name}</span>
-          {isTechnicianOrAdmin && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-        </div>
-      ))}
+      <div className={expanded && properties.length > 6 ? "max-h-[280px] overflow-y-auto space-y-1.5" : "space-y-1.5"}>
+        {visible.map((p) => (
+          <div
+            key={p.id}
+            className={`flex items-center gap-2 p-2.5 min-h-[44px] bg-muted/50 rounded-md ${isTechnicianOrAdmin ? "hover-elevate active-elevate-2 cursor-pointer" : ""}`}
+            onClick={() => isTechnicianOrAdmin && safeNavigate(`/properties/${p.id}`)}
+            data-testid={`link-multi-property-${p.id}`}
+          >
+            <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm truncate flex-1">{p.name}</span>
+            {isTechnicianOrAdmin && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+          </div>
+        ))}
+      </div>
       {!expanded && hiddenCount > 0 && (
         <button
           type="button"
-          className="text-sm text-primary hover:underline pl-6"
+          className="text-sm text-primary hover:underline pl-6 min-h-[44px]"
           onClick={() => setExpanded(true)}
           data-testid="button-show-more-buildings"
         >
@@ -280,7 +282,7 @@ function MultiPropertyDisplay({ properties, isTechnicianOrAdmin, safeNavigate }:
       {expanded && properties.length > MAX_VISIBLE && (
         <button
           type="button"
-          className="text-sm text-primary hover:underline pl-6"
+          className="text-sm text-primary hover:underline pl-6 min-h-[44px]"
           onClick={() => setExpanded(false)}
           data-testid="button-show-fewer-buildings"
         >
