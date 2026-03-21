@@ -540,8 +540,9 @@ export default function NewTask() {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const isMultiAsset = selectedAssets.length > 1;
-      const isSingleAsset = selectedAssets.length === 1;
+      const isSingleScope = !data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0);
+      const isMultiAsset = isSingleScope && selectedAssets.length > 1;
+      const isSingleAsset = isSingleScope && selectedAssets.length === 1;
 
       const taskData: any = {
         name: data.name,
@@ -551,8 +552,8 @@ export default function NewTask() {
         estimatedCompletionDate: data.estimatedCompletionDate
           ? new Date(data.estimatedCompletionDate).toISOString()
           : undefined,
-        propertyId: data.propertyId || undefined,
-        spaceId: data.spaceId || undefined,
+        propertyId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.propertyId || undefined) : undefined,
+        spaceId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.spaceId || undefined) : undefined,
         assignedToId: data.assignedToId || undefined,
         assignedVendorId: data.assignedVendorId || undefined,
         taskType: data.taskType,
@@ -583,16 +584,18 @@ export default function NewTask() {
         propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : undefined,
       };
 
-      if (isSingleAsset) {
-        const asset = selectedAssets[0];
-        if (asset.type === "equipment") {
-          taskData.equipmentId = asset.id;
-        } else {
-          taskData.vehicleId = asset.id;
+      if (isSingleScope) {
+        if (isSingleAsset) {
+          const asset = selectedAssets[0];
+          if (asset.type === "equipment") {
+            taskData.equipmentId = asset.id;
+          } else {
+            taskData.vehicleId = asset.id;
+          }
+        } else if (!isMultiAsset) {
+          taskData.equipmentId = data.equipmentId || undefined;
+          taskData.vehicleId = data.vehicleId || undefined;
         }
-      } else if (!isMultiAsset) {
-        taskData.equipmentId = data.equipmentId || undefined;
-        taskData.vehicleId = data.vehicleId || undefined;
       }
 
       const response = await apiRequest("POST", "/api/tasks", taskData);
@@ -920,7 +923,14 @@ export default function NewTask() {
               onRemoveAsset={handleRemoveAsset}
               multiAssetMode={multiAssetMode}
               locationScope={locationScope}
-              onLocationScopeChange={setLocationScope}
+              onLocationScopeChange={(scope) => {
+                setLocationScope(scope);
+                if (scope !== "single") {
+                  setSelectedAssets([]);
+                  form.setValue("equipmentId", undefined);
+                  form.setValue("vehicleId", undefined);
+                }
+              }}
               selectedPropertyIds={selectedPropertyIds}
               onSelectedPropertyIdsChange={setSelectedPropertyIds}
             />
