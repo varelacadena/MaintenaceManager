@@ -997,7 +997,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     className="flex items-center justify-center shrink-0 bg-primary/10 rounded-lg"
                     style={{ width: 32, height: 32 }}
                   >
-                    <Star className="w-4 h-4 text-primary" />
+                    <Package className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">
