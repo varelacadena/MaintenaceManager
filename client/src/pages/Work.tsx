@@ -600,6 +600,7 @@ export default function Work() {
   const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
   const [holdReason, setHoldReason] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     unifiedStatusConfig.forEach(s => { initial[s.key] = true; });
@@ -1032,6 +1033,106 @@ export default function Work() {
     );
   }
 
+  const getTaskDate = (task: Task): Date | null => {
+    if (task.status === "completed" && task.actualCompletionDate) {
+      return new Date(task.actualCompletionDate);
+    }
+    if (task.estimatedCompletionDate) return new Date(task.estimatedCompletionDate);
+    if (task.initialDate) return new Date(task.initialDate);
+    return null;
+  };
+
+  const isToday = (d: Date) => {
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  };
+
+  const isThisWeek = (d: Date) => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    return d >= startOfWeek && d < endOfWeek;
+  };
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const filterTasksByDate = (allTasks: Task[]) => {
+    return allTasks.filter((t) => {
+      if (t.status === "completed") {
+        const completedDate = t.actualCompletionDate ? new Date(t.actualCompletionDate) : null;
+        if (!completedDate || completedDate < sevenDaysAgo) return false;
+        if (dateFilter === "today") return isToday(completedDate);
+        if (dateFilter === "week") return isThisWeek(completedDate);
+        return true;
+      }
+      const taskDate = getTaskDate(t);
+      if (dateFilter === "today") {
+        return !taskDate || isToday(taskDate);
+      }
+      if (dateFilter === "week") {
+        return !taskDate || isThisWeek(taskDate);
+      }
+      return true;
+    });
+  };
+
+  const groupTasksByDay = (taskList: Task[]): { label: string; dateKey: string; tasks: Task[] }[] => {
+    const groups: Record<string, Task[]> = {};
+    const unscheduled: Task[] = [];
+
+    for (const t of taskList) {
+      const d = getTaskDate(t);
+      if (!d) {
+        unscheduled.push(t);
+      } else {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(t);
+      }
+    }
+
+    const sortedKeys = Object.keys(groups).sort();
+    const result: { label: string; dateKey: string; tasks: Task[] }[] = [];
+
+    for (const key of sortedKeys) {
+      const [y, m, day] = key.split("-").map(Number);
+      const d = new Date(y, m - 1, day);
+      const dayName = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      const todayLabel = isToday(d) ? " (Today)" : "";
+      result.push({ label: `${dayName}${todayLabel}`, dateKey: key, tasks: groups[key] });
+    }
+
+    if (unscheduled.length > 0) {
+      result.push({ label: "Unscheduled", dateKey: "unscheduled", tasks: unscheduled });
+    }
+
+    return result;
+  };
+
+  const DateFilterBar = () => (
+    <div className="flex gap-1 bg-muted rounded-md p-1" data-testid="date-filter-bar">
+      {([["today", "Today"], ["week", "This Week"], ["all", "All"]] as const).map(([value, label]) => (
+        <button
+          key={value}
+          onClick={() => setDateFilter(value)}
+          className={`flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+            dateFilter === value
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover-elevate"
+          }`}
+          data-testid={`button-filter-${value}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   if (user?.role === "student") {
     const studentTasks =
       tasks?.filter((t) => {
@@ -1039,12 +1140,108 @@ export default function Work() {
         const isAssignedToMe = t.assignedToId === user.id;
         const isStudentPoolTask = t.assignedToId === "student_pool";
         if (!isAssignedToMe && !isStudentPoolTask) return false;
-        if (!showCompleted && t.status === "completed") return false;
         return true;
       }) || [];
 
-    const activeTasks = studentTasks.filter((t) => t.status !== "completed");
-    const completedTasks = studentTasks.filter((t) => t.status === "completed");
+    const filteredTasks = filterTasksByDate(studentTasks);
+    const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
+    const completedTasks = filteredTasks.filter((t) => t.status === "completed");
+    const activeGroups = dateFilter === "today" ? [] : groupTasksByDay(activeTasks);
+    const completedGroups = dateFilter === "today" ? [] : groupTasksByDay(completedTasks);
+
+    const renderStudentActiveCard = (task: Task, index: number) => {
+      const property = getPropertyById(task.propertyId);
+      const isInProgress = task.status === "in_progress";
+      const isHighUrgency = task.urgency === "high";
+      return (
+        <div
+          key={task.id}
+          className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
+            isInProgress
+              ? "border-primary bg-primary/5"
+              : isHighUrgency
+              ? "border-red-400 dark:border-red-600"
+              : "border-border"
+          }`}
+          data-testid={`student-task-card-${task.id}`}
+          onClick={() => navigate(`/tasks/${task.id}`)}
+        >
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
+              isInProgress
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}>
+              {index + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
+                {task.name}
+              </h3>
+              {property && (
+                <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  {property.name}
+                </p>
+              )}
+            </div>
+            {isInProgress && (
+              <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
+                In Progress
+              </Badge>
+            )}
+            {isHighUrgency && !isInProgress && (
+              <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
+                Urgent
+              </Badge>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const renderStudentCompletedCard = (task: Task) => {
+      const property = getPropertyById(task.propertyId);
+      return (
+        <div
+          key={task.id}
+          className="rounded-lg border border-border/50 p-3 cursor-pointer opacity-60"
+          data-testid={`student-task-card-${task.id}`}
+          onClick={() => navigate(`/tasks/${task.id}`)}
+        >
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-sm line-through truncate" data-testid={`text-task-name-${task.id}`}>
+                {task.name}
+              </h3>
+              {property && (
+                <p className="text-xs text-muted-foreground truncate">{property.name}</p>
+              )}
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSummaryTaskId(task.id);
+              }}
+              data-testid={`button-view-summary-${task.id}`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      );
+    };
+
+    const DaySeparator = ({ label }: { label: string }) => (
+      <div className="flex items-center gap-3 pt-2" data-testid={`day-separator-${label}`}>
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">{label}</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+    );
 
     return (
       <div className="p-4 pb-28 space-y-5 max-w-lg mx-auto">
@@ -1059,65 +1256,28 @@ export default function Work() {
           </p>
         </div>
 
-        {activeTasks.length === 0 ? (
+        <DateFilterBar />
+
+        {activeTasks.length === 0 && completedTasks.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <p className="text-xl font-semibold">All done!</p>
-            <p className="text-muted-foreground mt-1">No tasks assigned to you right now.</p>
+            <p className="text-muted-foreground mt-1">
+              {dateFilter === "today" ? "No tasks for today." : dateFilter === "week" ? "No tasks this week." : "No tasks assigned to you right now."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {activeTasks.map((task, index) => {
-              const property = getPropertyById(task.propertyId);
-              const isInProgress = task.status === "in_progress";
-              const isHighUrgency = task.urgency === "high";
-
-              return (
-                <div
-                  key={task.id}
-                  className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
-                    isInProgress
-                      ? "border-primary bg-primary/5"
-                      : isHighUrgency
-                      ? "border-red-400 dark:border-red-600"
-                      : "border-border"
-                  }`}
-                  data-testid={`student-task-card-${task.id}`}
-                  onClick={() => navigate(`/tasks/${task.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
-                      isInProgress
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
-                        {task.name}
-                      </h3>
-                      {property && (
-                        <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          {property.name}
-                        </p>
-                      )}
-                    </div>
-                    {isInProgress && (
-                      <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
-                        In Progress
-                      </Badge>
-                    )}
-                    {isHighUrgency && !isInProgress && (
-                      <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
-                        Urgent
-                      </Badge>
-                    )}
-                  </div>
+            {dateFilter === "today" ? (
+              activeTasks.map((task, index) => renderStudentActiveCard(task, index))
+            ) : (
+              activeGroups.map((group) => (
+                <div key={group.dateKey} className="space-y-3">
+                  <DaySeparator label={group.label} />
+                  {group.tasks.map((task, index) => renderStudentActiveCard(task, index))}
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         )}
 
@@ -1133,40 +1293,16 @@ export default function Work() {
             </button>
             {showCompleted && (
               <div className="space-y-2">
-                {completedTasks.map((task) => {
-                  const property = getPropertyById(task.propertyId);
-                  return (
-                    <div
-                      key={task.id}
-                      className="rounded-lg border border-border/50 p-3 cursor-pointer opacity-60"
-                      data-testid={`student-task-card-${task.id}`}
-                      onClick={() => navigate(`/tasks/${task.id}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm line-through truncate" data-testid={`text-task-name-${task.id}`}>
-                            {task.name}
-                          </h3>
-                          {property && (
-                            <p className="text-xs text-muted-foreground truncate">{property.name}</p>
-                          )}
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSummaryTaskId(task.id);
-                          }}
-                          data-testid={`button-view-summary-${task.id}`}
-                        >
-                          <ClipboardCheck className="w-4 h-4" />
-                        </Button>
-                      </div>
+                {dateFilter === "today" ? (
+                  completedTasks.map((task) => renderStudentCompletedCard(task))
+                ) : (
+                  completedGroups.map((group) => (
+                    <div key={group.dateKey} className="space-y-2">
+                      <DaySeparator label={group.label} />
+                      {group.tasks.map((task) => renderStudentCompletedCard(task))}
                     </div>
-                  );
-                })}
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -1191,8 +1327,113 @@ export default function Work() {
         return true;
       }) || [];
 
-    const activeTasks = techTasks.filter((t) => t.status !== "completed");
-    const completedTasks = techTasks.filter((t) => t.status === "completed");
+    const filteredTasks = filterTasksByDate(techTasks);
+    const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
+    const completedTasks = filteredTasks.filter((t) => t.status === "completed");
+    const activeGroups = dateFilter === "today" ? [] : groupTasksByDay(activeTasks);
+    const completedGroups = dateFilter === "today" ? [] : groupTasksByDay(completedTasks);
+
+    const renderTechActiveCard = (task: Task, index: number) => {
+      const property = getPropertyById(task.propertyId);
+      const isInProgress = task.status === "in_progress";
+      const isHighUrgency = task.urgency === "high";
+      return (
+        <div
+          key={task.id}
+          className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
+            isInProgress
+              ? "border-primary bg-primary/5"
+              : isHighUrgency
+              ? "border-red-400 dark:border-red-600"
+              : "border-border"
+          }`}
+          data-testid={`tech-task-card-${task.id}`}
+          onClick={() => navigate(`/tasks/${task.id}`)}
+        >
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
+              isInProgress
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}>
+              {index + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
+                {task.name}
+              </h3>
+              {property && (
+                <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  {property.name}
+                </p>
+              )}
+            </div>
+            {isInProgress && (
+              <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
+                In Progress
+              </Badge>
+            )}
+            {isHighUrgency && !isInProgress && (
+              <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
+                Urgent
+              </Badge>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const renderTechCompletedCard = (task: Task) => {
+      const property = getPropertyById(task.propertyId);
+      return (
+        <div
+          key={task.id}
+          className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 cursor-pointer active-elevate-2 transition-colors"
+          data-testid={`tech-task-card-${task.id}`}
+          onClick={() => navigate(`/tasks/${task.id}`)}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base leading-tight truncate text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
+                {task.name}
+              </h3>
+              {property && (
+                <p className="text-sm text-green-700 dark:text-green-400 mt-0.5 truncate flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  {property.name}
+                </p>
+              )}
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSummaryTaskId(task.id);
+              }}
+              data-testid={`button-view-summary-${task.id}`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+            </Button>
+            <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400" data-testid={`badge-completed-${task.id}`}>
+              Done
+            </Badge>
+          </div>
+        </div>
+      );
+    };
+
+    const DaySeparator = ({ label }: { label: string }) => (
+      <div className="flex items-center gap-3 pt-2" data-testid={`day-separator-${label}`}>
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">{label}</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+    );
 
     return (
       <div className="p-4 pb-8 space-y-5 max-w-lg mx-auto">
@@ -1207,114 +1448,46 @@ export default function Work() {
           </p>
         </div>
 
+        <DateFilterBar />
+
         {activeTasks.length === 0 && completedTasks.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <p className="text-xl font-semibold">All done!</p>
-            <p className="text-muted-foreground mt-1">No tasks assigned to you right now.</p>
+            <p className="text-muted-foreground mt-1">
+              {dateFilter === "today" ? "No tasks for today." : dateFilter === "week" ? "No tasks this week." : "No tasks assigned to you right now."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {activeTasks.map((task, index) => {
-              const property = getPropertyById(task.propertyId);
-              const isInProgress = task.status === "in_progress";
-              const isHighUrgency = task.urgency === "high";
-
-              return (
-                <div
-                  key={task.id}
-                  className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
-                    isInProgress
-                      ? "border-primary bg-primary/5"
-                      : isHighUrgency
-                      ? "border-red-400 dark:border-red-600"
-                      : "border-border"
-                  }`}
-                  data-testid={`tech-task-card-${task.id}`}
-                  onClick={() => navigate(`/tasks/${task.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
-                      isInProgress
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
-                        {task.name}
-                      </h3>
-                      {property && (
-                        <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          {property.name}
-                        </p>
-                      )}
-                    </div>
-                    {isInProgress && (
-                      <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
-                        In Progress
-                      </Badge>
-                    )}
-                    {isHighUrgency && !isInProgress && (
-                      <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
-                        Urgent
-                      </Badge>
-                    )}
-                  </div>
+            {dateFilter === "today" ? (
+              activeTasks.map((task, index) => renderTechActiveCard(task, index))
+            ) : (
+              activeGroups.map((group) => (
+                <div key={group.dateKey} className="space-y-3">
+                  <DaySeparator label={group.label} />
+                  {group.tasks.map((task, index) => renderTechActiveCard(task, index))}
                 </div>
-              );
-            })}
-
-            {completedTasks.length > 0 && activeTasks.length > 0 && (
-              <div className="pt-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Completed</p>
-              </div>
+              ))
             )}
 
-            {completedTasks.map((task) => {
-              const property = getPropertyById(task.propertyId);
-              return (
-                <div
-                  key={task.id}
-                  className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 cursor-pointer active-elevate-2 transition-colors"
-                  data-testid={`tech-task-card-${task.id}`}
-                  onClick={() => navigate(`/tasks/${task.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
-                      <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base leading-tight truncate text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
-                        {task.name}
-                      </h3>
-                      {property && (
-                        <p className="text-sm text-green-700 dark:text-green-400 mt-0.5 truncate flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          {property.name}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSummaryTaskId(task.id);
-                      }}
-                      data-testid={`button-view-summary-${task.id}`}
-                    >
-                      <ClipboardCheck className="w-4 h-4" />
-                    </Button>
-                    <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400" data-testid={`badge-completed-${task.id}`}>
-                      Done
-                    </Badge>
-                  </div>
+            {completedTasks.length > 0 && (
+              <>
+                <div className="pt-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Completed</p>
                 </div>
-              );
-            })}
+                {dateFilter === "today" ? (
+                  completedTasks.map((task) => renderTechCompletedCard(task))
+                ) : (
+                  completedGroups.map((group) => (
+                    <div key={group.dateKey} className="space-y-3">
+                      <DaySeparator label={group.label} />
+                      {group.tasks.map((task) => renderTechCompletedCard(task))}
+                    </div>
+                  ))
+                )}
+              </>
+            )}
           </div>
         )}
 
