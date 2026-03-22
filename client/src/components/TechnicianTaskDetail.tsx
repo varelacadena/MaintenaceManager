@@ -262,7 +262,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCompletion, setShowCompletion] = useState(false);
-  const completionNavTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
@@ -283,10 +282,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
   useEffect(() => {
     setShowCompletion(false);
-    if (completionNavTimeoutRef.current) {
-      clearTimeout(completionNavTimeoutRef.current);
-      completionNavTimeoutRef.current = null;
-    }
   }, [task.id]);
 
   useEffect(() => {
@@ -407,30 +402,17 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       return;
     }
     setIsPauseDialogOpen(false);
+    const onCompleteSuccess = () => setShowCompletion(true);
+    const onCompleteError = () => toast({ title: "Failed to complete task", variant: "destructive" });
     if (activeTimer) {
       stopTimerMutation.mutate(
         { timerId: activeTimer, newStatus: "completed" },
-        {
-          onSuccess: () => {
-            setShowCompletion(true);
-            toast({ title: "Task completed" });
-            if (isSubTask && task.parentTaskId) {
-              completionNavTimeoutRef.current = setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
-            }
-          },
-          onError: () => toast({ title: "Failed to complete task", variant: "destructive" }),
-        }
+        { onSuccess: onCompleteSuccess, onError: onCompleteError }
       );
     } else {
       props.updateStatusMutation.mutate("completed", {
-        onSuccess: () => {
-          setShowCompletion(true);
-          toast({ title: "Task completed" });
-          if (isSubTask && task.parentTaskId) {
-            completionNavTimeoutRef.current = setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
-          }
-        },
-        onError: () => toast({ title: "Failed to complete task", variant: "destructive" }),
+        onSuccess: onCompleteSuccess,
+        onError: onCompleteError,
       });
     }
   };
