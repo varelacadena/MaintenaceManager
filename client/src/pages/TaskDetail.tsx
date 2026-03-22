@@ -1366,10 +1366,18 @@ export default function TaskDetail() {
       });
       return;
     }
+    const onCompletionSuccess = () => {
+      if (isSubTask && task.parentTaskId) {
+        setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
+      }
+    };
     if (activeTimer) {
-      stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
+      stopTimerMutation.mutate(
+        { timerId: activeTimer, newStatus: "completed" },
+        { onSuccess: onCompletionSuccess }
+      );
     } else {
-      updateStatusMutation.mutate("completed");
+      updateStatusMutation.mutate("completed", { onSuccess: onCompletionSuccess });
     }
   };
 

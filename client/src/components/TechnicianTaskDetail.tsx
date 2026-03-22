@@ -262,7 +262,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCompletion, setShowCompletion] = useState(false);
-  const [completionTime, setCompletionTime] = useState(0);
+  const completionNavTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
@@ -280,6 +280,14 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
   const taskStarted = task.status === "in_progress" || task.status === "completed" || task.status === "waiting_approval";
   const isRunning = !!activeTimer && !isPaused;
+
+  useEffect(() => {
+    setShowCompletion(false);
+    if (completionNavTimeoutRef.current) {
+      clearTimeout(completionNavTimeoutRef.current);
+      completionNavTimeoutRef.current = null;
+    }
+  }, [task.id]);
 
   useEffect(() => {
     if ((task.status === "in_progress" || task.status === "waiting_approval") && !activeTimer) {
@@ -398,19 +406,30 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       toast({ title: "Photo required", description: "Please take a photo before completing.", variant: "destructive" });
       return;
     }
-    setCompletionTime(elapsedSeconds);
     setIsPauseDialogOpen(false);
     if (activeTimer) {
       stopTimerMutation.mutate(
         { timerId: activeTimer, newStatus: "completed" },
         {
-          onSuccess: () => setShowCompletion(true),
+          onSuccess: () => {
+            setShowCompletion(true);
+            toast({ title: "Task completed" });
+            if (isSubTask && task.parentTaskId) {
+              completionNavTimeoutRef.current = setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
+            }
+          },
           onError: () => toast({ title: "Failed to complete task", variant: "destructive" }),
         }
       );
     } else {
       props.updateStatusMutation.mutate("completed", {
-        onSuccess: () => setShowCompletion(true),
+        onSuccess: () => {
+          setShowCompletion(true);
+          toast({ title: "Task completed" });
+          if (isSubTask && task.parentTaskId) {
+            completionNavTimeoutRef.current = setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
+          }
+        },
         onError: () => toast({ title: "Failed to complete task", variant: "destructive" }),
       });
     }
@@ -449,42 +468,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const existingQuote = quotes.length > 0 ? quotes[0] : null;
 
   const isCompleted = showCompletion || task.status === "completed";
-
-  if (isCompleted) {
-    const totalMinutes = timeEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
-    const displaySecs = showCompletion ? completionTime : totalMinutes * 60;
-    const mins = Math.floor(displaySecs / 60);
-    const secs = displaySecs % 60;
-    return (
-      <div
-        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-green-50 dark:bg-green-950"
-        data-testid="completion-overlay"
-      >
-        <div
-          className="flex items-center justify-center rounded-full mb-6 bg-green-700"
-          style={{ width: 62, height: 62 }}
-        >
-          <Check className="w-8 h-8 text-white" />
-        </div>
-        <p className="text-lg font-bold mb-1 text-green-700 dark:text-green-400">
-          Task Complete
-        </p>
-        <p className="text-sm mb-2 text-green-800 dark:text-green-300">
-          {task.name}
-        </p>
-        <p className="text-sm mb-8 text-green-400 dark:text-green-500">
-          Time logged: {mins}m {secs}s
-        </p>
-        <button
-          className="px-8 py-3 rounded-lg text-white font-medium text-sm bg-green-700 dark:bg-green-600"
-          onClick={() => navigate("/work")}
-          data-testid="button-back-to-tasks"
-        >
-          Back to Tasks
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-muted/40 md:relative md:inset-auto md:z-auto md:min-h-full">
@@ -622,6 +605,29 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         <div className="px-2.5 py-2 space-y-2">
           {activeTab === "task" ? (
             <>
+              {/* Completion banner */}
+              {isCompleted && (
+                <div
+                  className="flex items-center gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+                  data-testid="banner-completed"
+                >
+                  <div
+                    className="flex items-center justify-center rounded-full bg-green-600 shrink-0"
+                    style={{ width: 32, height: 32 }}
+                  >
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                      Task Completed
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-400">
+                      You can still add photos, parts, and notes.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Estimate pending banner */}
               {estimateBlocksCompletion && (
                 <div
