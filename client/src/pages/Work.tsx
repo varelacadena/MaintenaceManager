@@ -1146,8 +1146,8 @@ export default function Work() {
     const filteredTasks = filterTasksByDate(studentTasks);
     const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
     const completedTasks = filteredTasks.filter((t) => t.status === "completed");
-    const activeGroups = dateFilter === "today" ? [] : groupTasksByDay(activeTasks);
-    const completedGroups = dateFilter === "today" ? [] : groupTasksByDay(completedTasks);
+    const activeGroups = groupTasksByDay(activeTasks);
+    const completedGroups = groupTasksByDay(completedTasks);
 
     const renderStudentActiveCard = (task: Task, index: number) => {
       const property = getPropertyById(task.propertyId);
@@ -1268,16 +1268,12 @@ export default function Work() {
           </div>
         ) : (
           <div className="space-y-3">
-            {dateFilter === "today" ? (
-              activeTasks.map((task, index) => renderStudentActiveCard(task, index))
-            ) : (
-              activeGroups.map((group) => (
-                <div key={group.dateKey} className="space-y-3">
-                  <DaySeparator label={group.label} />
-                  {group.tasks.map((task, index) => renderStudentActiveCard(task, index))}
-                </div>
-              ))
-            )}
+            {activeGroups.map((group) => (
+              <div key={group.dateKey} className="space-y-3">
+                <DaySeparator label={group.label} />
+                {group.tasks.map((task, index) => renderStudentActiveCard(task, index))}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1293,16 +1289,12 @@ export default function Work() {
             </button>
             {showCompleted && (
               <div className="space-y-2">
-                {dateFilter === "today" ? (
-                  completedTasks.map((task) => renderStudentCompletedCard(task))
-                ) : (
-                  completedGroups.map((group) => (
-                    <div key={group.dateKey} className="space-y-2">
-                      <DaySeparator label={group.label} />
-                      {group.tasks.map((task) => renderStudentCompletedCard(task))}
-                    </div>
-                  ))
-                )}
+                {completedGroups.map((group) => (
+                  <div key={group.dateKey} className="space-y-2">
+                    <DaySeparator label={group.label} />
+                    {group.tasks.map((task) => renderStudentCompletedCard(task))}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1330,8 +1322,8 @@ export default function Work() {
     const filteredTasks = filterTasksByDate(techTasks);
     const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
     const completedTasks = filteredTasks.filter((t) => t.status === "completed");
-    const activeGroups = dateFilter === "today" ? [] : groupTasksByDay(activeTasks);
-    const completedGroups = dateFilter === "today" ? [] : groupTasksByDay(completedTasks);
+    const activeGroups = groupTasksByDay(activeTasks);
+    const completedGroups = groupTasksByDay(completedTasks);
 
     const renderTechActiveCard = (task: Task, index: number) => {
       const property = getPropertyById(task.propertyId);
@@ -1460,32 +1452,24 @@ export default function Work() {
           </div>
         ) : (
           <div className="space-y-3">
-            {dateFilter === "today" ? (
-              activeTasks.map((task, index) => renderTechActiveCard(task, index))
-            ) : (
-              activeGroups.map((group) => (
-                <div key={group.dateKey} className="space-y-3">
-                  <DaySeparator label={group.label} />
-                  {group.tasks.map((task, index) => renderTechActiveCard(task, index))}
-                </div>
-              ))
-            )}
+            {activeGroups.map((group) => (
+              <div key={group.dateKey} className="space-y-3">
+                <DaySeparator label={group.label} />
+                {group.tasks.map((task, index) => renderTechActiveCard(task, index))}
+              </div>
+            ))}
 
             {completedTasks.length > 0 && (
               <>
                 <div className="pt-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Completed</p>
                 </div>
-                {dateFilter === "today" ? (
-                  completedTasks.map((task) => renderTechCompletedCard(task))
-                ) : (
-                  completedGroups.map((group) => (
-                    <div key={group.dateKey} className="space-y-3">
-                      <DaySeparator label={group.label} />
-                      {group.tasks.map((task) => renderTechCompletedCard(task))}
-                    </div>
-                  ))
-                )}
+                {completedGroups.map((group) => (
+                  <div key={group.dateKey} className="space-y-3">
+                    <DaySeparator label={group.label} />
+                    {group.tasks.map((task) => renderTechCompletedCard(task))}
+                  </div>
+                ))}
               </>
             )}
           </div>
