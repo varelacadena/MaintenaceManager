@@ -11,6 +11,7 @@ interface FileAttachmentProps {
     fileType: string;
     objectUrl: string;
     objectPath?: string | null;
+    label?: string | null;
   };
 }
 
@@ -123,7 +124,7 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
         </div>
         <div className="min-w-0 flex-1">
           <p className={`font-medium truncate ${isMobile ? 'text-sm' : 'text-xs'}`}>
-            {attachment.fileName}
+            {attachment.label || attachment.fileName}
           </p>
           <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-[10px]'}`}>
             {isMockFile ? "File unavailable" : attachment.fileType}
@@ -150,6 +151,7 @@ interface FileAttachmentListProps {
     fileType: string;
     objectUrl: string;
     objectPath?: string | null;
+    label?: string | null;
   }>;
 }
 

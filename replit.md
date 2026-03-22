@@ -54,3 +54,9 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Data persi
 -   **html5-qrcode:** For barcode/QR scanning via camera.
 -   **qrcode (package):** For QR label generation.
 -   **express-rate-limit:** Rate limiting middleware.
+
+## Test Credentials
+
+-   **Admin:** username `admin` / password `123456`
+-   **Technician:** username `maintenance` / password `123456`
+-   **Student:** username `Sebastian` / password `123456`

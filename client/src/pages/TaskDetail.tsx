@@ -112,6 +112,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import ResourceCard from "@/components/ResourceCard";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import { UploadLabelDialog } from "@/components/UploadLabelDialog";
 import type {
   Task,
   TimeEntry,
@@ -372,6 +373,12 @@ export default function TaskDetail() {
   const [subTaskSearchQuery, setSubTaskSearchQuery] = useState("");
   const [subTaskSearchType, setSubTaskSearchType] = useState<"equipment" | "vehicle">("equipment");
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
+  const [pendingUploadForLabel, setPendingUploadForLabel] = useState<{
+    fileName: string;
+    fileType: string;
+    objectUrl: string;
+    previewUrl?: string;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesSectionRef = useRef<HTMLDivElement>(null);
@@ -1144,12 +1151,13 @@ export default function TaskDetail() {
   });
 
   const addUploadMutation = useMutation({
-    mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
+    mutationFn: async ({ fileName, fileType, objectUrl, label }: { fileName: string, fileType: string, objectUrl: string, label?: string }) => {
       const response = await apiRequest("PUT", "/api/uploads", {
         taskId: id,
         fileName,
         fileType,
         objectUrl,
+        label,
       });
       return response.json();
     },
@@ -1212,25 +1220,70 @@ export default function TaskDetail() {
     return { method: "PUT" as const, url: uploadURL };
   };
 
+  const pendingUploadQueueRef = useRef<Array<{ fileName: string; fileType: string; objectUrl: string; previewUrl?: string }>>([]);
+
   const handleAutoSaveUpload = async (result: any) => {
     if (result.successful?.length > 0) {
-      try {
-        for (const file of result.successful) {
-          await addUploadMutation.mutateAsync({
-            fileName: file.name,
-            fileType: file.type || "application/octet-stream",
-            objectUrl: file.uploadURL || file.url,
-          });
-        }
-        toast({
-          title: result.successful.length === 1 ? "File saved" : `${result.successful.length} files saved`,
-        });
-      } catch {
-        toast({ title: "Upload failed", description: "Could not save file", variant: "destructive" });
-      }
+      const files = result.successful.map((file: any) => ({
+        fileName: file.name,
+        fileType: file.type || "application/octet-stream",
+        objectUrl: file.uploadURL || file.url,
+        previewUrl: file.file && file.type?.startsWith("image/") ? URL.createObjectURL(file.file) : undefined,
+      }));
+      pendingUploadQueueRef.current = files.slice(1);
+      setPendingUploadForLabel(files[0]);
     }
     if (result.failed?.length > 0) {
       toast({ title: "Upload failed", description: result.failed[0]?.error || "Could not upload file", variant: "destructive" });
+    }
+  };
+
+  const [isUploadLabelSaving, setIsUploadLabelSaving] = useState(false);
+
+  const advanceUploadQueue = () => {
+    if (pendingUploadForLabel?.previewUrl) {
+      URL.revokeObjectURL(pendingUploadForLabel.previewUrl);
+    }
+    const next = pendingUploadQueueRef.current.shift();
+    if (next) {
+      setPendingUploadForLabel(next);
+    } else {
+      setPendingUploadForLabel(null);
+    }
+  };
+
+  const handleUploadLabelSave = async (label: string) => {
+    if (!pendingUploadForLabel || isUploadLabelSaving) return;
+    setIsUploadLabelSaving(true);
+    try {
+      await addUploadMutation.mutateAsync({
+        fileName: pendingUploadForLabel.fileName,
+        fileType: pendingUploadForLabel.fileType,
+        objectUrl: pendingUploadForLabel.objectUrl,
+        label,
+      });
+      advanceUploadQueue();
+    } catch {
+      toast({ title: "Upload failed", description: "Could not save file", variant: "destructive" });
+    } finally {
+      setIsUploadLabelSaving(false);
+    }
+  };
+
+  const handleUploadLabelCancel = async () => {
+    if (!pendingUploadForLabel || isUploadLabelSaving) return;
+    setIsUploadLabelSaving(true);
+    try {
+      await addUploadMutation.mutateAsync({
+        fileName: pendingUploadForLabel.fileName,
+        fileType: pendingUploadForLabel.fileType,
+        objectUrl: pendingUploadForLabel.objectUrl,
+      });
+      advanceUploadQueue();
+    } catch {
+      toast({ title: "Upload failed", description: "Could not save file", variant: "destructive" });
+    } finally {
+      setIsUploadLabelSaving(false);
     }
   };
 
@@ -1828,12 +1881,23 @@ export default function TaskDetail() {
             })()}
           </DialogContent>
         </Dialog>
+
+        <UploadLabelDialog
+          open={!!pendingUploadForLabel}
+          fileName={pendingUploadForLabel?.fileName || ""}
+          fileType={pendingUploadForLabel?.fileType || ""}
+          filePreviewUrl={pendingUploadForLabel?.previewUrl}
+          saving={isUploadLabelSaving}
+          onSave={handleUploadLabelSave}
+          onCancel={handleUploadLabelCancel}
+        />
       </div>
     );
   }
 
   if (user?.role === "technician") {
     return (
+      <>
       <TechnicianTaskDetail
         task={task}
         user={user}
@@ -1928,6 +1992,16 @@ export default function TaskDetail() {
         isVehicleInfoOpen={isVehicleInfoOpen}
         setIsVehicleInfoOpen={setIsVehicleInfoOpen}
       />
+      <UploadLabelDialog
+        open={!!pendingUploadForLabel}
+        fileName={pendingUploadForLabel?.fileName || ""}
+        fileType={pendingUploadForLabel?.fileType || ""}
+        filePreviewUrl={pendingUploadForLabel?.previewUrl}
+        saving={isUploadLabelSaving}
+        onSave={handleUploadLabelSave}
+        onCancel={handleUploadLabelCancel}
+      />
+      </>
     );
   }
 
@@ -4098,6 +4172,16 @@ export default function TaskDetail() {
         taskId={summaryTaskId || ""}
         open={!!summaryTaskId}
         onOpenChange={(open) => { if (!open) setSummaryTaskId(null); }}
+      />
+
+      <UploadLabelDialog
+        open={!!pendingUploadForLabel}
+        fileName={pendingUploadForLabel?.fileName || ""}
+        fileType={pendingUploadForLabel?.fileType || ""}
+        filePreviewUrl={pendingUploadForLabel?.previewUrl}
+        saving={isUploadLabelSaving}
+        onSave={handleUploadLabelSave}
+        onCancel={handleUploadLabelCancel}
       />
     </div>
   );

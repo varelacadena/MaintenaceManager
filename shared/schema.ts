@@ -269,6 +269,7 @@ export const uploads = pgTable("uploads", {
   fileType: varchar("file_type", { length: 100 }).notNull(),
   objectUrl: varchar("object_url", { length: 1000 }).notNull(),
   objectPath: varchar("object_path", { length: 1000 }),
+  label: varchar("label", { length: 500 }),
   uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });

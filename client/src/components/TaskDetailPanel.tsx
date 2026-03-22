@@ -56,6 +56,7 @@ import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { UploadLabelDialog } from "@/components/UploadLabelDialog";
 import {
   Dialog,
   DialogContent,
@@ -173,6 +174,12 @@ export function TaskDetailPanel({
   const [logTimeDuration, setLogTimeDuration] = useState("");
   const [logTimeDescription, setLogTimeDescription] = useState("");
   const [isFileUploading, setIsFileUploading] = useState(false);
+  const [pendingUploadForLabel, setPendingUploadForLabel] = useState<{
+    fileName: string;
+    fileType: string;
+    objectUrl: string;
+    previewUrl?: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -395,19 +402,63 @@ export function TaskDetailPanel({
         if (!uploadRes.ok) throw new Error("Upload failed");
         objectUrl = uploadURL.split("?")[0];
       }
-      await apiRequest("PUT", "/api/uploads", {
-        taskId,
+      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+      setPendingUploadForLabel({
         fileName: file.name,
         fileType: file.type || "application/octet-stream",
         objectUrl,
+        previewUrl,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
-      toast({ title: "File uploaded" });
     } catch {
       toast({ title: "Upload failed", variant: "destructive" });
     } finally {
       setIsFileUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const [isPanelUploadLabelSaving, setIsPanelUploadLabelSaving] = useState(false);
+
+  const handlePanelUploadLabelSave = async (label: string) => {
+    if (!pendingUploadForLabel || isPanelUploadLabelSaving) return;
+    setIsPanelUploadLabelSaving(true);
+    try {
+      await apiRequest("PUT", "/api/uploads", {
+        taskId,
+        fileName: pendingUploadForLabel.fileName,
+        fileType: pendingUploadForLabel.fileType,
+        objectUrl: pendingUploadForLabel.objectUrl,
+        label,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
+      toast({ title: "File uploaded" });
+      if (pendingUploadForLabel.previewUrl) URL.revokeObjectURL(pendingUploadForLabel.previewUrl);
+      setPendingUploadForLabel(null);
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setIsPanelUploadLabelSaving(false);
+    }
+  };
+
+  const handlePanelUploadLabelCancel = async () => {
+    if (!pendingUploadForLabel || isPanelUploadLabelSaving) return;
+    setIsPanelUploadLabelSaving(true);
+    try {
+      await apiRequest("PUT", "/api/uploads", {
+        taskId,
+        fileName: pendingUploadForLabel.fileName,
+        fileType: pendingUploadForLabel.fileType,
+        objectUrl: pendingUploadForLabel.objectUrl,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
+      toast({ title: "File uploaded" });
+      if (pendingUploadForLabel.previewUrl) URL.revokeObjectURL(pendingUploadForLabel.previewUrl);
+      setPendingUploadForLabel(null);
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setIsPanelUploadLabelSaving(false);
     }
   };
 
@@ -1554,6 +1605,16 @@ export function TaskDetailPanel({
         }}
         title="Scan Barcode / QR Code"
         description="Scan an equipment or inventory barcode to look it up."
+      />
+
+      <UploadLabelDialog
+        open={!!pendingUploadForLabel}
+        fileName={pendingUploadForLabel?.fileName || ""}
+        fileType={pendingUploadForLabel?.fileType || ""}
+        filePreviewUrl={pendingUploadForLabel?.previewUrl}
+        saving={isPanelUploadLabelSaving}
+        onSave={handlePanelUploadLabelSave}
+        onCancel={handlePanelUploadLabelCancel}
       />
     </div>
   );
