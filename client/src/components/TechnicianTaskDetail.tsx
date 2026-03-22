@@ -173,8 +173,6 @@ interface TechnicianTaskDetailProps {
   setIsVehicleInfoOpen: (v: boolean) => void;
 }
 
-const PASTEL_COLORS = ["#BFDBFE", "#BBF7D0", "#FED7AA", "#FECDD3", "#DDD6FE"];
-
 const statusColors: Record<string, string> = {
   not_started: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",
   needs_estimate: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20",
