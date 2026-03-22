@@ -831,12 +831,16 @@ export default function TaskDetail() {
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
       const response = await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: newStatus });
-      return response.json();
+      const result = await response.json();
+      return { ...result, _requestedStatus: newStatus };
     },
-    onSuccess: (updatedTask) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Status updated" });
+      toast({ title: data?._requestedStatus === "completed" ? "Task completed" : "Status updated" });
+      if (data?._requestedStatus === "completed" && task?.parentTaskId) {
+        setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to update status", variant: "destructive" });
@@ -939,8 +943,9 @@ export default function TaskDetail() {
           });
         }
       }
+      return { newStatus };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setActiveTimer(null);
       setIsStopTimerDialogOpen(false);
       setIsHoldReasonDialogOpen(false);
@@ -949,7 +954,10 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
-      toast({ title: "Timer stopped" });
+      toast({ title: data?.newStatus === "completed" ? "Task completed" : "Timer stopped" });
+      if (data?.newStatus === "completed" && task?.parentTaskId) {
+        setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to stop timer", variant: "destructive" });
@@ -1366,18 +1374,10 @@ export default function TaskDetail() {
       });
       return;
     }
-    const onCompletionSuccess = () => {
-      if (isSubTask && task.parentTaskId) {
-        setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
-      }
-    };
     if (activeTimer) {
-      stopTimerMutation.mutate(
-        { timerId: activeTimer, newStatus: "completed" },
-        { onSuccess: onCompletionSuccess }
-      );
+      stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });
     } else {
-      updateStatusMutation.mutate("completed", { onSuccess: onCompletionSuccess });
+      updateStatusMutation.mutate("completed");
     }
   };
 
