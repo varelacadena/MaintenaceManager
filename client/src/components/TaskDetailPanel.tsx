@@ -450,6 +450,7 @@ export function TaskDetailPanel({
         fileName: pendingUploadForLabel.fileName,
         fileType: pendingUploadForLabel.fileType,
         objectUrl: pendingUploadForLabel.objectUrl,
+        label: pendingUploadForLabel.fileName,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
       toast({ title: "File uploaded" });

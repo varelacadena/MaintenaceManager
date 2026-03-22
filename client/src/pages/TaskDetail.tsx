@@ -1278,6 +1278,7 @@ export default function TaskDetail() {
         fileName: pendingUploadForLabel.fileName,
         fileType: pendingUploadForLabel.fileType,
         objectUrl: pendingUploadForLabel.objectUrl,
+        label: pendingUploadForLabel.fileName,
       });
       advanceUploadQueue();
     } catch {
