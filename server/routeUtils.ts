@@ -2,6 +2,15 @@ import type { Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 
+interface DatabaseError {
+  code?: string;
+  detail?: string;
+}
+
+function isDatabaseError(error: unknown): error is DatabaseError {
+  return typeof error === "object" && error !== null && "code" in error;
+}
+
 export function handleRouteError(res: Response, error: unknown, defaultMessage: string) {
   if (error instanceof z.ZodError) {
     return res.status(400).json({
@@ -10,16 +19,17 @@ export function handleRouteError(res: Response, error: unknown, defaultMessage: 
     });
   }
 
-  const dbError = error as any;
-  if (dbError?.code === "23505") {
-    return res.status(409).json({
-      message: dbError.detail || "A record with this value already exists",
-    });
-  }
-  if (dbError?.code === "23503") {
-    return res.status(409).json({
-      message: dbError.detail || "Referenced record does not exist",
-    });
+  if (isDatabaseError(error)) {
+    if (error.code === "23505") {
+      return res.status(409).json({
+        message: error.detail || "A record with this value already exists",
+      });
+    }
+    if (error.code === "23503") {
+      return res.status(409).json({
+        message: error.detail || "Referenced record does not exist",
+      });
+    }
   }
 
   console.error(`${defaultMessage}:`, error);
@@ -40,6 +50,8 @@ export async function getAuthUser(req: any) {
     return null;
   }
 }
+
+type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed" | "cancelled";
 
 export async function authenticateUser(req: any): Promise<any | null> {
   const userId = req.userId || (req.session as any)?.userId;
@@ -115,7 +127,7 @@ export async function syncProjectStatusFromTasks(projectId: string): Promise<voi
       t => t.status === "in_progress" || t.status === "completed"
     );
 
-    let newStatus: string | null = null;
+    let newStatus: ProjectStatus | null = null;
 
     if (allCompleted) {
       newStatus = "completed";
@@ -130,7 +142,7 @@ export async function syncProjectStatusFromTasks(projectId: string): Promise<voi
     }
 
     if (newStatus && newStatus !== project.status) {
-      await storage.updateProject(projectId, { status: newStatus as any });
+      await storage.updateProject(projectId, { status: newStatus });
     }
   } catch (error) {
     console.error(`Error syncing project status for ${projectId}:`, error);
