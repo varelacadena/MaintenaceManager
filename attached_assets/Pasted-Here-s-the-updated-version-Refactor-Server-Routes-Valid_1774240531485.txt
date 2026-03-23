@@ -1,0 +1,36 @@
+Here’s the updated version:
+
+Refactor Server Routes, Validation & Full App Testing
+What & Why
+server/routes.ts is ~6,000 lines handling every feature. This makes bugs hard to find, validation inconsistent, and error messages unhelpful. The refactor is split into two passes so structural changes are verified before validation logic is layered on top.
+Before starting
+Create a Replit checkpoint/snapshot now. Do not proceed without one. Also document the current order that routes and middleware are registered in server/routes.ts and server/index.ts — this must be preserved exactly throughout the refactor.
+
+Pass 1 — Structural refactor only (no behavior changes)
+Goal: Move code into modules without changing any logic. Everything should work identically after this pass.
+	1.	Create server/routes/ directory with one file per feature group: auth, users, vendors, inventory, serviceRequests, tasks, timeTracking, messages, uploads, properties, equipment, vehicles, vehicleReservations, projects, quotes, admin, ai. Each file exports a function that registers its routes on the Express app.
+	2.	Extract shared utilities into server/utils/ — move getAuthUser, authenticateUser, syncVehicleStatus, syncProjectStatusFromTasks, and repeated date parsing logic. No changes to logic, just relocation.
+	3.	Extract and register modules in small batches of 2-3 at a time, not all at once. After each batch, verify the app starts and the affected routes still work before continuing to the next batch.
+	4.	Replace server/routes.ts with a slim file that imports and registers all route modules. The file should be under 50 lines. The registration order must match the original file exactly — do not reorder routes or middleware.
+	5.	Test after Pass 1 before continuing. Verify every major feature works across all four roles (Admin, Technician, Staff, Student). Do not start Pass 2 until this passes.
+
+Pass 2 — Validation and error standardization
+Goal: Layer in Zod validation and consistent error handling. Do one route module at a time and test after each.
+	6.	Create a shared error handler utility in server/utils/errorHandler.ts that returns proper status codes — 400 for bad input (with field-level detail), 404 for not found, 409 for conflicts, 500 only for unexpected errors. Include consistent ZodError handling.
+	7.	For each route module, one at a time:
+	∙	Add Zod schemas for every POST/PATCH/DELETE endpoint (no raw req.body passed to storage)
+	∙	Handle empty-string-to-number coercion consistently across all numeric fields
+	∙	Apply the shared error handler
+	∙	Test that module’s features before moving to the next one
+	8.	Final end-to-end test across all four roles:
+	∙	Admin: Dashboard, user creation, inventory CRUD, task creation/assignment, project creation, vehicle fleet management, service requests, property management, analytics, resource library, email management, vendor management
+	∙	Technician: Dashboard/work view, task execution (status changes, timers, checklists), service request handling, vehicle reservations, messages
+	∙	Staff: Service request submission, vehicle reservations, messages, settings
+	∙	Student: Task execution, service requests, vehicle reservations, messages
+
+Out of scope
+	∙	Changing business logic or adding new features
+	∙	Frontend changes (except if a backend response format change requires it)
+	∙	Database schema changes
+Relevant files
+server/routes.ts, server/storage.ts, shared/schema.ts, server/index.ts
