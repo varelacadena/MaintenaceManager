@@ -78,7 +78,7 @@ export function registerUploadRoutes(app: Express) {
       } else if (req.body.requestId) {
         const request = await storage.getServiceRequest(req.body.requestId);
         if (!request) return res.status(404).json({ message: "Service request not found" });
-        if (request.requesterId !== userId && request.assignedTo !== userId && currentUser.role !== "admin") {
+        if (request.requesterId !== userId && currentUser.role !== "admin") {
           return res.status(403).json({ message: "You don't have access to this request" });
         }
       }
@@ -142,7 +142,7 @@ export function registerUploadRoutes(app: Express) {
       } else if (req.body.requestId) {
         const request = await storage.getServiceRequest(req.body.requestId);
         if (!request) return res.status(404).json({ message: "Service request not found" });
-        if (request.requesterId !== userId && request.assignedTo !== userId && currentUser.role !== "admin") {
+        if (request.requesterId !== userId && currentUser.role !== "admin") {
           return res.status(403).json({ message: "You don't have access to this request" });
         }
       }
@@ -352,7 +352,7 @@ export function registerUploadRoutes(app: Express) {
           hasAccess = await canAccessTask(userId, upload.taskId);
         } else if (upload.requestId) {
           const request = await storage.getServiceRequest(upload.requestId);
-          if (request && (request.requesterId === userId || request.assignedTo === userId)) {
+          if (request && request.requesterId === userId) {
             hasAccess = true;
           }
         }
