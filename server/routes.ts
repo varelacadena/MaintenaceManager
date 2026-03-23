@@ -861,7 +861,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/inventory/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const itemData = insertInventoryItemSchema.partial().parse(req.body);
+      const cleaned = { ...req.body };
+      for (const key of ["quantity", "minQuantity", "cost"]) {
+        if (cleaned[key] === "" || cleaned[key] === null) {
+          delete cleaned[key];
+        }
+      }
+      const itemData = insertInventoryItemSchema.partial().parse(cleaned);
       const item = await storage.updateInventoryItem(req.params.id, itemData);
       if (!item) {
         return res.status(404).json({ message: "Inventory item not found" });

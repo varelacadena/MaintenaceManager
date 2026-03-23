@@ -343,14 +343,18 @@ export default function ResourceLibrary() {
 
   const createMutation = useMutation({
     mutationFn: (data: typeof form) => apiRequest("POST", "/api/resources", data),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-      properties.forEach(p => {
-        queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
-      });
+    onSuccess: () => {
       setDialogOpen(false);
       resetForm();
       toast({ title: "Resource created" });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+        properties.forEach(p => {
+          queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
+        });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to create resource", variant: "destructive" }),
   });
@@ -358,28 +362,36 @@ export default function ResourceLibrary() {
   const updateMutation = useMutation({
     mutationFn: (data: typeof form & { id: string }) =>
       apiRequest("PATCH", `/api/resources/${data.id}`, data),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-      properties.forEach(p => {
-        queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
-      });
+    onSuccess: () => {
       setDialogOpen(false);
       setEditResource(null);
       resetForm();
       toast({ title: "Resource updated" });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+        properties.forEach(p => {
+          queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
+        });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to update resource", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/resources/${id}`),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-      properties.forEach(p => {
-        queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
-      });
+    onSuccess: () => {
       setDeleteId(null);
       toast({ title: "Resource deleted" });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+        properties.forEach(p => {
+          queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
+        });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to delete resource", variant: "destructive" }),
   });
@@ -392,7 +404,11 @@ export default function ResourceLibrary() {
       setFolderName("");
       setEditingFolder(null);
       toast({ title: "Folder created" });
-      queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to create folder", variant: "destructive" }),
   });
@@ -405,7 +421,11 @@ export default function ResourceLibrary() {
       setFolderName("");
       setEditingFolder(null);
       toast({ title: "Folder renamed" });
-      queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to rename folder", variant: "destructive" }),
   });
@@ -415,8 +435,12 @@ export default function ResourceLibrary() {
     onSuccess: () => {
       setDeleteFolderId(null);
       toast({ title: "Folder deleted" });
-      queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to delete folder", variant: "destructive" }),
   });

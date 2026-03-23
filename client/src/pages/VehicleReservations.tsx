@@ -185,7 +185,6 @@ export function VehicleReservationsContent() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
       toast({
         title: "Success",
         description: "Handoff details saved successfully",
@@ -195,6 +194,11 @@ export function VehicleReservationsContent() {
       setHandoffLockboxId("");
       setAdminNotes("");
       setSelectedReservationForHandoff(null);
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      }, 300);
     },
     onError: (error: Error) => {
       toast({
@@ -226,7 +230,6 @@ export function VehicleReservationsContent() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
       toast({
         title: "Success",
         description: "Reservation updated successfully. The user will be notified.",
@@ -244,6 +247,11 @@ export function VehicleReservationsContent() {
       setEditKeyPickupMethod("");
       setEditLockboxId("");
       setEditAdminNotes("");
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      }, 300);
     },
     onError: (error: Error) => {
       toast({

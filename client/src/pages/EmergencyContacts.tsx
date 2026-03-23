@@ -114,13 +114,17 @@ export default function EmergencyContacts() {
       return await apiRequest("DELETE", `/api/emergency-contacts/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts/active"] });
       setDeleteContactId(null);
       toast({
         title: "Contact deleted",
         description: "Emergency contact has been deleted successfully.",
       });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts/active"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({
