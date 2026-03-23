@@ -69,14 +69,16 @@ export default function MyReservations() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
-      toast({ title: "Success", description: "Reservation request submitted successfully" });
       setCreateDialogOpen(false);
+      toast({ title: "Success", description: "Reservation request submitted successfully" });
       setStartDateTime(undefined);
       setEndDateTime(undefined);
       setPassengerCount("");
       setPurpose("");
       setNotes("");
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] }), 300);
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

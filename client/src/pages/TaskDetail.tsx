@@ -948,14 +948,18 @@ export default function TaskDetail() {
       setIsStopTimerDialogOpen(false);
       setIsHoldReasonDialogOpen(false);
       setHoldReason("");
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       toast({ title: data?.newStatus === "completed" ? "Task completed" : "Timer stopped" });
       if (data?.newStatus === "completed" && task?.parentTaskId) {
         setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
       }
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to stop timer", variant: "destructive" });
@@ -976,13 +980,15 @@ export default function TaskDetail() {
       return response.json();
     },
     onSuccess: (newItem) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setIsQuickAddInventoryOpen(false);
       setSelectedInventoryItemId(newItem.id);
       setQuickInventoryName("");
       setQuickInventoryQuantity(0);
       setQuickInventoryUnit("");
       toast({ title: "Item created" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
     },
     onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to create item", variant: "destructive" }),
   });
@@ -1007,14 +1013,18 @@ export default function TaskDetail() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setIsAddPartDialogOpen(false);
       setSelectedInventoryItemId("");
       setPartNotes("");
       setPartQuantity("");
       setInventorySearchQuery("");
       toast({ title: "Part added" });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
+        queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      }, 300);
     },
     onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to add part", variant: "destructive" }),
   });
@@ -1024,11 +1034,13 @@ export default function TaskDetail() {
       return await apiRequest("POST", "/api/task-notes", { taskId: id, content, noteType });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
       setNewNote("");
       setNoteType("job_note");
       setIsAddNoteDialogOpen(false);
       toast({ title: "Note added" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] }), 300);
     },
     onError: () => toast({ title: "Failed to add note", variant: "destructive" }),
   });
@@ -1080,8 +1092,6 @@ export default function TaskDetail() {
       return quote;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       setNewQuoteVendorId("");
       setNewQuoteVendorName("");
       setNewQuoteEstimatedCost("");
@@ -1089,6 +1099,12 @@ export default function TaskDetail() {
       setPendingQuoteFiles([]);
       setIsAddQuoteDialogOpen(false);
       toast({ title: "Quote added", description: "The estimate has been added for comparison." });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      }, 300);
     },
     onError: () => toast({ title: "Failed to create quote", variant: "destructive" }),
   });
@@ -1142,7 +1158,6 @@ export default function TaskDetail() {
       return response.json();
     },
     onSuccess: (newVendor) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       setNewQuoteVendorId(newVendor.id);
       setNewQuoteVendorName(newVendor.name);
       setNewVendorName("");
@@ -1152,6 +1167,9 @@ export default function TaskDetail() {
       setNewVendorNotes("");
       setIsAddVendorDialogOpen(false);
       toast({ title: "Vendor created", description: `${newVendor.name} has been added.` });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/vendors"] }), 300);
     },
     onError: () => toast({ title: "Failed to create vendor", variant: "destructive" }),
   });

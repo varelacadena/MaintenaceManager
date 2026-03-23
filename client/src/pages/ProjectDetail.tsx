@@ -769,13 +769,17 @@ export default function ProjectDetail() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      toast({ title: "Task updated", description: "Task status has been updated successfully." });
       setIsHoldReasonDialogOpen(false);
       setHoldReason("");
       setPendingStatusChange(null);
+      toast({ title: "Task updated", description: "Task status has been updated successfully." });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to update task status.", variant: "destructive" });
@@ -854,10 +858,14 @@ export default function ProjectDetail() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       setEditDialogOpen(false);
       toast({ title: "Project updated successfully" });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

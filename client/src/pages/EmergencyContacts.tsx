@@ -59,14 +59,18 @@ export default function EmergencyContacts() {
       return await apiRequest("POST", "/api/emergency-contacts", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts/active"] });
       resetForm();
       setIsDialogOpen(false);
       toast({
         title: "Contact created",
         description: "Emergency contact has been created successfully.",
       });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts/active"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({
@@ -82,8 +86,6 @@ export default function EmergencyContacts() {
       return await apiRequest("PATCH", `/api/emergency-contacts/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts/active"] });
       resetForm();
       setIsDialogOpen(false);
       setEditingContact(null);
@@ -91,6 +93,12 @@ export default function EmergencyContacts() {
         title: "Contact updated",
         description: "Emergency contact has been updated successfully.",
       });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emergency-contacts/active"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({

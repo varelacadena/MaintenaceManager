@@ -7,7 +7,33 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Sheet = SheetPrimitive.Root
+function cleanupBodyPointerEvents() {
+  setTimeout(() => {
+    if (!document.querySelector('[data-state="open"][role="dialog"], [data-state="open"][role="alertdialog"]')) {
+      document.body.style.removeProperty('pointer-events');
+    }
+  }, 350);
+}
+
+const Sheet = ({ open, onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Root>) => {
+  const prevOpen = React.useRef(open);
+
+  React.useEffect(() => {
+    if (prevOpen.current === true && open === false) {
+      cleanupBodyPointerEvents();
+    }
+    prevOpen.current = open;
+  }, [open]);
+
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    if (!newOpen) {
+      cleanupBodyPointerEvents();
+    }
+    onOpenChange?.(newOpen);
+  }, [onOpenChange]);
+
+  return <SheetPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />;
+};
 
 const SheetTrigger = SheetPrimitive.Trigger
 

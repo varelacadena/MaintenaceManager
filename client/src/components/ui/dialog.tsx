@@ -6,7 +6,33 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = DialogPrimitive.Root
+function cleanupBodyPointerEvents() {
+  setTimeout(() => {
+    if (!document.querySelector('[data-state="open"][role="dialog"], [data-state="open"][role="alertdialog"]')) {
+      document.body.style.removeProperty('pointer-events');
+    }
+  }, 350);
+}
+
+const Dialog = ({ open, onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+  const prevOpen = React.useRef(open);
+
+  React.useEffect(() => {
+    if (prevOpen.current === true && open === false) {
+      cleanupBodyPointerEvents();
+    }
+    prevOpen.current = open;
+  }, [open]);
+
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    if (!newOpen) {
+      cleanupBodyPointerEvents();
+    }
+    onOpenChange?.(newOpen);
+  }, [onOpenChange]);
+
+  return <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />;
+};
 
 const DialogTrigger = DialogPrimitive.Trigger
 

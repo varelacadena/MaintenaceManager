@@ -165,10 +165,12 @@ export default function Inventory() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setIsCreateDialogOpen(false);
       createForm.reset();
       toast({ title: "Item added" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -183,10 +185,12 @@ export default function Inventory() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setIsEditDialogOpen(false);
       setSelectedItem(null);
       toast({ title: "Item updated" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -198,10 +202,12 @@ export default function Inventory() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setIsDeleteDialogOpen(false);
       setSelectedItem(null);
       toast({ title: "Item deleted" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -216,11 +222,13 @@ export default function Inventory() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setIsQuantityDialogOpen(false);
       setSelectedItem(null);
       setQuantityChange("");
       toast({ title: "Quantity updated" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

@@ -157,10 +157,12 @@ export default function Users() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsCreateDialogOpen(false);
       resetCreateForm();
       toast({ title: "User created successfully" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
     },
     onError: (error: any) => {
       toast({
@@ -176,11 +178,13 @@ export default function Users() {
       return await apiRequest("PATCH", `/api/users/${userId}/role`, { role });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Role Updated",
         description: "User role has been updated successfully.",
       });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
     },
     onError: (error: any) => {
       toast({
@@ -197,9 +201,11 @@ export default function Users() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsEditDialogOpen(false);
       toast({ title: "User updated successfully" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
     },
     onError: (error: any) => {
       toast({
@@ -218,10 +224,12 @@ export default function Users() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsPasswordDialogOpen(false);
       setEditPassword("");
       toast({ title: "Password updated successfully" });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
     },
     onError: (error: any) => {
       toast({

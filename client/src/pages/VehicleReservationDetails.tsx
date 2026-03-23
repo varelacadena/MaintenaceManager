@@ -131,9 +131,11 @@ export default function VehicleReservationDetails() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
-      toast({ title: "Reservation Updated", description: "The reservation has been updated successfully." });
       setEditDialogOpen(false);
+      toast({ title: "Reservation Updated", description: "The reservation has been updated successfully." });
+    },
+    onSettled: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] }), 300);
     },
     onError: (error: Error) => {
       toast({ title: "Update Failed", description: error.message || "An error occurred.", variant: "destructive" });
