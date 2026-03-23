@@ -740,15 +740,19 @@ export default function Work() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      setIsHoldReasonDialogOpen(false);
+      setHoldReason("");
+      setPendingStatusChange(null);
       toast({
         title: "Task updated",
         description: "Task status has been updated successfully.",
       });
-      setIsHoldReasonDialogOpen(false);
-      setHoldReason("");
-      setPendingStatusChange(null);
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      }, 300);
     },
     onError: async (error: any) => {
       let description = "Failed to update task status.";
@@ -772,13 +776,17 @@ export default function Work() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       setProjectDialogOpen(false);
       form.reset();
       toast({
         title: "Project created",
         description: "The project has been created successfully.",
       });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({

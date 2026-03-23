@@ -115,14 +115,18 @@ export default function PropertyMapPage() {
       return await apiRequest("POST", "/api/properties", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      setIsCreateDialogOpen(false);
+      setPendingCoordinates(null);
+      form.reset();
       toast({
         title: "Success",
         description: "Property created successfully",
       });
-      setIsCreateDialogOpen(false);
-      setPendingCoordinates(null);
-      form.reset();
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({
@@ -158,12 +162,16 @@ export default function PropertyMapPage() {
       return await apiRequest("DELETE", `/api/properties/${id}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      setSelectedPropertyId(null);
       toast({
         title: "Success",
         description: "Property deleted successfully",
       });
-      setSelectedPropertyId(null);
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      }, 300);
     },
     onError: (error: any) => {
       toast({

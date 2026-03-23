@@ -78,18 +78,22 @@ function FleetContent() {
       return await apiRequest("POST", "/api/vehicles", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicles');
-        }
-      });
+      setCreateDialogOpen(false);
+      form.reset();
       toast({
         title: "Success",
         description: "Vehicle created successfully",
       });
-      setCreateDialogOpen(false);
-      form.reset();
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return typeof key === 'string' && key.startsWith('/api/vehicles');
+          }
+        });
+      }, 300);
     },
     onError: (error: Error) => {
       toast({
