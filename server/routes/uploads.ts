@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { canAccessTask } from "../middleware";
-import { handleRouteError, getAuthUser } from "../routeUtils";
+import { handleRouteError, getAuthUser, canAccessServiceRequest } from "../routeUtils";
 import { insertUploadSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -78,7 +78,8 @@ export function registerUploadRoutes(app: Express) {
       } else if (req.body.requestId) {
         const request = await storage.getServiceRequest(req.body.requestId);
         if (!request) return res.status(404).json({ message: "Service request not found" });
-        if (request.requesterId !== userId && currentUser.role !== "admin") {
+        const hasRequestAccess = await canAccessServiceRequest(userId, req.body.requestId);
+        if (!hasRequestAccess && currentUser.role !== "admin") {
           return res.status(403).json({ message: "You don't have access to this request" });
         }
       }
@@ -142,7 +143,8 @@ export function registerUploadRoutes(app: Express) {
       } else if (req.body.requestId) {
         const request = await storage.getServiceRequest(req.body.requestId);
         if (!request) return res.status(404).json({ message: "Service request not found" });
-        if (request.requesterId !== userId && currentUser.role !== "admin") {
+        const hasRequestAccess = await canAccessServiceRequest(userId, req.body.requestId);
+        if (!hasRequestAccess && currentUser.role !== "admin") {
           return res.status(403).json({ message: "You don't have access to this request" });
         }
       }
@@ -207,22 +209,11 @@ export function registerUploadRoutes(app: Express) {
         }
         
         if (!hasAccess && upload.requestId) {
-          const request = await storage.getServiceRequest(upload.requestId);
-          if (request && request.requesterId === userId) {
-            hasAccess = true;
-          }
+          hasAccess = await canAccessServiceRequest(userId, upload.requestId);
         }
         
         if (!hasAccess && upload.taskId) {
-          const task = await storage.getTask(upload.taskId);
-          if (task) {
-            if (task.requestId) {
-              const request = await storage.getServiceRequest(task.requestId);
-              if (request && request.requesterId === userId) {
-                hasAccess = true;
-              }
-            }
-          }
+          hasAccess = await canAccessTask(userId, upload.taskId);
         }
         
         if (!hasAccess && upload.vehicleCheckOutLogId) {
@@ -351,10 +342,7 @@ export function registerUploadRoutes(app: Express) {
         if (upload.taskId) {
           hasAccess = await canAccessTask(userId, upload.taskId);
         } else if (upload.requestId) {
-          const request = await storage.getServiceRequest(upload.requestId);
-          if (request && request.requesterId === userId) {
-            hasAccess = true;
-          }
+          hasAccess = await canAccessServiceRequest(userId, upload.requestId);
         }
         if (!hasAccess) {
           return res.status(403).json({ message: "You don't have permission to delete this upload" });

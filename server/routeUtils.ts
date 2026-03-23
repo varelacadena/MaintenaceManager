@@ -65,6 +65,18 @@ export async function authenticateUser(req: any): Promise<any | null> {
   return null;
 }
 
+export async function canAccessServiceRequest(userId: string, requestId: string): Promise<boolean> {
+  try {
+    const request = await storage.getServiceRequest(requestId);
+    if (!request) return false;
+    if (request.requesterId === userId) return true;
+    const tasks = await storage.getTasks();
+    return tasks.some(t => t.requestId === requestId && t.assignedToId === userId);
+  } catch {
+    return false;
+  }
+}
+
 export async function syncVehicleStatus(vehicleId: string): Promise<void> {
   try {
     const vehicle = await storage.getVehicle(vehicleId);

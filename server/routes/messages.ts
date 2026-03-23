@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin, requireTaskExecutorOrAdmin, requireTaskAccess, canAccessTask } from "../middleware";
-import { handleRouteError } from "../routeUtils";
+import { handleRouteError, canAccessServiceRequest } from "../routeUtils";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -21,7 +21,8 @@ export function registerMessageRoutes(app: Express) {
       } else if (req.body.requestId) {
         const request = await storage.getServiceRequest(req.body.requestId);
         if (!request) return res.status(404).json({ message: "Service request not found" });
-        if (request.requesterId !== userId && currentUser.role !== "admin") {
+        const hasRequestAccess = await canAccessServiceRequest(userId, req.body.requestId);
+        if (!hasRequestAccess && currentUser.role !== "admin") {
           return res.status(403).json({ message: "You don't have access to this request" });
         }
       }
