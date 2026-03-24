@@ -609,7 +609,9 @@ export default function Work() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedParentTasks, setExpandedParentTasks] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"tasks" | "projects">("tasks");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<string>("all");
+  const [projectSearchQuery, setProjectSearchQuery] = useState("");
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     taskId: string;
@@ -975,12 +977,10 @@ export default function Work() {
           t.description?.toLowerCase().includes(q)
       );
     }
-    if (typeFilter === "projects") return [];
     return filtered;
-  }, [standaloneTasks, searchQuery, typeFilter]);
+  }, [standaloneTasks, searchQuery]);
 
   const filteredProjects = useMemo(() => {
-    if (typeFilter === "tasks") return [];
     let filtered = projects || [];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -991,7 +991,23 @@ export default function Work() {
       );
     }
     return filtered;
-  }, [projects, searchQuery, typeFilter]);
+  }, [projects, searchQuery]);
+
+  const projectsTabFiltered = useMemo(() => {
+    let filtered = projects || [];
+    if (projectSearchQuery) {
+      const q = projectSearchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q)
+      );
+    }
+    if (projectStatusFilter !== "all") {
+      filtered = filtered.filter((p) => p.status === projectStatusFilter);
+    }
+    return filtered;
+  }, [projects, projectSearchQuery, projectStatusFilter]);
 
   const unifiedGroups = useMemo(() => {
     const groups: Record<string, WorkItem[]> = {};
@@ -1006,15 +1022,17 @@ export default function Work() {
       }
     });
 
-    filteredProjects.forEach((project) => {
-      const unifiedStatus = projectStatusMapping[project.status] || "not_started";
-      if (groups[unifiedStatus]) {
-        groups[unifiedStatus].push({ type: "project", data: project });
-      }
-    });
+    if (!isAdmin) {
+      filteredProjects.forEach((project) => {
+        const unifiedStatus = projectStatusMapping[project.status] || "not_started";
+        if (groups[unifiedStatus]) {
+          groups[unifiedStatus].push({ type: "project", data: project });
+        }
+      });
+    }
 
     return groups;
-  }, [filteredStandaloneTasks, filteredProjects]);
+  }, [filteredStandaloneTasks, filteredProjects, isAdmin]);
 
   const adminUsers = allUsers?.filter((u) => u.role === "admin") || [];
   const technicianUsers = allUsers?.filter((u) => u.role === "technician") || [];
@@ -1518,12 +1536,14 @@ export default function Work() {
               </div>
               {user?.role === "admin" && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Link href="/tasks/new">
-                    <Button data-testid="button-create-task">
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Task
-                    </Button>
-                  </Link>
+                  {activeTab === "tasks" && (
+                    <Link href="/tasks/new">
+                      <Button data-testid="button-create-task">
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Task
+                      </Button>
+                    </Link>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => setProjectDialogOpen(true)}
@@ -1545,30 +1565,191 @@ export default function Work() {
             </div>
 
             {user?.role === "admin" && (
+              <div className="space-y-3">
+                <div className="flex gap-1 bg-muted rounded-md p-1" data-testid="work-tabs">
+                  {([["tasks", "Tasks"], ["projects", "Projects"]] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => setActiveTab(value)}
+                      className={`flex-1 px-4 py-1.5 text-sm font-medium rounded transition-colors ${
+                        activeTab === value
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover-elevate"
+                      }`}
+                      data-testid={`tab-${value}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {user?.role === "admin" && activeTab === "tasks" && (
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search tasks and projects..."
+                    placeholder="Search tasks..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
                     data-testid="input-search-work"
                   />
                 </div>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-[160px]" data-testid="select-type-filter">
-                    <SelectValue placeholder="Filter type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="tasks">Tasks Only</SelectItem>
-                    <SelectItem value="projects">Projects Only</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             )}
 
+            {user?.role === "admin" && activeTab === "projects" && (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search projects..."
+                      value={projectSearchQuery}
+                      onChange={(e) => setProjectSearchQuery(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-search-projects"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-wrap" data-testid="project-status-filters">
+                  {([
+                    ["all", "All"],
+                    ["planning", "Planning"],
+                    ["in_progress", "In Progress"],
+                    ["on_hold", "On Hold"],
+                    ["completed", "Completed"],
+                    ["cancelled", "Cancelled"],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => setProjectStatusFilter(value)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                        projectStatusFilter === value
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-background text-muted-foreground border-border hover-elevate"
+                      }`}
+                      data-testid={`filter-project-status-${value}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {projectsTabFiltered.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FolderKanban className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
+                    <p className="text-sm font-medium text-muted-foreground">No projects found</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {projectSearchQuery || projectStatusFilter !== "all"
+                        ? "Try adjusting your filters"
+                        : "Create a new project to get started"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" data-testid="projects-grid">
+                    {projectsTabFiltered.map((project) => {
+                      const childTasks = projectTasksMap[project.id] || [];
+                      const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
+                      const totalChildTasks = childTasks.length;
+                      const progressPercent = totalChildTasks > 0 ? Math.round((completedChildTasks / totalChildTasks) * 100) : 0;
+                      const propertyName = getPropertyName(project.propertyId);
+                      const isOverdue = project.targetEndDate
+                        && project.status !== "completed"
+                        && new Date(project.targetEndDate) < new Date();
+                      const priorityCfg = projectPriorityConfig[project.priority] || projectPriorityConfig.medium;
+
+                      const projectStatusBadgeColors: Record<string, string> = {
+                        planning: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
+                        in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
+                        on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
+                        completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
+                        cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
+                      };
+
+                      const statusLabel: Record<string, string> = {
+                        planning: "Planning",
+                        in_progress: "In Progress",
+                        on_hold: "On Hold",
+                        completed: "Completed",
+                        cancelled: "Cancelled",
+                      };
+
+                      return (
+                        <Link key={project.id} href={`/projects/${project.id}`} data-testid={`link-project-${project.id}`}>
+                          <Card
+                            className="cursor-pointer hover-elevate p-4 space-y-3"
+                            data-testid={`project-card-${project.id}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-project-name-${project.id}`}>
+                                {project.name}
+                              </h3>
+                              {isOverdue && (
+                                <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 shrink-0" data-testid={`icon-overdue-${project.id}`} />
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge className={`text-[10px] ${projectStatusBadgeColors[project.status] || ""}`} data-testid={`badge-project-status-${project.id}`}>
+                                {statusLabel[project.status] || project.status}
+                              </Badge>
+                              <Badge variant="outline" className={`text-[10px] ${priorityCfg.color}`} data-testid={`badge-project-priority-${project.id}`}>
+                                <Flag className="w-3 h-3 mr-0.5" />
+                                {priorityCfg.label}
+                              </Badge>
+                            </div>
+
+                            <div className="space-y-1" data-testid={`progress-${project.id}`}>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>{completedChildTasks}/{totalChildTasks} tasks</span>
+                                <span>{progressPercent}%</span>
+                              </div>
+                              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all"
+                                  style={{ width: `${progressPercent}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              {propertyName && (
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  <span className="truncate" data-testid={`text-project-property-${project.id}`}>{propertyName}</span>
+                                </div>
+                              )}
+                              {(project.startDate || project.targetEndDate) && (
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar className="w-3 h-3 shrink-0" />
+                                  <span data-testid={`text-project-dates-${project.id}`}>
+                                    {project.startDate ? format(new Date(project.startDate), "MMM d") : "?"}
+                                    {" - "}
+                                    {project.targetEndDate ? format(new Date(project.targetEndDate), "MMM d, yyyy") : "?"}
+                                  </span>
+                                </div>
+                              )}
+                              {(project.budgetAmount ?? 0) > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium" data-testid={`text-project-budget-${project.id}`}>
+                                    ${(project.budgetAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} budget
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(user?.role !== "admin" || activeTab === "tasks") && (
             <div className="space-y-2">
               {unifiedStatusConfig.map((status) => {
                 const itemsInGroup = unifiedGroups[status.key] || [];
@@ -1701,6 +1882,7 @@ export default function Work() {
                 );
               })}
             </div>
+            )}
           </div>
         </div>
 
