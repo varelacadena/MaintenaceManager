@@ -14,12 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft, Edit, Trash2, Plus, Calendar, DollarSign, Building2,
   ClipboardList, Clock, CheckCircle, AlertCircle, XCircle, FolderKanban,
   GanttChart, User as UserIcon, Flag, MapPin, AlertTriangle, Pencil,
-  ClipboardCheck,
+  ClipboardCheck, Send, Paperclip, FileIcon, Download, Image as ImageIcon,
+  ChevronRight,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
@@ -67,7 +69,7 @@ import { statusColors, priorityColors, taskStatusColors } from "@/lib/constants"
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Project, Task, Property, Area, User } from "@shared/schema";
+import type { Project, Task, Property, Area, User, ProjectComment, Upload } from "@shared/schema";
 import { format, parse } from "date-fns";
 
 const GANTT_STATUS_COLORS: Record<string, string> = {
@@ -694,6 +696,9 @@ export default function ProjectDetail() {
   } | null>(null);
   const [reviewEstimatesTaskId, setReviewEstimatesTaskId] = useState<string | null>(null);
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [rightTab, setRightTab] = useState("activity");
+  const activityEndRef = useRef<HTMLDivElement>(null);
   const projectId = params?.id || "";
   const isAdmin = user?.role === "admin";
 
@@ -723,6 +728,128 @@ export default function ProjectDetail() {
   const { data: allUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
+
+  const { data: comments } = useQuery<ProjectComment[]>({
+    queryKey: ["/api/projects", projectId, "comments"],
+    enabled: !!projectId,
+  });
+
+  const { data: projectUploads } = useQuery<Upload[]>({
+    queryKey: ["/api/projects", projectId, "uploads"],
+    enabled: !!projectId,
+  });
+
+  const addCommentMutation = useMutation({
+    mutationFn: async (data: { content: string; isSystem?: boolean }) => {
+      return await apiRequest("POST", `/api/projects/${projectId}/comments`, data);
+    },
+    onSuccess: () => {
+      setCommentText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "comments"] });
+      setTimeout(() => {
+        activityEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to post comment.", variant: "destructive" });
+    },
+  });
+
+  const uploadToProjectMutation = useMutation({
+    mutationFn: async (data: { fileName: string; fileType: string; objectUrl: string; objectPath?: string; projectCommentId?: string }) => {
+      return await apiRequest("POST", `/api/projects/${projectId}/uploads`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "uploads"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload file.", variant: "destructive" });
+    },
+  });
+
+  const handleCommentSubmit = () => {
+    const trimmed = commentText.trim();
+    if (!trimmed) return;
+    addCommentMutation.mutate({ content: trimmed });
+  };
+
+  const handleFileAttachToComment = async () => {
+    try {
+      const res = await apiRequest("POST", "/api/objects/upload", {});
+      const { uploadURL, objectPath } = await res.json();
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+
+        await fetch(uploadURL, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+
+        const commentRes = await apiRequest("POST", `/api/projects/${projectId}/comments`, {
+          content: commentText.trim() || `Shared a file: ${file.name}`,
+        });
+        const comment = await commentRes.json();
+
+        await apiRequest("POST", `/api/projects/${projectId}/uploads`, {
+          fileName: file.name,
+          fileType: file.type,
+          objectUrl: uploadURL.split("?")[0],
+          objectPath,
+          projectCommentId: comment.id,
+        });
+
+        setCommentText("");
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "comments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "uploads"] });
+        toast({ title: "File shared", description: `${file.name} has been attached.` });
+        setTimeout(() => {
+          activityEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      };
+      input.click();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to attach file.", variant: "destructive" });
+    }
+  };
+
+  const handleDirectFileUpload = async () => {
+    try {
+      const res = await apiRequest("POST", "/api/objects/upload", {});
+      const { uploadURL, objectPath } = await res.json();
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+
+        await fetch(uploadURL, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+
+        uploadToProjectMutation.mutate({
+          fileName: file.name,
+          fileType: file.type,
+          objectUrl: uploadURL.split("?")[0],
+          objectPath,
+        });
+
+        toast({ title: "File uploaded", description: `${file.name} has been uploaded.` });
+      };
+      input.click();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to initiate upload.", variant: "destructive" });
+    }
+  };
 
   const adminUsers = allUsers?.filter((u) => u.role === "admin") || [];
   const technicianUsers = allUsers?.filter((u) => u.role === "technician") || [];
@@ -926,257 +1053,442 @@ export default function ProjectDetail() {
     && !["completed", "cancelled"].includes(project.status)
     && new Date(project.targetEndDate) < new Date();
 
+  const daysLeft = project.targetEndDate
+    ? Math.ceil((new Date(project.targetEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const commentsByDate = (comments || []).reduce<Record<string, ProjectComment[]>>((acc, comment) => {
+    const dateKey = comment.createdAt ? format(new Date(comment.createdAt), "MMM d") : "Unknown";
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(comment);
+    return acc;
+  }, {});
+
+  const getSenderInfo = (senderId: string) => {
+    const u = allUsers?.find(u => u.id === senderId);
+    if (!u) return { name: "Unknown", initials: "?" };
+    const name = u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username || "Unknown";
+    const initials = u.firstName && u.lastName ? `${u.firstName[0]}${u.lastName[0]}` : (u.username?.[0] || "?");
+    return { name, initials: initials.toUpperCase() };
+  };
+
+  const imageUploads = (projectUploads || []).filter(u => u.fileType?.startsWith("image/"));
+  const fileUploads = (projectUploads || []).filter(u => !u.fileType?.startsWith("image/"));
+
+  const getCommentAttachments = (commentId: string) => {
+    return (projectUploads || []).filter(u => u.projectCommentId === commentId);
+  };
+
+  const getImageUrl = (upload: Upload) => {
+    if (upload.objectPath) {
+      return `/api/objects/image?path=${encodeURIComponent(upload.objectPath)}`;
+    }
+    return upload.objectUrl;
+  };
+
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/work">
-            <Button variant="ghost" size="icon" data-testid="button-back">
-              <ArrowLeft className="w-4 h-4" />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/work" className="hover:underline underline-offset-2" data-testid="link-breadcrumb-work">Work</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="text-foreground font-medium" data-testid="text-breadcrumb-project">{project.name}</span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)} data-testid="button-edit-project">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+          <Link href={`/tasks/new?projectId=${projectId}`}>
+            <Button data-testid="button-add-task">
+              <Plus className="w-4 h-4 mr-2" />
+              New task
             </Button>
           </Link>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 min-w-0 space-y-5">
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <FolderKanban className="w-5 h-5 text-indigo-500" />
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-project-name">{project.name}</h1>
-              {isOverdue && (
-                <Badge variant="destructive" className="shrink-0" data-testid="badge-overdue">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  Overdue
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <h1 className="text-2xl font-bold text-foreground" data-testid="text-project-name">{project.name}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-project-subtitle">
+              {project.description || project.status.replace(/_/g, " ")}
+              {getPropertyName(project.propertyId) && ` · ${getPropertyName(project.propertyId)}`}
+              {project.startDate && ` · ${format(new Date(project.startDate), "MMM d")}`}
+              {project.targetEndDate && ` → ${format(new Date(project.targetEndDate), "MMM d, yyyy")}`}
+            </p>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Badge className={statusColors[project.status]} variant="secondary">
                 {project.status.replace(/_/g, " ")}
               </Badge>
               <Badge className={priorityColors[project.priority]} variant="secondary">
                 {project.priority}
               </Badge>
+              {isOverdue && (
+                <Badge variant="destructive" data-testid="badge-overdue">Overdue</Badge>
+              )}
             </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditDialogOpen(true)} data-testid="button-edit-project">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} data-testid="button-delete-project">
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
 
-      {project.description && (
-        <p className="text-muted-foreground" data-testid="text-project-description">{project.description}</p>
-      )}
-
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <ClipboardList className="w-4 h-4" />
-              <span>Task Progress</span>
-            </div>
-            <div className="text-2xl font-bold" data-testid="text-task-progress">
-              {analytics?.taskStats.completed || 0}/{analytics?.taskStats.total || 0}
-            </div>
-            <Progress value={taskProgress} className="mt-2 h-1.5" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <DollarSign className="w-4 h-4" />
-              <span>Budget</span>
-            </div>
-            <div className="text-2xl font-bold" data-testid="text-budget">
-              ${(project.budgetAmount || 0).toLocaleString()}
-            </div>
-            {analytics && analytics.budget.remaining !== analytics.budget.allocated && (
-              <p className={`text-xs mt-1 ${(analytics.budget.remaining || 0) < 0 ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
-                ${(analytics.budget.remaining || 0).toLocaleString()} remaining
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <Clock className="w-4 h-4" />
-              <span>Time Logged</span>
-            </div>
-            <div className="text-2xl font-bold" data-testid="text-time-logged">
-              {analytics?.time.totalHours || 0}h
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <Calendar className="w-4 h-4" />
-              <span>Timeline</span>
-            </div>
-            <div className="text-sm space-y-0.5" data-testid="text-timeline">
-              {project.startDate ? (
-                <p>{format(new Date(project.startDate), "MMM d, yyyy")}</p>
-              ) : (
-                <p className="text-muted-foreground">No start date</p>
-              )}
-              {project.targetEndDate && (
-                <p className="text-muted-foreground">to {format(new Date(project.targetEndDate), "MMM d, yyyy")}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {(getPropertyName(project.propertyId) || getAreaName(project.areaId) || (analytics && (analytics.budget.quoted > 0 || analytics.budget.actualParts > 0))) && (
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-              {getPropertyName(project.propertyId) && (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Building2 className="w-4 h-4" />
-                  <span>{getPropertyName(project.propertyId)}</span>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="text-xs text-muted-foreground mb-1">Tasks</div>
+                <div className="text-xl font-bold" data-testid="text-task-progress">
+                  {analytics?.taskStats.completed || 0}/{analytics?.taskStats.total || 0}
                 </div>
-              )}
-              {getAreaName(project.areaId) && (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <span>Area: {getAreaName(project.areaId)}</span>
+                <Progress value={taskProgress} className="mt-1.5 h-1" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="text-xs text-muted-foreground mb-1">Budget</div>
+                <div className="text-xl font-bold" data-testid="text-budget">
+                  ${(project.budgetAmount || 0).toLocaleString()}
                 </div>
-              )}
-              {analytics && analytics.budget.quoted > 0 && (
-                <div className="text-muted-foreground">
-                  Quoted: ${analytics.budget.quoted.toLocaleString()}
+                <div className="text-[10px] text-muted-foreground mt-0.5">allocated</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="text-xs text-muted-foreground mb-1">Time logged</div>
+                <div className="text-xl font-bold" data-testid="text-time-logged">
+                  {analytics?.time.totalHours || 0}h
                 </div>
-              )}
-              {analytics && analytics.budget.actualParts > 0 && (
-                <div className="text-muted-foreground">
-                  Parts: ${analytics.budget.actualParts.toLocaleString()}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="text-xs text-muted-foreground mb-1">Days left</div>
+                <div className={`text-xl font-bold ${daysLeft !== null && daysLeft < 0 ? "text-red-500 dark:text-red-400" : ""}`} data-testid="text-days-left">
+                  {daysLeft !== null ? daysLeft : "—"}
                 </div>
-              )}
-              {analytics && analytics.quotes.total > 0 && (
-                <div className="text-muted-foreground">
-                  Quotes: {analytics.quotes.approved}/{analytics.quotes.total} approved
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {analytics && analytics.taskStats.total > 0 && (
-        <div className="flex flex-wrap gap-3 text-sm">
-          <div className="flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-muted-foreground">{analytics.taskStats.notStarted} not started</span>
+                {daysLeft !== null && daysLeft < 0 && (
+                  <div className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">past due</div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-muted-foreground">{analytics.taskStats.inProgress} in progress</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <XCircle className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-muted-foreground">{analytics.taskStats.onHold} on hold</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-            <span className="text-muted-foreground">{analytics.taskStats.completed} completed</span>
-          </div>
-        </div>
-      )}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <CardTitle className="text-lg">Tasks</CardTitle>
-          <Link href={`/tasks/new?projectId=${projectId}`}>
-            <Button size="sm" data-testid="button-add-task">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Task
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {tasks && tasks.length > 0 ? (
-            isMobile ? (
-              <div className="space-y-2">
-                {tasks.map((task) => (
-                  <MobileTaskCard
-                    key={task.id}
-                    task={task}
-                    allUsers={allUsers}
-                    handleStatusChange={handleStatusChange}
-                    handleUrgencyChange={handleUrgencyChange}
-                    onReviewEstimates={(id) => setReviewEstimatesTaskId(id)}
-                    isAdmin={isAdmin}
-                    onViewSummary={(id) => setSummaryTaskId(id)}
-                  />
-                ))}
+          {analytics && analytics.taskStats.total > 0 && (
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-gray-400" />
+                <span className="text-muted-foreground">{analytics.taskStats.notStarted} not started</span>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[180px]">Task</TableHead>
-                      <TableHead className="w-[50px]">Assignee</TableHead>
-                      <TableHead className="min-w-[110px]">Start</TableHead>
-                      <TableHead className="min-w-[110px]">Due</TableHead>
-                      <TableHead className="min-w-[140px]">Status</TableHead>
-                      <TableHead className="w-[80px]">Urgency</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[120px]">Property</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span className="text-muted-foreground">{analytics.taskStats.inProgress} in progress</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-muted-foreground">{analytics.taskStats.completed} done</span>
+              </div>
+            </div>
+          )}
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <CardTitle className="text-lg">Tasks</CardTitle>
+              <Link href={`/tasks/new?projectId=${projectId}`}>
+                <Button size="sm" data-testid="button-add-task-inline">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add task
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {tasks && tasks.length > 0 ? (
+                isMobile ? (
+                  <div className="space-y-2">
                     {tasks.map((task) => (
-                      <ProjectTaskTableRow
+                      <MobileTaskCard
                         key={task.id}
                         task={task}
-                        userGroups={userGroups}
                         allUsers={allUsers}
-                        properties={properties}
                         handleStatusChange={handleStatusChange}
                         handleUrgencyChange={handleUrgencyChange}
-                        handleAssigneeChange={handleAssigneeChange}
-                        handlePropertyChange={handlePropertyChange}
-                        handleInlineEdit={handleInlineEdit}
                         onReviewEstimates={(id) => setReviewEstimatesTaskId(id)}
                         isAdmin={isAdmin}
                         onViewSummary={(id) => setSummaryTaskId(id)}
                       />
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )
-          ) : (
-            <p className="text-muted-foreground text-center py-8">
-              No tasks assigned to this project yet
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <ProjectGanttChart tasks={tasks || []} project={project} />
-
-      {project.notes && (
-        <Collapsible defaultOpen={false}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer">
-                <CardTitle className="text-lg">Notes</CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <p className="text-muted-foreground whitespace-pre-wrap" data-testid="text-project-notes">{project.notes}</p>
-              </CardContent>
-            </CollapsibleContent>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[180px]">Task</TableHead>
+                          <TableHead className="w-[50px]">Assignee</TableHead>
+                          <TableHead className="min-w-[90px]">Due</TableHead>
+                          <TableHead className="min-w-[120px]">Status</TableHead>
+                          <TableHead className="w-[80px]">Urgency</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tasks.map((task) => (
+                          <ProjectTaskTableRow
+                            key={task.id}
+                            task={task}
+                            userGroups={userGroups}
+                            allUsers={allUsers}
+                            properties={properties}
+                            handleStatusChange={handleStatusChange}
+                            handleUrgencyChange={handleUrgencyChange}
+                            handleAssigneeChange={handleAssigneeChange}
+                            handlePropertyChange={handlePropertyChange}
+                            handleInlineEdit={handleInlineEdit}
+                            onReviewEstimates={(id) => setReviewEstimatesTaskId(id)}
+                            isAdmin={isAdmin}
+                            onViewSummary={(id) => setSummaryTaskId(id)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  No tasks assigned to this project yet
+                </p>
+              )}
+            </CardContent>
           </Card>
-        </Collapsible>
-      )}
+
+          <ProjectGanttChart tasks={tasks || []} project={project} />
+        </div>
+
+        <div className="w-full lg:w-[340px] xl:w-[380px] shrink-0 space-y-4">
+          <Card>
+            <CardContent className="pt-4 pb-3 space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" data-testid="text-details-heading">Details</h3>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Property</span>
+                  <span className="font-medium text-right" data-testid="text-detail-property">{getPropertyName(project.propertyId) || "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Start</span>
+                  <span className="font-medium" data-testid="text-detail-start">
+                    {project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Due</span>
+                  <span className={`font-medium ${isOverdue ? "text-red-500 dark:text-red-400" : ""}`} data-testid="text-detail-due">
+                    {project.targetEndDate ? format(new Date(project.targetEndDate), "MMM d, yyyy") : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Budget</span>
+                  <span className="font-medium" data-testid="text-detail-budget">${(project.budgetAmount || 0).toLocaleString()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Tabs value={rightTab} onValueChange={setRightTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="activity" className="flex-1" data-testid="tab-activity">Activity</TabsTrigger>
+              <TabsTrigger value="files" className="flex-1" data-testid="tab-files">Files</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="activity" className="mt-3">
+              <div className="border rounded-md">
+                <div className="max-h-[450px] overflow-y-auto p-3 space-y-4" data-testid="activity-feed">
+                  {(!comments || comments.length === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-6">No activity yet</p>
+                  )}
+                  {Object.entries(commentsByDate).map(([date, dateComments]) => (
+                    <div key={date}>
+                      <div className="flex items-center gap-2 my-3">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-[11px] text-muted-foreground font-medium">{date}</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                      {dateComments.map((comment) => {
+                        const sender = getSenderInfo(comment.senderId);
+                        if (comment.isSystem) {
+                          return (
+                            <div key={comment.id} className="flex items-center gap-2 py-1.5" data-testid={`comment-system-${comment.id}`}>
+                              <Avatar className="w-7 h-7 shrink-0">
+                                <AvatarFallback className="bg-muted text-[10px] font-bold text-muted-foreground">SYS</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm text-muted-foreground">{comment.content}</span>
+                            </div>
+                          );
+                        }
+                        const attachments = getCommentAttachments(comment.id);
+                        return (
+                          <div key={comment.id} className="flex gap-2 py-1.5" data-testid={`comment-${comment.id}`}>
+                            <Avatar className="w-7 h-7 shrink-0">
+                              <AvatarFallback className={`${getAvatarColor(comment.senderId)} text-white text-[10px] font-medium`}>
+                                {sender.initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="font-medium text-sm">{sender.name}</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {comment.createdAt ? format(new Date(comment.createdAt), "h:mm a") : ""}
+                                </span>
+                              </div>
+                              <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap break-words">{comment.content}</p>
+                              {attachments.length > 0 && (
+                                <div className="mt-2 space-y-1.5">
+                                  {attachments.map((att) => (
+                                    att.fileType?.startsWith("image/") ? (
+                                      <a
+                                        key={att.id}
+                                        href={getImageUrl(att)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block max-w-[200px] rounded-md overflow-hidden border"
+                                        data-testid={`comment-image-${att.id}`}
+                                      >
+                                        <img
+                                          src={getImageUrl(att)}
+                                          alt={att.fileName}
+                                          className="w-full object-cover"
+                                        />
+                                      </a>
+                                    ) : (
+                                      <a
+                                        key={att.id}
+                                        href={getImageUrl(att)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 p-1.5 rounded-md border text-xs hover-elevate"
+                                        data-testid={`comment-file-${att.id}`}
+                                      >
+                                        <FileIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                        <span className="truncate">{att.fileName}</span>
+                                        <Download className="w-3 h-3 text-muted-foreground shrink-0" />
+                                      </a>
+                                    )
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  <div ref={activityEndRef} />
+                </div>
+                <div className="border-t p-2 flex items-center gap-2">
+                  <Button size="icon" variant="ghost" onClick={handleFileAttachToComment} data-testid="button-attach-file">
+                    <Paperclip className="w-4 h-4" />
+                  </Button>
+                  <Input
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Comment..."
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleCommentSubmit();
+                      }
+                    }}
+                    data-testid="input-comment"
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleCommentSubmit}
+                    disabled={!commentText.trim() || addCommentMutation.isPending}
+                    data-testid="button-send-comment"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="files" className="mt-3">
+              <div className="border rounded-md p-3 space-y-4" data-testid="files-section">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-medium">Files & Photos</h4>
+                  <Button size="sm" variant="outline" onClick={handleDirectFileUpload} data-testid="button-upload-file">
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Upload
+                  </Button>
+                </div>
+
+                {(!projectUploads || projectUploads.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-6">No files uploaded yet</p>
+                )}
+
+                {imageUploads.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      Photos ({imageUploads.length})
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {imageUploads.map((upload) => (
+                        <a
+                          key={upload.id}
+                          href={getImageUrl(upload)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block aspect-square rounded-md overflow-hidden border hover-elevate"
+                          data-testid={`image-upload-${upload.id}`}
+                        >
+                          <img
+                            src={getImageUrl(upload)}
+                            alt={upload.fileName}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {fileUploads.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <FileIcon className="w-3.5 h-3.5" />
+                      Files ({fileUploads.length})
+                    </div>
+                    <div className="space-y-1">
+                      {fileUploads.map((upload) => (
+                        <a
+                          key={upload.id}
+                          href={getImageUrl(upload)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 rounded-md hover-elevate text-sm group"
+                          data-testid={`file-upload-${upload.id}`}
+                        >
+                          <FileIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <span className="truncate flex-1">{upload.fileName}</span>
+                          <Download className="w-3.5 h-3.5 text-muted-foreground invisible group-hover:visible shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setDeleteDialogOpen(true)}
+            data-testid="button-delete-project"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Project
+          </Button>
+        </div>
+      </div>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">

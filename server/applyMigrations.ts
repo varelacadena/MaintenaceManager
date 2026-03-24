@@ -60,6 +60,7 @@ export async function applyMigrations() {
     { file: "046_move_lockbox_to_reservations.sql", name: "046_move_lockbox_to_reservations" },
     { file: "047_add_task_location_scope.sql", name: "047_add_task_location_scope" },
     { file: "048_add_upload_label.sql", name: "048_add_upload_label" },
+    { file: "049_add_project_comments_and_upload_columns.sql", name: "049_add_project_comments_and_upload_columns" },
   ];
 
   try {

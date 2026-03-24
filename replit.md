@@ -40,6 +40,7 @@ The backend uses Express.js (Node.js, TypeScript) with a RESTful API. Server rou
 -   **User Management:** Full CRUD with admin-only access and safeguards against self-deletion and FK constraint violations.
 -   **One-tap Photo/Doc Upload:** Streamlined file upload directly from the task detail page without intermediate steps.
 -   **Scheduled Time Field:** Optional `scheduledStartTime` for tasks, influencing calendar display.
+-   **Project Detail Redesign:** Two-column layout on desktop (left: project info/tasks/timeline, right: details panel + activity feed + files). Includes a chat-style activity feed with comments, system events, date separators, and file attachments. Files & Photos tab aggregates all project-level uploads. Database: `project_comments` table and `project_id`/`project_comment_id` columns on `uploads`.
 
 ## External Dependencies
 

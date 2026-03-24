@@ -9,6 +9,8 @@ import {
   insertProjectVendorSchema,
   insertQuoteSchema,
   insertEmergencyContactSchema,
+  insertProjectCommentSchema,
+  insertUploadSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -222,6 +224,18 @@ export function registerProjectRoutes(app: Express) {
       });
       
       const project = await storage.createProject(data);
+
+      const user = await storage.getUser(userId);
+      const userName = user?.firstName && user?.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user?.username || "Unknown";
+      await storage.createProjectComment({
+        projectId: project.id,
+        senderId: userId,
+        content: `Created by ${userName}`,
+        isSystem: true,
+      });
+
       res.status(201).json(project);
     } catch (error) {
       handleRouteError(res, error, "Failed to create project");
@@ -237,12 +251,45 @@ export function registerProjectRoutes(app: Express) {
       if (rawBody.targetEndDate && typeof rawBody.targetEndDate === "string") {
         rawBody.targetEndDate = new Date(rawBody.targetEndDate);
       }
+      const existingProject = await storage.getProject(req.params.id);
+      if (!existingProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
       const validated = insertProjectSchema.partial().parse(rawBody);
       const body: any = { ...validated };
       const project = await storage.updateProject(req.params.id, body);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
+
+      const userId = (req as any).userId;
+      if (validated.status && validated.status !== existingProject.status) {
+        const user = await storage.getUser(userId);
+        const userName = user?.firstName && user?.lastName
+          ? `${user.firstName} ${user.lastName}`
+          : user?.username || "Unknown";
+        await storage.createProjectComment({
+          projectId: req.params.id,
+          senderId: userId,
+          content: `Status changed from ${existingProject.status.replace(/_/g, " ")} to ${validated.status.replace(/_/g, " ")} by ${userName}`,
+          isSystem: true,
+        });
+      }
+
+      if (validated.priority && validated.priority !== existingProject.priority) {
+        const user = await storage.getUser(userId);
+        const userName = user?.firstName && user?.lastName
+          ? `${user.firstName} ${user.lastName}`
+          : user?.username || "Unknown";
+        await storage.createProjectComment({
+          projectId: req.params.id,
+          senderId: userId,
+          content: `Priority changed from ${existingProject.priority} to ${validated.priority} by ${userName}`,
+          isSystem: true,
+        });
+      }
+
       res.json(project);
     } catch (error) {
       handleRouteError(res, error, "Failed to update project");
@@ -762,6 +809,89 @@ export function registerProjectRoutes(app: Express) {
       res.json(logs);
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch email logs");
+    }
+  });
+
+  // ============== PROJECT COMMENTS (Activity Feed) ==============
+
+  app.get("/api/projects/:id/comments", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const comments = await storage.getProjectComments(req.params.id);
+      res.json(comments);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch project comments");
+    }
+  });
+
+  app.post("/api/projects/:id/comments", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const data = insertProjectCommentSchema.parse({
+        ...req.body,
+        projectId: req.params.id,
+        senderId: userId,
+      });
+      const comment = await storage.createProjectComment(data);
+      res.status(201).json(comment);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to create project comment");
+    }
+  });
+
+  app.delete("/api/project-comments/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteProjectComment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      handleRouteError(res, error, "Failed to delete project comment");
+    }
+  });
+
+  // ============== PROJECT FILE UPLOADS ==============
+
+  app.get("/api/projects/:id/uploads", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const projectUploads = await storage.getUploadsByProject(req.params.id);
+      res.json(projectUploads);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch project uploads");
+    }
+  });
+
+  app.post("/api/projects/:id/uploads", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+
+      const errors = [];
+      if (!req.body.fileName) errors.push({ field: "fileName", message: "fileName is required" });
+      if (!req.body.objectUrl) errors.push({ field: "objectUrl", message: "objectUrl is required" });
+      if (!req.body.fileType) errors.push({ field: "fileType", message: "fileType is required" });
+      if (errors.length > 0) {
+        return res.status(400).json({ message: "Invalid upload data", errors });
+      }
+
+      let objectUrl = req.body.objectUrl;
+      if (req.body.objectPath && (!objectUrl.startsWith('http') || objectUrl.includes('mock-storage.local'))) {
+        try {
+          const { getDownloadUrl, getBucketId } = await import("../objectStorage");
+          if (getBucketId()) {
+            objectUrl = await getDownloadUrl(req.body.objectPath);
+          }
+        } catch (e) {
+          console.warn("Could not get signed download URL, using original:", e);
+        }
+      }
+
+      const uploadData = insertUploadSchema.parse({
+        ...req.body,
+        objectUrl,
+        projectId: req.params.id,
+        uploadedById: userId,
+      });
+      const upload = await storage.createUpload(uploadData);
+      res.status(201).json(upload);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to upload project file");
     }
   });
 

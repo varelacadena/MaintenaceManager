@@ -265,6 +265,8 @@ export const uploads = pgTable("uploads", {
   equipmentId: varchar("equipment_id").references(() => equipment.id, { onDelete: "cascade" }),
   vehicleCheckOutLogId: varchar("vehicle_check_out_log_id").references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
   vehicleCheckInLogId: varchar("vehicle_check_in_log_id").references(() => vehicleCheckInLogs.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id"),
+  projectCommentId: varchar("project_comment_id"),
   fileName: varchar("file_name", { length: 500 }).notNull(),
   fileType: varchar("file_type", { length: 100 }).notNull(),
   objectUrl: varchar("object_url", { length: 1000 }).notNull(),
@@ -1497,6 +1499,20 @@ export const propertyResources = pgTable("property_resources", {
 });
 
 export type PropertyResource = typeof propertyResources.$inferSelect;
+
+// Project comments (activity feed)
+export const projectComments = pgTable("project_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertProjectCommentSchema = createInsertSchema(projectComments).omit({ id: true, createdAt: true });
+export type InsertProjectComment = z.infer<typeof insertProjectCommentSchema>;
+export type ProjectComment = typeof projectComments.$inferSelect;
 
 // Password reset tokens
 export const passwordResetTokens = pgTable("password_reset_tokens", {

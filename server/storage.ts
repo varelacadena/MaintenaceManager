@@ -140,6 +140,9 @@ import {
   type InsertResourceFolder,
   type Resource,
   type InsertResource,
+  projectComments,
+  type ProjectComment,
+  type InsertProjectComment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -428,6 +431,14 @@ export interface IStorage {
   updateProject(id: string, data: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: string): Promise<void>;
   getTasksByProject(projectId: string): Promise<Task[]>;
+
+  // Project comment operations
+  getProjectComments(projectId: string): Promise<ProjectComment[]>;
+  createProjectComment(comment: InsertProjectComment): Promise<ProjectComment>;
+  deleteProjectComment(id: string): Promise<void>;
+
+  // Project upload operations
+  getUploadsByProject(projectId: string): Promise<Upload[]>;
 
   // Project team member operations
   getProjectTeamMembers(projectId: string): Promise<ProjectTeamMember[]>;
@@ -2299,6 +2310,32 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.projectId, projectId))
       .orderBy(desc(tasks.initialDate));
+  }
+
+  // Project comment operations
+  async getProjectComments(projectId: string): Promise<ProjectComment[]> {
+    return await this.db
+      .select()
+      .from(projectComments)
+      .where(eq(projectComments.projectId, projectId))
+      .orderBy(projectComments.createdAt);
+  }
+
+  async createProjectComment(commentData: InsertProjectComment): Promise<ProjectComment> {
+    const [comment] = await this.db.insert(projectComments).values(commentData).returning();
+    return comment;
+  }
+
+  async deleteProjectComment(id: string): Promise<void> {
+    await this.db.delete(projectComments).where(eq(projectComments.id, id));
+  }
+
+  async getUploadsByProject(projectId: string): Promise<Upload[]> {
+    return await this.db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.projectId, projectId))
+      .orderBy(desc(uploads.createdAt));
   }
 
   // Project team member operations
