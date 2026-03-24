@@ -2197,6 +2197,13 @@ export default function TaskDetail() {
             )
           )}
 
+          {!task?.isCampusWide && multiProperties.length === 0 && !property && (
+            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md border border-dashed border-muted-foreground/20" data-testid="display-no-location">
+              <MapPin className="w-5 h-5 text-muted-foreground/50 shrink-0" />
+              <p className="text-sm text-muted-foreground">No location assigned</p>
+            </div>
+          )}
+
           {/* Space if present */}
           {!task?.isCampusWide && multiProperties.length === 0 && space && (
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md" data-testid="display-space">

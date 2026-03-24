@@ -96,14 +96,6 @@ const formSchema = insertTaskSchema.extend({
 }, {
   message: "Please provide the required contact information",
   path: ["contactType"],
-}).refine((data) => {
-  if (data.isCampusWide) return true;
-  if (data.propertyIds && data.propertyIds.length > 0) return true;
-  if (data.propertyId && data.propertyId.length > 0) return true;
-  return false;
-}, {
-  message: "Please select a property, multiple buildings, or campus-wide scope",
-  path: ["propertyId"],
 });
 
 type FormData = z.infer<typeof formSchema>;
