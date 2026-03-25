@@ -94,10 +94,13 @@ export async function canAccessTask(userId: string, taskId: string): Promise<boo
     return task.executorType === "technician" && task.assignedPool === "technician_pool";
   }
 
-  // Students can access tasks directly assigned to them, or student-type tasks in the student pool
+  // Students can access tasks directly assigned to them, student pool tasks, or tasks where they are a helper
   if (user.role === "student") {
     if (task.assignedToId === userId) return true;
-    return task.executorType === "student" && task.assignedPool === "student_pool";
+    if (task.executorType === "student" && task.assignedPool === "student_pool") return true;
+    const isHelper = await storage.isTaskHelper(taskId, userId);
+    if (isHelper) return true;
+    return false;
   }
 
   // Staff cannot access tasks

@@ -69,6 +69,7 @@ export default function EditTask() {
   const [isTaskLoaded, setIsTaskLoaded] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
+  const [selectedHelperIds, setSelectedHelperIds] = useState<string[]>([]);
 
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
@@ -235,6 +236,11 @@ export default function EditTask() {
       }
 
       form.setValue("createdById", task.createdById);
+
+      if ((task as any).helpers) {
+        setSelectedHelperIds((task as any).helpers.map((h: any) => h.userId));
+      }
+
       setIsTaskLoaded(true);
     }
   }, [task, form, isTaskLoaded]);
@@ -282,6 +288,7 @@ export default function EditTask() {
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
         scheduledStartTime: (data as any).scheduledStartTime || undefined,
+        helperUserIds: selectedHelperIds,
       };
       const response = await apiRequest("PATCH", `/api/tasks/${id}`, taskData);
       return response.json();
@@ -573,6 +580,50 @@ export default function EditTask() {
                     </FormItem>
                   )}
                 />
+              )}
+
+              {assignmentType === "technician" && (
+                <div className="p-4 border rounded-md bg-muted/30 space-y-3">
+                  <p className="text-sm font-medium">Student Helpers (Optional)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Assign student workers to assist with this task. They can log time and add notes but cannot change task status.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {studentUsers
+                      .filter(s => s.id !== form.watch("assignedToId"))
+                      .map((student) => {
+                        const isSelected = selectedHelperIds.includes(student.id);
+                        return (
+                          <button
+                            key={student.id}
+                            type="button"
+                            data-testid={`helper-toggle-${student.id}`}
+                            className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background border-border hover-elevate"
+                            }`}
+                            onClick={() => {
+                              setSelectedHelperIds(prev =>
+                                isSelected
+                                  ? prev.filter(id => id !== student.id)
+                                  : [...prev, student.id]
+                              );
+                            }}
+                          >
+                            {student.firstName && student.lastName
+                              ? `${student.firstName} ${student.lastName}`
+                              : student.username}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  {selectedHelperIds.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedHelperIds.length} helper{selectedHelperIds.length !== 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 

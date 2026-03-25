@@ -409,6 +409,11 @@ function TaskTableRow({
             onSave={handleInlineEdit}
             linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
           />
+          {(task as any).isHelper && (
+            <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
+              Helper
+            </Badge>
+          )}
           {isOverdue && (
             <span className="shrink-0" title="Overdue">
               <AlertTriangle className="w-3.5 h-3.5 text-destructive" />

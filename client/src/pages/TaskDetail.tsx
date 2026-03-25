@@ -100,6 +100,7 @@ import {
   Layers,
   ClipboardCheck,
   Globe,
+  Users,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
@@ -1339,6 +1340,8 @@ export default function TaskDetail() {
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const isStudent = user?.role === "student";
+  const taskIsHelper = !!(task as any).isHelper;
+  const taskHelpers = (task as any).helpers || [];
   const estimateBlocksCompletion = task.requiresEstimate && task.estimateStatus !== "approved";
   const assignedUser = users.find(u => u.id === task.assignedToId);
   const adminUsers = users.filter(u => u.role === "admin");
@@ -1442,9 +1445,14 @@ export default function TaskDetail() {
               </button>
             )}
             <div className="space-y-1">
-              <h1 className="text-xl font-bold leading-tight" data-testid="text-task-name">
-                {task.name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold leading-tight" data-testid="text-task-name">
+                  {task.name}
+                </h1>
+                {taskIsHelper && (
+                  <Badge variant="outline" data-testid="badge-helper">Helper</Badge>
+                )}
+              </div>
               {property && (
                 <p className="text-muted-foreground flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 shrink-0" />
@@ -1647,7 +1655,12 @@ export default function TaskDetail() {
 
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
           <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
-            {isParentTask ? (
+            {taskIsHelper ? (
+              <div className="flex-1 flex items-center justify-center gap-2 py-2">
+                <Badge variant="outline" data-testid="badge-helper-status">Helper</Badge>
+                <span className="text-sm text-muted-foreground">You can log time and add notes</span>
+              </div>
+            ) : isParentTask ? (
               <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
                 <Layers className="w-5 h-5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
@@ -2121,6 +2134,12 @@ export default function TaskDetail() {
                             : "Unassigned"}
                   </span>
                 </div>
+                {taskHelpers.length > 0 && (
+                  <div className="flex items-center gap-1" data-testid="text-helpers-count">
+                    <Users className="w-3.5 h-3.5" />
+                    <span>{taskHelpers.length} helper{taskHelpers.length !== 1 ? "s" : ""}</span>
+                  </div>
+                )}
                 <div className={`flex items-center gap-1 ${isOverdue ? "text-red-500" : ""}`}>
                   <Calendar className="w-3.5 h-3.5" />
                   <span data-testid="text-due-date">{dateLabel}</span>
@@ -2353,6 +2372,24 @@ export default function TaskDetail() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Instructions</p>
                   <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{task.instructions}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {taskHelpers.length > 0 && (
+            <div className="p-4 bg-muted/30 border rounded-lg" data-testid="task-helpers-section">
+              <div className="flex items-start gap-3">
+                <Users className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium mb-2">Student Helpers</p>
+                  <div className="flex flex-wrap gap-2">
+                    {taskHelpers.map((h: any) => (
+                      <Badge key={h.userId} variant="secondary" data-testid={`badge-helper-${h.userId}`}>
+                        {h.user?.name || "Unknown"}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

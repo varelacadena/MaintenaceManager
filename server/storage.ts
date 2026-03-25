@@ -143,6 +143,8 @@ import {
   projectComments,
   type ProjectComment,
   type InsertProjectComment,
+  taskHelpers,
+  type TaskHelper,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -529,6 +531,13 @@ export interface IStorage {
   deleteResource(id: string): Promise<void>;
   getPropertyResources(propertyId: string): Promise<(Resource & { category: ResourceCategory | null })[]>;
   getEquipmentResources(equipmentId: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
+
+  // Task helper operations
+  addTaskHelper(taskId: string, userId: string): Promise<TaskHelper>;
+  removeTaskHelper(taskId: string, userId: string): Promise<void>;
+  getTaskHelpers(taskId: string): Promise<TaskHelper[]>;
+  getHelperTaskIds(userId: string): Promise<string[]>;
+  isTaskHelper(taskId: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2869,6 +2878,40 @@ export class DatabaseStorage implements IStorage {
         })
     );
     return result;
+  }
+
+  async addTaskHelper(taskId: string, userId: string): Promise<TaskHelper> {
+    const existing = await this.db.select().from(taskHelpers)
+      .where(and(eq(taskHelpers.taskId, taskId), eq(taskHelpers.userId, userId)));
+    if (existing.length > 0) return existing[0];
+    const [helper] = await this.db.insert(taskHelpers)
+      .values({ taskId, userId })
+      .returning();
+    return helper;
+  }
+
+  async removeTaskHelper(taskId: string, userId: string): Promise<void> {
+    await this.db.delete(taskHelpers)
+      .where(and(eq(taskHelpers.taskId, taskId), eq(taskHelpers.userId, userId)));
+  }
+
+  async getTaskHelpers(taskId: string): Promise<TaskHelper[]> {
+    return await this.db.select().from(taskHelpers)
+      .where(eq(taskHelpers.taskId, taskId));
+  }
+
+  async getHelperTaskIds(userId: string): Promise<string[]> {
+    const rows = await this.db.select({ taskId: taskHelpers.taskId })
+      .from(taskHelpers)
+      .where(eq(taskHelpers.userId, userId));
+    return rows.map(r => r.taskId);
+  }
+
+  async isTaskHelper(taskId: string, userId: string): Promise<boolean> {
+    const rows = await this.db.select({ id: taskHelpers.id })
+      .from(taskHelpers)
+      .where(and(eq(taskHelpers.taskId, taskId), eq(taskHelpers.userId, userId)));
+    return rows.length > 0;
   }
 }
 

@@ -463,6 +463,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   vehicleReservations: many(vehicleReservations),
   vehicleCheckOutLogs: many(vehicleCheckOutLogs),
   vehicleCheckInLogs: many(vehicleCheckInLogs),
+  taskHelperships: many(taskHelpers),
 }));
 
 export const areasRelations = relations(areas, ({ many }) => ({
@@ -573,6 +574,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   uploads: many(uploads),
   checklists: many(taskChecklists),
   checklistGroups: many(taskChecklistGroups),
+  helpers: many(taskHelpers),
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
@@ -1525,3 +1527,26 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 });
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// Task helpers (students assigned as helpers on technician tasks)
+export const taskHelpers = pgTable("task_helpers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+});
+
+export const insertTaskHelperSchema = createInsertSchema(taskHelpers).omit({ id: true, assignedAt: true });
+export type InsertTaskHelper = z.infer<typeof insertTaskHelperSchema>;
+export type TaskHelper = typeof taskHelpers.$inferSelect;
+
+export const taskHelpersRelations = relations(taskHelpers, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskHelpers.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskHelpers.userId],
+    references: [users.id],
+  }),
+}));

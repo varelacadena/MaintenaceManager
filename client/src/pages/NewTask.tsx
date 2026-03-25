@@ -134,6 +134,7 @@ export default function NewTask() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<SelectedAsset[]>([]);
   const multiAssetMode = selectedAssets.length > 0;
+  const [selectedHelperIds, setSelectedHelperIds] = useState<string[]>([]);
 
   const searchParams = new URLSearchParams(window.location.search);
   const requestId = searchParams.get('requestId');
@@ -574,6 +575,7 @@ export default function NewTask() {
         scheduledStartTime: data.scheduledStartTime || undefined,
         isCampusWide: data.isCampusWide || false,
         propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : undefined,
+        helperUserIds: selectedHelperIds.length > 0 ? selectedHelperIds : undefined,
       };
 
       if (isSingleScope) {
@@ -1073,6 +1075,50 @@ export default function NewTask() {
                     />
                   </div>
                 </>
+              )}
+
+              {assignmentOption && assignmentOption !== "vendor" && (
+                <div className="p-4 border rounded-md bg-muted/30 space-y-3">
+                  <p className="text-sm font-medium">Student Helpers (Optional)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Assign student workers to assist with this task. They can log time and add notes but cannot change task status.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {studentUsers
+                      .filter(s => s.id !== form.watch("assignedToId"))
+                      .map((student) => {
+                        const isSelected = selectedHelperIds.includes(student.id);
+                        return (
+                          <button
+                            key={student.id}
+                            type="button"
+                            data-testid={`helper-toggle-${student.id}`}
+                            className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background border-border hover-elevate"
+                            }`}
+                            onClick={() => {
+                              setSelectedHelperIds(prev =>
+                                isSelected
+                                  ? prev.filter(id => id !== student.id)
+                                  : [...prev, student.id]
+                              );
+                            }}
+                          >
+                            {student.firstName && student.lastName
+                              ? `${student.firstName} ${student.lastName}`
+                              : student.username}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  {selectedHelperIds.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedHelperIds.length} helper{selectedHelperIds.length !== 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Estimate requirement - always visible */}

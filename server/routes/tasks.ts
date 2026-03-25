@@ -54,8 +54,22 @@ export function registerTaskRoutes(app: Express) {
         filters.equipmentId = equipmentIdFilter;
       }
 
-      const tasks = await storage.getTasks(filters);
-      res.json(tasks);
+      let allTasks = await storage.getTasks(filters);
+
+      if (currentUser.role === "student" && !equipmentIdFilter) {
+        const helperTaskIds = await storage.getHelperTaskIds(userId);
+        if (helperTaskIds.length > 0) {
+          const helperFilters: any = {};
+          if (req.query.status) helperFilters.status = req.query.status;
+          const helperTasks = await storage.getTasks(helperFilters);
+          const helperFiltered = helperTasks
+            .filter(t => helperTaskIds.includes(t.id) && !allTasks.some(at => at.id === t.id));
+          const tagged = helperFiltered.map(t => ({ ...t, isHelper: true as const }));
+          allTasks = [...allTasks, ...tagged];
+        }
+      }
+
+      res.json(allTasks);
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch tasks");
     }
@@ -80,7 +94,8 @@ export function registerTaskRoutes(app: Express) {
       }
       
       if (currentUser.role === "student") {
-        if (task.assignedToId !== userId) {
+        const isHelper = await storage.isTaskHelper(task.id, userId);
+        if (task.assignedToId !== userId && !isHelper) {
           return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
         }
       }
@@ -91,7 +106,15 @@ export function registerTaskRoutes(app: Express) {
         }
       }
 
-      res.json(task);
+      const helpers = await storage.getTaskHelpers(task.id);
+      const helperUsers = await Promise.all(
+        helpers.map(async (h) => {
+          const user = await storage.getUser(h.userId);
+          return user ? { id: h.id, userId: h.userId, taskId: h.taskId, assignedAt: h.assignedAt, user: { id: user.id, name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username, email: user.email, role: user.role } } : null;
+        })
+      );
+      const isHelper = currentUser.role === "student" ? await storage.isTaskHelper(task.id, userId) : false;
+      res.json({ ...task, helpers: helperUsers.filter(Boolean), isHelper });
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch task");
     }
@@ -100,7 +123,7 @@ export function registerTaskRoutes(app: Express) {
   app.post("/api/tasks", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const { checklists, checklistGroups, ...taskPayload } = req.body;
+      const { checklists, checklistGroups, helperUserIds, ...taskPayload } = req.body;
       
       const taskData = insertTaskSchema.parse({
         ...taskPayload,
@@ -138,6 +161,12 @@ export function registerTaskRoutes(app: Express) {
         task = result.task;
       } else {
         task = await storage.createTask(taskData);
+      }
+
+      if (helperUserIds && Array.isArray(helperUserIds)) {
+        for (const hId of helperUserIds) {
+          await storage.addTaskHelper(task.id, hId);
+        }
       }
 
       if (task.projectId) {
@@ -217,6 +246,10 @@ export function registerTaskRoutes(app: Express) {
         }
         
         if (currentUser.role === "student") {
+          const isHelper = await storage.isTaskHelper(task.id, userId);
+          if (isHelper) {
+            return res.status(403).json({ message: "Forbidden: Helpers cannot modify task details" });
+          }
           const directlyAssigned = task.assignedToId === userId;
           const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
           if (!directlyAssigned && !inPool) {
@@ -228,7 +261,18 @@ export function registerTaskRoutes(app: Express) {
         }
       }
 
-      const updateData: any = { ...req.body };
+      const { helperUserIds: patchHelperIds, ...restBody } = req.body;
+
+      if (currentUser?.role === "admin" && patchHelperIds !== undefined && Array.isArray(patchHelperIds)) {
+        const existingHelpers = await storage.getTaskHelpers(req.params.id);
+        const existingUserIds = existingHelpers.map(h => h.userId);
+        const toAdd = patchHelperIds.filter((id: string) => !existingUserIds.includes(id));
+        const toRemove = existingUserIds.filter(id => !patchHelperIds.includes(id));
+        for (const id of toAdd) await storage.addTaskHelper(req.params.id, id);
+        for (const id of toRemove) await storage.removeTaskHelper(req.params.id, id);
+      }
+
+      const updateData: any = { ...restBody };
 
       if (updateData.status === "ready") {
         updateData.status = "not_started";
@@ -266,6 +310,52 @@ export function registerTaskRoutes(app: Express) {
       res.json(task);
     } catch (error) {
       handleRouteError(res, error, "Failed to update task");
+    }
+  });
+
+  app.get("/api/tasks/:id/helpers", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const hasAccess = await canAccessTask(userId, req.params.id);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
+      const helpers = await storage.getTaskHelpers(req.params.id);
+      const helperUsers = await Promise.all(
+        helpers.map(async (h) => {
+          const user = await storage.getUser(h.userId);
+          return user ? { ...h, user: { id: user.id, name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username, email: user.email, role: user.role } } : null;
+        })
+      );
+      res.json(helperUsers.filter(Boolean));
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch task helpers");
+    }
+  });
+
+  app.post("/api/tasks/:id/helpers", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const { userId: helperUserId } = req.body;
+      if (!helperUserId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      const helper = await storage.addTaskHelper(req.params.id, helperUserId);
+      res.json(helper);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to add task helper");
+    }
+  });
+
+  app.delete("/api/tasks/:id/helpers/:userId", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      await storage.removeTaskHelper(req.params.id, req.params.userId);
+      res.json({ success: true });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to remove task helper");
     }
   });
 
@@ -385,6 +475,10 @@ export function registerTaskRoutes(app: Express) {
       }
       
       if (currentUser.role === "student") {
+        const isHelper = await storage.isTaskHelper(taskId, userId);
+        if (isHelper) {
+          return res.status(403).json({ message: "Forbidden: Helpers cannot change task status" });
+        }
         const directlyAssigned = task.assignedToId === userId;
         const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
         if (!directlyAssigned && !inPool) {
