@@ -77,9 +77,8 @@ export function registerAuthRoutes(app: Express) {
       }
 
       if (!user) {
-        const pendingByUsername = await storage.getPendingUserByUsername(username);
-        const pendingByEmail = !pendingByUsername ? await storage.getPendingUserByEmail(username) : null;
-        const matchingPending = pendingByUsername || pendingByEmail;
+        const allPending = await storage.getPendingUsers();
+        const matchingPending = allPending.find(p => p.username === username || p.email === username);
         if (matchingPending && matchingPending.status === "pending") {
           return res.status(403).json({ message: "Your account request is still pending admin review. You'll receive an email when it's been processed." });
         }
