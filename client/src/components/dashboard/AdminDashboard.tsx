@@ -34,10 +34,15 @@ import {
   MapPin,
   User,
   ArrowUpRight,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
-import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
-import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation } from "@shared/schema";
+import { format, parseISO, isPast, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type AiStats = {
@@ -181,11 +186,35 @@ export default function AdminDashboard({
   statusMutationPending,
 }: AdminDashboardProps) {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [boardFilter, setBoardFilter] = useState<"today" | "weekly">("today");
   const [kpiModal, setKpiModal] = useState<{ title: string; tasks: Task[] } | null>(null);
   const [techModal, setTechModal] = useState<{ name: string; tasks: Task[] } | null>(null);
+  const [selectedAiLog, setSelectedAiLog] = useState<AiAgentLog | null>(null);
+
+  const { data: pendingAiLogs = [] } = useQuery<AiAgentLog[]>({
+    queryKey: ["/api/ai-logs", "pending_review"],
+    queryFn: async () => {
+      const res = await fetch("/api/ai-logs?status=pending_review&limit=5");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const aiLogMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+      await apiRequest("PATCH", `/api/ai-logs/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "AI recommendation updated" });
+      setSelectedAiLog(null);
+    },
+  });
 
   const getUserById = (id: string | null) => users.find((u) => u.id === id) || null;
   const getPropertyById = (id: string | null) => properties.find((p) => p.id === id) || null;
@@ -242,6 +271,9 @@ export default function AdminDashboard({
     }
   };
 
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
   const boardTasks = useMemo(() => {
     let filtered = [...tasks];
     if (boardFilter === "today") {
@@ -249,6 +281,12 @@ export default function AdminDashboard({
         if (!t.initialDate) return false;
         const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
         return taskDate.getTime() === today.getTime();
+      });
+    } else {
+      filtered = filtered.filter(t => {
+        if (!t.initialDate) return true;
+        const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
+        return taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime();
       });
     }
 
@@ -258,7 +296,7 @@ export default function AdminDashboard({
     const blocked = filtered.filter(t => t.status === "on_hold");
 
     return { todo, inProgress, completed, blocked };
-  }, [tasks, boardFilter, today]);
+  }, [tasks, boardFilter, today, weekStart, weekEnd]);
 
   const technicianStats = useMemo(() => {
     const techs = users.filter(u => u.role === "technician");
@@ -570,15 +608,16 @@ export default function AdminDashboard({
 
         <div className="lg:col-span-3 space-y-6">
           {aiStats && aiStats.total > 0 && (
-            <Card
-              className="border-primary/20 bg-primary/5 shadow-sm cursor-pointer hover-elevate"
-              onClick={() => setLocation("/ai-agent")}
-              data-testid="card-ai-insights"
-            >
+            <Card className="shadow-sm" data-testid="card-ai-insights">
               <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <BrainCircuit className="w-5 h-5 text-muted-foreground" />
-                  AI Insights
+                <CardTitle className="text-base flex items-center justify-between gap-2 flex-wrap">
+                  <span className="flex items-center gap-2">
+                    <BrainCircuit className="w-5 h-5 text-muted-foreground" />
+                    AI Insights
+                  </span>
+                  <Badge variant="outline" className="text-xs">
+                    {aiStats.pending} pending
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -592,12 +631,59 @@ export default function AdminDashboard({
                     <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Auto-Applied</p>
                   </div>
                 </div>
-                {aiStats.pending > 0 && (
-                  <Button variant="outline" size="sm" className="w-full text-xs" data-testid="button-review-ai">
-                    Review Recommendations
-                    <ArrowUpRight className="w-3 h-3 ml-1" />
-                  </Button>
+                {pendingAiLogs.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Suggestions</p>
+                    {pendingAiLogs.slice(0, 3).map(log => (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between gap-2 p-2 rounded-md hover-elevate"
+                        data-testid={`ai-suggestion-${log.id}`}
+                      >
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => setSelectedAiLog(log)}
+                          data-testid={`ai-suggestion-detail-${log.id}`}
+                        >
+                          <p className="text-sm font-medium truncate capitalize">{log.action.replace(/_/g, " ")}</p>
+                          <p className="text-xs text-muted-foreground truncate">{log.entityType} {log.entityId ? `#${log.entityId.slice(0, 8)}` : ""}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-emerald-600"
+                            onClick={() => aiLogMutation.mutate({ id: log.id, status: "approved" })}
+                            disabled={aiLogMutation.isPending}
+                            data-testid={`button-approve-ai-${log.id}`}
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-red-500"
+                            onClick={() => aiLogMutation.mutate({ id: log.id, status: "rejected" })}
+                            disabled={aiLogMutation.isPending}
+                            data-testid={`button-reject-ai-${log.id}`}
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => setLocation("/ai-agent")}
+                  data-testid="button-review-ai"
+                >
+                  View All Recommendations
+                  <ArrowUpRight className="w-3 h-3 ml-1" />
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -734,6 +820,60 @@ export default function AdminDashboard({
               ))}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedAiLog} onOpenChange={(open) => !open && setSelectedAiLog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="capitalize">{selectedAiLog?.action.replace(/_/g, " ")}</DialogTitle>
+            <DialogDescription>
+              {selectedAiLog?.entityType} {selectedAiLog?.entityId ? `#${selectedAiLog.entityId.slice(0, 8)}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedAiLog?.reasoning && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Reasoning</p>
+                <p className="text-sm" data-testid="text-ai-reasoning">{selectedAiLog.reasoning}</p>
+              </div>
+            )}
+            {selectedAiLog?.proposedValue && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Proposed Change</p>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40" data-testid="text-ai-proposed">
+                  {JSON.stringify(selectedAiLog.proposedValue, null, 2)}
+                </pre>
+              </div>
+            )}
+            {selectedAiLog?.createdAt && (
+              <p className="text-xs text-muted-foreground">
+                Suggested {format(new Date(selectedAiLog.createdAt), "MMM d, yyyy 'at' h:mm a")}
+              </p>
+            )}
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1 text-emerald-600"
+                onClick={() => selectedAiLog && aiLogMutation.mutate({ id: selectedAiLog.id, status: "approved" })}
+                disabled={aiLogMutation.isPending}
+                data-testid="button-approve-ai-detail"
+              >
+                <ThumbsUp className="w-4 h-4 mr-2" />
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 text-red-500"
+                onClick={() => selectedAiLog && aiLogMutation.mutate({ id: selectedAiLog.id, status: "rejected" })}
+                disabled={aiLogMutation.isPending}
+                data-testid="button-reject-ai-detail"
+              >
+                <ThumbsDown className="w-4 h-4 mr-2" />
+                Reject
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
