@@ -952,6 +952,10 @@ export function registerTaskRoutes(app: Express) {
       if (!hasAccess) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
+      const isHelper = await storage.isTaskHelper(existingChecklist.taskId, userId);
+      if (isHelper) {
+        return res.status(403).json({ message: "Forbidden: Student helpers cannot modify checklists" });
+      }
       
       const validated = insertTaskChecklistSchema.partial().parse(req.body);
       const checklist = await storage.updateTaskChecklist(req.params.id, validated);
@@ -1009,6 +1013,10 @@ export function registerTaskRoutes(app: Express) {
       const hasAccess = await canAccessTask(userId, existingGroup.taskId);
       if (!hasAccess) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
+      const isHelper = await storage.isTaskHelper(existingGroup.taskId, userId);
+      if (isHelper) {
+        return res.status(403).json({ message: "Forbidden: Student helpers cannot modify checklists" });
       }
       
       const groupUpdateSchema = z.object({
@@ -1072,6 +1080,10 @@ export function registerTaskRoutes(app: Express) {
       const hasAccess = await canAccessTask(userId, group.taskId);
       if (!hasAccess) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
+      const isHelper = await storage.isTaskHelper(group.taskId, userId);
+      if (isHelper) {
+        return res.status(403).json({ message: "Forbidden: Student helpers cannot modify checklists" });
       }
       
       const itemUpdateSchema = z.object({

@@ -1557,11 +1557,11 @@ export default function TaskDetail() {
                     {group.items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg cursor-pointer active-elevate-2 min-h-[56px]"
-                        onClick={() => toggleChecklistItemMutation.mutate({ itemId: item.id, isCompleted: !item.isCompleted })}
+                        className={`flex items-center gap-4 p-4 bg-muted/30 rounded-lg min-h-[56px] ${taskIsHelper ? "opacity-80" : "cursor-pointer active-elevate-2"}`}
+                        onClick={taskIsHelper ? undefined : () => toggleChecklistItemMutation.mutate({ itemId: item.id, isCompleted: !item.isCompleted })}
                         data-testid={`checklist-item-${item.id}`}
                       >
-                        <Checkbox checked={item.isCompleted} className="w-6 h-6" />
+                        <Checkbox checked={item.isCompleted} disabled={taskIsHelper} className="w-6 h-6" />
                         <span className={`text-base flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
                           {item.text}
                         </span>
