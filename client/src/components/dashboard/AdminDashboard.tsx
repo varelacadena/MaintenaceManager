@@ -190,6 +190,7 @@ export default function AdminDashboard({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [boardFilter, setBoardFilter] = useState<"today" | "weekly">("today");
+  const [techFilter, setTechFilter] = useState<"today" | "weekly">("weekly");
   const [kpiModal, setKpiModal] = useState<{ title: string; tasks: Task[] } | null>(null);
   const [techModal, setTechModal] = useState<{ name: string; tasks: Task[] } | null>(null);
   const [selectedAiLog, setSelectedAiLog] = useState<AiAgentLog | null>(null);
@@ -301,7 +302,17 @@ export default function AdminDashboard({
   const technicianStats = useMemo(() => {
     const techs = users.filter(u => u.role === "technician");
     return techs.map(tech => {
-      const techTasks = tasks.filter(t => t.assignedToId === tech.id);
+      const allTechTasks = tasks.filter(t => t.assignedToId === tech.id);
+      const techTasks = allTechTasks.filter(t => {
+        if (techFilter === "today") {
+          if (!t.initialDate) return false;
+          const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
+          return taskDate.getTime() === today.getTime();
+        }
+        if (!t.initialDate) return true;
+        const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
+        return taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime();
+      });
       const completed = techTasks.filter(t => t.status === "completed").length;
       const total = techTasks.length;
       const inProgress = techTasks.filter(t => t.status === "in_progress").length;
@@ -322,7 +333,7 @@ export default function AdminDashboard({
       const bPct = b.total > 0 ? b.completed / b.total : 0;
       return bPct - aPct;
     });
-  }, [users, tasks]);
+  }, [users, tasks, techFilter, today, weekStart, weekEnd]);
 
   const recentRequests = useMemo(() => {
     return [...requests]
@@ -446,9 +457,17 @@ export default function AdminDashboard({
         <div className="lg:col-span-3 space-y-6">
           <Card className="flex flex-col shadow-sm" style={{ minHeight: "380px" }}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-muted-foreground" />
-                Technician Progress
+              <CardTitle className="text-lg flex items-center justify-between gap-2 flex-wrap">
+                <span className="flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-muted-foreground" />
+                  Technician Progress
+                </span>
+                <Tabs value={techFilter} onValueChange={(v) => setTechFilter(v as "today" | "weekly")}>
+                  <TabsList className="h-8">
+                    <TabsTrigger value="today" className="text-xs px-3" data-testid="tech-tab-today">Today</TabsTrigger>
+                    <TabsTrigger value="weekly" className="text-xs px-3" data-testid="tech-tab-weekly">Weekly</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 pr-2">
