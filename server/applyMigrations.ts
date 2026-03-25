@@ -61,6 +61,7 @@ export async function applyMigrations() {
     { file: "047_add_task_location_scope.sql", name: "047_add_task_location_scope" },
     { file: "048_add_upload_label.sql", name: "048_add_upload_label" },
     { file: "049_add_project_comments_and_upload_columns.sql", name: "049_add_project_comments_and_upload_columns" },
+    { file: "050_fix_uploads_parent_check_for_projects.sql", name: "050_fix_uploads_parent_check_for_projects" },
   ];
 
   try {

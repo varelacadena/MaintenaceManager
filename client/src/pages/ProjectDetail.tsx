@@ -773,17 +773,16 @@ export default function ProjectDetail() {
     addCommentMutation.mutate({ content: trimmed });
   };
 
-  const handleFileAttachToComment = async () => {
-    try {
-      const res = await apiRequest("POST", "/api/objects/upload", {});
-      const { uploadURL, objectPath } = await res.json();
-
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
-      input.onchange = async () => {
-        const file = input.files?.[0];
-        if (!file) return;
+  const handleFileAttachToComment = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const res = await apiRequest("POST", "/api/objects/upload", {});
+        const { uploadURL, objectPath } = await res.json();
 
         await fetch(uploadURL, {
           method: "PUT",
@@ -811,24 +810,23 @@ export default function ProjectDetail() {
         setTimeout(() => {
           activityEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 100);
-      };
-      input.click();
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to attach file.", variant: "destructive" });
-    }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to attach file.", variant: "destructive" });
+      }
+    };
+    input.click();
   };
 
-  const handleDirectFileUpload = async () => {
-    try {
-      const res = await apiRequest("POST", "/api/objects/upload", {});
-      const { uploadURL, objectPath } = await res.json();
-
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
-      input.onchange = async () => {
-        const file = input.files?.[0];
-        if (!file) return;
+  const handleDirectFileUpload = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const res = await apiRequest("POST", "/api/objects/upload", {});
+        const { uploadURL, objectPath } = await res.json();
 
         await fetch(uploadURL, {
           method: "PUT",
@@ -844,11 +842,11 @@ export default function ProjectDetail() {
         });
 
         toast({ title: "File uploaded", description: `${file.name} has been uploaded.` });
-      };
-      input.click();
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to initiate upload.", variant: "destructive" });
-    }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to initiate upload.", variant: "destructive" });
+      }
+    };
+    input.click();
   };
 
   const adminUsers = allUsers?.filter((u) => u.role === "admin") || [];
