@@ -409,11 +409,23 @@ function TaskTableRow({
             onSave={handleInlineEdit}
             linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
           />
-          {(task as Task & { isHelper?: boolean }).isHelper && (
-            <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
-              Helper
-            </Badge>
-          )}
+          {(() => {
+            const ext = task as Task & { isHelper?: boolean; helperCount?: number };
+            return (
+              <>
+                {ext.isHelper && (
+                  <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
+                    Helper
+                  </Badge>
+                )}
+                {ext.helperCount != null && ext.helperCount > 0 && (
+                  <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helpers-count-${task.id}`}>
+                    {ext.helperCount} Helper{ext.helperCount > 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </>
+            );
+          })()}
           {isOverdue && (
             <span className="shrink-0" title="Overdue">
               <AlertTriangle className="w-3.5 h-3.5 text-destructive" />

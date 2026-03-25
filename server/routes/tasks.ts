@@ -59,14 +59,24 @@ export function registerTaskRoutes(app: Express) {
       if (currentUser.role === "student" && !equipmentIdFilter) {
         const helperTaskIds = await storage.getHelperTaskIds(userId);
         if (helperTaskIds.length > 0) {
-          const helperFilters: any = {};
-          if (req.query.status) helperFilters.status = req.query.status;
+          const helperFilters: Record<string, string> = {};
+          if (req.query.status) helperFilters.status = req.query.status as string;
           const helperTasks = await storage.getTasks(helperFilters);
           const helperFiltered = helperTasks
             .filter(t => helperTaskIds.includes(t.id) && !allTasks.some(at => at.id === t.id));
           const tagged = helperFiltered.map(t => ({ ...t, isHelper: true as const }));
           allTasks = [...allTasks, ...tagged];
         }
+      }
+
+      if (currentUser.role === "admin" || currentUser.role === "technician") {
+        const tasksWithHelperCount = await Promise.all(
+          allTasks.map(async (t) => {
+            const helpers = await storage.getTaskHelpers(t.id);
+            return { ...t, helperCount: helpers.length };
+          })
+        );
+        return res.json(tasksWithHelperCount);
       }
 
       res.json(allTasks);
