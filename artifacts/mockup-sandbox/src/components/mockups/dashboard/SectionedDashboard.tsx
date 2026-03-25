@@ -254,94 +254,82 @@ export function SectionedDashboard() {
               <CardContent className="flex-1 p-0 overflow-hidden">
                 <div className="grid grid-cols-4 h-[676px]">
                   {/* To Do */}
-                  <div className="border-r p-3 space-y-3 bg-muted/10 overflow-y-auto">
-                    <div className="flex items-center justify-between pb-1">
+                  <div className="border-r p-2 bg-muted/10 overflow-y-auto">
+                    <div className="flex items-center justify-between pb-2 px-1">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">To Do</h4>
                       <Badge variant="secondary" className="px-1.5 py-0 min-w-5 h-5 flex items-center justify-center text-xs rounded-full">
                         {taskBoard.todo.length}
                       </Badge>
                     </div>
-                    {taskBoard.todo.map(task => (
-                      <Card key={task.id} className="p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                        <div className="flex items-start gap-2 mb-2">
-                          <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${priorityColors[task.priority]}`} />
-                          <p className="text-sm font-medium leading-tight line-clamp-2">{task.title}</p>
+                    <div className="space-y-0.5">
+                      {taskBoard.todo.map(task => (
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${priorityColors[task.priority]}`} />
+                          <p className="text-xs font-medium leading-tight truncate flex-1">{task.title}</p>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                          <span className="text-[10px] text-muted-foreground">{task.assignee}</span>
-                          <span className="text-[10px] font-medium uppercase text-muted-foreground">{task.priority}</span>
-                        </div>
-                      </Card>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                   {/* In Progress */}
-                  <div className="border-r p-3 space-y-3 bg-blue-50/30 dark:bg-blue-900/5 overflow-y-auto">
-                    <div className="flex items-center justify-between pb-1">
+                  <div className="border-r p-2 bg-blue-50/30 dark:bg-blue-900/5 overflow-y-auto">
+                    <div className="flex items-center justify-between pb-2 px-1">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">In Progress</h4>
                       <Badge variant="outline" className="px-1.5 py-0 min-w-5 h-5 flex items-center justify-center text-xs rounded-full text-blue-600 border-blue-200 bg-blue-50">
                         {taskBoard.inProgress.length}
                       </Badge>
                     </div>
-                    {taskBoard.inProgress.map(task => (
-                      <Card key={task.id} className="p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                        <div className="flex items-start gap-2 mb-2">
-                          <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${priorityColors[task.priority]}`} />
-                          <p className="text-sm font-medium leading-tight line-clamp-2">{task.title}</p>
+                    <div className="space-y-0.5">
+                      {taskBoard.inProgress.map(task => (
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate border-l-2 border-l-blue-400">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${priorityColors[task.priority]}`} />
+                          <p className="text-xs font-medium leading-tight truncate flex-1">{task.title}</p>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                          <span className="text-[10px] text-muted-foreground">{task.assignee}</span>
-                          <Avatar className="w-4 h-4"><AvatarFallback className="text-[8px] bg-blue-100 text-blue-700">{task.assignee.split(" ").map(n=>n[0]).join("")}</AvatarFallback></Avatar>
-                        </div>
-                      </Card>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                   {/* Done */}
-                  <div className="border-r p-3 space-y-3 bg-emerald-50/30 dark:bg-emerald-900/5 overflow-y-auto">
-                    <div className="flex items-center justify-between pb-1">
+                  <div className="border-r p-2 bg-emerald-50/30 dark:bg-emerald-900/5 overflow-y-auto">
+                    <div className="flex items-center justify-between pb-2 px-1">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Done</h4>
                       <Badge variant="outline" className="px-1.5 py-0 min-w-5 h-5 flex items-center justify-center text-xs rounded-full text-emerald-600 border-emerald-200 bg-emerald-50">
                         {taskBoard.completed.length}
                       </Badge>
                     </div>
-                    {taskBoard.completed.map(task => (
-                      <Card key={task.id} className="p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer opacity-75 hover:opacity-100">
-                        <div className="flex items-start gap-2 mb-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                          <p className="text-sm font-medium leading-tight line-clamp-2 line-through text-muted-foreground">{task.title}</p>
+                    <div className="space-y-0.5">
+                      {taskBoard.completed.map(task => (
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate opacity-70 hover:opacity-100">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                          <p className="text-xs leading-tight truncate flex-1 line-through text-muted-foreground">{task.title}</p>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                          <span className="text-[10px] text-muted-foreground">{task.assignee}</span>
-                        </div>
-                      </Card>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                   {/* Blocked */}
-                  <div className="p-3 space-y-3 bg-red-50/30 dark:bg-red-900/5 overflow-y-auto">
-                    <div className="flex items-center justify-between pb-1">
+                  <div className="p-2 bg-red-50/30 dark:bg-red-900/5 overflow-y-auto">
+                    <div className="flex items-center justify-between pb-2 px-1">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Blocked</h4>
                       <Badge variant="outline" className="px-1.5 py-0 min-w-5 h-5 flex items-center justify-center text-xs rounded-full text-red-600 border-red-200 bg-red-50">
                         {taskBoard.blocked.length}
                       </Badge>
                     </div>
-                    {taskBoard.blocked.map(task => (
-                      <Card key={task.id} className="p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-red-200 dark:border-red-900/50">
-                        <div className="flex items-start gap-2 mb-2">
-                          <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
-                          <p className="text-sm font-medium leading-tight line-clamp-2 text-red-700 dark:text-red-400">{task.title}</p>
-                        </div>
-                        {task.reason && (
-                          <div className="bg-red-100/50 dark:bg-red-900/20 p-1.5 rounded mt-2 mb-2">
-                            <p className="text-[10px] text-red-600 dark:text-red-400 leading-tight">{task.reason}</p>
+                    <div className="space-y-0.5">
+                      {taskBoard.blocked.map(task => (
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate border-l-2 border-l-red-400">
+                          <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium leading-tight truncate text-red-700 dark:text-red-400">{task.title}</p>
+                            {task.reason && <p className="text-[10px] text-red-500 truncate">{task.reason}</p>}
                           </div>
-                        )}
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-red-100 dark:border-red-900/30">
-                          <span className="text-[10px] text-muted-foreground">{task.assignee}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
-                      </Card>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </CardContent>

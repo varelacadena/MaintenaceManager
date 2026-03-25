@@ -65,17 +65,30 @@ export const taskBoard = {
   todo: [
     { id: 1, title: "Replace ceiling tiles — Lecture Hall B", priority: "medium", assignee: "Mike R." },
     { id: 2, title: "Fix door lock — Science Lab 101", priority: "high", assignee: "Alex T." },
+    { id: 9, title: "Repaint stairwell — Dorm C", priority: "low", assignee: "Maria G." },
+    { id: 10, title: "Replace broken window — Cafeteria", priority: "high", assignee: "James W." },
+    { id: 11, title: "Fix leaking faucet — Faculty Lounge", priority: "medium", assignee: "Mike R." },
+    { id: 12, title: "Install handrail — North Entrance", priority: "critical", assignee: "Alex T." },
+    { id: 13, title: "Patch drywall — Room 204", priority: "low", assignee: "Sarah C." },
   ],
   inProgress: [
     { id: 3, title: "HVAC Filter Replacement — Building C", priority: "medium", assignee: "Mike R." },
     { id: 4, title: "Electrical Panel Inspection — Dorm A", priority: "high", assignee: "Sarah C." },
     { id: 5, title: "Fire Extinguisher Check — Library", priority: "low", assignee: "Maria G." },
+    { id: 14, title: "Rewire outlets — Computer Lab", priority: "high", assignee: "Alex T." },
+    { id: 15, title: "Replace carpet — Admin Office", priority: "medium", assignee: "James W." },
+    { id: 16, title: "Fix AC unit — Lecture Hall A", priority: "critical", assignee: "Mike R." },
   ],
   completed: [
     { id: 6, title: "Plumbing fix — Admin restroom", priority: "medium", assignee: "James W." },
     { id: 7, title: "Light replacement — Gym", priority: "low", assignee: "James W." },
+    { id: 17, title: "Door hinge repair — Library", priority: "low", assignee: "Maria G." },
+    { id: 18, title: "Smoke detector test — Dorm B", priority: "high", assignee: "Sarah C." },
+    { id: 19, title: "Gutter cleaning — Main Building", priority: "medium", assignee: "Mike R." },
   ],
   blocked: [
     { id: 8, title: "Elevator repair — Main Hall", priority: "critical", assignee: "Unassigned", reason: "Waiting for parts" },
+    { id: 20, title: "Boiler replacement — Heating Plant", priority: "critical", assignee: "Alex T.", reason: "Budget approval pending" },
+    { id: 21, title: "Roof patch — Science Wing", priority: "high", assignee: "James W.", reason: "Weather delay" },
   ],
 };

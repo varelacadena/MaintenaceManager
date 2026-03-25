@@ -59,6 +59,16 @@ export function TwoColumnOps() {
     }
   };
 
+  const getPriorityDot = (priority: string) => {
+    switch (priority) {
+      case "critical": return "bg-red-500";
+      case "high": return "bg-amber-500";
+      case "medium": return "bg-blue-500";
+      case "low": return "bg-emerald-500";
+      default: return "bg-gray-500";
+    }
+  };
+
   const getStatusDot = (status: string) => {
     switch (status) {
       case "pending": return "bg-amber-500";
@@ -163,81 +173,67 @@ export function TwoColumnOps() {
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x">
                   {/* To Do */}
-                  <div className="p-4 bg-muted/20">
-                    <div className="text-xs font-semibold text-muted-foreground mb-3 flex items-center justify-between">
+                  <div className="p-3 bg-muted/20">
+                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between gap-1">
                       TO DO <Badge variant="secondary" className="text-[10px] px-1">{taskBoard.todo.length}</Badge>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-0.5">
                       {taskBoard.todo.map(task => (
-                        <div key={task.id} className="bg-background border rounded-lg p-3 shadow-sm flex flex-col gap-2">
-                          <span className="text-sm font-medium leading-tight">{task.title}</span>
-                          <div className="flex items-center justify-between mt-auto pt-2">
-                            <Badge variant="outline" className={`text-[10px] uppercase px-1.5 ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">{task.assignee}</span>
-                          </div>
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${getPriorityDot(task.priority)}`} />
+                          <span className="text-xs font-medium leading-tight truncate flex-1">{task.title}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* In Progress */}
-                  <div className="p-4 bg-muted/20">
-                    <div className="text-xs font-semibold text-muted-foreground mb-3 flex items-center justify-between">
+                  <div className="p-3 bg-muted/20">
+                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between gap-1">
                       IN PROGRESS <Badge variant="secondary" className="text-[10px] px-1">{taskBoard.inProgress.length}</Badge>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-0.5">
                       {taskBoard.inProgress.map(task => (
-                        <div key={task.id} className="bg-background border-l-2 border-l-blue-500 border-t border-r border-b rounded-lg p-3 shadow-sm flex flex-col gap-2">
-                          <span className="text-sm font-medium leading-tight">{task.title}</span>
-                          <div className="flex items-center justify-between mt-auto pt-2">
-                            <Badge variant="outline" className={`text-[10px] uppercase px-1.5 ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">{task.assignee}</span>
-                          </div>
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate border-l-2 border-l-blue-400">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${getPriorityDot(task.priority)}`} />
+                          <span className="text-xs font-medium leading-tight truncate flex-1">{task.title}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Done */}
-                  <div className="p-4 bg-muted/20">
-                    <div className="text-xs font-semibold text-muted-foreground mb-3 flex items-center justify-between">
+                  <div className="p-3 bg-muted/20">
+                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between gap-1">
                       DONE <Badge variant="secondary" className="text-[10px] px-1">{taskBoard.completed.length}</Badge>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-0.5">
                       {taskBoard.completed.map(task => (
-                        <div key={task.id} className="bg-background border rounded-lg p-3 shadow-sm opacity-60 flex flex-col gap-2">
-                          <span className="text-sm font-medium leading-tight line-through">{task.title}</span>
-                          <div className="flex items-center justify-between mt-auto pt-2">
-                            <Badge variant="outline" className={`text-[10px] uppercase px-1.5 ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">{task.assignee}</span>
-                          </div>
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate opacity-60 hover:opacity-100">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                          <span className="text-xs leading-tight truncate flex-1 line-through text-muted-foreground">{task.title}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Blocked */}
-                  <div className="p-4 bg-red-50/30 dark:bg-red-950/10">
-                    <div className="text-xs font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center justify-between">
+                  <div className="p-3 bg-red-50/30 dark:bg-red-950/10">
+                    <div className="text-xs font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center justify-between gap-1">
                       BLOCKED <Badge variant="destructive" className="text-[10px] px-1">{taskBoard.blocked.length}</Badge>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-0.5">
                       {taskBoard.blocked.map(task => (
-                        <div key={task.id} className="bg-background border-l-2 border-l-red-500 border-t border-r border-b rounded-lg p-3 shadow-sm flex flex-col gap-2">
-                          <span className="text-sm font-medium leading-tight">{task.title}</span>
-                          <p className="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 p-1 rounded">Reason: {task.reason}</p>
-                          <div className="flex items-center justify-between mt-auto pt-1">
-                            <Badge variant="outline" className={`text-[10px] uppercase px-1.5 ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">{task.assignee}</span>
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate border-l-2 border-l-red-400">
+                          <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-medium leading-tight truncate block text-red-700 dark:text-red-400">{task.title}</span>
+                            {task.reason && <span className="text-[10px] text-red-500 truncate block">{task.reason}</span>}
                           </div>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{task.assignee.split(" ")[0]}</span>
                         </div>
                       ))}
                     </div>
