@@ -1173,19 +1173,19 @@ export default function NewTask() {
                     </Label>
 
                     <div className="flex bg-background border rounded-md p-0.5" data-testid="select-assignment-option">
-                      {[
-                        { value: "technician" as const, label: "Tech", executorType: "technician" as const, pool: "technician_pool" },
-                        { value: "student" as const, label: "Student", executorType: "student" as const, pool: "student_pool" },
-                        { value: "vendor" as const, label: "Vendor", executorType: undefined as string | undefined, pool: undefined as string | undefined },
-                      ].map((tab) => (
+                      {([
+                        { value: "technician", label: "Tech", executorType: "technician" as "student" | "technician" | undefined, pool: "technician_pool" as string | undefined },
+                        { value: "student", label: "Student", executorType: "student" as "student" | "technician" | undefined, pool: "student_pool" as string | undefined },
+                        { value: "vendor", label: "Vendor", executorType: undefined as "student" | "technician" | undefined, pool: undefined as string | undefined },
+                      ]).map((tab) => (
                         <button
                           key={tab.value}
                           type="button"
                           onClick={() => {
-                            setAssignmentOption(tab.value);
+                            setAssignmentOption(tab.value as "student" | "technician" | "vendor");
                             form.setValue("assignedToId", undefined);
                             form.setValue("assignedVendorId", undefined);
-                            form.setValue("executorType", tab.executorType as any);
+                            form.setValue("executorType", tab.executorType);
                             form.setValue("assignedPool", tab.pool);
                           }}
                           className={`flex-1 py-1.5 text-xs font-medium rounded-sm transition-colors ${
@@ -1337,45 +1337,63 @@ export default function NewTask() {
                   {/* Contact Info */}
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</Label>
-                    {requestId && requester ? (
-                      <div className="p-3 rounded-md border bg-muted/30 text-sm space-y-1">
-                        <p><span className="text-muted-foreground">Contact:</span> {requester.firstName} {requester.lastName}</p>
-                        {requester.email && <p><span className="text-muted-foreground">Email:</span> {requester.email}</p>}
-                        {requester.phoneNumber && <p><span className="text-muted-foreground">Phone:</span> {requester.phoneNumber}</p>}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
+                    <div className="space-y-3">
+                      <div className="flex gap-2 flex-wrap">
+                        {requestId && requester && (
                           <Button
                             type="button"
-                            variant={contactType === "staff" ? "default" : "outline"}
+                            variant={contactType === "requester" ? "default" : "outline"}
                             size="sm"
                             onClick={() => {
-                              setContactType("staff");
-                              form.setValue("contactType", "staff");
-                              form.setValue("contactName", "");
-                              form.setValue("contactEmail", "");
-                              form.setValue("contactPhone", "");
-                            }}
-                            data-testid="button-contact-staff"
-                          >
-                            Staff
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={contactType === "other" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              setContactType("other");
-                              form.setValue("contactType", "other");
+                              setContactType("requester");
+                              form.setValue("contactType", "requester");
                               form.setValue("contactStaffId", undefined);
+                              form.setValue("contactName", `${requester.firstName || ""} ${requester.lastName || ""}`.trim());
+                              form.setValue("contactEmail", requester.email || "");
+                              form.setValue("contactPhone", requester.phoneNumber || "");
                             }}
-                            data-testid="button-contact-other"
+                            data-testid="button-contact-requester"
                           >
-                            Other
+                            Requester
                           </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant={contactType === "staff" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setContactType("staff");
+                            form.setValue("contactType", "staff");
+                            form.setValue("contactName", "");
+                            form.setValue("contactEmail", "");
+                            form.setValue("contactPhone", "");
+                          }}
+                          data-testid="button-contact-staff"
+                        >
+                          Staff
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={contactType === "other" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setContactType("other");
+                            form.setValue("contactType", "other");
+                            form.setValue("contactStaffId", undefined);
+                          }}
+                          data-testid="button-contact-other"
+                        >
+                          Other
+                        </Button>
+                      </div>
+                      {contactType === "requester" && requester && (
+                        <div className="p-3 rounded-md border bg-muted/30 text-sm space-y-1" data-testid="contact-requester-info">
+                          <p><span className="text-muted-foreground">Contact:</span> {requester.firstName} {requester.lastName}</p>
+                          {requester.email && <p><span className="text-muted-foreground">Email:</span> {requester.email}</p>}
+                          {requester.phoneNumber && <p><span className="text-muted-foreground">Phone:</span> {requester.phoneNumber}</p>}
                         </div>
-                        {contactType === "staff" && (
+                      )}
+                      {contactType === "staff" && (
                           <FormField
                             control={form.control}
                             name="contactStaffId"
@@ -1443,7 +1461,6 @@ export default function NewTask() {
                           </div>
                         )}
                       </div>
-                    )}
                   </div>
 
                   {/* Options */}
