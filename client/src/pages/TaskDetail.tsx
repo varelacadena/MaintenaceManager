@@ -2386,7 +2386,7 @@ export default function TaskDetail() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium mb-2">Student Helpers</p>
                   <div className="flex flex-wrap gap-2">
-                    {taskHelpers.map((h: any) => (
+                    {taskHelpers.map((h: { userId: string; user?: { id: string; name: string; email: string; role: string } }) => (
                       <Badge key={h.userId} variant="secondary" data-testid={`badge-helper-${h.userId}`}>
                         {h.user?.name || "Unknown"}
                       </Badge>
