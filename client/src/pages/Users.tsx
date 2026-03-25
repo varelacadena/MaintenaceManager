@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Users as UsersIcon, Mail, Plus, Edit, Trash2, User as UserIcon, Lock, Bot, X, UserPlus, Shield, Clock, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { User } from "@shared/schema";
+import type { User, PendingUser } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -140,7 +140,7 @@ export default function Users() {
   const [editPassword, setEditPassword] = useState("");
 
   const [isPendingReviewOpen, setIsPendingReviewOpen] = useState(false);
-  const [selectedPendingUser, setSelectedPendingUser] = useState<any>(null);
+  const [selectedPendingUser, setSelectedPendingUser] = useState<PendingUser | null>(null);
   const [denyReason, setDenyReason] = useState("");
   const [isDenyMode, setIsDenyMode] = useState(false);
   const [isEditingPending, setIsEditingPending] = useState(false);
@@ -157,7 +157,7 @@ export default function Users() {
     queryKey: ["/api/users"],
   });
 
-  const { data: pendingUsers = [], isLoading: isPendingLoading } = useQuery<any[]>({
+  const { data: pendingUsers = [], isLoading: isPendingLoading } = useQuery<PendingUser[]>({
     queryKey: ["/api/pending-users"],
   });
 
@@ -199,7 +199,7 @@ export default function Users() {
   });
 
   const updatePendingMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, string> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<PendingUser, "firstName" | "lastName" | "email" | "phoneNumber" | "requestedRole" | "requestedProperty">> }) => {
       const response = await apiRequest("PATCH", `/api/pending-users/${id}`, data);
       return response.json();
     },
@@ -741,9 +741,9 @@ export default function Users() {
           <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
           <TabsTrigger value="pending" data-testid="tab-pending" className="gap-1.5">
             Pending
-            {pendingUsers.filter((p: any) => p.status === "pending").length > 0 && (
+            {pendingUsers.filter((p) => p.status === "pending").length > 0 && (
               <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 text-[9px] font-medium text-white px-1" data-testid="badge-pending-count">
-                {pendingUsers.filter((p: any) => p.status === "pending").length}
+                {pendingUsers.filter((p) => p.status === "pending").length}
               </span>
             )}
           </TabsTrigger>
@@ -846,7 +846,7 @@ export default function Users() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingUsers.map((pu: any) => {
+                  {pendingUsers.map((pu) => {
                     const initials = `${pu.firstName?.[0] || ""}${pu.lastName?.[0] || ""}`.toUpperCase() || "?";
                     const statusColors: Record<string, string> = {
                       pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
@@ -859,7 +859,7 @@ export default function Users() {
                       : 0;
                     const agingClass = pu.status === "pending" && daysSinceSubmission > 5
                       ? "border-red-400 dark:border-red-600 border-2"
-                      : pu.status === "pending" && daysSinceSubmission >= 3
+                      : pu.status === "pending" && daysSinceSubmission >= 1
                       ? "border-amber-400 dark:border-amber-600 border-2"
                       : "";
                     return (
