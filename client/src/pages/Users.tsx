@@ -143,6 +143,15 @@ export default function Users() {
   const [selectedPendingUser, setSelectedPendingUser] = useState<any>(null);
   const [denyReason, setDenyReason] = useState("");
   const [isDenyMode, setIsDenyMode] = useState(false);
+  const [isEditingPending, setIsEditingPending] = useState(false);
+  const [editPendingData, setEditPendingData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    requestedRole: "",
+    requestedProperty: "",
+  });
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -186,6 +195,22 @@ export default function Users() {
     },
     onError: (error: any) => {
       toast({ title: "Denial Failed", description: error.message || "Failed to deny request", variant: "destructive" });
+    },
+  });
+
+  const updatePendingMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, string> }) => {
+      const response = await apiRequest("PATCH", `/api/pending-users/${id}`, data);
+      return response.json();
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-users"] });
+      setSelectedPendingUser(updatedUser);
+      setIsEditingPending(false);
+      toast({ title: "Request Updated", description: "The pending user information has been updated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Update Failed", description: error.message || "Failed to update", variant: "destructive" });
     },
   });
 
@@ -829,10 +854,18 @@ export default function Users() {
                       denied: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
                       expired: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
                     };
+                    const daysSinceSubmission = pu.submittedAt
+                      ? Math.floor((Date.now() - new Date(pu.submittedAt).getTime()) / (1000 * 60 * 60 * 24))
+                      : 0;
+                    const agingClass = pu.status === "pending" && daysSinceSubmission > 10
+                      ? "border-red-400 dark:border-red-600"
+                      : pu.status === "pending" && daysSinceSubmission > 5
+                      ? "border-orange-400 dark:border-orange-600"
+                      : "";
                     return (
                       <div
                         key={pu.id}
-                        className="flex items-center gap-3 p-3 rounded-md border"
+                        className={`flex items-center gap-3 p-3 rounded-md border ${agingClass}`}
                         data-testid={`pending-user-${pu.id}`}
                       >
                         <Avatar className="h-9 w-9 shrink-0">
@@ -1341,16 +1374,17 @@ export default function Users() {
           setSelectedPendingUser(null);
           setIsDenyMode(false);
           setDenyReason("");
+          setIsEditingPending(false);
         }
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Review Access Request</DialogTitle>
+            <DialogTitle>{isEditingPending ? "Edit Access Request" : "Review Access Request"}</DialogTitle>
             <DialogDescription>
-              Review the details and approve or deny this request
+              {isEditingPending ? "Modify the request details before approving" : "Review the details and approve or deny this request"}
             </DialogDescription>
           </DialogHeader>
-          {selectedPendingUser && (
+          {selectedPendingUser && !isEditingPending && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -1405,6 +1439,24 @@ export default function Users() {
                   <>
                     <Button
                       variant="outline"
+                      onClick={() => {
+                        setEditPendingData({
+                          firstName: selectedPendingUser.firstName || "",
+                          lastName: selectedPendingUser.lastName || "",
+                          email: selectedPendingUser.email || "",
+                          phoneNumber: selectedPendingUser.phoneNumber || "",
+                          requestedRole: selectedPendingUser.requestedRole || "staff",
+                          requestedProperty: selectedPendingUser.requestedProperty || "",
+                        });
+                        setIsEditingPending(true);
+                      }}
+                      data-testid="button-edit-pending"
+                    >
+                      <Edit className="w-4 h-4 mr-1.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={() => setIsDenyMode(true)}
                       data-testid="button-deny-pending"
                     >
@@ -1439,6 +1491,87 @@ export default function Users() {
                     </Button>
                   </>
                 )}
+              </DialogFooter>
+            </div>
+          )}
+          {selectedPendingUser && isEditingPending && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">First Name</Label>
+                  <Input
+                    value={editPendingData.firstName}
+                    onChange={(e) => setEditPendingData((prev) => ({ ...prev, firstName: e.target.value }))}
+                    data-testid="input-edit-pending-first-name"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Last Name</Label>
+                  <Input
+                    value={editPendingData.lastName}
+                    onChange={(e) => setEditPendingData((prev) => ({ ...prev, lastName: e.target.value }))}
+                    data-testid="input-edit-pending-last-name"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Email</Label>
+                <Input
+                  type="email"
+                  value={editPendingData.email}
+                  onChange={(e) => setEditPendingData((prev) => ({ ...prev, email: e.target.value }))}
+                  data-testid="input-edit-pending-email"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Phone Number</Label>
+                <Input
+                  value={editPendingData.phoneNumber}
+                  onChange={(e) => setEditPendingData((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                  data-testid="input-edit-pending-phone"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Role</Label>
+                  <Select
+                    value={editPendingData.requestedRole}
+                    onValueChange={(v) => setEditPendingData((prev) => ({ ...prev, requestedRole: v }))}
+                  >
+                    <SelectTrigger data-testid="select-edit-pending-role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="technician">Technician</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Property</Label>
+                  <Input
+                    value={editPendingData.requestedProperty}
+                    onChange={(e) => setEditPendingData((prev) => ({ ...prev, requestedProperty: e.target.value }))}
+                    data-testid="input-edit-pending-property"
+                  />
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditingPending(false)}
+                  data-testid="button-cancel-edit-pending"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => updatePendingMutation.mutate({ id: selectedPendingUser.id, data: editPendingData })}
+                  disabled={updatePendingMutation.isPending}
+                  data-testid="button-save-edit-pending"
+                >
+                  {updatePendingMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
               </DialogFooter>
             </div>
           )}

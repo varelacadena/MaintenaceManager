@@ -12,6 +12,7 @@ import { storage } from "./storage";
 import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
 import { startDocumentExpirationScheduler } from "./documentExpirationScheduler";
 import { startTaskReminderScheduler } from "./taskReminderScheduler";
+import { startPendingUserExpirationScheduler } from "./pendingUserExpirationScheduler";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 
@@ -179,6 +180,9 @@ app.use((req, res, next) => {
     
     // Start the task reminder scheduler
     startTaskReminderScheduler();
+    
+    // Start the pending user expiration scheduler
+    startPendingUserExpirationScheduler();
   });
 
   // Graceful shutdown
