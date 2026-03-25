@@ -15,7 +15,6 @@ const signupSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   requestedRole: z.enum(["staff", "technician", "student"]),
-  requestedProperty: z.string().optional(),
 });
 
 export function registerSignupRoutes(app: Express) {
@@ -68,7 +67,6 @@ export function registerSignupRoutes(app: Express) {
         firstName: data.firstName,
         lastName: data.lastName,
         requestedRole: data.requestedRole,
-        requestedProperty: data.requestedProperty || null,
         expiresAt,
       });
 
@@ -128,7 +126,7 @@ export function registerSignupRoutes(app: Express) {
         return res.status(400).json({ message: "Can only edit pending requests" });
       }
 
-      const allowedFields = ["firstName", "lastName", "email", "phoneNumber", "requestedRole", "requestedProperty"];
+      const allowedFields = ["firstName", "lastName", "email", "phoneNumber", "requestedRole"];
       const updates: Record<string, any> = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
@@ -183,7 +181,6 @@ export function registerSignupRoutes(app: Express) {
         lastName: pendingUser.lastName,
         role: pendingUser.requestedRole,
         phoneNumber: pendingUser.phoneNumber,
-        property: pendingUser.requestedProperty,
       });
 
       await storage.updatePendingUser(req.params.id, {

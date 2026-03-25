@@ -150,7 +150,6 @@ export default function Users() {
     email: "",
     phoneNumber: "",
     requestedRole: "",
-    requestedProperty: "",
   });
 
   const { data: users = [], isLoading } = useQuery<User[]>({
@@ -199,7 +198,7 @@ export default function Users() {
   });
 
   const updatePendingMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<PendingUser, "firstName" | "lastName" | "email" | "phoneNumber" | "requestedRole" | "requestedProperty">> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<PendingUser, "firstName" | "lastName" | "email" | "phoneNumber" | "requestedRole">> }) => {
       const response = await apiRequest("PATCH", `/api/pending-users/${id}`, data);
       return response.json();
     },
@@ -1408,10 +1407,6 @@ export default function Users() {
                   <p className="font-medium capitalize" data-testid="text-pending-role">{selectedPendingUser.requestedRole}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground text-xs">Property</span>
-                  <p className="font-medium">{selectedPendingUser.requestedProperty || "—"}</p>
-                </div>
-                <div>
                   <span className="text-muted-foreground text-xs">Submitted</span>
                   <p className="font-medium">{selectedPendingUser.submittedAt ? new Date(selectedPendingUser.submittedAt).toLocaleDateString() : "—"}</p>
                 </div>
@@ -1446,7 +1441,6 @@ export default function Users() {
                           email: selectedPendingUser.email || "",
                           phoneNumber: selectedPendingUser.phoneNumber || "",
                           requestedRole: selectedPendingUser.requestedRole || "staff",
-                          requestedProperty: selectedPendingUser.requestedProperty || "",
                         });
                         setIsEditingPending(true);
                       }}
@@ -1531,31 +1525,21 @@ export default function Users() {
                   data-testid="input-edit-pending-phone"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Role</Label>
-                  <Select
-                    value={editPendingData.requestedRole}
-                    onValueChange={(v) => setEditPendingData((prev) => ({ ...prev, requestedRole: v }))}
-                  >
-                    <SelectTrigger data-testid="select-edit-pending-role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="technician">Technician</SelectItem>
-                      <SelectItem value="student">Student</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Property</Label>
-                  <Input
-                    value={editPendingData.requestedProperty}
-                    onChange={(e) => setEditPendingData((prev) => ({ ...prev, requestedProperty: e.target.value }))}
-                    data-testid="input-edit-pending-property"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Role</Label>
+                <Select
+                  value={editPendingData.requestedRole}
+                  onValueChange={(v) => setEditPendingData((prev) => ({ ...prev, requestedRole: v }))}
+                >
+                  <SelectTrigger data-testid="select-edit-pending-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="technician">Technician</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <DialogFooter className="gap-2">
                 <Button

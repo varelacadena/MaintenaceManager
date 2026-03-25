@@ -32,7 +32,7 @@ export function registerAuthRoutes(app: Express) {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
+      return res.status(400).json({ message: "Username/email and password are required" });
     }
 
     try {
@@ -71,11 +71,15 @@ export function registerAuthRoutes(app: Express) {
         return;
       }
 
-      const user = await storage.getUserByUsername(username);
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.getUserByEmail(username);
+      }
 
       if (!user) {
-        const allPending = await storage.getPendingUsers();
-        const matchingPending = allPending.find(p => p.username === username);
+        const pendingByUsername = await storage.getPendingUserByUsername(username);
+        const pendingByEmail = !pendingByUsername ? await storage.getPendingUserByEmail(username) : null;
+        const matchingPending = pendingByUsername || pendingByEmail;
         if (matchingPending && matchingPending.status === "pending") {
           return res.status(403).json({ message: "Your account request is still pending admin review. You'll receive an email when it's been processed." });
         }

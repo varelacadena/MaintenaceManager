@@ -95,11 +95,11 @@ export default function Landing() {
         <CardContent className="px-8 pb-8">
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-semibold text-foreground">Username</Label>
+              <Label htmlFor="username" className="text-sm font-semibold text-foreground">Username or Email</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter username"
+                placeholder="Enter username or email"
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);

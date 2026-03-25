@@ -17,7 +17,6 @@ export default function RequestAccess() {
     firstName: "",
     lastName: "",
     requestedRole: "",
-    requestedProperty: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,7 +56,6 @@ export default function RequestAccess() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           requestedRole: formData.requestedRole,
-          requestedProperty: formData.requestedProperty || undefined,
         }),
       });
 
@@ -238,36 +236,23 @@ export default function RequestAccess() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Role</Label>
-                <Select
-                  value={formData.requestedRole}
-                  onValueChange={(value) => updateField("requestedRole", value)}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger data-testid="select-role">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="technician">Technician</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.requestedRole && <p className="text-xs text-red-500">{errors.requestedRole}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="requestedProperty" className="text-xs font-semibold">Property <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Input
-                  id="requestedProperty"
-                  value={formData.requestedProperty}
-                  onChange={(e) => updateField("requestedProperty", e.target.value)}
-                  disabled={isLoading}
-                  placeholder="Building/unit"
-                  data-testid="input-property"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Role</Label>
+              <Select
+                value={formData.requestedRole}
+                onValueChange={(value) => updateField("requestedRole", value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger data-testid="select-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.requestedRole && <p className="text-xs text-red-500">{errors.requestedRole}</p>}
             </div>
 
             <Button type="submit" size="lg" className="w-full mt-4" disabled={isLoading} data-testid="button-submit-request">

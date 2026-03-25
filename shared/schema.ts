@@ -55,7 +55,6 @@ export const pendingUsers = pgTable("pending_users", {
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   requestedRole: varchar("requested_role", { length: 20 }).notNull().default("staff"),
-  requestedProperty: varchar("requested_property", { length: 200 }),
   status: pendingUserStatusEnum("status").notNull().default("pending"),
   denialReason: text("denial_reason"),
   submittedAt: timestamp("submitted_at").defaultNow(),
