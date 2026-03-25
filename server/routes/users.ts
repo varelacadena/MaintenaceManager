@@ -44,34 +44,56 @@ export function registerUserRoutes(app: Express) {
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
 
-      const users = await storage.getAllUsers();
-
-      let usersWithoutPasswords = users.map(({ password, ...user }) => user);
-
       if (currentUser?.role === "staff") {
         return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
       }
 
+      const users = await storage.getAllUsers();
+
       const roleFilter = req.query.role as string | undefined;
+      let filtered = users;
       if (roleFilter && ["admin", "technician", "staff", "student"].includes(roleFilter)) {
-        usersWithoutPasswords = usersWithoutPasswords.filter(u => u.role === roleFilter);
+        filtered = filtered.filter(u => u.role === roleFilter);
       }
 
-      res.json(usersWithoutPasswords);
+      if (currentUser?.role === "admin") {
+        res.json(filtered.map(({ password, ...user }) => user));
+      } else {
+        res.json(filtered.map(u => ({
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          role: u.role,
+          username: u.username,
+        })));
+      }
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch users");
     }
   });
 
-  app.get("/api/users/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/users/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
       const user = await storage.getUser(req.params.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+
+      if (currentUser?.role === "admin" || userId === req.params.id) {
+        res.json(userWithoutPassword);
+      } else {
+        res.json({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          username: user.username,
+        });
+      }
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch user");
     }
