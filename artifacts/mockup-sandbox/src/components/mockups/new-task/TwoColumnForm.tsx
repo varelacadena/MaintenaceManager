@@ -396,9 +396,9 @@ export function TwoColumnForm() {
               </div>
               
               <div className="mt-4 pt-4 border-t border-dashed">
-                <div className="flex items-center gap-2 mb-3 cursor-pointer w-fit" onClick={() => setIsRecurring(!isRecurring)}>
-                  <Checkbox checked={isRecurring} onCheckedChange={(c) => setIsRecurring(!!c)} id="recurring" className="pointer-events-none" />
-                  <Label className="font-medium cursor-pointer">Make this task recurring</Label>
+                <div className="flex items-center gap-2 mb-3">
+                  <Checkbox checked={isRecurring} onCheckedChange={(c) => setIsRecurring(!!c)} id="recurring" />
+                  <Label htmlFor="recurring" className="font-medium cursor-pointer">Make this task recurring</Label>
                 </div>
                 
                 {isRecurring && (
