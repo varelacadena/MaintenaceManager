@@ -1,12 +1,11 @@
 import React from "react";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   kpis,
   weeklyTrend,
@@ -23,7 +22,6 @@ import {
   Clock, 
   Calendar, 
   CheckCircle2, 
-  TrendingUp,
   BrainCircuit,
   Car,
   Wrench,
