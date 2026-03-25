@@ -6,5 +6,8 @@ export const modules: ModuleMap = {
   "./components/mockups/dashboard/TwoColumnOps.tsx": () => import("../components/mockups/dashboard/TwoColumnOps.tsx"),
   "./components/mockups/new-task/ProgressiveForm.tsx": () => import("../components/mockups/new-task/ProgressiveForm.tsx"),
   "./components/mockups/new-task/StepperWizard.tsx": () => import("../components/mockups/new-task/StepperWizard.tsx"),
-  "./components/mockups/new-task/TwoColumnForm.tsx": () => import("../components/mockups/new-task/TwoColumnForm.tsx")
+  "./components/mockups/new-task/TwoColumnForm.tsx": () => import("../components/mockups/new-task/TwoColumnForm.tsx"),
+  "./components/mockups/property-detail/ContentSplit.tsx": () => import("../components/mockups/property-detail/ContentSplit.tsx"),
+  "./components/mockups/property-detail/DashboardOverview.tsx": () => import("../components/mockups/property-detail/DashboardOverview.tsx"),
+  "./components/mockups/property-detail/SidebarNav.tsx": () => import("../components/mockups/property-detail/SidebarNav.tsx")
 };
