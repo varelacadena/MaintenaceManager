@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signup & Review UI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F4F0;padding:32px;color:#1a1a1a}
+.section{margin-bottom:48px}
+.sec-label{font-size:10px;font-weight:600;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:.5px;background:#ddd}
+
+/* LOGIN */
+.login-outer{background:#EEECEA;border:1px solid #E0DDD8;border-radius:14px;padding:48px;display:flex;justify-content:center}
+.login-card{background:#fff;border:1px solid #E0DDD8;border-radius:14px;padding:32px 28px;width:340px}
+.logo{width:36px;height:36px;background:#2C2C2A;border-radius:9px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.logo svg{display:block}
+.card-title{font-size:17px;font-weight:600;text-align:center;margin-bottom:4px;color:#111}
+.card-sub{font-size:12px;color:#888;text-align:center;margin-bottom:24px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11px;font-weight:600;color:#555;margin-bottom:5px}
+.field input,.field select{width:100%;border:1px solid #E0DDD8;border-radius:8px;padding:8px 10px;font-size:12px;color:#333;background:#fff;font-family:inherit;outline:none}
+.field input::placeholder{color:#bbb}
+.btn-dark{width:100%;padding:9px;background:#2C2C2A;color:#F5F3EE;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:4px}
+.divider{display:flex;align-items:center;gap:10px;margin:18px 0}
+.div-line{flex:1;height:.5px;background:#E0DDD8}
+.div-txt{font-size:11px;color:#aaa}
+.btn-outline{width:100%;padding:9px;background:transparent;color:#555;border:1px solid #E0DDD8;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+.forgot{text-align:center;margin-top:14px;font-size:11px;color:#aaa}
+.forgot a{color:#1a6db5;text-decoration:none}
+
+/* SIGNUP */
+.signup-outer{background:#EEECEA;border:1px solid #E0DDD8;border-radius:14px;padding:40px;display:flex;justify-content:center}
+.signup-card{background:#fff;border:1px solid #E0DDD8;border-radius:14px;padding:28px;width:400px}
+.back-link{display:flex;align-items:center;gap:5px;font-size:11px;color:#888;margin-bottom:20px;cursor:pointer}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.notice{background:#EBF4FF;border:1px solid #BDDAF7;border-radius:8px;padding:10px 12px;margin-bottom:18px;display:flex;gap:8px;align-items:flex-start}
+.notice-txt{font-size:11px;color:#1a6db5;line-height:1.55}
+.hint{font-size:11px;color:#aaa;text-align:center;margin-top:14px}
+.hint a{color:#1a6db5;text-decoration:none}
+
+/* USERS PAGE */
+.users-outer{background:#fff;border:1px solid #E0DDD8;border-radius:14px;overflow:hidden}
+.users-topbar{padding:12px 18px;border-bottom:1px solid #E0DDD8;display:flex;align-items:center;justify-content:space-between}
+.users-topbar h2{font-size:14px;font-weight:600;color:#111}
+.invite-btn{font-size:11px;padding:6px 13px;border-radius:8px;border:none;background:#2C2C2A;color:#F5F3EE;cursor:pointer;font-family:inherit;font-weight:500}
+.tabs{display:flex;padding:0 18px;border-bottom:1px solid #E0DDD8;background:#fff}
+.tab{font-size:12px;padding:10px 12px;cursor:pointer;color:#888;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px}
+.tab.on{color:#111;font-weight:600;border-bottom-color:#111}
+.badge{font-size:10px;font-weight:600;background:#FCEBEB;color:#A32D2D;padding:1px 6px;border-radius:20px}
+.badge-n{font-size:10px;background:#EEECEA;color:#777;padding:1px 6px;border-radius:20px}
+.tbl-wrap{padding:16px 18px}
+table{width:100%;border-collapse:collapse;font-size:12px;border:1px solid #E0DDD8;border-radius:10px;overflow:hidden;table-layout:fixed}
+thead th{font-size:10px;color:#999;font-weight:500;padding:8px 14px;background:#F9F8F6;border-bottom:1px solid #E0DDD8;text-align:left}
+tbody td{padding:11px 14px;border-bottom:1px solid #E0DDD8;color:#666;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFAF8}
+.u-name{font-weight:600;color:#111;font-size:12px}
+.u-email{font-size:11px;color:#aaa;margin-top:1px}
+.age-red{font-size:10px;background:#FCEBEB;color:#A32D2D;padding:2px 7px;border-radius:4px;font-weight:500}
+.age-amb{font-size:10px;background:#FEF3E2;color:#854F0B;padding:2px 7px;border-radius:4px;font-weight:500}
+.review-btn{font-size:11px;padding:5px 13px;border-radius:7px;border:1px solid #E0DDD8;background:#fff;color:#111;cursor:pointer;font-family:inherit;font-weight:500}
+.review-btn:hover{background:#F5F4F0}
+
+/* MODAL */
+.modal-bg{background:rgba(0,0,0,0.3);min-height:440px;display:flex;align-items:center;justify-content:center;border-radius:14px;border:1px solid #E0DDD8;overflow:hidden}
+.modal{background:#fff;border-radius:14px;width:450px;border:1px solid #E0DDD8;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.modal-hd{padding:16px 20px;border-bottom:1px solid #E0DDD8;display:flex;align-items:center;justify-content:space-between}
+.modal-hd h3{font-size:14px;font-weight:600;color:#111}
+.close-btn{width:24px;height:24px;border-radius:6px;border:1px solid #E0DDD8;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#999}
+.modal-body{padding:20px}
+.user-row{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid #F0EFED}
+.av{width:40px;height:40px;border-radius:50%;background:#DCEEFF;color:#1a6db5;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.u-info-name{font-size:14px;font-weight:600;color:#111}
+.u-info-email{font-size:12px;color:#aaa}
+.u-info-sub{font-size:11px;color:#bbb;margin-top:2px}
+.edit-hint{font-size:11px;color:#aaa;margin-bottom:14px;display:flex;align-items:center;gap:5px}
+.mfields{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mf label{display:block;font-size:11px;font-weight:600;color:#555;margin-bottom:4px}
+.mf input,.mf select{width:100%;border:1px solid #E0DDD8;border-radius:7px;padding:7px 9px;font-size:12px;color:#333;background:#fff;font-family:inherit;outline:none}
+.modal-actions{display:flex;gap:8px;padding-top:16px;border-top:1px solid #F0EFED}
+.btn-approve{flex:1;padding:9px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-deny{padding:9px 16px;background:#FCEBEB;color:#A32D2D;border:1px solid #F5C4C4;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-cancel{padding:9px 14px;background:transparent;color:#999;border:1px solid #E0DDD8;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+</style>
+
+</head>
+<body>
+
+<div class="section">
+  <div class="sec-label">1 — login page</div>
+  <div class="login-outer">
+    <div class="login-card">
+      <div class="logo"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1" fill="#F1EFE8" opacity=".7"/><rect x="10" y="2" width="6" height="6" rx="1" fill="#F1EFE8"/><rect x="2" y="10" width="6" height="6" rx="1" fill="#F1EFE8"/><rect x="10" y="10" width="6" height="6" rx="1" fill="#F1EFE8" opacity=".4"/></svg></div>
+      <div class="card-title">Welcome back</div>
+      <div class="card-sub">Sign in to your account</div>
+      <div class="field"><label>Email</label><input type="email" placeholder="you@company.com"></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+      <button class="btn-dark">Sign in</button>
+      <div class="divider"><div class="div-line"></div><div class="div-txt">new here?</div><div class="div-line"></div></div>
+      <button class="btn-outline">Request access</button>
+      <div class="forgot"><a href="#">Forgot password?</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-label">2 — request access form</div>
+  <div class="signup-outer">
+    <div class="signup-card">
+      <div class="back-link">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6 2L4 5l2 3" stroke="#888" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Back to login
+      </div>
+      <div class="card-title" style="text-align:left;margin-bottom:3px">Request access</div>
+      <div class="card-sub" style="text-align:left;margin-bottom:16px">Fill out your info and an admin will review your request.</div>
+      <div class="notice">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="7" cy="7" r="6" stroke="#1a6db5" stroke-width="1.2"/><path d="M7 6v4M7 4.5v.5" stroke="#1a6db5" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <div class="notice-txt">You'll get an email once your account is approved. This usually takes 1–2 business days.</div>
+      </div>
+      <div class="two-col" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label>First name</label><input type="text" placeholder="Carlos"></div>
+        <div class="field" style="margin:0"><label>Last name</label><input type="text" placeholder="Mendez"></div>
+      </div>
+      <div class="field"><label>Work email</label><input type="email" placeholder="carlos@company.com"></div>
+      <div class="two-col" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label>Role</label><select><option>Technician</option><option>Driver</option><option>Supervisor</option></select></div>
+        <div class="field" style="margin:0"><label>Property</label><select><option>Health Center</option><option>Main Warehouse</option><option>North Hub</option></select></div>
+      </div>
+      <div class="field"><label>Password</label><input type="password" placeholder="Create a password"></div>
+      <button class="btn-dark">Submit request</button>
+      <div class="hint">Already have an account? <a href="#">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-label">3 — admin users page — pending tab</div>
+  <div class="users-outer">
+    <div class="users-topbar">
+      <h2>Users</h2>
+      <button class="invite-btn">+ Invite user</button>
+    </div>
+    <div class="tabs">
+      <div class="tab">Active <span class="badge-n">12</span></div>
+      <div class="tab on">Pending <span class="badge">3</span></div>
+      <div class="tab">Inactive</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th style="width:30%">User</th><th style="width:16%">Role</th><th style="width:18%">Property</th><th style="width:16%">Submitted</th><th style="width:20%"></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="u-name">Carlos Mendez</div><div class="u-email">carlos@company.com</div></td>
+            <td>Technician</td><td>Health Center</td>
+            <td><span class="age-red">6 days ago</span></td>
+            <td style="text-align:right"><button class="review-btn">Review</button></td>
+          </tr>
+          <tr>
+            <td><div class="u-name">Diana Reyes</div><div class="u-email">diana@company.com</div></td>
+            <td>Supervisor</td><td>North Hub</td>
+            <td><span class="age-amb">2 days ago</span></td>
+            <td style="text-align:right"><button class="review-btn">Review</button></td>
+          </tr>
+          <tr>
+            <td><div class="u-name">James Park</div><div class="u-email">james@company.com</div></td>
+            <td>Driver</td><td>Main Warehouse</td>
+            <td><span class="age-amb">1 day ago</span></td>
+            <td style="text-align:right"><button class="review-btn">Review</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-label">4 — review popup</div>
+  <div class="modal-bg">
+    <div class="modal">
+      <div class="modal-hd">
+        <h3>Review access request</h3>
+        <button class="close-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="#999" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="user-row">
+          <div class="av">CM</div>
+          <div>
+            <div class="u-info-name">Carlos Mendez</div>
+            <div class="u-info-email">carlos@company.com</div>
+            <div class="u-info-sub">Submitted 6 days ago · expires in 8 days</div>
+          </div>
+        </div>
+        <div class="edit-hint">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke="#bbb" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          You can edit any fields before approving
+        </div>
+        <div class="mfields">
+          <div class="mf-row">
+            <div class="mf"><label>First name</label><input type="text" value="Carlos"></div>
+            <div class="mf"><label>Last name</label><input type="text" value="Mendez"></div>
+          </div>
+          <div class="mf-row">
+            <div class="mf"><label>Role</label><select><option selected>Technician</option><option>Driver</option><option>Supervisor</option></select></div>
+            <div class="mf"><label>Property</label><select><option selected>Health Center</option><option>Main Warehouse</option><option>North Hub</option></select></div>
+          </div>
+          <div class="mf"><label>Permission level</label><select><option>Standard — view &amp; edit assigned work</option><option>Read only</option><option>Admin</option></select></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel">Cancel</button>
+          <button class="btn-deny">Deny</button>
+          <button class="btn-approve">Approve access</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
