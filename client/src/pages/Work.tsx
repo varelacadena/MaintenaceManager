@@ -1649,102 +1649,113 @@ export default function Work() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" data-testid="projects-grid">
-                    {projectsTabFiltered.map((project) => {
-                      const childTasks = projectTasksMap[project.id] || [];
-                      const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
-                      const totalChildTasks = childTasks.length;
-                      const progressPercent = totalChildTasks > 0 ? Math.round((completedChildTasks / totalChildTasks) * 100) : 0;
-                      const propertyName = getPropertyName(project.propertyId);
-                      const isOverdue = project.targetEndDate
-                        && project.status !== "completed"
-                        && new Date(project.targetEndDate) < new Date();
-                      const priorityCfg = projectPriorityConfig[project.priority] || projectPriorityConfig.medium;
+                  <Card data-testid="projects-list">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>
+                          <TableHead className="w-[120px] text-xs font-medium text-muted-foreground">Status</TableHead>
+                          <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
+                          <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Progress</TableHead>
+                          <TableHead className="w-[150px] hidden md:table-cell text-xs font-medium text-muted-foreground">Property</TableHead>
+                          <TableHead className="w-[180px] hidden md:table-cell text-xs font-medium text-muted-foreground">Dates</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {projectsTabFiltered.map((project) => {
+                          const childTasks = projectTasksMap[project.id] || [];
+                          const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
+                          const totalChildTasks = childTasks.length;
+                          const progressPercent = totalChildTasks > 0 ? Math.round((completedChildTasks / totalChildTasks) * 100) : 0;
+                          const propertyName = getPropertyName(project.propertyId);
+                          const isOverdue = project.targetEndDate
+                            && project.status !== "completed"
+                            && new Date(project.targetEndDate) < new Date();
+                          const priorityCfg = projectPriorityConfig[project.priority] || projectPriorityConfig.medium;
 
-                      const projectStatusBadgeColors: Record<string, string> = {
-                        planning: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
-                        in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
-                        on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
-                        completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
-                        cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
-                      };
+                          const projectStatusBadgeColors: Record<string, string> = {
+                            planning: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
+                            in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
+                            on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
+                            completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
+                            cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
+                          };
 
-                      const statusLabel: Record<string, string> = {
-                        planning: "Planning",
-                        in_progress: "In Progress",
-                        on_hold: "On Hold",
-                        completed: "Completed",
-                        cancelled: "Cancelled",
-                      };
+                          const statusLabel: Record<string, string> = {
+                            planning: "Planning",
+                            in_progress: "In Progress",
+                            on_hold: "On Hold",
+                            completed: "Completed",
+                            cancelled: "Cancelled",
+                          };
 
-                      return (
-                        <Link key={project.id} href={`/projects/${project.id}`} data-testid={`link-project-${project.id}`}>
-                          <Card
-                            className="cursor-pointer hover-elevate p-4 space-y-3"
-                            data-testid={`project-card-${project.id}`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-project-name-${project.id}`}>
-                                {project.name}
-                              </h3>
-                              {isOverdue && (
-                                <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 shrink-0" data-testid={`icon-overdue-${project.id}`} />
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge className={`text-[10px] ${projectStatusBadgeColors[project.status] || ""}`} data-testid={`badge-project-status-${project.id}`}>
-                                {statusLabel[project.status] || project.status}
-                              </Badge>
-                              <Badge variant="outline" className={`text-[10px] ${priorityCfg.color}`} data-testid={`badge-project-priority-${project.id}`}>
-                                <Flag className="w-3 h-3 mr-0.5" />
-                                {priorityCfg.label}
-                              </Badge>
-                            </div>
-
-                            <div className="space-y-1" data-testid={`progress-${project.id}`}>
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{completedChildTasks}/{totalChildTasks} tasks</span>
-                                <span>{progressPercent}%</span>
-                              </div>
-                              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-primary rounded-full transition-all"
-                                  style={{ width: `${progressPercent}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-1 text-xs text-muted-foreground">
-                              {propertyName && (
-                                <div className="flex items-center gap-1.5">
-                                  <MapPin className="w-3 h-3 shrink-0" />
-                                  <span className="truncate" data-testid={`text-project-property-${project.id}`}>{propertyName}</span>
+                          return (
+                            <TableRow
+                              key={project.id}
+                              className="cursor-pointer"
+                              onClick={() => navigate(`/projects/${project.id}`)}
+                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/projects/${project.id}`); } }}
+                              tabIndex={0}
+                              role="link"
+                              data-testid={`project-row-${project.id}`}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FolderKanban className="w-4 h-4 text-muted-foreground shrink-0" />
+                                  <span className="font-medium text-sm truncate" data-testid={`text-project-name-${project.id}`}>
+                                    {project.name}
+                                  </span>
+                                  {isOverdue && (
+                                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0" data-testid={`icon-overdue-${project.id}`} />
+                                  )}
                                 </div>
-                              )}
-                              {(project.startDate || project.targetEndDate) && (
-                                <div className="flex items-center gap-1.5">
-                                  <Calendar className="w-3 h-3 shrink-0" />
-                                  <span data-testid={`text-project-dates-${project.id}`}>
-                                    {project.startDate ? format(new Date(project.startDate), "MMM d") : "?"}
-                                    {" - "}
-                                    {project.targetEndDate ? format(new Date(project.targetEndDate), "MMM d, yyyy") : "?"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`text-[10px] ${projectStatusBadgeColors[project.status] || ""}`} data-testid={`badge-project-status-${project.id}`}>
+                                  {statusLabel[project.status] || project.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] ${priorityCfg.color}`} data-testid={`badge-project-priority-${project.id}`}>
+                                  <Flag className="w-3 h-3 mr-0.5" />
+                                  {priorityCfg.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary rounded-full transition-all"
+                                      style={{ width: `${progressPercent}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap" data-testid={`progress-${project.id}`}>
+                                    {completedChildTasks}/{totalChildTasks}
                                   </span>
                                 </div>
-                              )}
-                              {(project.budgetAmount ?? 0) > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-medium" data-testid={`text-project-budget-${project.id}`}>
-                                    ${(project.budgetAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} budget
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {propertyName ? (
+                                  <span className="text-xs text-muted-foreground truncate block max-w-[140px]" data-testid={`text-project-property-${project.id}`}>
+                                    {propertyName}
                                   </span>
-                                </div>
-                              )}
-                            </div>
-                          </Card>
-                        </Link>
-                      );
-                    })}
-                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/50">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-project-dates-${project.id}`}>
+                                  {project.startDate ? format(new Date(project.startDate), "MMM d") : "—"}
+                                  {project.startDate && project.targetEndDate ? " – " : ""}
+                                  {project.targetEndDate ? format(new Date(project.targetEndDate), "MMM d, yyyy") : project.startDate ? "" : "—"}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </Card>
                 )}
               </div>
             )}
