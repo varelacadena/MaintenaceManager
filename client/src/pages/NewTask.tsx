@@ -34,20 +34,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
-import type { Area, Subdivision, User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle } from "@shared/schema";
+import type { User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle } from "@shared/schema";
 import { z } from "zod";
-import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, AlertCircle, FileText, Save, Upload, Paperclip, Trash2, Layers } from "lucide-react";
+import { Plus, X, ListChecks, MapPin, Calendar, Users, ClipboardList, ChevronDown, FileText, Save, Upload, Paperclip, Trash2, Layers } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { TaskLocationFields, type SelectedAsset } from "@/components/task-form/TaskLocationFields";
@@ -100,20 +95,6 @@ const formSchema = insertTaskSchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
-function SectionHeader({ number, icon: Icon, title, description }: { number: number; icon: any; title: string; description?: string }) {
-  return (
-    <div className="flex items-start gap-3 mb-4">
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-primary" />
-      </div>
-      <div>
-        <h3 className="font-semibold text-lg">{title}</h3>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      </div>
-    </div>
-  );
-}
-
 export default function NewTask() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -130,8 +111,6 @@ export default function NewTask() {
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
   const [pendingEquipmentFiles, setPendingEquipmentFiles] = useState<File[]>([]);
   const equipmentFileInputRef = useRef<HTMLInputElement>(null);
-  const [isContactOpen, setIsContactOpen] = useState(true);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<SelectedAsset[]>([]);
   const multiAssetMode = selectedAssets.length > 0;
   const [selectedHelperIds, setSelectedHelperIds] = useState<string[]>([]);
@@ -230,7 +209,6 @@ export default function NewTask() {
     vehicleId: string;
   };
   const [pendingSubTasks, setPendingSubTasks] = useState<PendingSubTask[]>([]);
-  const [isSubTasksOpen, setIsSubTasksOpen] = useState(false);
 
   const { data: checklistTemplates = [] } = useQuery<ChecklistTemplate[]>({
     queryKey: ["/api/checklist-templates"],
@@ -333,7 +311,6 @@ export default function NewTask() {
       return res.json();
     },
     onSuccess: async (newEquipment: Equipment) => {
-      // Upload pending files if any
       let uploadedCount = 0;
       let failedCount = 0;
       const filesToUpload = [...pendingEquipmentFiles];
@@ -341,7 +318,6 @@ export default function NewTask() {
       if (filesToUpload.length > 0) {
         for (const file of filesToUpload) {
           try {
-            // Get upload URL
             const uploadUrlRes = await fetch("/api/objects/upload", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -355,7 +331,6 @@ export default function NewTask() {
             }
             const { url, objectPath } = await uploadUrlRes.json();
             
-            // Upload file to object storage
             const uploadRes = await fetch(url, {
               method: "PUT",
               body: file,
@@ -368,7 +343,6 @@ export default function NewTask() {
               continue;
             }
             
-            // Register the upload in database with equipment ID
             const registerRes = await fetch("/api/uploads", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -396,7 +370,6 @@ export default function NewTask() {
         }
         setPendingEquipmentFiles([]);
         
-        // Invalidate equipment uploads cache
         queryClient.invalidateQueries({ queryKey: ["/api/equipment", newEquipment.id, "uploads"] });
       }
       
@@ -524,12 +497,6 @@ export default function NewTask() {
       }
     }
   }, [selectedVendorId, vendors, form]);
-
-  useEffect(() => {
-    if (requestId || projectId) {
-      setAdvancedOpen(true);
-    }
-  }, [requestId, projectId]);
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -689,23 +656,15 @@ export default function NewTask() {
     );
   }
 
-  const urgencyColors: Record<string, string> = {
-    low: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  };
-
   return (
-    <div className="max-w-2xl mx-auto p-3 md:p-4 pb-40">
-      <div className="flex items-center gap-3 mb-6">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
-            {requestId ? "Convert to Task" : "New Task"}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {requestId ? "Create a task from this service request" : "Fill in the details below"}
-          </p>
-        </div>
+    <div className="max-w-[1200px] mx-auto p-3 md:p-6 pb-40">
+      <div className="mb-6">
+        <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
+          {requestId ? "Convert to Task" : "New Task"}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {requestId ? "Create a task from this service request" : "Fill in the details below"}
+        </p>
       </div>
 
       {project && (
@@ -723,744 +682,137 @@ export default function NewTask() {
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          
-          {/* Section 1: Task Details */}
-          <Card className="p-5">
-            <SectionHeader 
-              number={1} 
-              icon={ClipboardList} 
-              title="Task Details" 
-              description="What needs to be done?"
-            />
-            
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Task Name *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Fix leaking faucet in Room 101"
-                        {...field}
-                        data-testid="input-task-name"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe what needs to be done..."
-                        className="min-h-[80px] resize-none"
-                        {...field}
-                        data-testid="textarea-description"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* LEFT COLUMN: Main Form */}
+            <div className="w-full lg:w-[65%] space-y-8 pb-12">
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="urgency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-urgency">
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="low">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-green-500" />
-                              Low
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="medium">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                              Medium
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="high">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-red-500" />
-                              High
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="taskType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setTaskType(value as "one_time" | "recurring" | "reminder" | "project");
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-task-type">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="one_time">One-Time</SelectItem>
-                          <SelectItem value="recurring">Recurring</SelectItem>
-                          <SelectItem value="reminder">Reminder</SelectItem>
-                          <SelectItem value="project">Project</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="projectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-project">
-                          <SelectValue placeholder="Assign to a project (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No Project</SelectItem>
-                        {projects.filter(p => p.status === "in_progress" || p.status === "planning").map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Link this task to an existing project for organization
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </Card>
-
-          {/* Section 2: Location */}
-          <Card className="p-5">
-            <SectionHeader 
-              number={2} 
-              icon={MapPin} 
-              title="Location" 
-              description="Where is this task?"
-            />
-            
-            <TaskLocationFields
-              form={form}
-              properties={properties}
-              spaces={spaces}
-              equipment={equipment}
-              vehicles={allVehicles}
-              selectedPropertyId={selectedPropertyId}
-              setSelectedPropertyId={setSelectedPropertyId}
-              selectedSpaceId={selectedSpaceId}
-              setSelectedSpaceId={setSelectedSpaceId}
-              isBuilding={isBuilding}
-              selectedProperty={selectedProperty}
-              onAddSpace={() => setIsSpaceDialogOpen(true)}
-              showEquipmentCreate
-              onAddEquipment={() => {
-                equipmentForm.reset({
-                  name: "",
-                  category: "other",
-                  description: "",
-                  serialNumber: "",
-                  condition: "",
-                  notes: "",
-                  imageUrl: "",
-                });
-                setPendingEquipmentFiles([]);
-                setIsEquipmentDialogOpen(true);
-              }}
-              selectedAssets={selectedAssets}
-              onAddAsset={handleAddAsset}
-              onRemoveAsset={handleRemoveAsset}
-              multiAssetMode={multiAssetMode}
-              locationScope={locationScope}
-              onLocationScopeChange={(scope) => {
-                setLocationScope(scope);
-                if (scope !== "single") {
-                  setSelectedAssets([]);
-                  form.setValue("equipmentId", undefined);
-                  form.setValue("vehicleId", undefined);
-                }
-              }}
-              selectedPropertyIds={selectedPropertyIds}
-              onSelectedPropertyIdsChange={setSelectedPropertyIds}
-            />
-          </Card>
-
-          {/* Section 3: Schedule */}
-          <Card className="p-5">
-            <SectionHeader 
-              number={3} 
-              icon={Calendar} 
-              title="Schedule" 
-              description="When should this be done?"
-            />
-            
-            <div className="space-y-4">
-              <TaskDateFields form={form} />
-              <TaskRecurringFields form={form} taskType={taskType} />
-            </div>
-          </Card>
-
-          {/* Section 4: Assignment */}
-          <Card className="p-5">
-            <SectionHeader 
-              number={4} 
-              icon={Users} 
-              title="Assignment" 
-              description="Who will work on this?"
-            />
-            
-            <div className="space-y-4">
-              <FormItem>
-                <FormLabel>Assign To</FormLabel>
-                <Select
-                  onValueChange={(value: string) => {
-                    const option = value as "student" | "technician" | "vendor" | "";
-                    setAssignmentOption(option);
-                    form.setValue("assignedToId", undefined);
-                    form.setValue("assignedVendorId", undefined);
-                    
-                    if (option === "student") {
-                      form.setValue("executorType", "student");
-                      form.setValue("assignedPool", "student_pool");
-                    } else if (option === "technician") {
-                      form.setValue("executorType", "technician");
-                      form.setValue("assignedPool", "technician_pool");
-                    } else {
-                      form.setValue("executorType", undefined);
-                      form.setValue("assignedPool", undefined);
-                    }
-                  }}
-                  value={assignmentOption}
-                >
-                  <FormControl>
-                    <SelectTrigger data-testid="select-assignment-option">
-                      <SelectValue placeholder="Select who should do this (optional)" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="student">Student Worker</SelectItem>
-                    <SelectItem value="technician">Technician</SelectItem>
-                    <SelectItem value="vendor">External Vendor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            </div>
-          </Card>
-
-          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" type="button" className="w-full justify-between py-3" data-testid="toggle-advanced-options">
-                <span className="font-medium">Advanced Options</span>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", advancedOpen && "rotate-180")} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="space-y-4 pt-2" data-testid="section-advanced-options">
-
-          <Card className="p-5">
-            <div className="space-y-4">
-              {assignmentOption === "student" && (
-                <>
+              {/* Details */}
+              <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-details">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Details</h2>
+                </div>
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="assignedToId"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Select Student</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value || ""}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-assigned-student">
-                              <SelectValue placeholder="Select a student" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {studentUsers.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.firstName && user.lastName 
-                                  ? `${user.firstName} ${user.lastName}` 
-                                  : user.username}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input
+                            placeholder="Task Name (e.g. Fix leaking pipe in Science Lab)"
+                            className="text-lg py-6 placeholder:text-muted-foreground/60"
+                            {...field}
+                            data-testid="input-task-name"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
-                  <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
-                    <p className="text-sm font-medium">Student Instructions</p>
-                    <FormField
-                      control={form.control}
-                      name="instructions"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Step-by-step instructions for the student..."
-                              className="min-h-[80px] resize-none"
-                              data-testid="input-instructions"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="requiresPhoto"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-requires-photo"
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Require photo when completed
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
-              )}
-
-              {assignmentOption === "technician" && (
-                <div className="p-4 border rounded-md bg-muted/30 space-y-3">
-                  <p className="text-sm font-medium">Student Helpers (Optional)</p>
-                  <p className="text-xs text-muted-foreground">
-                    Assign student workers to assist with this task. They can log time and add notes but cannot change task status.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {studentUsers
-                      .filter(s => s.id !== form.watch("assignedToId"))
-                      .map((student) => {
-                        const isSelected = selectedHelperIds.includes(student.id);
-                        return (
-                          <button
-                            key={student.id}
-                            type="button"
-                            data-testid={`helper-toggle-${student.id}`}
-                            className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                              isSelected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-background border-border hover-elevate"
-                            }`}
-                            onClick={() => {
-                              setSelectedHelperIds(prev =>
-                                isSelected
-                                  ? prev.filter(id => id !== student.id)
-                                  : [...prev, student.id]
-                              );
-                            }}
-                          >
-                            {student.firstName && student.lastName
-                              ? `${student.firstName} ${student.lastName}`
-                              : student.username}
-                          </button>
-                        );
-                      })}
-                  </div>
-                  {selectedHelperIds.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedHelperIds.length} helper{selectedHelperIds.length !== 1 ? "s" : ""} selected
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Estimate requirement - always visible */}
-              <div className="p-4 border rounded-lg bg-muted/30">
-                <FormField
-                  control={form.control}
-                  name="requiresEstimate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-requires-estimate"
-                        />
-                      </FormControl>
-                      <div>
-                        <FormLabel className="font-normal">
-                          Requires estimate/quote approval before work begins
-                        </FormLabel>
-                        <FormDescription className="text-xs">
-                          When enabled, the task will start in "needs estimate" status and require quote approval
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {assignmentOption === "technician" && (
-                <FormField
-                  control={form.control}
-                  name="assignedToId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Technician</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value || ""}
-                      >
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <SelectTrigger data-testid="select-assigned-user">
-                            <SelectValue placeholder="Select a technician" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {technicianUserGroups.map((group) => (
-                            <SelectGroup key={group.label}>
-                              <SelectLabel>{group.label}</SelectLabel>
-                              {group.items.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.firstName && user.lastName 
-                                    ? `${user.firstName} ${user.lastName}` 
-                                    : user.username}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {assignmentOption === "vendor" && (
-                <FormField
-                  control={form.control}
-                  name="assignedVendorId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Vendor</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedVendorId(value);
-                        }}
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-assigned-vendor">
-                            <SelectValue placeholder="Choose a vendor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {vendors.map((vendor) => (
-                            <SelectItem key={vendor.id} value={vendor.id}>
-                              {vendor.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {/* Contact Information */}
-              <Collapsible open={isContactOpen} onOpenChange={setIsContactOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" type="button" className="w-full justify-between p-0 h-auto hover:bg-transparent" data-testid="button-toggle-contact">
-                    <span className="text-sm font-medium">Point of Contact (Optional)</span>
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", isContactOpen && "rotate-180")} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  {requestId && requester ? (
-                    <div className="p-3 rounded-md border bg-muted/30 text-sm space-y-1">
-                      <p><span className="text-muted-foreground">Contact:</span> {requester.firstName} {requester.lastName}</p>
-                      {requester.email && <p><span className="text-muted-foreground">Email:</span> {requester.email}</p>}
-                      {requester.phoneNumber && <p><span className="text-muted-foreground">Phone:</span> {requester.phoneNumber}</p>}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={contactType === "staff" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => {
-                            setContactType("staff");
-                            form.setValue("contactType", "staff");
-                            form.setValue("contactName", "");
-                            form.setValue("contactEmail", "");
-                            form.setValue("contactPhone", "");
-                          }}
-                          data-testid="button-contact-staff"
-                        >
-                          Staff
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={contactType === "other" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => {
-                            setContactType("other");
-                            form.setValue("contactType", "other");
-                            form.setValue("contactStaffId", undefined);
-                          }}
-                          data-testid="button-contact-other"
-                        >
-                          Other
-                        </Button>
-                      </div>
-
-                      {contactType === "staff" && (
-                        <FormField
-                          control={form.control}
-                          name="contactStaffId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <Select onValueChange={field.onChange} value={field.value || ""}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-contact-staff">
-                                    <SelectValue placeholder="Select staff member" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {users.map((user) => (
-                                    <SelectItem key={user.id} value={user.id}>
-                                      {user.firstName} {user.lastName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {contactType === "other" && (
-                        <div className="grid gap-3">
-                          <FormField
-                            control={form.control}
-                            name="contactName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input placeholder="Contact name" {...field} data-testid="input-contact-name" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
+                          <Textarea
+                            placeholder="Provide detailed information about the issue..."
+                            className="min-h-[120px] resize-y"
+                            {...field}
+                            data-testid="textarea-description"
                           />
-                          <div className="grid grid-cols-2 gap-2">
-                            <FormField
-                              control={form.control}
-                              name="contactEmail"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input type="email" placeholder="Email" {...field} data-testid="input-contact-email" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="contactPhone"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input type="tel" placeholder="Phone" {...field} data-testid="input-contact-phone" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          </Card>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </section>
 
-          {/* Section 5: Sub-Tasks - Optional */}
-          <Card className="p-5">
-            <Collapsible open={isSubTasksOpen} onOpenChange={setIsSubTasksOpen}>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" type="button" className="p-0 h-auto hover:bg-transparent gap-2" data-testid="button-toggle-subtasks">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Sub-Tasks</span>
+              {/* Location */}
+              <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-location">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Location & Equipment</h2>
+                </div>
+                <TaskLocationFields
+                  form={form}
+                  properties={properties}
+                  spaces={spaces}
+                  equipment={equipment}
+                  vehicles={allVehicles}
+                  selectedPropertyId={selectedPropertyId}
+                  setSelectedPropertyId={setSelectedPropertyId}
+                  selectedSpaceId={selectedSpaceId}
+                  setSelectedSpaceId={setSelectedSpaceId}
+                  isBuilding={isBuilding}
+                  selectedProperty={selectedProperty}
+                  onAddSpace={() => setIsSpaceDialogOpen(true)}
+                  showEquipmentCreate
+                  onAddEquipment={() => {
+                    equipmentForm.reset({
+                      name: "",
+                      category: "other",
+                      description: "",
+                      serialNumber: "",
+                      condition: "",
+                      notes: "",
+                      imageUrl: "",
+                    });
+                    setPendingEquipmentFiles([]);
+                    setIsEquipmentDialogOpen(true);
+                  }}
+                  selectedAssets={selectedAssets}
+                  onAddAsset={handleAddAsset}
+                  onRemoveAsset={handleRemoveAsset}
+                  multiAssetMode={multiAssetMode}
+                  locationScope={locationScope}
+                  onLocationScopeChange={(scope) => {
+                    setLocationScope(scope);
+                    if (scope !== "single") {
+                      setSelectedAssets([]);
+                      form.setValue("equipmentId", undefined);
+                      form.setValue("vehicleId", undefined);
+                    }
+                  }}
+                  selectedPropertyIds={selectedPropertyIds}
+                  onSelectedPropertyIdsChange={setSelectedPropertyIds}
+                />
+              </section>
+
+              {/* Schedule */}
+              <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-schedule">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Schedule</h2>
+                </div>
+                <div className="space-y-4">
+                  <TaskDateFields form={form} />
+                  <TaskRecurringFields form={form} taskType={taskType} />
+                </div>
+              </section>
+
+              {/* Sub-tasks */}
+              <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-subtasks">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-muted-foreground" />
+                    <h2 className="text-lg font-semibold">Sub-tasks</h2>
                     <Badge variant="secondary" className="text-xs">Optional</Badge>
                     {pendingSubTasks.length > 0 && (
                       <Badge variant="default" className="text-xs">{pendingSubTasks.length}</Badge>
                     )}
-                    <ChevronDown className={cn("h-4 w-4 transition-transform text-muted-foreground", isSubTasksOpen && "rotate-180")} />
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-              <CollapsibleContent>
-                <div className="mt-4 space-y-3">
-                  {pendingSubTasks.map((subTask, index) => {
-                    const hasEmptyName = subTask.name.length > 0 && !subTask.name.trim();
-                    return (
-                    <div key={index} className="p-3 border rounded-md space-y-2" data-testid={`subtask-item-${index}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 space-y-2">
-                          <div>
-                            <Input
-                              placeholder="Sub-task name *"
-                              value={subTask.name}
-                              onChange={(e) => {
-                                setPendingSubTasks(prev => prev.map((st, i) =>
-                                  i === index ? { ...st, name: e.target.value } : st
-                                ));
-                              }}
-                              className={hasEmptyName ? "border-destructive" : ""}
-                              data-testid={`input-subtask-name-${index}`}
-                            />
-                            {hasEmptyName && (
-                              <p className="text-xs text-destructive mt-1">Sub-task name cannot be blank</p>
-                            )}
-                          </div>
-                          <Textarea
-                            placeholder="Description (optional)"
-                            className="min-h-[60px] resize-none"
-                            value={subTask.description}
-                            onChange={(e) => {
-                              setPendingSubTasks(prev => prev.map((st, i) =>
-                                i === index ? { ...st, description: e.target.value } : st
-                              ));
-                            }}
-                            data-testid={`textarea-subtask-description-${index}`}
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label className="text-xs text-muted-foreground mb-1 block">Equipment (optional)</Label>
-                              <Select
-                                value={subTask.equipmentId || "none"}
-                                onValueChange={(value) => {
-                                  setPendingSubTasks(prev => prev.map((st, i) =>
-                                    i === index ? { ...st, equipmentId: value === "none" ? "" : value, vehicleId: value !== "none" ? "" : st.vehicleId } : st
-                                  ));
-                                }}
-                              >
-                                <SelectTrigger data-testid={`select-subtask-equipment-${index}`}>
-                                  <SelectValue placeholder="None" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  {equipment.map((eq) => (
-                                    <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground mb-1 block">Vehicle (optional)</Label>
-                              <Select
-                                value={subTask.vehicleId || "none"}
-                                onValueChange={(value) => {
-                                  setPendingSubTasks(prev => prev.map((st, i) =>
-                                    i === index ? { ...st, vehicleId: value === "none" ? "" : value, equipmentId: value !== "none" ? "" : st.equipmentId } : st
-                                  ));
-                                }}
-                              >
-                                <SelectTrigger data-testid={`select-subtask-vehicle-${index}`}>
-                                  <SelectValue placeholder="None" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  {allVehicles.map((v) => (
-                                    <SelectItem key={v.id} value={v.id}>
-                                      {v.make} {v.model} {v.vehicleId}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setPendingSubTasks(prev => prev.filter((_, i) => i !== index));
-                          }}
-                          data-testid={`button-remove-subtask-${index}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    );
-                  })}
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => {
                       setPendingSubTasks(prev => [...prev, { name: "", description: "", equipmentId: "", vehicleId: "" }]);
-                      if (!isSubTasksOpen) setIsSubTasksOpen(true);
                     }}
                     data-testid="button-add-subtask"
                   >
@@ -1468,160 +820,711 @@ export default function NewTask() {
                     Add Sub-Task
                   </Button>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-
-          {/* Section 6: Checklists - Optional */}
-          <Card className="p-5 mb-8">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <ListChecks className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Checklists</span>
-                <Badge variant="secondary" className="text-xs">Optional</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                {checklistTemplates.length > 0 && (
-                  <Popover open={isTemplatePopoverOpen} onOpenChange={setIsTemplatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        className="gap-1"
-                        data-testid="button-use-template"
-                      >
-                        <FileText className="h-3 w-3" />
-                        Use Template
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-1" align="end">
-                      <div className="space-y-1">
-                        {checklistTemplates.map((template) => (
-                          <Button
-                            key={template.id}
-                            type="button"
-                            variant="ghost"
-                            className="w-full justify-start h-auto py-2 px-2"
-                            onClick={() => applyTemplate(template)}
-                            data-testid={`button-template-${template.id}`}
-                          >
-                            <div className="flex flex-col items-start text-left">
-                              <span className="text-sm font-medium">{template.name}</span>
-                              {template.description && (
-                                <span className="text-xs text-muted-foreground">{template.description}</span>
+                {pendingSubTasks.length === 0 ? (
+                  <div className="text-center py-6 bg-muted/10 rounded-md border border-dashed">
+                    <p className="text-sm text-muted-foreground">No sub-tasks added. Break down complex tasks into smaller steps.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingSubTasks.map((subTask, index) => {
+                      const hasEmptyName = subTask.name.length > 0 && !subTask.name.trim();
+                      return (
+                      <div key={index} className="p-3 border rounded-md space-y-2" data-testid={`subtask-item-${index}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 space-y-2">
+                            <div>
+                              <Input
+                                placeholder="Sub-task name *"
+                                value={subTask.name}
+                                onChange={(e) => {
+                                  setPendingSubTasks(prev => prev.map((st, i) =>
+                                    i === index ? { ...st, name: e.target.value } : st
+                                  ));
+                                }}
+                                className={hasEmptyName ? "border-destructive" : ""}
+                                data-testid={`input-subtask-name-${index}`}
+                              />
+                              {hasEmptyName && (
+                                <p className="text-xs text-destructive mt-1">Sub-task name cannot be blank</p>
                               )}
                             </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditingChecklistIndex(null);
-                    setDialogChecklistName("");
-                    setDialogChecklistItems([]);
-                    setNewDialogChecklistItem("");
-                    setIsChecklistDialogOpen(true);
-                  }}
-                  data-testid="button-add-checklist"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </div>
-            </div>
-            
-            {checklistGroups.length > 0 && (
-              <div className="mt-4 space-y-3">
-                {checklistGroups.map((group, groupIndex) => (
-                  <div key={groupIndex} className="p-3 border rounded-md space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{group.name}</span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingChecklistIndex(groupIndex);
-                            setDialogChecklistName(group.name);
-                            setDialogChecklistItems(group.items.map(item => ({ ...item })));
-                            setNewDialogChecklistItem("");
-                            setIsChecklistDialogOpen(true);
-                          }}
-                          data-testid={`button-edit-checklist-${groupIndex}`}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            setChecklistGroups(checklistGroups.filter((_, i) => i !== groupIndex));
-                          }}
-                          data-testid={`button-remove-checklist-${groupIndex}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {group.items.length > 0 && (
-                      <div className="space-y-1 pl-1">
-                        {group.items.map((item, itemIndex) => (
-                          <div key={itemIndex} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Checkbox
-                              checked={item.isCompleted}
-                              onCheckedChange={(checked) => {
-                                setChecklistGroups(prev => prev.map((g, gIdx) =>
-                                  gIdx === groupIndex
-                                    ? {
-                                        ...g,
-                                        items: g.items.map((it, iIdx) =>
-                                          iIdx === itemIndex
-                                            ? { ...it, isCompleted: checked === true }
-                                            : it
-                                        )
-                                      }
-                                    : g
+                            <Textarea
+                              placeholder="Description (optional)"
+                              className="min-h-[60px] resize-none"
+                              value={subTask.description}
+                              onChange={(e) => {
+                                setPendingSubTasks(prev => prev.map((st, i) =>
+                                  i === index ? { ...st, description: e.target.value } : st
                                 ));
                               }}
-                              className="h-3 w-3"
-                              data-testid={`checkbox-checklist-${groupIndex}-item-${itemIndex}`}
+                              data-testid={`textarea-subtask-description-${index}`}
                             />
-                            <span className={item.isCompleted ? "line-through" : ""}>
-                              {item.text}
-                            </span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs text-muted-foreground mb-1 block">Equipment (optional)</Label>
+                                <Select
+                                  value={subTask.equipmentId || "none"}
+                                  onValueChange={(value) => {
+                                    setPendingSubTasks(prev => prev.map((st, i) =>
+                                      i === index ? { ...st, equipmentId: value === "none" ? "" : value, vehicleId: value !== "none" ? "" : st.vehicleId } : st
+                                    ));
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`select-subtask-equipment-${index}`}>
+                                    <SelectValue placeholder="None" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    {equipment.map((eq) => (
+                                      <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground mb-1 block">Vehicle (optional)</Label>
+                                <Select
+                                  value={subTask.vehicleId || "none"}
+                                  onValueChange={(value) => {
+                                    setPendingSubTasks(prev => prev.map((st, i) =>
+                                      i === index ? { ...st, vehicleId: value === "none" ? "" : value, equipmentId: value !== "none" ? "" : st.equipmentId } : st
+                                    ));
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`select-subtask-vehicle-${index}`}>
+                                    <SelectValue placeholder="None" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    {allVehicles.map((v) => (
+                                      <SelectItem key={v.id} value={v.id}>
+                                        {v.make} {v.model} {v.vehicleId}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
                           </div>
-                        ))}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setPendingSubTasks(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            data-testid={`button-remove-subtask-${index}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              {/* Checklists */}
+              <section className="pb-4 space-y-4" data-testid="section-checklists">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="w-5 h-5 text-muted-foreground" />
+                    <h2 className="text-lg font-semibold">Checklists</h2>
+                    <Badge variant="secondary" className="text-xs">Optional</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {checklistTemplates.length > 0 && (
+                      <Popover open={isTemplatePopoverOpen} onOpenChange={setIsTemplatePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" data-testid="button-template-popover">
+                            <FileText className="h-4 w-4 mr-1" />
+                            Templates
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-2" align="end">
+                          <div className="space-y-1">
+                            {checklistTemplates.map((template) => (
+                              <Button
+                                key={template.id}
+                                type="button"
+                                variant="ghost"
+                                className="w-full justify-start h-auto py-2 px-2"
+                                onClick={() => applyTemplate(template)}
+                                data-testid={`button-template-${template.id}`}
+                              >
+                                <div className="flex flex-col items-start text-left">
+                                  <span className="text-sm font-medium">{template.name}</span>
+                                  {template.description && (
+                                    <span className="text-xs text-muted-foreground">{template.description}</span>
+                                  )}
+                                </div>
+                              </Button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     )}
-                    {group.items.length === 0 && (
-                      <span className="text-xs text-muted-foreground italic">No items yet</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingChecklistIndex(null);
+                        setDialogChecklistName("");
+                        setDialogChecklistItems([]);
+                        setNewDialogChecklistItem("");
+                        setIsChecklistDialogOpen(true);
+                      }}
+                      data-testid="button-add-checklist"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+                
+                {checklistGroups.length > 0 ? (
+                  <div className="space-y-3">
+                    {checklistGroups.map((group, groupIndex) => (
+                      <div key={groupIndex} className="p-3 border rounded-md space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{group.name}</span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingChecklistIndex(groupIndex);
+                                setDialogChecklistName(group.name);
+                                setDialogChecklistItems(group.items.map(item => ({ ...item })));
+                                setNewDialogChecklistItem("");
+                                setIsChecklistDialogOpen(true);
+                              }}
+                              data-testid={`button-edit-checklist-${groupIndex}`}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setChecklistGroups(checklistGroups.filter((_, i) => i !== groupIndex));
+                              }}
+                              data-testid={`button-remove-checklist-${groupIndex}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        {group.items.length > 0 && (
+                          <div className="space-y-1 pl-1">
+                            {group.items.map((item, itemIndex) => (
+                              <div key={itemIndex} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Checkbox
+                                  checked={item.isCompleted}
+                                  onCheckedChange={(checked) => {
+                                    setChecklistGroups(prev => prev.map((g, gIdx) =>
+                                      gIdx === groupIndex
+                                        ? {
+                                            ...g,
+                                            items: g.items.map((it, iIdx) =>
+                                              iIdx === itemIndex
+                                                ? { ...it, isCompleted: checked === true }
+                                                : it
+                                            )
+                                          }
+                                        : g
+                                    ));
+                                  }}
+                                  className="h-3 w-3"
+                                  data-testid={`checkbox-checklist-${groupIndex}-item-${itemIndex}`}
+                                />
+                                <span className={item.isCompleted ? "line-through" : ""}>
+                                  {item.text}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {group.items.length === 0 && (
+                          <span className="text-xs text-muted-foreground italic">No items yet</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 bg-muted/10 rounded-md border border-dashed">
+                    <p className="text-sm text-muted-foreground">Add checklists for required inspections or procedures.</p>
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* RIGHT COLUMN: Sidebar */}
+            <div className="w-full lg:w-[35%]">
+              <div className="lg:sticky lg:top-6 space-y-6">
+                <div className="bg-muted/30 border rounded-xl p-5 shadow-sm space-y-6">
+
+                  {/* Priority */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Priority</Label>
+                    <FormField
+                      control={form.control}
+                      name="urgency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex gap-2" data-testid="select-urgency">
+                            {[
+                              { value: "low", label: "Low", active: "bg-emerald-500 text-white border-emerald-600 shadow-sm", inactive: "bg-background text-emerald-600 border-emerald-200 dark:border-emerald-800 dark:text-emerald-400" },
+                              { value: "medium", label: "Medium", active: "bg-amber-500 text-white border-amber-600 shadow-sm", inactive: "bg-background text-amber-600 border-amber-200 dark:border-amber-800 dark:text-amber-400" },
+                              { value: "high", label: "High", active: "bg-red-500 text-white border-red-600 shadow-sm", inactive: "bg-background text-red-600 border-red-200 dark:border-red-800 dark:text-red-400" },
+                            ].map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => field.onChange(opt.value)}
+                                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors border ${
+                                  field.value === opt.value ? opt.active : opt.inactive
+                                }`}
+                                data-testid={`priority-${opt.value}`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Task Type & Project */}
+                  <div className="space-y-4 pt-2 border-t border-border/50">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Task Type</Label>
+                      <FormField
+                        control={form.control}
+                        name="taskType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                setTaskType(value as "one_time" | "recurring" | "reminder" | "project");
+                              }}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-background" data-testid="select-task-type">
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="one_time">One-Time</SelectItem>
+                                <SelectItem value="recurring">Recurring</SelectItem>
+                                <SelectItem value="reminder">Reminder</SelectItem>
+                                <SelectItem value="project">Project</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Link to Project</Label>
+                      <FormField
+                        control={form.control}
+                        name="projectId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
+                              value={field.value || "none"}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-background" data-testid="select-project">
+                                  <SelectValue placeholder="None" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">No Project</SelectItem>
+                                {projects.filter(p => p.status === "in_progress" || p.status === "planning").map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Assignment */}
+                  <div className="space-y-4 pt-4 border-t border-border/50">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5" /> Assignment
+                    </Label>
+
+                    <div className="flex bg-background border rounded-md p-0.5" data-testid="select-assignment-option">
+                      {[
+                        { value: "technician" as const, label: "Tech", executorType: "technician" as const, pool: "technician_pool" },
+                        { value: "student" as const, label: "Student", executorType: "student" as const, pool: "student_pool" },
+                        { value: "vendor" as const, label: "Vendor", executorType: undefined as string | undefined, pool: undefined as string | undefined },
+                      ].map((tab) => (
+                        <button
+                          key={tab.value}
+                          type="button"
+                          onClick={() => {
+                            setAssignmentOption(tab.value);
+                            form.setValue("assignedToId", undefined);
+                            form.setValue("assignedVendorId", undefined);
+                            form.setValue("executorType", tab.executorType as any);
+                            form.setValue("assignedPool", tab.pool);
+                          }}
+                          className={`flex-1 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                            assignmentOption === tab.value
+                              ? "bg-muted shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                          data-testid={`assignment-tab-${tab.value}`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {assignmentOption === "student" && (
+                      <FormField
+                        control={form.control}
+                        name="assignedToId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-background" data-testid="select-assigned-student">
+                                  <SelectValue placeholder="Select a student" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {studentUsers.map((user) => (
+                                  <SelectItem key={user.id} value={user.id}>
+                                    {user.firstName && user.lastName
+                                      ? `${user.firstName} ${user.lastName}`
+                                      : user.username}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {assignmentOption === "technician" && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="assignedToId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-background" data-testid="select-assigned-user">
+                                    <SelectValue placeholder="Select a technician" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {technicianUserGroups.map((group) => (
+                                    <SelectGroup key={group.label}>
+                                      <SelectLabel>{group.label}</SelectLabel>
+                                      {group.items.map((user) => (
+                                        <SelectItem key={user.id} value={user.id}>
+                                          {user.firstName && user.lastName
+                                            ? `${user.firstName} ${user.lastName}`
+                                            : user.username}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="p-3 border rounded-md bg-muted/30 space-y-2">
+                          <p className="text-xs font-medium">Student Helpers</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {studentUsers
+                              .filter(s => s.id !== form.watch("assignedToId"))
+                              .map((student) => {
+                                const isSelected = selectedHelperIds.includes(student.id);
+                                return (
+                                  <button
+                                    key={student.id}
+                                    type="button"
+                                    data-testid={`helper-toggle-${student.id}`}
+                                    className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                                      isSelected
+                                        ? "bg-primary text-primary-foreground border-primary"
+                                        : "bg-background border-border hover-elevate"
+                                    }`}
+                                    onClick={() => {
+                                      setSelectedHelperIds(prev =>
+                                        isSelected
+                                          ? prev.filter(id => id !== student.id)
+                                          : [...prev, student.id]
+                                      );
+                                    }}
+                                  >
+                                    {student.firstName && student.lastName
+                                      ? `${student.firstName} ${student.lastName}`
+                                      : student.username}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                          {selectedHelperIds.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {selectedHelperIds.length} helper{selectedHelperIds.length !== 1 ? "s" : ""} selected
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {assignmentOption === "vendor" && (
+                      <FormField
+                        control={form.control}
+                        name="assignedVendorId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                setSelectedVendorId(value);
+                              }}
+                              value={field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-background" data-testid="select-assigned-vendor">
+                                  <SelectValue placeholder="Choose a vendor" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {vendors.map((vendor) => (
+                                  <SelectItem key={vendor.id} value={vendor.id}>
+                                    {vendor.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
 
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+                  {/* Contact Info */}
+                  <div className="space-y-3 pt-4 border-t border-border/50">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</Label>
+                    {requestId && requester ? (
+                      <div className="p-3 rounded-md border bg-muted/30 text-sm space-y-1">
+                        <p><span className="text-muted-foreground">Contact:</span> {requester.firstName} {requester.lastName}</p>
+                        {requester.email && <p><span className="text-muted-foreground">Email:</span> {requester.email}</p>}
+                        {requester.phoneNumber && <p><span className="text-muted-foreground">Phone:</span> {requester.phoneNumber}</p>}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={contactType === "staff" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                              setContactType("staff");
+                              form.setValue("contactType", "staff");
+                              form.setValue("contactName", "");
+                              form.setValue("contactEmail", "");
+                              form.setValue("contactPhone", "");
+                            }}
+                            data-testid="button-contact-staff"
+                          >
+                            Staff
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={contactType === "other" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                              setContactType("other");
+                              form.setValue("contactType", "other");
+                              form.setValue("contactStaffId", undefined);
+                            }}
+                            data-testid="button-contact-other"
+                          >
+                            Other
+                          </Button>
+                        </div>
+                        {contactType === "staff" && (
+                          <FormField
+                            control={form.control}
+                            name="contactStaffId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger className="bg-background" data-testid="select-contact-staff">
+                                      <SelectValue placeholder="Select staff member" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {users.map((user) => (
+                                      <SelectItem key={user.id} value={user.id}>
+                                        {user.firstName} {user.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                        {contactType === "other" && (
+                          <div className="grid gap-2">
+                            <FormField
+                              control={form.control}
+                              name="contactName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input placeholder="Contact name" className="bg-background" {...field} data-testid="input-contact-name" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <FormField
+                                control={form.control}
+                                name="contactEmail"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input type="email" placeholder="Email" className="bg-background" {...field} data-testid="input-contact-email" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="contactPhone"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input type="tel" placeholder="Phone" className="bg-background" {...field} data-testid="input-contact-phone" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-          {/* Spacer for fixed footer */}
+                  {/* Options */}
+                  <div className="space-y-3 pt-4 border-t border-border/50">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Options</Label>
+                    <div className="space-y-2.5">
+                      <FormField
+                        control={form.control}
+                        name="requiresEstimate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-requires-estimate"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium leading-none cursor-pointer">
+                              Require cost estimate before work
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      {assignmentOption === "student" && (
+                        <FormField
+                          control={form.control}
+                          name="requiresPhoto"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-requires-photo"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium leading-none cursor-pointer">
+                                Require completion photo
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Instructions (student only) */}
+                  {assignmentOption === "student" && (
+                    <div className="space-y-1.5 pt-2">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Student Instructions</Label>
+                      <FormField
+                        control={form.control}
+                        name="instructions"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Step-by-step instructions for the student..."
+                                className="min-h-[80px] resize-none bg-background text-sm"
+                                data-testid="input-instructions"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="h-24" aria-hidden="true" />
 
           {/* Sticky Footer */}
           <div className="fixed bottom-0 inset-x-0 p-4 bg-background/95 backdrop-blur border-t z-10 md:left-[var(--sidebar-width)]">
-            <div className="max-w-2xl mx-auto flex gap-3 md:ml-0">
+            <div className="max-w-[1200px] mx-auto flex gap-3 md:ml-0">
               <Button
                 type="button"
                 variant="outline"

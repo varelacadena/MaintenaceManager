@@ -207,6 +207,7 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
                         field.onChange(undefined);
                       }
                     }}
+                    className="[--cell-size:2.5rem] p-4"
                     initialFocus
                     disabled={disabledDate}
                   />
@@ -253,6 +254,7 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
                         field.onChange(undefined);
                       }
                     }}
+                    className="[--cell-size:2.5rem] p-4"
                     initialFocus
                     disabled={disabledDate}
                   />
