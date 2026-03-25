@@ -6,12 +6,13 @@ export interface NotificationCounts {
   pendingVehicleReservations: number;
   unreadMessages: number;
   approvedReservations: number;
+  pendingSignups: number;
 }
 
 export function useNotificationCounts() {
   const { user } = useAuth();
 
-  const { data: counts = { pendingServiceRequests: 0, pendingVehicleReservations: 0, unreadMessages: 0, approvedReservations: 0 } } = useQuery<NotificationCounts>({
+  const { data: counts = { pendingServiceRequests: 0, pendingVehicleReservations: 0, unreadMessages: 0, approvedReservations: 0, pendingSignups: 0 } } = useQuery<NotificationCounts>({
     queryKey: ["/api/notifications/counts"],
     enabled: !!user,
     refetchInterval: 5000,

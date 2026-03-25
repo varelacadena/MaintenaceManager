@@ -428,4 +428,75 @@ export async function notifyVehicleReservationDenied(
   );
 }
 
+export async function notifySignupPending(pendingUser: { firstName: string; lastName: string; email: string; username: string; requestedRole: string }): Promise<void> {
+  const ns = new ProductionNotificationService();
+  const variables: Record<string, string> = {
+    '{{first_name}}': pendingUser.firstName,
+    '{{last_name}}': pendingUser.lastName,
+    '{{username}}': pendingUser.username,
+    '{{requested_role}}': pendingUser.requestedRole,
+  };
+
+  const fallbackSubject = `Access Request Received – Hartland Maintenance`;
+  const fallbackBody = `Hello ${pendingUser.firstName},\n\nYour request to access the Hartland Maintenance system has been received and is pending review by an administrator.\n\nUsername: ${pendingUser.username}\nRequested Role: ${pendingUser.requestedRole}\n\nYou will receive an email once your request has been reviewed. This typically takes 1-2 business days.\n\n— Hartland Maintenance System`;
+
+  await sendTrackedEmail(
+    ns, "signup_pending", pendingUser.email,
+    `${pendingUser.firstName} ${pendingUser.lastName}`,
+    fallbackSubject, fallbackBody, variables
+  );
+
+  try {
+    const admins = (await storage.getAllUsers()).filter(u => u.role === "admin" && u.email);
+    for (const admin of admins) {
+      const adminFallbackSubject = `New Access Request: ${pendingUser.firstName} ${pendingUser.lastName}`;
+      const adminFallbackBody = `A new access request has been submitted.\n\nName: ${pendingUser.firstName} ${pendingUser.lastName}\nUsername: ${pendingUser.username}\nEmail: ${pendingUser.email}\nRequested Role: ${pendingUser.requestedRole}\n\nPlease log in to review and approve or deny this request.`;
+
+      await sendTrackedEmail(
+        ns, "signup_pending_admin", admin.email,
+        `${admin.firstName} ${admin.lastName}`,
+        adminFallbackSubject, adminFallbackBody, variables
+      );
+    }
+  } catch (err) {
+    console.error("[SIGNUP] Failed to notify admins:", err);
+  }
+}
+
+export async function notifySignupDecision(
+  pendingUser: { firstName: string; lastName: string; email: string; username: string },
+  decision: "approved" | "denied",
+  reason?: string
+): Promise<void> {
+  const ns = new ProductionNotificationService();
+  const variables: Record<string, string> = {
+    '{{first_name}}': pendingUser.firstName,
+    '{{last_name}}': pendingUser.lastName,
+    '{{username}}': pendingUser.username,
+    '{{decision}}': decision,
+    '{{reason}}': reason || '',
+  };
+
+  if (decision === "approved") {
+    const fallbackSubject = `Access Approved – Hartland Maintenance`;
+    const fallbackBody = `Hello ${pendingUser.firstName},\n\nYour request to access the Hartland Maintenance system has been approved!\n\nYou can now log in with your username: ${pendingUser.username}\n\nIf you have any questions, please contact your administrator.\n\n— Hartland Maintenance System`;
+
+    await sendTrackedEmail(
+      ns, "signup_approved", pendingUser.email,
+      `${pendingUser.firstName} ${pendingUser.lastName}`,
+      fallbackSubject, fallbackBody, variables
+    );
+  } else {
+    const reasonText = reason ? `\n\nReason: ${reason}` : '';
+    const fallbackSubject = `Access Request Update – Hartland Maintenance`;
+    const fallbackBody = `Hello ${pendingUser.firstName},\n\nYour request to access the Hartland Maintenance system was not approved at this time.${reasonText}\n\nIf you have questions, please contact your administrator.\n\n— Hartland Maintenance System`;
+
+    await sendTrackedEmail(
+      ns, "signup_denied", pendingUser.email,
+      `${pendingUser.firstName} ${pendingUser.lastName}`,
+      fallbackSubject, fallbackBody, variables
+    );
+  }
+}
+
 export const notificationService = new ProductionNotificationService();

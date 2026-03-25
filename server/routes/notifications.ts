@@ -17,6 +17,7 @@ export function registerNotificationRoutes(app: Express) {
       let pendingVehicleReservations = 0;
       let unreadMessages = 0;
       let approvedReservations = 0;
+      let pendingSignups = 0;
 
       if (currentUser.role === "admin" || currentUser.role === "technician") {
         const serviceRequests = await storage.getServiceRequests({
@@ -33,6 +34,8 @@ export function registerNotificationRoutes(app: Express) {
           status: "pending",
         });
         pendingVehicleReservations = vehicleReservations.length;
+
+        pendingSignups = await storage.getPendingUserCount();
       } else {
         const myReservations = await storage.getVehicleReservations({
           userId: userId,
@@ -52,6 +55,7 @@ export function registerNotificationRoutes(app: Express) {
         pendingVehicleReservations,
         unreadMessages,
         approvedReservations,
+        pendingSignups,
       });
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch notification counts");

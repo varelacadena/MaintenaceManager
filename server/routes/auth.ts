@@ -74,6 +74,14 @@ export function registerAuthRoutes(app: Express) {
       const user = await storage.getUserByUsername(username);
 
       if (!user) {
+        const allPending = await storage.getPendingUsers();
+        const matchingPending = allPending.find(p => p.username === username);
+        if (matchingPending && matchingPending.status === "pending") {
+          return res.status(403).json({ message: "Your account request is still pending admin review. You'll receive an email when it's been processed." });
+        }
+        if (matchingPending && matchingPending.status === "denied") {
+          return res.status(403).json({ message: "Your account request was not approved. Please contact an administrator for more information." });
+        }
         return res.status(401).json({ message: "Invalid credentials" });
       }
 

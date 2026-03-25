@@ -130,6 +130,8 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                   badgeCount = notificationCounts.pendingServiceRequests;
                 } else if (item.title === "Vehicles" && notificationCounts.pendingVehicleReservations > 0) {
                   badgeCount = notificationCounts.pendingVehicleReservations;
+                } else if (item.title === "Users" && notificationCounts.pendingSignups > 0) {
+                  badgeCount = notificationCounts.pendingSignups;
                 }
 
                 return (

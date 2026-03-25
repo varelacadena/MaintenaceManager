@@ -44,6 +44,37 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+export const pendingUserStatusEnum = pgEnum("pending_user_status", ["pending", "approved", "denied", "expired"]);
+
+export const pendingUsers = pgTable("pending_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username", { length: 100 }).notNull(),
+  password: varchar("password").notNull(),
+  email: varchar("email", { length: 200 }).notNull(),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  requestedRole: varchar("requested_role", { length: 20 }).notNull().default("staff"),
+  requestedProperty: varchar("requested_property", { length: 200 }),
+  status: pendingUserStatusEnum("status").notNull().default("pending"),
+  denialReason: text("denial_reason"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"),
+});
+
+export const insertPendingUserSchema = createInsertSchema(pendingUsers).omit({
+  id: true,
+  submittedAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  status: true,
+  denialReason: true,
+});
+export type InsertPendingUser = z.infer<typeof insertPendingUserSchema>;
+export type PendingUser = typeof pendingUsers.$inferSelect;
+
 // Vendors
 export const vendors = pgTable("vendors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

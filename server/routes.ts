@@ -18,12 +18,14 @@ import { registerAnalyticsRoutes } from "./routes/analytics";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerResourceRoutes } from "./routes/resources";
 import { registerAiRoutes } from "./routes/ai";
+import { registerSignupRoutes } from "./routes/signup";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   await seedDatabase();
 
   registerAuthRoutes(app);
+  registerSignupRoutes(app);
   registerUserRoutes(app);
   registerVendorRoutes(app);
   registerInventoryRoutes(app);

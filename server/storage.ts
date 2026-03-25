@@ -145,6 +145,9 @@ import {
   type InsertProjectComment,
   taskHelpers,
   type TaskHelper,
+  pendingUsers,
+  type PendingUser,
+  type InsertPendingUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, ne, isNull, lte, gte } from "drizzle-orm";
@@ -538,6 +541,17 @@ export interface IStorage {
   getTaskHelpers(taskId: string): Promise<TaskHelper[]>;
   getHelperTaskIds(userId: string): Promise<string[]>;
   isTaskHelper(taskId: string, userId: string): Promise<boolean>;
+
+  // Pending user operations
+  getPendingUsers(status?: string): Promise<PendingUser[]>;
+  getPendingUser(id: string): Promise<PendingUser | undefined>;
+  getPendingUserByUsername(username: string): Promise<PendingUser | undefined>;
+  getPendingUserByEmail(email: string): Promise<PendingUser | undefined>;
+  createPendingUser(data: InsertPendingUser): Promise<PendingUser>;
+  updatePendingUser(id: string, data: Partial<PendingUser>): Promise<PendingUser | undefined>;
+  deletePendingUser(id: string): Promise<void>;
+  getPendingUserCount(): Promise<number>;
+  expireOldPendingUsers(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2912,6 +2926,69 @@ export class DatabaseStorage implements IStorage {
       .from(taskHelpers)
       .where(and(eq(taskHelpers.taskId, taskId), eq(taskHelpers.userId, userId)));
     return rows.length > 0;
+  }
+
+  async getPendingUsers(status?: string): Promise<PendingUser[]> {
+    if (status) {
+      return await this.db.select().from(pendingUsers)
+        .where(eq(pendingUsers.status, status as any))
+        .orderBy(desc(pendingUsers.submittedAt));
+    }
+    return await this.db.select().from(pendingUsers)
+      .orderBy(desc(pendingUsers.submittedAt));
+  }
+
+  async getPendingUser(id: string): Promise<PendingUser | undefined> {
+    const [user] = await this.db.select().from(pendingUsers).where(eq(pendingUsers.id, id));
+    return user;
+  }
+
+  async getPendingUserByUsername(username: string): Promise<PendingUser | undefined> {
+    const [user] = await this.db.select().from(pendingUsers)
+      .where(and(eq(pendingUsers.username, username), eq(pendingUsers.status, "pending")));
+    return user;
+  }
+
+  async getPendingUserByEmail(email: string): Promise<PendingUser | undefined> {
+    const [user] = await this.db.select().from(pendingUsers)
+      .where(and(eq(pendingUsers.email, email), eq(pendingUsers.status, "pending")));
+    return user;
+  }
+
+  async createPendingUser(data: InsertPendingUser): Promise<PendingUser> {
+    const [user] = await this.db.insert(pendingUsers).values(data).returning();
+    return user;
+  }
+
+  async updatePendingUser(id: string, data: Partial<PendingUser>): Promise<PendingUser | undefined> {
+    const [user] = await this.db.update(pendingUsers)
+      .set(data)
+      .where(eq(pendingUsers.id, id))
+      .returning();
+    return user;
+  }
+
+  async deletePendingUser(id: string): Promise<void> {
+    await this.db.delete(pendingUsers).where(eq(pendingUsers.id, id));
+  }
+
+  async getPendingUserCount(): Promise<number> {
+    const rows = await this.db.select({ id: pendingUsers.id })
+      .from(pendingUsers)
+      .where(eq(pendingUsers.status, "pending"));
+    return rows.length;
+  }
+
+  async expireOldPendingUsers(): Promise<number> {
+    const now = new Date();
+    const expired = await this.db.update(pendingUsers)
+      .set({ status: "expired" })
+      .where(and(
+        eq(pendingUsers.status, "pending"),
+        lte(pendingUsers.expiresAt, now)
+      ))
+      .returning();
+    return expired.length;
   }
 }
 

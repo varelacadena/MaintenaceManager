@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import RequestAccess from "@/pages/RequestAccess";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Requests from "@/pages/Requests";
@@ -74,6 +75,7 @@ function AuthenticatedApp() {
     const path = window.location.pathname;
     if (path === "/forgot-password") return <ForgotPassword />;
     if (path === "/reset-password") return <ResetPassword />;
+    if (path === "/request-access") return <RequestAccess />;
     if (path && path !== "/" && path !== "/login") {
       const fullUrl = path + window.location.search + window.location.hash;
       sessionStorage.setItem("returnUrl", fullUrl);

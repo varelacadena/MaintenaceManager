@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Users as UsersIcon, Mail, Plus, Edit, Trash2, User as UserIcon, Lock, Bot, X, UserPlus, Shield } from "lucide-react";
+import { Users as UsersIcon, Mail, Plus, Edit, Trash2, User as UserIcon, Lock, Bot, X, UserPlus, Shield, Clock, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
@@ -139,8 +139,66 @@ export default function Users() {
 
   const [editPassword, setEditPassword] = useState("");
 
+  const [isPendingReviewOpen, setIsPendingReviewOpen] = useState(false);
+  const [selectedPendingUser, setSelectedPendingUser] = useState<any>(null);
+  const [denyReason, setDenyReason] = useState("");
+  const [isDenyMode, setIsDenyMode] = useState(false);
+
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
+  });
+
+  const { data: pendingUsers = [], isLoading: isPendingLoading } = useQuery<any[]>({
+    queryKey: ["/api/pending-users"],
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/pending-users/${id}/approve`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/counts"] });
+      setIsPendingReviewOpen(false);
+      setSelectedPendingUser(null);
+      toast({ title: "User Approved", description: "The account has been created and the user has been notified." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Approval Failed", description: error.message || "Failed to approve user", variant: "destructive" });
+    },
+  });
+
+  const denyMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const response = await apiRequest("POST", `/api/pending-users/${id}/deny`, { reason });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/counts"] });
+      setIsPendingReviewOpen(false);
+      setSelectedPendingUser(null);
+      setDenyReason("");
+      setIsDenyMode(false);
+      toast({ title: "Request Denied", description: "The user has been notified of the decision." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Denial Failed", description: error.message || "Failed to deny request", variant: "destructive" });
+    },
+  });
+
+  const deletePendingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/pending-users/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/counts"] });
+      toast({ title: "Request Deleted" });
+    },
   });
 
   const createUserMutation = useMutation({
@@ -656,6 +714,14 @@ export default function Users() {
       <Tabs defaultValue="users" data-testid="tabs-user-management">
         <TabsList>
           <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
+          <TabsTrigger value="pending" data-testid="tab-pending" className="gap-1.5">
+            Pending
+            {pendingUsers.filter((p: any) => p.status === "pending").length > 0 && (
+              <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 text-[9px] font-medium text-white px-1" data-testid="badge-pending-count">
+                {pendingUsers.filter((p: any) => p.status === "pending").length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="credentials" data-testid="tab-credentials">Credentials</TabsTrigger>
         </TabsList>
 
@@ -737,6 +803,111 @@ export default function Users() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending">
+          <Card>
+            <CardHeader className="p-3 md:p-4">
+              <CardTitle className="text-base md:text-lg">Access Requests</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 md:p-4 pt-0">
+              {isPendingLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : pendingUsers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="text-no-pending">
+                  No signup requests
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingUsers.map((pu: any) => {
+                    const initials = `${pu.firstName?.[0] || ""}${pu.lastName?.[0] || ""}`.toUpperCase() || "?";
+                    const statusColors: Record<string, string> = {
+                      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+                      approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+                      denied: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                      expired: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                    };
+                    return (
+                      <div
+                        key={pu.id}
+                        className="flex items-center gap-3 p-3 rounded-md border"
+                        data-testid={`pending-user-${pu.id}`}
+                      >
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">{pu.firstName} {pu.lastName}</span>
+                            <Badge variant="outline" className="text-[10px]">{pu.requestedRole}</Badge>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusColors[pu.status] || ""}`}>
+                              {pu.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                            <span>{pu.username}</span>
+                            <span>{pu.email}</span>
+                            {pu.submittedAt && <span>Submitted {new Date(pu.submittedAt).toLocaleDateString()}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {pu.status === "pending" && (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedPendingUser(pu);
+                                  setIsDenyMode(false);
+                                  setDenyReason("");
+                                  setIsPendingReviewOpen(true);
+                                }}
+                                data-testid={`button-review-${pu.id}`}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => approveMutation.mutate(pu.id)}
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-quick-approve-${pu.id}`}
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedPendingUser(pu);
+                                  setIsDenyMode(true);
+                                  setDenyReason("");
+                                  setIsPendingReviewOpen(true);
+                                }}
+                                data-testid={`button-quick-deny-${pu.id}`}
+                              >
+                                <XCircle className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </>
+                          )}
+                          {pu.status !== "pending" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => deletePendingMutation.mutate(pu.id)}
+                              data-testid={`button-delete-pending-${pu.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1161,6 +1332,116 @@ export default function Users() {
               </div>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPendingReviewOpen} onOpenChange={(open) => {
+        setIsPendingReviewOpen(open);
+        if (!open) {
+          setSelectedPendingUser(null);
+          setIsDenyMode(false);
+          setDenyReason("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Access Request</DialogTitle>
+            <DialogDescription>
+              Review the details and approve or deny this request
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPendingUser && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground text-xs">Name</span>
+                  <p className="font-medium" data-testid="text-pending-name">{selectedPendingUser.firstName} {selectedPendingUser.lastName}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Username</span>
+                  <p className="font-medium" data-testid="text-pending-username">{selectedPendingUser.username}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Email</span>
+                  <p className="font-medium" data-testid="text-pending-email">{selectedPendingUser.email}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Phone</span>
+                  <p className="font-medium">{selectedPendingUser.phoneNumber || "—"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Requested Role</span>
+                  <p className="font-medium capitalize" data-testid="text-pending-role">{selectedPendingUser.requestedRole}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Property</span>
+                  <p className="font-medium">{selectedPendingUser.requestedProperty || "—"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Submitted</span>
+                  <p className="font-medium">{selectedPendingUser.submittedAt ? new Date(selectedPendingUser.submittedAt).toLocaleDateString() : "—"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Expires</span>
+                  <p className="font-medium">{selectedPendingUser.expiresAt ? new Date(selectedPendingUser.expiresAt).toLocaleDateString() : "—"}</p>
+                </div>
+              </div>
+
+              {isDenyMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="denyReason" className="text-sm">Reason for denial (optional)</Label>
+                  <Input
+                    id="denyReason"
+                    value={denyReason}
+                    onChange={(e) => setDenyReason(e.target.value)}
+                    placeholder="Briefly explain why..."
+                    data-testid="input-deny-reason"
+                  />
+                </div>
+              )}
+
+              <DialogFooter className="gap-2">
+                {!isDenyMode ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDenyMode(true)}
+                      data-testid="button-deny-pending"
+                    >
+                      <XCircle className="w-4 h-4 mr-1.5" />
+                      Deny
+                    </Button>
+                    <Button
+                      onClick={() => approveMutation.mutate(selectedPendingUser.id)}
+                      disabled={approveMutation.isPending}
+                      data-testid="button-approve-pending"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                      {approveMutation.isPending ? "Approving..." : "Approve"}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDenyMode(false)}
+                      data-testid="button-cancel-deny"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => denyMutation.mutate({ id: selectedPendingUser.id, reason: denyReason })}
+                      disabled={denyMutation.isPending}
+                      data-testid="button-confirm-deny"
+                    >
+                      {denyMutation.isPending ? "Denying..." : "Confirm Deny"}
+                    </Button>
+                  </>
+                )}
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
