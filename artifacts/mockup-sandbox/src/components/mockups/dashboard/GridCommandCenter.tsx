@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { 
   BarChart3, BrainCircuit, Users, Truck, Clock, ClipboardList,
-  Briefcase, LayoutKanban, ArrowUpRight, CheckCircle2, 
+  Briefcase, Columns3, ArrowUpRight, CheckCircle2, 
   AlertCircle, AlertTriangle, Zap, Check, ArrowRight
 } from "lucide-react";
 import {
@@ -365,7 +365,7 @@ export function GridCommandCenter() {
           <Card className="lg:col-span-8 shadow-sm flex flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <LayoutKanban className="w-5 h-5 text-primary" />
+                <Columns3 className="w-5 h-5 text-primary" />
                 Active Workflow
               </CardTitle>
             </CardHeader>
