@@ -16,7 +16,7 @@ The platform employs a 4-role model (Admin, Technician, Staff, Student) with rol
 
 ### UI/UX Decisions
 
-The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui components styled with Tailwind CSS. It features a mobile-first, action-focused design with PWA support. Dashboards are interactive with clickable filter cards and quick view drawers. Analytics are consolidated into a dynamic page with tab-based navigation, lazy loading, and consistent filtering. User experiences for students and technicians are simplified with "dummy-proof" interfaces, minimal headers, and full-width layouts. The calendar offers week and day views with an hourly time grid and assignee filters.
+The frontend is built with React 18, TypeScript, and Vite, utilizing Radix UI and shadcn/ui components styled with Tailwind CSS. It features a mobile-first, action-focused design with PWA support. The admin dashboard uses a "Sectioned Dashboard" (Variant C) layout: full-width KPI banner (5 tiles), three-column body (technician progress left, task board center, AI/requests/vehicles right) with hover popovers on task rows and responsive mobile stacking. Staff, student, and technician dashboards remain simplified role-specific views. The admin dashboard component lives at `client/src/components/dashboard/AdminDashboard.tsx`. Analytics are consolidated into a dynamic page with tab-based navigation, lazy loading, and consistent filtering. User experiences for students and technicians are simplified with "dummy-proof" interfaces, minimal headers, and full-width layouts. The calendar offers week and day views with an hourly time grid and assignee filters.
 
 ### Technical Implementations
 

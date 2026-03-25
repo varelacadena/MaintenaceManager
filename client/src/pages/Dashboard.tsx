@@ -3,28 +3,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation } from "wouter";
 import {
-  CalendarDays,
-  Clock,
   CheckCircle2,
-  AlertTriangle,
-  User,
   Plus,
   Car,
   ClipboardList,
-  List,
-  Calendar as CalendarIcon,
   Eye,
   EyeOff,
-  FolderKanban,
-  ArrowUpRight,
-  Bot,
-  Sparkles,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import type { ServiceRequest, Task, VehicleReservation, Vehicle, User as UserType, Property, Project } from "@shared/schema";
+import type { ServiceRequest, Task, VehicleReservation, User as UserType, Property, Project } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -39,22 +28,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import FilterCard from "@/components/dashboard/FilterCard";
 import TaskCard from "@/components/dashboard/TaskCard";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import EmptyState from "@/components/dashboard/EmptyState";
 import EmergencyContactBanner from "@/components/EmergencyContactBanner";
-import { isToday, isPast, parseISO, startOfDay, format, isSameDay } from "date-fns";
-
-type FilterType = "due_today" | "overdue" | "high_priority" | "unassigned" | "completed_today" | "all";
+import AdminDashboard from "@/components/dashboard/AdminDashboard";
+import { parseISO, format, isSameDay } from "date-fns";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   
-  const [activeFilter, setActiveFilter] = useState<FilterType>("due_today");
-  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
   const [showCompleted, setShowCompleted] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -86,11 +71,6 @@ export default function Dashboard() {
     queryKey: ["/api/vehicle-reservations/my"],
   });
 
-  const { data: vehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
-    enabled: createDialogOpen,
-  });
-
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
     enabled: user?.role === "admin",
@@ -110,14 +90,6 @@ export default function Dashboard() {
     queryKey: ["/api/ai-stats"],
     enabled: user?.role === "admin",
   });
-
-  const projectStats = useMemo(() => {
-    const inProgress = projects.filter(p => p.status === "in_progress").length;
-    const planning = projects.filter(p => p.status === "planning").length;
-    const totalBudget = projects.reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0);
-    const highPriority = projects.filter(p => (p.priority === "high" || p.priority === "critical") && p.status !== "completed").length;
-    return { total: projects.length, inProgress, planning, totalBudget, highPriority };
-  }, [projects]);
 
   const statusMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: Task["status"] }) => {
@@ -246,92 +218,6 @@ export default function Dashboard() {
   // Use student-filtered tasks for students, all tasks for other roles
   const baseTasks = user?.role === "student" ? studentTodayTasks : tasks;
 
-  const taskCounts = useMemo(() => {
-    const today = startOfDay(new Date());
-    
-    const dueToday = baseTasks.filter((t) => {
-      if (t.status === "completed") return false;
-      if (!t.initialDate) return false;
-      const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-      return taskDate.getTime() === today.getTime();
-    }).length;
-
-    const overdue = baseTasks.filter((t) => {
-      if (t.status === "completed") return false;
-      if (!t.estimatedCompletionDate) return false;
-      return isPast(parseISO(t.estimatedCompletionDate as unknown as string));
-    }).length;
-
-    const highPriority = baseTasks.filter(
-      (t) => t.urgency === "high" && t.status !== "completed"
-    ).length;
-
-    const unassigned = baseTasks.filter(
-      (t) => !t.assignedToId && t.status !== "completed"
-    ).length;
-
-    const completedToday = baseTasks.filter((t) => {
-      if (t.status !== "completed") return false;
-      if (!t.actualCompletionDate) return false;
-      return isToday(parseISO(t.actualCompletionDate as unknown as string));
-    }).length;
-
-    return { dueToday, overdue, highPriority, unassigned, completedToday };
-  }, [baseTasks]);
-
-  const filteredTasks = useMemo(() => {
-    const today = startOfDay(new Date());
-    
-    let filtered = [...baseTasks];
-
-    if (!showCompleted) {
-      filtered = filtered.filter((t) => t.status !== "completed");
-    }
-
-    switch (activeFilter) {
-      case "due_today":
-        filtered = filtered.filter((t) => {
-          if (!t.initialDate) return false;
-          const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-          return taskDate.getTime() === today.getTime();
-        });
-        break;
-      case "overdue":
-        filtered = filtered.filter((t) => {
-          if (t.status === "completed") return false;
-          if (!t.estimatedCompletionDate) return false;
-          return isPast(parseISO(t.estimatedCompletionDate as unknown as string));
-        });
-        break;
-      case "high_priority":
-        filtered = filtered.filter((t) => t.urgency === "high" && t.status !== "completed");
-        break;
-      case "unassigned":
-        filtered = filtered.filter((t) => !t.assignedToId && t.status !== "completed");
-        break;
-      case "completed_today":
-        filtered = [...baseTasks].filter((t) => {
-          if (t.status !== "completed") return false;
-          if (!t.actualCompletionDate) return false;
-          return isToday(parseISO(t.actualCompletionDate as unknown as string));
-        });
-        break;
-      case "all":
-        break;
-    }
-
-    return filtered.sort((a, b) => {
-      const urgencyOrder = { high: 0, medium: 1, low: 2 };
-      if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
-        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
-      }
-      if (!a.estimatedCompletionDate) return 1;
-      if (!b.estimatedCompletionDate) return -1;
-      return new Date(a.estimatedCompletionDate as unknown as string).getTime() -
-             new Date(b.estimatedCompletionDate as unknown as string).getTime();
-    });
-  }, [baseTasks, activeFilter, showCompleted]);
-
   const handleStatusChange = (taskId: string, status: Task["status"]) => {
     statusMutation.mutate({ taskId, status });
   };
@@ -339,17 +225,6 @@ export default function Dashboard() {
   const handleViewDetails = (task: Task) => {
     setSelectedTask(task);
     setDrawerOpen(true);
-  };
-
-  const getFilterTitle = () => {
-    switch (activeFilter) {
-      case "due_today": return "Today's Tasks";
-      case "overdue": return "Overdue Tasks";
-      case "high_priority": return "High Priority Tasks";
-      case "unassigned": return "Unassigned Tasks";
-      case "completed_today": return "Completed Today";
-      case "all": return "All Tasks";
-    }
   };
 
   const isLoading = tasksLoading || reservationsLoading;
@@ -746,382 +621,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-3 md:space-y-4 pb-6">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div className="space-y-0.5">
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-dashboard-title">
-            Welcome back, {user?.firstName || "User"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {format(new Date(), "EEEE, MMMM d, yyyy")}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/tasks/new">
-            <Button data-testid="button-new-task">
-              <Plus className="w-4 h-4 mr-2" />
-              New Task
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-        <FilterCard
-          title="Due Today"
-          count={taskCounts.dueToday}
-          icon={CalendarDays}
-          color="blue"
-          isActive={activeFilter === "due_today"}
-          onClick={() => setActiveFilter("due_today")}
-          testId="filter-due-today"
-        />
-        <FilterCard
-          title="Overdue"
-          count={taskCounts.overdue}
-          icon={AlertTriangle}
-          color="red"
-          isActive={activeFilter === "overdue"}
-          onClick={() => setActiveFilter("overdue")}
-          testId="filter-overdue"
-        />
-        <FilterCard
-          title="High Priority"
-          count={taskCounts.highPriority}
-          icon={Clock}
-          color="orange"
-          isActive={activeFilter === "high_priority"}
-          onClick={() => setActiveFilter("high_priority")}
-          testId="filter-high-priority"
-        />
-        <FilterCard
-          title="Unassigned"
-          count={taskCounts.unassigned}
-          icon={User}
-          color="purple"
-          isActive={activeFilter === "unassigned"}
-          onClick={() => setActiveFilter("unassigned")}
-          testId="filter-unassigned"
-        />
-        <FilterCard
-          title="Completed Today"
-          count={taskCounts.completedToday}
-          icon={CheckCircle2}
-          color="green"
-          isActive={activeFilter === "completed_today"}
-          onClick={() => setActiveFilter("completed_today")}
-          testId="filter-completed-today"
-        />
-      </div>
-
-      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-indigo-200 dark:border-indigo-800" data-testid="card-projects-summary">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <FolderKanban className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <CardTitle className="text-lg">Projects Overview</CardTitle>
-            </div>
-            <Link href="/work">
-              <Button variant="outline" size="sm" data-testid="button-view-projects">
-                View All
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{projectStats.total}</p>
-              <p className="text-xs text-muted-foreground">Total Projects</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{projectStats.inProgress}</p>
-              <p className="text-xs text-muted-foreground">In Progress</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{projectStats.highPriority}</p>
-              <p className="text-xs text-muted-foreground">High Priority</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                ${projectStats.totalBudget.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Budget</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {aiStats && aiStats.total > 0 && (
-        <Card
-          className="bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/20 dark:to-fuchsia-950/20 border-violet-200 dark:border-violet-800 hover-elevate cursor-pointer"
-          data-testid="card-ai-recommendations"
-          onClick={() => setLocation("/ai-agent")}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                <CardTitle className="text-lg">AI Recommendations</CardTitle>
-                {(aiStats.pending ?? 0) > 0 && (
-                  <Badge variant="secondary" className="ml-1" data-testid="badge-ai-pending-count">
-                    {aiStats.pending} pending
-                  </Badge>
-                )}
-              </div>
-              <Button variant="outline" size="sm" data-testid="button-review-ai">
-                Review
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="text-ai-pending">{aiStats.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending Review</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-ai-approved">{aiStats.approved}</p>
-                <p className="text-xs text-muted-foreground">Approved</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-ai-auto">{aiStats.autoApplied}</p>
-                <p className="text-xs text-muted-foreground">Auto-Applied</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-ai-rate">{aiStats.acceptanceRate}%</p>
-                <p className="text-xs text-muted-foreground">Acceptance Rate</p>
-              </div>
-            </div>
-            {(aiStats.pending ?? 0) > 0 && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-violet-700 dark:text-violet-300">
-                <Sparkles className="w-4 h-4" />
-                <span data-testid="text-ai-breakdown">
-                  {(() => {
-                    const actionLabels: Record<string, string> = {
-                      triage: "triage",
-                      schedule: "scheduling",
-                      assign: "assignment",
-                      suggest_date: "date suggestion",
-                      pm_trigger: "PM trigger",
-                      fleet_maintenance: "fleet maintenance",
-                      dependency_check: "dependency check",
-                    };
-                    const byAction = aiStats.pendingByAction || {};
-                    const parts = Object.entries(byAction)
-                      .filter(([, count]) => count > 0)
-                      .map(([action, count]) => `${count} ${actionLabels[action] || action}`);
-                    return parts.length > 0
-                      ? `${parts.join(", ")} ${aiStats.pending === 1 ? "needs" : "need"} review`
-                      : `${aiStats.pending} ${aiStats.pending === 1 ? "recommendation needs" : "recommendations need"} review`;
-                  })()}
-                </span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <CardTitle className="text-lg">{getFilterTitle()}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="text-xs"
-                data-testid="toggle-completed"
-              >
-                {showCompleted ? (
-                  <><EyeOff className="w-3 h-3 mr-1" /> Hide Completed</>
-                ) : (
-                  <><Eye className="w-3 h-3 mr-1" /> Show Completed</>
-                )}
-              </Button>
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline")}>
-                <TabsList className="h-8">
-                  <TabsTrigger value="list" className="text-xs px-2" data-testid="view-list">
-                    <List className="w-3 h-3 mr-1" />
-                    List
-                  </TabsTrigger>
-                  <TabsTrigger value="timeline" className="text-xs px-2" data-testid="view-timeline">
-                    <CalendarIcon className="w-3 h-3 mr-1" />
-                    Timeline
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredTasks.length === 0 ? (
-            <EmptyState
-              icon={CheckCircle2}
-              title={activeFilter === "completed_today" ? "No tasks completed yet" : "No tasks found"}
-              description={
-                activeFilter === "due_today"
-                  ? "Great job! No tasks scheduled for today"
-                  : activeFilter === "overdue"
-                  ? "All tasks are on track"
-                  : activeFilter === "unassigned"
-                  ? "All tasks have been assigned"
-                  : "Try selecting a different filter"
-              }
-              actionLabel={activeFilter !== "completed_today" ? "Create Task" : undefined}
-              actionHref={activeFilter !== "completed_today" ? "/tasks/new" : undefined}
-              testId="empty-tasks"
-            />
-          ) : viewMode === "list" ? (
-            <div className="space-y-3">
-              {filteredTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  assignee={getUserById(task.assignedToId)}
-                  property={getPropertyById(task.propertyId)}
-                  onStatusChange={handleStatusChange}
-                  onViewDetails={handleViewDetails}
-                  isPending={statusMutation.isPending}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredTasks.map((task) => {
-                const startHour = task.initialDate
-                  ? new Date(task.initialDate as unknown as string).getHours()
-                  : 9;
-                const widthPercent = Math.min(100, Math.max(20, 30 + Math.random() * 40));
-                const leftPercent = Math.max(0, (startHour - 8) * 6.25);
-
-                return (
-                  <div
-                    key={task.id}
-                    className="relative h-12 bg-muted/30 rounded-lg overflow-hidden"
-                    onClick={() => handleViewDetails(task)}
-                    data-testid={`timeline-task-${task.id}`}
-                  >
-                    <div
-                      className={`absolute top-1 bottom-1 rounded-md px-3 flex items-center cursor-pointer transition-all hover:brightness-95 ${
-                        task.urgency === "high"
-                          ? "bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500"
-                          : task.urgency === "medium"
-                          ? "bg-yellow-100 dark:bg-yellow-900/40 border-l-4 border-yellow-500"
-                          : "bg-blue-100 dark:bg-blue-900/40 border-l-4 border-blue-500"
-                      }`}
-                      style={{
-                        left: `${leftPercent}%`,
-                        width: `${widthPercent}%`,
-                      }}
-                    >
-                      <span className="text-xs font-medium truncate">{task.name}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="flex justify-between text-[10px] text-muted-foreground px-1 pt-2">
-                {Array.from({ length: 9 }, (_, i) => (
-                  <span key={i}>{8 + i}:00</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card 
-          className="hover-elevate cursor-pointer" 
-          onClick={() => setLocation("/requests")}
-          data-testid="card-recent-requests"
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <ClipboardList className="w-5 h-5" />
-                Recent Service Requests
-              </span>
-              <Badge variant="outline">{requests.filter(r => r.status === "pending").length} pending</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentRequests.length === 0 ? (
-              <EmptyState
-                icon={ClipboardList}
-                title="No requests yet"
-                description="Service requests will appear here"
-                testId="empty-recent-requests"
-              />
-            ) : (
-              <div className="space-y-2">
-                {recentRequests.map((request) => (
-                  <Link key={request.id} href={`/requests/${request.id}`}>
-                    <div 
-                      className="flex items-start gap-3 p-2 rounded-lg hover-elevate" 
-                      onClick={(e) => e.stopPropagation()}
-                      data-testid={`recent-request-${request.id}`}
-                    >
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getStatusColor(request.status)}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{request.title}</p>
-                        <p className="text-xs text-muted-foreground">{request.createdAt ? format(new Date(request.createdAt), "MMM d") : "N/A"}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card 
-          className="hover-elevate cursor-pointer" 
-          onClick={() => setLocation("/vehicles?tab=reservations")}
-          data-testid="card-vehicle-status"
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Car className="w-5 h-5" />
-              Vehicle Reservations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {vehicleReservations.length === 0 ? (
-              <EmptyState
-                icon={Car}
-                title="No reservations"
-                description="Vehicle reservations will appear here"
-                actionLabel="View Fleet"
-                actionHref="/vehicles"
-                testId="empty-vehicle-reservations"
-              />
-            ) : (
-              <div className="text-center py-4">
-                <div className="text-3xl font-bold">{vehicleReservations.length}</div>
-                <p className="text-sm text-muted-foreground mb-2">Active Reservations</p>
-                <Button variant="ghost" size="sm" onClick={() => setLocation("/vehicles?tab=reservations")} data-testid="button-manage-reservations">Manage Reservations</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <TaskDetailDrawer
-        task={selectedTask}
-        assignee={selectedTask ? getUserById(selectedTask.assignedToId) : null}
-        property={selectedTask ? getPropertyById(selectedTask.propertyId) : null}
-        isOpen={drawerOpen}
-        onClose={() => {
-          setDrawerOpen(false);
-          setSelectedTask(null);
-        }}
-        onStatusChange={handleStatusChange}
-        isPending={statusMutation.isPending}
-      />
-    </div>
+    <AdminDashboard
+      tasks={baseTasks}
+      users={users}
+      properties={properties}
+      projects={projects}
+      requests={requests}
+      vehicleReservations={vehicleReservations}
+      aiStats={aiStats}
+      onStatusChange={handleStatusChange}
+      statusMutationPending={statusMutation.isPending}
+    />
   );
 }
