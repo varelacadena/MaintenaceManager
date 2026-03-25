@@ -605,7 +605,7 @@ export function TwoColumnForm() {
                 <div className="space-y-4 pt-4 border-t border-border/50">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</Label>
                   
-                  <Select value={contactType} onValueChange={(val: any) => setContactType(val)}>
+                  <Select value={contactType} onValueChange={(val: "requester" | "staff" | "other") => setContactType(val)}>
                     <SelectTrigger className="bg-background h-9">
                       <SelectValue />
                     </SelectTrigger>
