@@ -35,7 +35,9 @@ export function registerNotificationRoutes(app: Express) {
         });
         pendingVehicleReservations = vehicleReservations.length;
 
-        pendingSignups = await storage.getPendingUserCount();
+        if (currentUser.role === "admin") {
+          pendingSignups = await storage.getPendingUserCount();
+        }
       } else {
         const myReservations = await storage.getVehicleReservations({
           userId: userId,

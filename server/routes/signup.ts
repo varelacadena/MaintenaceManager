@@ -136,8 +136,11 @@ export function registerSignupRoutes(app: Express) {
         }
       }
 
-      if (updates.requestedRole && updates.requestedRole === "admin") {
-        return res.status(400).json({ message: "Cannot assign admin role through signup" });
+      const validRoles = ["staff", "technician", "manager"];
+      if (updates.requestedRole) {
+        if (!validRoles.includes(updates.requestedRole)) {
+          return res.status(400).json({ message: `Invalid role. Allowed roles: ${validRoles.join(", ")}` });
+        }
       }
 
       const updated = await storage.updatePendingUser(req.params.id, updates);
