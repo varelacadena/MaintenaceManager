@@ -1657,10 +1657,35 @@ export default function TaskDetail() {
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
           <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
             {taskIsHelper ? (
-              <div className="flex-1 flex items-center justify-center gap-2 py-2">
-                <Badge variant="outline" data-testid="badge-helper-status">Helper</Badge>
-                <span className="text-sm text-muted-foreground">You can log time and add notes</span>
-              </div>
+              activeTimer ? (
+                <div className="flex-1 flex items-center gap-3">
+                  <Badge variant="outline" data-testid="badge-helper-status">Helper</Badge>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={handleStartOrPause}
+                    disabled={stopTimerMutation.isPending}
+                    data-testid="bottom-button-helper-pause"
+                  >
+                    <Pause className="w-5 h-5" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground flex-1 text-center">Timer running</span>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center gap-3">
+                  <Badge variant="outline" data-testid="badge-helper-status">Helper</Badge>
+                  <Button
+                    size="lg"
+                    className="flex-1"
+                    onClick={handleStartOrPause}
+                    disabled={startTimerMutation.isPending}
+                    data-testid="bottom-button-helper-start"
+                  >
+                    <Play className="w-5 h-5 mr-2" />
+                    Log Time
+                  </Button>
+                </div>
+              )
             ) : isParentTask ? (
               <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
                 <Layers className="w-5 h-5 text-muted-foreground" />
