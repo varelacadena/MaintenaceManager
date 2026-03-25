@@ -409,7 +409,7 @@ function TaskTableRow({
             onSave={handleInlineEdit}
             linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
           />
-          {(task as any).isHelper && (
+          {(task as Task & { isHelper?: boolean }).isHelper && (
             <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
               Helper
             </Badge>

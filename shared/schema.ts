@@ -1550,3 +1550,12 @@ export const taskHelpersRelations = relations(taskHelpers, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export type TaskHelperWithUser = TaskHelper & {
+  user: { id: string; name: string; email: string; role: string };
+};
+
+export type TaskWithHelpers = Task & {
+  helpers: TaskHelperWithUser[];
+  isHelper: boolean;
+};

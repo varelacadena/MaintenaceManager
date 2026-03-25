@@ -1340,8 +1340,9 @@ export default function TaskDetail() {
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
   const isStudent = user?.role === "student";
-  const taskIsHelper = !!(task as any).isHelper;
-  const taskHelpers = (task as any).helpers || [];
+  const taskWithHelpers = task as Task & { helpers?: Array<{ userId: string; user?: { id: string; name: string; email: string; role: string } }>; isHelper?: boolean };
+  const taskIsHelper = !!taskWithHelpers.isHelper;
+  const taskHelpers = taskWithHelpers.helpers || [];
   const estimateBlocksCompletion = task.requiresEstimate && task.estimateStatus !== "approved";
   const assignedUser = users.find(u => u.id === task.assignedToId);
   const adminUsers = users.filter(u => u.role === "admin");

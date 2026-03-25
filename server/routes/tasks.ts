@@ -748,9 +748,14 @@ export function registerTaskRoutes(app: Express) {
     }
   );
 
-  app.post("/api/parts", isAuthenticated, requireTaskExecutorOrAdmin, requireTaskAccess(), async (req, res) => {
+  app.post("/api/parts", isAuthenticated, requireTaskExecutorOrAdmin, requireTaskAccess(), async (req: any, res) => {
     try {
       const partData = insertPartUsedSchema.parse(req.body);
+      const userId = req.currentUser?.id || req.userId;
+      const isHelper = await storage.isTaskHelper(partData.taskId, userId);
+      if (isHelper) {
+        return res.status(403).json({ message: "Forbidden: Student helpers cannot add parts" });
+      }
       const part = await storage.createPartUsed(partData);
       res.json(part);
     } catch (error) {
@@ -764,9 +769,14 @@ export function registerTaskRoutes(app: Express) {
       if (!part) {
         return res.status(404).json({ message: "Part not found" });
       }
-      const hasAccess = await canAccessTask(req.currentUser?.id || req.userId, part.taskId);
+      const userId = req.currentUser?.id || req.userId;
+      const hasAccess = await canAccessTask(userId, part.taskId);
       if (!hasAccess) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
+      const isHelper = await storage.isTaskHelper(part.taskId, userId);
+      if (isHelper) {
+        return res.status(403).json({ message: "Forbidden: Student helpers cannot delete parts" });
       }
       await storage.deletePartUsed(req.params.id);
       res.json({ success: true });

@@ -181,8 +181,9 @@ export default function EditTask() {
       if (task.estimatedCompletionDate) {
         form.setValue("estimatedCompletionDate", new Date(task.estimatedCompletionDate).toISOString().split("T")[0]);
       }
-      if ((task as any).scheduledStartTime) {
-        (form as any).setValue("scheduledStartTime", (task as any).scheduledStartTime);
+      const taskExt = task as Task & { scheduledStartTime?: string; helpers?: Array<{ userId: string }> };
+      if (taskExt.scheduledStartTime) {
+        form.setValue("scheduledStartTime" as keyof typeof form.getValues, taskExt.scheduledStartTime);
       }
       if (task.isCampusWide) {
         setLocationScope("campus");
@@ -237,8 +238,8 @@ export default function EditTask() {
 
       form.setValue("createdById", task.createdById);
 
-      if ((task as any).helpers) {
-        setSelectedHelperIds((task as any).helpers.map((h: any) => h.userId));
+      if (taskExt.helpers) {
+        setSelectedHelperIds(taskExt.helpers.map((h) => h.userId));
       }
 
       setIsTaskLoaded(true);
