@@ -3,8 +3,5 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/dashboard/GridCommandCenter.tsx": () => import("../components/mockups/dashboard/GridCommandCenter.tsx"),
   "./components/mockups/dashboard/SectionedDashboard.tsx": () => import("../components/mockups/dashboard/SectionedDashboard.tsx"),
-  "./components/mockups/dashboard/TwoColumnOps.tsx": () => import("../components/mockups/dashboard/TwoColumnOps.tsx"),
-  "./components/mockups/tech-progress/ActivityTimeline.tsx": () => import("../components/mockups/tech-progress/ActivityTimeline.tsx"),
-  "./components/mockups/tech-progress/CompactBars.tsx": () => import("../components/mockups/tech-progress/CompactBars.tsx"),
-  "./components/mockups/tech-progress/RadialGauges.tsx": () => import("../components/mockups/tech-progress/RadialGauges.tsx")
+  "./components/mockups/dashboard/TwoColumnOps.tsx": () => import("../components/mockups/dashboard/TwoColumnOps.tsx")
 };

@@ -162,6 +162,20 @@ export function GridCommandCenter() {
               </div>
             </CardHeader>
             <CardContent>
+              <div className="flex gap-4 mb-4">
+                <div className="flex-1 text-center p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg">
+                  <p className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{aiRecommendations.approved}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Approved</p>
+                </div>
+                <div className="flex-1 text-center p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg">
+                  <p className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{aiRecommendations.autoApplied}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Auto-Applied</p>
+                </div>
+                <div className="flex-1 text-center p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                  <p className="text-lg font-bold text-emerald-600">{aiRecommendations.acceptanceRate}%</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Accepted</p>
+                </div>
+              </div>
               <div className="space-y-3">
                 {aiRecommendations.suggestions.map((suggestion, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-indigo-100/50 dark:border-indigo-900/30 shadow-sm hover:shadow transition-shadow">
@@ -423,7 +437,15 @@ export function GridCommandCenter() {
   );
 }
 
-function TaskCard({ task }: { task: any }) {
+interface BoardTask {
+  id: number;
+  title: string;
+  priority: string;
+  assignee: string;
+  reason?: string;
+}
+
+function TaskCard({ task }: { task: BoardTask }) {
   return (
     <div className="bg-background p-3 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition-all hover:border-primary/30 group">
       <div className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">{task.title}</div>

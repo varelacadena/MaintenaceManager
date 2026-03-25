@@ -351,14 +351,22 @@ export function SectionedDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-3 mb-2">
-                  <div className="bg-background rounded-md p-2 flex-1 text-center border shadow-sm">
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
                     <p className="text-xl font-bold text-primary">{aiRecommendations.pending}</p>
                     <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Pending</p>
                   </div>
-                  <div className="bg-background rounded-md p-2 flex-1 text-center border shadow-sm">
+                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
                     <p className="text-xl font-bold text-emerald-600">{aiRecommendations.acceptanceRate}%</p>
                     <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Accepted</p>
+                  </div>
+                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
+                    <p className="text-xl font-bold text-indigo-600">{aiRecommendations.approved}</p>
+                    <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Approved</p>
+                  </div>
+                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
+                    <p className="text-xl font-bold text-indigo-600">{aiRecommendations.autoApplied}</p>
+                    <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Auto-Applied</p>
                   </div>
                 </div>
                 <div className="space-y-2">

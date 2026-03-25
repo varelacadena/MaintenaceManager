@@ -340,6 +340,20 @@ export function TwoColumnOps() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="grid grid-cols-3 gap-2 mb-1">
+                  <div className="text-center p-2 bg-white/70 dark:bg-background/70 rounded-lg border border-indigo-50 dark:border-indigo-900/30">
+                    <p className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{aiRecommendations.approved}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Approved</p>
+                  </div>
+                  <div className="text-center p-2 bg-white/70 dark:bg-background/70 rounded-lg border border-indigo-50 dark:border-indigo-900/30">
+                    <p className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{aiRecommendations.autoApplied}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Auto-Applied</p>
+                  </div>
+                  <div className="text-center p-2 bg-white/70 dark:bg-background/70 rounded-lg border border-emerald-50 dark:border-emerald-900/30">
+                    <p className="text-lg font-bold text-emerald-600">{aiRecommendations.acceptanceRate}%</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Accepted</p>
+                  </div>
+                </div>
                 {aiRecommendations.suggestions.map((sugg, i) => (
                   <div key={i} className="flex gap-3 bg-white/60 dark:bg-background/60 p-3 rounded-lg border border-indigo-50 dark:border-indigo-900/30 shadow-sm">
                     <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
