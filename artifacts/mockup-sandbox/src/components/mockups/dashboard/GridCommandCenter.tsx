@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { 
-  BarChart3, BrainCircuit, Users, Truck, Clock, 
+  BarChart3, BrainCircuit, Users, Truck, Clock, ClipboardList,
   Briefcase, LayoutKanban, ArrowUpRight, CheckCircle2, 
   AlertCircle, AlertTriangle, Zap, Check, ArrowRight
 } from "lucide-react";
@@ -71,24 +71,21 @@ export function GridCommandCenter() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
-                    Work Order Health
+                    Work Order Overview
                   </CardTitle>
                   <CardDescription>Key performance indicators and volume trends</CardDescription>
                 </div>
-                <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                  {kpis.openTasks} Active
-                </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-8 mt-2">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 flex-1">
-                  <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/50">
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-sm font-medium">Overdue</span>
+                  <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-xl border border-primary/20">
+                    <div className="flex items-center gap-2 text-primary mb-1">
+                      <ClipboardList className="w-4 h-4" />
+                      <span className="text-sm font-medium">Open Tasks</span>
                     </div>
-                    <div className="text-3xl font-bold text-red-700 dark:text-red-300">{kpis.overdue}</div>
+                    <div className="text-3xl font-bold text-primary">{kpis.openTasks}</div>
                   </div>
                   <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-xl border border-orange-100 dark:border-orange-900/50">
                     <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
@@ -96,6 +93,13 @@ export function GridCommandCenter() {
                       <span className="text-sm font-medium">High Priority</span>
                     </div>
                     <div className="text-3xl font-bold text-orange-700 dark:text-orange-300">{kpis.highPriority}</div>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/50">
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm font-medium">Overdue</span>
+                    </div>
+                    <div className="text-3xl font-bold text-red-700 dark:text-red-300">{kpis.overdue}</div>
                   </div>
                   <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">
                     <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
@@ -107,16 +111,9 @@ export function GridCommandCenter() {
                   <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
                     <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
                       <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-sm font-medium">Completed</span>
+                      <span className="text-sm font-medium">Completed Today</span>
                     </div>
                     <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{kpis.completedToday}</div>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 mb-1">
-                      <Users className="w-4 h-4" />
-                      <span className="text-sm font-medium">Unassigned</span>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-700 dark:text-slate-300">{kpis.unassigned}</div>
                   </div>
                 </div>
                 

@@ -6,7 +6,7 @@ import {
   Calendar,
   AlertCircle,
   AlertTriangle,
-  UserX,
+  ClipboardList,
   CheckCircle2,
   Clock,
   Sparkles,
@@ -129,12 +129,12 @@ export function TwoColumnOps() {
               
               <Card>
                 <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-400">
-                    <UserX className="h-5 w-5" />
+                  <div className="p-2 bg-primary/10 rounded-full text-primary">
+                    <ClipboardList className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{kpis.unassigned}</div>
-                    <div className="text-xs text-muted-foreground font-medium">Unassigned</div>
+                    <div className="text-2xl font-bold">{kpis.openTasks}</div>
+                    <div className="text-xs text-muted-foreground font-medium">Open Tasks</div>
                   </div>
                 </CardContent>
               </Card>

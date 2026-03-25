@@ -254,7 +254,7 @@ export function SectionedDashboard() {
                       </Badge>
                     </div>
                     {taskBoard.todo.map(task => (
-                      <Card key={task.id} className="p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-t-2" style={{ borderTopColor: `var(--${task.priority === 'critical' ? 'destructive' : task.priority === 'high' ? 'amber-500' : task.priority === 'medium' ? 'blue-500' : 'emerald-500'})` }}>
+                      <Card key={task.id} className="p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                         <div className="flex items-start gap-2 mb-2">
                           <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${priorityColors[task.priority]}`} />
                           <p className="text-sm font-medium leading-tight line-clamp-2">{task.title}</p>
