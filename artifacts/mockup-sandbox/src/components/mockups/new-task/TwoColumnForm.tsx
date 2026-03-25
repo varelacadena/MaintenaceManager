@@ -308,6 +308,7 @@ export function TwoColumnForm() {
                         mode="single"
                         selected={startDate}
                         onSelect={setStartDate}
+                        className="[--cell-size:2.5rem] p-4"
                         initialFocus
                       />
                     </PopoverContent>
@@ -333,6 +334,7 @@ export function TwoColumnForm() {
                         mode="single"
                         selected={dueDate}
                         onSelect={setDueDate}
+                        className="[--cell-size:2.5rem] p-4"
                         initialFocus
                       />
                     </PopoverContent>
@@ -441,6 +443,7 @@ export function TwoColumnForm() {
                             mode="single"
                             selected={recurringEndDate}
                             onSelect={setRecurringEndDate}
+                            className="[--cell-size:2.5rem] p-4"
                             initialFocus
                           />
                         </PopoverContent>
