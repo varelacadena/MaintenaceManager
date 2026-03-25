@@ -238,7 +238,17 @@ export function SectionedDashboard() {
               <CardHeader className="pb-2 bg-muted/20 border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl">Task Board</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex bg-muted rounded-md p-0.5">
+                      <Button variant="secondary" size="sm" className="text-xs px-3 rounded-sm">
+                        Today
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-xs px-3 rounded-sm text-muted-foreground">
+                        Weekly
+                      </Button>
+                    </div>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 p-0 overflow-hidden">
@@ -349,21 +359,13 @@ export function SectionedDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
-                    <p className="text-xl font-bold text-primary">{aiRecommendations.pending}</p>
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  <div className="bg-background rounded-md p-3 text-center border shadow-sm">
+                    <p className="text-2xl font-bold text-primary">{aiRecommendations.pending}</p>
                     <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Pending</p>
                   </div>
-                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
-                    <p className="text-xl font-bold text-emerald-600">{aiRecommendations.acceptanceRate}%</p>
-                    <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Accepted</p>
-                  </div>
-                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
-                    <p className="text-xl font-bold text-indigo-600">{aiRecommendations.approved}</p>
-                    <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Approved</p>
-                  </div>
-                  <div className="bg-background rounded-md p-2 text-center border shadow-sm">
-                    <p className="text-xl font-bold text-indigo-600">{aiRecommendations.autoApplied}</p>
+                  <div className="bg-background rounded-md p-3 text-center border shadow-sm">
+                    <p className="text-2xl font-bold text-indigo-600">{aiRecommendations.autoApplied}</p>
                     <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Auto-Applied</p>
                   </div>
                 </div>
