@@ -1952,6 +1952,7 @@ export default function TaskDetail() {
         quotes={quotes}
         vendors={vendors}
         inventoryItems={inventoryItems}
+        taskHelpers={taskHelpers}
         checklistGroups={checklistGroups}
         subTasks={subTasks}
         parentTask={parentTask}

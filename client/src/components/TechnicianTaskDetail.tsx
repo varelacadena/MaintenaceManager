@@ -78,6 +78,11 @@ import type {
 
 type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
 
+interface TaskHelperDisplay {
+  userId: string;
+  user?: { id: string; name: string; email: string; role: string };
+}
+
 interface TechnicianTaskDetailProps {
   task: Task;
   user: UserType;
@@ -93,6 +98,7 @@ interface TechnicianTaskDetailProps {
   quotes: Quote[];
   vendors: Vendor[];
   inventoryItems: InventoryItem[];
+  taskHelpers?: TaskHelperDisplay[];
   checklistGroups: ChecklistGroupWithItems[];
   subTasks: Task[];
   parentTask?: Task;
@@ -230,7 +236,7 @@ function formatElapsed(seconds: number): string {
 export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
     task, user, property, multiProperties = [], space, equipment, vehicle, contactStaff,
-    notes, uploads, parts, quotes, vendors, inventoryItems,
+    notes, uploads, parts, quotes, vendors, inventoryItems, taskHelpers = [],
     checklistGroups, subTasks, parentTask, timeEntries, activeTimer,
     allTaskResources, previousWork, users,
     isParentTask, isSubTask, completedSubTasks, subTaskProgress,
@@ -664,6 +670,27 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   <p className="text-sm text-foreground" style={{ lineHeight: 1.65 }}>
                     {task.description}
                   </p>
+                </div>
+              )}
+
+              {taskHelpers.length > 0 && (
+                <div
+                  className="p-3 rounded-xl bg-background border border-border"
+                  data-testid="card-student-helpers"
+                >
+                  <p
+                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    style={{ letterSpacing: "0.05em" }}
+                  >
+                    Student Helpers ({taskHelpers.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {taskHelpers.map((h) => (
+                      <Badge key={h.userId} variant="secondary" data-testid={`badge-helper-${h.userId}`}>
+                        {h.user?.name || "Unknown"}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
 
