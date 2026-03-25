@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { 
   ClipboardList, 
   MapPin, 
@@ -11,19 +11,19 @@ import {
   Building2, 
   Wrench, 
   Car, 
-  AlertCircle, 
   FileText, 
-  ChevronDown,
   Trash2
 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -73,11 +73,14 @@ export function TwoColumnForm() {
   const [selectedVehicle, setSelectedVehicle] = useState("");
 
   // Schedule state
-  const [startDate, setStartDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [scheduledTime, setScheduledTime] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [timeHour, setTimeHour] = useState("");
+  const [timeMinute, setTimeMinute] = useState("");
+  const [timePeriod, setTimePeriod] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringFreq, setRecurringFreq] = useState("weekly");
+  const [recurringEndDate, setRecurringEndDate] = useState<Date | undefined>(undefined);
 
   // Subtasks
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -287,24 +290,115 @@ export function TwoColumnForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground">Start Date</Label>
-                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "MMM d, yyyy") : "Pick start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground">Due Date</Label>
-                  <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dueDate ? format(dueDate, "MMM d, yyyy") : "Pick due date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dueDate}
+                        onSelect={setDueDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" /> Scheduled Time
                   </Label>
-                  <Input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !timeHour && "text-muted-foreground"
+                        )}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        {timeHour
+                          ? `${parseInt(timeHour, 10)}:${timeMinute || "00"} ${timePeriod || "AM"}`
+                          : "Pick time"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-3" align="start">
+                      <div className="flex gap-2 items-center">
+                        <Select value={timeHour} onValueChange={(val) => { setTimeHour(val); if (!timeMinute) setTimeMinute("00"); if (!timePeriod) setTimePeriod("AM"); }}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="HH" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["01","02","03","04","05","06","07","08","09","10","11","12"].map(h => (
+                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-muted-foreground font-medium">:</span>
+                        <Select value={timeMinute} onValueChange={setTimeMinute}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="MM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => (
+                              <SelectItem key={m} value={m}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={timePeriod} onValueChange={setTimePeriod}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="AM/PM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AM">AM</SelectItem>
+                            <SelectItem value="PM">PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
               
               <div className="mt-4 pt-4 border-t border-dashed">
                 <div className="flex items-center gap-2 mb-3 cursor-pointer w-fit" onClick={() => setIsRecurring(!isRecurring)}>
-                  <Checkbox checked={isRecurring} onCheckedChange={(c) => setIsRecurring(!!c)} id="recurring" />
-                  <Label htmlFor="recurring" className="font-medium cursor-pointer">Make this task recurring</Label>
+                  <Checkbox checked={isRecurring} onCheckedChange={(c) => setIsRecurring(!!c)} id="recurring" className="pointer-events-none" />
+                  <Label className="font-medium cursor-pointer">Make this task recurring</Label>
                 </div>
                 
                 {isRecurring && (
@@ -312,7 +406,7 @@ export function TwoColumnForm() {
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">Frequency</Label>
                       <Select value={recurringFreq} onValueChange={setRecurringFreq}>
-                        <SelectTrigger className="h-8">
+                        <SelectTrigger className="h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -325,11 +419,32 @@ export function TwoColumnForm() {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">Interval</Label>
-                      <Input type="number" min="1" defaultValue="1" className="h-8" />
+                      <Input type="number" min="1" defaultValue="1" className="h-9" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">End Date</Label>
-                      <Input type="date" className="h-8" />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal h-9",
+                              !recurringEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                            {recurringEndDate ? format(recurringEndDate, "MMM d, yyyy") : "No end date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={recurringEndDate}
+                            onSelect={setRecurringEndDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 )}
