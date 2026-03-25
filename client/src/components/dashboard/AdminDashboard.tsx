@@ -139,7 +139,7 @@ function TaskRowPopover({
       <div>
         <p className="font-semibold leading-tight">{task.name}</p>
         {task.description && (
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+          <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
