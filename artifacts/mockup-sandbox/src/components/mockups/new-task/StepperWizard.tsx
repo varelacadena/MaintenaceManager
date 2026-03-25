@@ -596,8 +596,7 @@ export function StepperWizard() {
                               <Checkbox 
                                 id={`chk-${template.id}`} 
                                 checked={isSelected}
-                                onCheckedChange={() => toggleChecklist(template.id)}
-                                className="mt-0.5"
+                                className="mt-0.5 pointer-events-none"
                               />
                               <div className="grid gap-1.5 leading-none">
                                 <label 
