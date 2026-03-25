@@ -39,8 +39,8 @@ const TRIGGER_VARIABLES: Record<string, string[]> = {
   status_change: ["{{request_title}}", "{{status_message}}", "{{old_status}}", "{{new_status}}"],
   task_reminder: ["{{task_name}}", "{{task_status}}", "{{due_date}}"],
   document_expiration: ["{{document_name}}", "{{vehicle_name}}", "{{expiration_date}}"],
-  signup_pending: ["{{first_name}}", "{{last_name}}", "{{username}}", "{{requested_role}}"],
-  signup_decision: ["{{first_name}}", "{{last_name}}", "{{username}}", "{{decision}}", "{{denial_reason}}", "{{login_url}}"],
+  signup_pending: ["{{first_name}}", "{{last_name}}", "{{user_name}}", "{{username}}", "{{user_email}}", "{{requested_role}}"],
+  signup_decision: ["{{first_name}}", "{{last_name}}", "{{user_name}}", "{{username}}", "{{user_email}}", "{{decision}}", "{{denial_reason}}", "{{login_url}}"],
 };
 
 export default function EmailManagement() {

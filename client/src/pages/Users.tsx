@@ -859,6 +859,8 @@ export default function Users() {
                       : 0;
                     const agingClass = pu.status === "pending" && daysSinceSubmission > 5
                       ? "border-red-400 dark:border-red-600 border-2"
+                      : pu.status === "pending" && daysSinceSubmission >= 3
+                      ? "border-amber-400 dark:border-amber-600 border-2"
                       : "";
                     return (
                       <div

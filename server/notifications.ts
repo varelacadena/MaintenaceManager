@@ -433,7 +433,9 @@ export async function notifySignupPending(pendingUser: { firstName: string; last
   const variables: Record<string, string> = {
     '{{first_name}}': pendingUser.firstName,
     '{{last_name}}': pendingUser.lastName,
+    '{{user_name}}': `${pendingUser.firstName} ${pendingUser.lastName}`,
     '{{username}}': pendingUser.username,
+    '{{user_email}}': pendingUser.email,
     '{{requested_role}}': pendingUser.requestedRole,
   };
 
@@ -473,7 +475,9 @@ export async function notifySignupDecision(
   const variables: Record<string, string> = {
     '{{first_name}}': pendingUser.firstName,
     '{{last_name}}': pendingUser.lastName,
+    '{{user_name}}': `${pendingUser.firstName} ${pendingUser.lastName}`,
     '{{username}}': pendingUser.username,
+    '{{user_email}}': pendingUser.email,
     '{{decision}}': decision,
     '{{denial_reason}}': reason || '',
     '{{login_url}}': loginUrl || '/login',
