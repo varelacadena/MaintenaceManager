@@ -61,6 +61,7 @@ export function registerTaskRoutes(app: Express) {
         if (helperTaskIds.length > 0) {
           const helperFilters: Record<string, string> = {};
           if (req.query.status) helperFilters.status = req.query.status as string;
+          if (req.query.areaId) helperFilters.areaId = req.query.areaId as string;
           const helperTasks = await storage.getTasks(helperFilters);
           const helperFiltered = helperTasks
             .filter(t => helperTaskIds.includes(t.id) && !allTasks.some(at => at.id === t.id));

@@ -1077,7 +1077,7 @@ export default function NewTask() {
                 </>
               )}
 
-              {assignmentOption && assignmentOption !== "vendor" && (
+              {assignmentOption === "technician" && (
                 <div className="p-4 border rounded-md bg-muted/30 space-y-3">
                   <p className="text-sm font-medium">Student Helpers (Optional)</p>
                   <p className="text-xs text-muted-foreground">
