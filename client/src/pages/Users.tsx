@@ -857,10 +857,8 @@ export default function Users() {
                     const daysSinceSubmission = pu.submittedAt
                       ? Math.floor((Date.now() - new Date(pu.submittedAt).getTime()) / (1000 * 60 * 60 * 24))
                       : 0;
-                    const agingClass = pu.status === "pending" && daysSinceSubmission > 10
-                      ? "border-red-400 dark:border-red-600"
-                      : pu.status === "pending" && daysSinceSubmission > 5
-                      ? "border-orange-400 dark:border-orange-600"
+                    const agingClass = pu.status === "pending" && daysSinceSubmission > 5
+                      ? "border-red-400 dark:border-red-600 border-2"
                       : "";
                     return (
                       <div

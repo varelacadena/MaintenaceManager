@@ -25,6 +25,8 @@ const TRIGGERS = [
   { value: "status_change", label: "Status Changed", description: "When a service request status is updated" },
   { value: "task_reminder", label: "Task Reminder", description: "Scheduled reminder for tasks due within 7 days" },
   { value: "document_expiration", label: "Document Expiration", description: "Scheduled warning when a vehicle document is expiring" },
+  { value: "signup_pending", label: "Signup Request Received", description: "When a new user submits a signup request" },
+  { value: "signup_decision", label: "Signup Decision", description: "When an admin approves or denies a signup request" },
 ];
 
 const TRIGGER_VARIABLES: Record<string, string[]> = {
@@ -37,6 +39,8 @@ const TRIGGER_VARIABLES: Record<string, string[]> = {
   status_change: ["{{request_title}}", "{{status_message}}", "{{old_status}}", "{{new_status}}"],
   task_reminder: ["{{task_name}}", "{{task_status}}", "{{due_date}}"],
   document_expiration: ["{{document_name}}", "{{vehicle_name}}", "{{expiration_date}}"],
+  signup_pending: ["{{first_name}}", "{{last_name}}", "{{username}}", "{{requested_role}}"],
+  signup_decision: ["{{first_name}}", "{{last_name}}", "{{username}}", "{{decision}}", "{{denial_reason}}", "{{login_url}}"],
 };
 
 export default function EmailManagement() {

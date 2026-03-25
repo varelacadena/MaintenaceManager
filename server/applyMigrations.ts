@@ -63,6 +63,7 @@ export async function applyMigrations() {
     { file: "049_add_project_comments_and_upload_columns.sql", name: "049_add_project_comments_and_upload_columns" },
     { file: "050_fix_uploads_parent_check_for_projects.sql", name: "050_fix_uploads_parent_check_for_projects" },
     { file: "051_add_task_helpers.sql", name: "051_add_task_helpers" },
+    { file: "052_add_pending_users.sql", name: "052_add_pending_users" },
   ];
 
   try {
