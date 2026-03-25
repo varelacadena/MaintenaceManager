@@ -64,80 +64,82 @@ export function GridCommandCenter() {
           
           {/* === TOP ROW === */}
           
-          {/* Work Order Overview (Span 8) */}
-          <Card className="lg:col-span-8 shadow-sm">
+          {/* Work Order KPIs (Span 5) */}
+          <Card className="lg:col-span-5 shadow-sm">
             <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-primary" />
-                    Work Order Overview
-                  </CardTitle>
-                  <CardDescription>Key performance indicators and volume trends</CardDescription>
-                </div>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-primary" />
+                Work Order Overview
+              </CardTitle>
+              <CardDescription>Key performance indicators</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col md:flex-row gap-8 mt-2">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 flex-1">
-                  <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-xl border border-primary/20">
-                    <div className="flex items-center gap-2 text-primary mb-1">
-                      <ClipboardList className="w-4 h-4" />
-                      <span className="text-sm font-medium">Open Tasks</span>
-                    </div>
-                    <div className="text-3xl font-bold text-primary">{kpis.openTasks}</div>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-xl border border-primary/20">
+                  <div className="flex items-center gap-2 text-primary mb-1">
+                    <ClipboardList className="w-4 h-4" />
+                    <span className="text-sm font-medium">Open Tasks</span>
                   </div>
-                  <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-xl border border-orange-100 dark:border-orange-900/50">
-                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm font-medium">High Priority</span>
-                    </div>
-                    <div className="text-3xl font-bold text-orange-700 dark:text-orange-300">{kpis.highPriority}</div>
-                  </div>
-                  <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/50">
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-sm font-medium">Overdue</span>
-                    </div>
-                    <div className="text-3xl font-bold text-red-700 dark:text-red-300">{kpis.overdue}</div>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm font-medium">Due Today</span>
-                    </div>
-                    <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">{kpis.dueToday}</div>
-                  </div>
-                  <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
-                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-sm font-medium">Completed Today</span>
-                    </div>
-                    <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{kpis.completedToday}</div>
-                  </div>
+                  <div className="text-3xl font-bold text-primary">{kpis.openTasks}</div>
                 </div>
-                
-                {/* Mini Bar Chart */}
-                <div className="w-full md:w-48 shrink-0 flex flex-col justify-end">
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-4">WEEKLY VOLUME</h4>
-                  <div className="flex items-end justify-between h-32 gap-1.5">
-                    {weeklyTrend.map((day) => (
-                      <div key={day.day} className="flex flex-col items-center gap-2 flex-1 group">
-                        <div className="w-full relative flex-1 flex items-end">
-                          <div 
-                            className="w-full bg-primary/20 rounded-t-sm group-hover:bg-primary/40 transition-colors relative"
-                            style={{ height: `${(day.tasks / maxWeeklyTasks) * 100}%` }}
-                          >
-                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                              {day.tasks}
-                            </div>
-                          </div>
+                <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-xl border border-orange-100 dark:border-orange-900/50">
+                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">High Priority</span>
+                  </div>
+                  <div className="text-3xl font-bold text-orange-700 dark:text-orange-300">{kpis.highPriority}</div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/50">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Overdue</span>
+                  </div>
+                  <div className="text-3xl font-bold text-red-700 dark:text-red-300">{kpis.overdue}</div>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-sm font-medium">Due Today</span>
+                  </div>
+                  <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">{kpis.dueToday}</div>
+                </div>
+                <div className="col-span-2 bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">Completed Today</span>
+                  </div>
+                  <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{kpis.completedToday}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Weekly Volume (Span 3) */}
+          <Card className="lg:col-span-3 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Weekly Volume
+              </CardTitle>
+              <CardDescription>Tasks submitted per day</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end justify-between h-40 gap-2 mt-2">
+                {weeklyTrend.map((day) => (
+                  <div key={day.day} className="flex flex-col items-center gap-2 flex-1 group">
+                    <div className="w-full relative flex-1 flex items-end">
+                      <div 
+                        className="w-full bg-primary/20 rounded-t-sm group-hover:bg-primary/40 transition-colors relative"
+                        style={{ height: `${(day.tasks / maxWeeklyTasks) * 100}%` }}
+                      >
+                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+                          {day.tasks}
                         </div>
-                        <span className="text-[10px] text-muted-foreground font-medium">{day.day[0]}</span>
                       </div>
-                    ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground font-medium">{day.day}</span>
                   </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
