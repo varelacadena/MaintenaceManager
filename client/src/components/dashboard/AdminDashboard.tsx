@@ -497,7 +497,7 @@ export default function AdminDashboard({
               ) : (
                 <div className="space-y-5">
                   {projectStats.map(project => (
-                    <Link key={project.id} href={`/work/${project.id}`}>
+                    <Link key={project.id} href={`/projects/${project.id}`}>
                       <div className="space-y-1.5 cursor-pointer hover-elevate rounded-md p-2 -m-2" data-testid={`project-card-${project.id}`}>
                         <div className="flex justify-between items-center text-sm gap-2">
                           <span className="font-medium truncate">{project.name}</span>
