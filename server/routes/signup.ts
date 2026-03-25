@@ -136,7 +136,7 @@ export function registerSignupRoutes(app: Express) {
         }
       }
 
-      const validRoles = ["staff", "technician", "manager"];
+      const validRoles = ["staff", "technician", "student"];
       if (updates.requestedRole) {
         if (!validRoles.includes(updates.requestedRole)) {
           return res.status(400).json({ message: `Invalid role. Allowed roles: ${validRoles.join(", ")}` });
