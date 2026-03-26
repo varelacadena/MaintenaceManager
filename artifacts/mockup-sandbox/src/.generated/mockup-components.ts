@@ -9,5 +9,8 @@ export const modules: ModuleMap = {
   "./components/mockups/new-task/TwoColumnForm.tsx": () => import("../components/mockups/new-task/TwoColumnForm.tsx"),
   "./components/mockups/property-detail/ContentSplit.tsx": () => import("../components/mockups/property-detail/ContentSplit.tsx"),
   "./components/mockups/property-detail/DashboardOverview.tsx": () => import("../components/mockups/property-detail/DashboardOverview.tsx"),
-  "./components/mockups/property-detail/SidebarNav.tsx": () => import("../components/mockups/property-detail/SidebarNav.tsx")
+  "./components/mockups/property-detail/SidebarNav.tsx": () => import("../components/mockups/property-detail/SidebarNav.tsx"),
+  "./components/mockups/property-list/CardGrid.tsx": () => import("../components/mockups/property-list/CardGrid.tsx"),
+  "./components/mockups/property-list/CommandCenter.tsx": () => import("../components/mockups/property-list/CommandCenter.tsx"),
+  "./components/mockups/property-list/SplitPanel.tsx": () => import("../components/mockups/property-list/SplitPanel.tsx")
 };
