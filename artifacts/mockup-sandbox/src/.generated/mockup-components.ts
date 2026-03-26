@@ -12,5 +12,8 @@ export const modules: ModuleMap = {
   "./components/mockups/property-detail/SidebarNav.tsx": () => import("../components/mockups/property-detail/SidebarNav.tsx"),
   "./components/mockups/property-list/CardGrid.tsx": () => import("../components/mockups/property-list/CardGrid.tsx"),
   "./components/mockups/property-list/CommandCenter.tsx": () => import("../components/mockups/property-list/CommandCenter.tsx"),
-  "./components/mockups/property-list/SplitPanel.tsx": () => import("../components/mockups/property-list/SplitPanel.tsx")
+  "./components/mockups/property-list/SplitPanel.tsx": () => import("../components/mockups/property-list/SplitPanel.tsx"),
+  "./components/mockups/property-list-v2/CompactPanels.tsx": () => import("../components/mockups/property-list-v2/CompactPanels.tsx"),
+  "./components/mockups/property-list-v2/DashboardHub.tsx": () => import("../components/mockups/property-list-v2/DashboardHub.tsx"),
+  "./components/mockups/property-list-v2/ListFirst.tsx": () => import("../components/mockups/property-list-v2/ListFirst.tsx")
 };
