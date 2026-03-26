@@ -309,7 +309,7 @@ export const SplitPanel = () => {
                     <Card className="bg-card shadow-sm border-muted">
                       <CardContent className="p-4">
                         <div className="text-muted-foreground mb-1 flex items-center gap-1.5">
-                          <ToolIcon className="w-4 h-4" />
+                          <Wrench className="w-4 h-4" />
                           <span className="text-xs font-medium uppercase tracking-wider">Equipment</span>
                         </div>
                         <p className="text-2xl font-semibold">{selectedProperty.equipmentCount || 0}</p>
