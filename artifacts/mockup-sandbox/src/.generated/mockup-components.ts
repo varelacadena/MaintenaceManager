@@ -19,5 +19,6 @@ export const modules: ModuleMap = {
   "./components/mockups/property-list-v3/CommandSearch.tsx": () => import("../components/mockups/property-list-v3/CommandSearch.tsx"),
   "./components/mockups/property-list-v3/DirectoryPreview.tsx": () => import("../components/mockups/property-list-v3/DirectoryPreview.tsx"),
   "./components/mockups/property-list-v3/PriorityTimeline.tsx": () => import("../components/mockups/property-list-v3/PriorityTimeline.tsx"),
-  "./components/mockups/property-list-v3/SpatialNavigator.tsx": () => import("../components/mockups/property-list-v3/SpatialNavigator.tsx")
+  "./components/mockups/property-list-v3/SpatialNavigator.tsx": () => import("../components/mockups/property-list-v3/SpatialNavigator.tsx"),
+  "./components/mockups/property-list-v4/ListFirstRefined.tsx": () => import("../components/mockups/property-list-v4/ListFirstRefined.tsx")
 };
