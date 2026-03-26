@@ -85,12 +85,12 @@ const typeConfig: Record<
 
 // Map shapes simulation
 const mapShapes = [
-  { type: "building", top: "20%", left: "30%", width: "12%", height: "15%" },
-  { type: "building", top: "45%", left: "45%", width: "10%", height: "10%" },
-  { type: "lawn", top: "35%", left: "25%", width: "15%", height: "20%" },
-  { type: "parking", top: "60%", left: "70%", width: "18%", height: "12%" },
-  { type: "recreation", top: "15%", left: "60%", width: "14%", height: "14%" },
-  { type: "utility", top: "80%", left: "20%", width: "8%", height: "8%" },
+  { type: "building", propertyId: "b1", top: "20%", left: "30%", width: "12%", height: "15%" },
+  { type: "building", propertyId: "b2", top: "45%", left: "45%", width: "10%", height: "10%" },
+  { type: "lawn", propertyId: "l1", top: "35%", left: "25%", width: "15%", height: "20%" },
+  { type: "parking", propertyId: "p1", top: "60%", left: "70%", width: "18%", height: "12%" },
+  { type: "recreation", propertyId: "r1", top: "15%", left: "60%", width: "14%", height: "14%" },
+  { type: "utility", propertyId: "u1", top: "80%", left: "20%", width: "8%", height: "8%" },
 ];
 
 export function CommandCenter() {
@@ -143,18 +143,26 @@ export function CommandCenter() {
           </div>
 
           {/* Map Boundaries/Shapes */}
-          {mapShapes.map((shape, i) => (
-            <div
-              key={i}
-              className={`absolute rounded-sm opacity-60 border-2 border-white/50 shadow-sm ${typeConfig[shape.type as PropertyType].bgClass}`}
-              style={{
-                top: shape.top,
-                left: shape.left,
-                width: shape.width,
-                height: shape.height,
-              }}
-            />
-          ))}
+          {mapShapes.map((shape, i) => {
+            const isSelected = selectedPropertyId === shape.propertyId;
+            return (
+              <div
+                key={i}
+                onClick={() => setSelectedPropertyId(shape.propertyId)}
+                className={`absolute rounded-sm border-2 shadow-sm cursor-pointer transition-all duration-200 ${typeConfig[shape.type as PropertyType].bgClass} ${
+                  isSelected
+                    ? 'opacity-90 ring-2 ring-primary ring-offset-2 scale-105 z-10'
+                    : 'opacity-60 border-white/50'
+                }`}
+                style={{
+                  top: shape.top,
+                  left: shape.left,
+                  width: shape.width,
+                  height: shape.height,
+                }}
+              />
+            );
+          })}
 
           {/* Map Legend */}
           <div className="absolute bottom-4 left-4 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-3 rounded-lg border shadow-sm flex flex-col gap-2 max-w-[200px]">
@@ -189,8 +197,8 @@ export function CommandCenter() {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-4 gap-2">
-            {(Object.keys(typeConfig) as PropertyType[]).slice(0, 4).map((type) => {
+          <div className="grid grid-cols-4 lg:grid-cols-7 gap-2">
+            {(Object.keys(typeConfig) as PropertyType[]).map((type) => {
               const count = mockProperties.filter((p) => p.type === type).length;
               const Icon = typeConfig[type].icon;
               return (

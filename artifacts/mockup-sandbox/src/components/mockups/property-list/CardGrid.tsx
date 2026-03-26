@@ -174,7 +174,7 @@ export const CardGrid = () => {
         </div>
       ) : (
         // Card Grid
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredProperties.length > 0 ? (
             filteredProperties.map(property => {
               const TypeIcon = TYPE_CONFIG[property.type]?.icon || HelpCircle;

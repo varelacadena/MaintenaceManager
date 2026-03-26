@@ -291,7 +291,9 @@ export const SplitPanel = () => {
 
                   {/* Small Map Placeholder */}
                   <div className="w-full h-48 bg-muted rounded-xl border overflow-hidden relative group">
-                    <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v11/static/-98.5795,39.8283,14/800x400?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29nMTA2YjIyd284N3pnZDlxazIifQ.0tJ-ilA4P10N23KIR0h0QA')] bg-cover bg-center opacity-40 mix-blend-luminosity"></div>
+                    <div className="absolute inset-0 bg-muted/50 flex items-center justify-center">
+                      <MapPin className="w-6 h-6 text-muted-foreground/30" />
+                    </div>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
                         <div className="w-4 h-4 bg-primary rounded-full shadow-lg ring-4 ring-primary/30"></div>
