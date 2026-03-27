@@ -244,6 +244,7 @@ export interface IStorage {
     endTime: Date,
     durationMinutes: number
   ): Promise<TimeEntry | undefined>;
+  deleteTimeEntry(id: string): Promise<void>;
   getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]>;
 
   // Parts used operations (linked to tasks)
@@ -1079,6 +1080,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timeEntries.id, id))
       .returning();
     return entry;
+  }
+
+  async deleteTimeEntry(id: string): Promise<void> {
+    await this.db.delete(timeEntries).where(eq(timeEntries.id, id));
   }
 
   async getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]> {

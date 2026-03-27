@@ -724,21 +724,52 @@ export function registerTaskRoutes(app: Express) {
       }
 
       const timeEntryUpdateSchema = z.object({
-        endTime: z.string().refine(val => !isNaN(new Date(val).getTime()), { message: "Invalid endTime format" }),
+        endTime: z.string().refine(val => !isNaN(new Date(val).getTime()), { message: "Invalid endTime format" }).optional(),
         durationMinutes: z.number().int().min(0).optional(),
       });
 
       const parsed = timeEntryUpdateSchema.parse(req.body);
-      const parsedEndTime = new Date(parsed.endTime);
+      const parsedEndTime = parsed.endTime ? new Date(parsed.endTime) : (timeEntry.endTime || new Date());
+      const finalDuration = parsed.durationMinutes ?? timeEntry.durationMinutes ?? 0;
 
       const entry = await storage.updateTimeEntry(
         req.params.id,
         parsedEndTime,
-        parsed.durationMinutes!
+        finalDuration
       );
       res.json(entry);
     } catch (error) {
       handleRouteError(res, error, "Failed to update time entry");
+    }
+  });
+
+  app.delete("/api/time-entries/:id", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const timeEntry = await storage.getTimeEntry(req.params.id);
+
+      if (!timeEntry) {
+        return res.status(404).json({ message: "Time entry not found" });
+      }
+
+      if (timeEntry.taskId) {
+        const hasAccess = await canAccessTask(userId, timeEntry.taskId);
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+        }
+      }
+
+      if (timeEntry.userId !== userId) {
+        const currentUser = await storage.getUser(userId);
+        if (currentUser?.role !== "admin") {
+          return res.status(403).json({ message: "Forbidden: You can only delete your own time entries" });
+        }
+      }
+
+      await storage.deleteTimeEntry(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to delete time entry");
     }
   });
 

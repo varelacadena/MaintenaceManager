@@ -28,6 +28,7 @@ import Users from "@/pages/Users";
 import Credentials from "@/pages/Credentials";
 import Vendors from "@/pages/Vendors";
 import Inventory from "@/pages/Inventory";
+import AdminTaskDetailPage from "@/pages/AdminTaskDetailPage";
 import Settings from "@/pages/Settings";
 import PropertyMapPage from "./pages/PropertyMapPage";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -95,6 +96,9 @@ function AuthenticatedApp() {
   if (isMobileTaskDetail) {
     if (user?.role === "technician") {
       return <Route path="/tasks/:id" component={TaskDetail} />;
+    }
+    if (user?.role === "admin") {
+      return <Route path="/tasks/:id" component={AdminTaskDetailPage} />;
     }
     return <MobileTaskDetail />;
   }
@@ -291,6 +295,7 @@ function TaskDetailResponsive() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const hasFullView = typeof window !== "undefined" && window.location.search.includes("view=full");
+  if (user?.role === "admin") return <AdminTaskDetailPage />;
   if (isMobile && !hasFullView && user?.role !== "technician") return <MobileTaskDetail />;
   return <TaskDetail />;
 }
