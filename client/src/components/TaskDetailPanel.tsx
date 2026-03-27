@@ -175,7 +175,6 @@ export function TaskDetailPanel({
   const [newNoteContent, setNewNoteContent] = useState("");
   const [newNoteType, setNewNoteType] = useState("job_note");
   const [logTimeDuration, setLogTimeDuration] = useState("");
-  const [logTimeDescription, setLogTimeDescription] = useState("");
   const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
   const [editTimeDuration, setEditTimeDuration] = useState("");
   const [deleteTimeEntryId, setDeleteTimeEntryId] = useState<string | null>(null);
@@ -440,7 +439,7 @@ export function TaskDetailPanel({
   });
 
   const logTimeMutation = useMutation({
-    mutationFn: async ({ durationMinutes, description }: { durationMinutes: number; description: string }) => {
+    mutationFn: async (durationMinutes: number) => {
       const now = new Date();
       const startTime = new Date(now.getTime() - durationMinutes * 60000);
       return apiRequest("POST", "/api/time-entries", {
@@ -453,7 +452,6 @@ export function TaskDetailPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
       setLogTimeDuration("");
-      setLogTimeDescription("");
       setIsLogTimeDialogOpen(false);
       toast({ title: "Time logged" });
     },
@@ -1803,16 +1801,6 @@ export function TaskDetailPanel({
                 data-testid="input-time-duration"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Description</label>
-              <Textarea
-                placeholder="What did you work on?"
-                value={logTimeDescription}
-                onChange={(e) => setLogTimeDescription(e.target.value)}
-                rows={3}
-                data-testid="input-time-description"
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1823,10 +1811,7 @@ export function TaskDetailPanel({
               Cancel
             </Button>
             <Button
-              onClick={() => logTimeMutation.mutate({
-                durationMinutes: parseInt(logTimeDuration, 10),
-                description: logTimeDescription,
-              })}
+              onClick={() => logTimeMutation.mutate(parseInt(logTimeDuration, 10))}
               disabled={!logTimeDuration || parseInt(logTimeDuration, 10) <= 0 || logTimeMutation.isPending}
               data-testid="button-save-time"
             >
