@@ -71,6 +71,13 @@ import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Project, Task, Property, Area, User, ProjectComment, Upload } from "@shared/schema";
 import { format, parse } from "date-fns";
+import {
+  urgencyConfig,
+  taskStatusBadgeColors as tableBadgeColors,
+  statusDotColors,
+  taskStatusConfig,
+  getAvatarColor,
+} from "@/utils/taskUtils";
 
 const GANTT_STATUS_COLORS: Record<string, string> = {
   not_started: "#6b7280",
@@ -81,14 +88,6 @@ const GANTT_STATUS_COLORS: Record<string, string> = {
   completed: "#10b981",
   cancelled: "#ef4444",
 };
-
-import {
-  urgencyConfig,
-  taskStatusBadgeColors as tableBadgeColors,
-  statusDotColors,
-  taskStatusConfig,
-  getAvatarColor,
-} from "@/utils/taskUtils";
 
 type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
 

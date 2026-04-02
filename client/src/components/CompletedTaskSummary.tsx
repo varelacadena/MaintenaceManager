@@ -44,18 +44,17 @@ import type {
   Vehicle,
 } from "@shared/schema";
 import { useState } from "react";
+import {
+  urgencyBadgeStyles as urgencyColors,
+  statusBadgeStyles as statusColors,
+  statusLabels,
+} from "@/utils/taskUtils";
 
 interface CompletedTaskSummaryProps {
   taskId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-import {
-  urgencyBadgeStyles as urgencyColors,
-  statusBadgeStyles as statusColors,
-  statusLabels,
-} from "@/utils/taskUtils";
 
 function formatDuration(minutes: number): string {
   const hrs = Math.floor(minutes / 60);
