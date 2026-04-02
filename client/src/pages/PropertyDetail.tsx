@@ -430,7 +430,7 @@ export default function PropertyDetail() {
     : equipment;
 
   const categoryFilteredEquipment = selectedCategory
-    ? spaceFilteredEquipment.filter((e) => e.category === selectedCategory)
+    ? spaceFilteredEquipment.filter((e) => e.category.toLowerCase() === selectedCategory)
     : spaceFilteredEquipment;
 
   const filteredEquipment = equipmentSearch.trim()
@@ -442,8 +442,9 @@ export default function PropertyDetail() {
     : categoryFilteredEquipment;
 
   const groupedEquipment = spaceFilteredEquipment.reduce((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
+    const cat = item.category.toLowerCase();
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(item);
     return acc;
   }, {} as Record<string, Equipment[]>);
 
@@ -713,7 +714,7 @@ export default function PropertyDetail() {
               {categories.map((cat) => {
                 const count = groupedEquipment[cat]?.length || 0;
                 if (count === 0) return null;
-                const Icon = categoryIcons[cat];
+                const Icon = categoryIcons[cat] || categoryIcons[cat.toLowerCase()] || HelpCircle;
                 return (
                   <Badge
                     key={cat}
@@ -757,7 +758,7 @@ export default function PropertyDetail() {
             ) : (
               <div className="space-y-1">
                 {filteredEquipment.map((item) => {
-                  const Icon = categoryIcons[item.category];
+                  const Icon = categoryIcons[item.category] || categoryIcons[item.category.toLowerCase()] || HelpCircle;
                   return (
                     <div
                       key={item.id}
@@ -769,7 +770,7 @@ export default function PropertyDetail() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm truncate">{item.name}</span>
-                            <Badge variant="secondary">{EQUIPMENT_CATEGORIES.find(c => c.slug === item.category)?.label ?? item.category}</Badge>
+                            <Badge variant="secondary">{EQUIPMENT_CATEGORIES.find(c => c.slug === item.category.toLowerCase())?.label ?? item.category}</Badge>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             {item.serialNumber && <span>SN: {item.serialNumber}</span>}

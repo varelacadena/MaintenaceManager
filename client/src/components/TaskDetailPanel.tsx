@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem, TaskNote } from "@shared/schema";
@@ -103,6 +104,7 @@ export function TaskDetailPanel({
   const { user } = useAuth();
   const { toast } = useToast();
   const isAdmin = user?.role === "admin";
+  const isMobile = useIsMobile();
 
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [resourcesExpanded, setResourcesExpanded] = useState(false);
@@ -573,9 +575,9 @@ export function TaskDetailPanel({
   const statusLabel = panelStatusLabels[task.status] || "UNKNOWN";
 
   const mainContent = (
-    <div className="flex-1 overflow-y-auto" data-testid="panel-main-content">
-      {/* Admin bar */}
-      {isAdmin && (
+    <div className={isMobile && isFullscreen ? "flex-1" : "flex-1 overflow-y-auto"} data-testid="panel-main-content">
+      {/* Admin bar — hidden on mobile fullscreen since sidebar actions are stacked below */}
+      {isAdmin && !(isMobile && isFullscreen) && (
         <div className="flex items-center justify-end gap-2 px-5 py-3" style={{ borderBottom: "1px solid #EEEEEE" }}>
           <Button
             variant="outline"
@@ -643,7 +645,7 @@ export function TaskDetailPanel({
 
       {/* Meta grid */}
       <div
-        className={`grid px-5 py-4 gap-4 ${isFullscreen ? "grid-cols-4" : "grid-cols-2"}`}
+        className={`grid px-5 py-4 gap-4 ${isFullscreen ? (isMobile ? "grid-cols-2" : "grid-cols-4") : "grid-cols-2"}`}
         style={{ borderBottom: "1px solid #EEEEEE" }}
       >
         <div>
@@ -1411,8 +1413,8 @@ export function TaskDetailPanel({
 
   const rightSidebar = isFullscreen ? (
     <div
-      className="w-60 shrink-0 overflow-y-auto"
-      style={{ borderLeft: "1px solid #EEEEEE", backgroundColor: "#FFFFFF" }}
+      className={isMobile ? "w-full shrink-0" : "w-60 shrink-0 overflow-y-auto"}
+      style={{ borderLeft: isMobile ? "none" : "1px solid #EEEEEE", borderTop: isMobile ? "1px solid #EEEEEE" : "none", backgroundColor: "#FFFFFF" }}
       data-testid="panel-right-sidebar"
     >
       {/* Status section */}
@@ -1456,7 +1458,7 @@ export function TaskDetailPanel({
         <p className="text-[11px] font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           ACTIONS
         </p>
-        <div className="space-y-1">
+        <div className={isMobile ? "grid grid-cols-2 gap-1" : "space-y-1"}>
           {[
             { icon: Camera, label: "Photos / Docs", onClick: () => fileInputRef.current?.click() },
             { icon: ScanLine, label: "Scan", onClick: () => setIsScanDialogOpen(true) },
@@ -1556,11 +1558,11 @@ export function TaskDetailPanel({
       {/* Admin actions in fullscreen sidebar */}
       {isAdmin && (
         <div className="p-4" style={{ borderTop: "1px solid #EEEEEE" }}>
-          <div className="space-y-2">
+          <div className={isMobile ? "flex gap-2" : "space-y-2"}>
             <Button
               variant="outline"
               size="sm"
-              className="w-full"
+              className={isMobile ? "flex-1" : "w-full"}
               data-testid="button-sidebar-edit"
               style={{ backgroundColor: "#FFFFFF", borderColor: "#EEEEEE", color: "#1A1A1A" }}
               onClick={() => setIsEditMode(true)}
@@ -1571,7 +1573,7 @@ export function TaskDetailPanel({
             <Button
               variant="outline"
               size="sm"
-              className="w-full"
+              className={isMobile ? "flex-1" : "w-full"}
               onClick={() => setDeleteDialogOpen(true)}
               data-testid="button-sidebar-delete"
               style={{ backgroundColor: "#FEF2F2", borderColor: "#FECACA", color: "#D94F4F" }}
@@ -1663,7 +1665,7 @@ export function TaskDetailPanel({
       </div>
 
       {/* Content area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className={isMobile && isFullscreen ? "flex flex-col flex-1 overflow-y-auto" : "flex flex-1 overflow-hidden"}>
         {mainContent}
         {rightSidebar}
       </div>
