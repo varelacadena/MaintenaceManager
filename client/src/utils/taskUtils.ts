@@ -192,8 +192,8 @@ export function getInitials(user: { firstName?: string | null; lastName?: string
 }
 
 export function getUserDisplayName(user: { firstName?: string | null; lastName?: string | null; username: string }): string {
-  if (user.firstName && user.lastName) {
-    return `${user.firstName} ${user.lastName}`;
+  if (user.firstName) {
+    return `${user.firstName} ${user.lastName || ""}`.trim();
   }
   return user.username;
 }
