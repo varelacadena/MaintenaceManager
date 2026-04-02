@@ -84,15 +84,6 @@ const unifiedStatusConfig = [
   { key: "cancelled", label: "Cancelled" },
 ];
 
-const unifiedStatusColors: Record<string, string> = {
-  not_started: taskStatusColors.not_started,
-  needs_estimate: taskStatusColors.needs_estimate,
-  waiting_approval: taskStatusColors.waiting_approval,
-  in_progress: taskStatusColors.in_progress,
-  on_hold: taskStatusColors.on_hold,
-  completed: taskStatusColors.completed,
-  cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
-};
 
 const projectStatusMapping: Record<string, string> = {
   planning: "not_started",

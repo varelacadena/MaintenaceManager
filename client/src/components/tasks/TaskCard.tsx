@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, User, MapPin } from "lucide-react";
-import { statusBadgeStyles, urgencyBadgeStyles, statusLabels, taskTypeLabels } from "@/utils/taskUtils";
+import { statusBadgeStyles, urgencyBadgeStyles, statusLabels, taskTypeLabels, formatTaskDate } from "@/utils/taskUtils";
 import type { Task } from "@shared/schema";
 
 interface TaskCardProps {
@@ -47,18 +47,18 @@ export function TaskCard({ task, getAssigneeName, onClick }: TaskCardProps) {
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                <span>Started: {new Date(task.initialDate).toLocaleDateString()}</span>
+                <span>Started: {formatTaskDate(task.initialDate)}</span>
               </div>
               {task.estimatedCompletionDate && (
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  <span>Due: {new Date(task.estimatedCompletionDate).toLocaleDateString()}</span>
+                  <span>Due: {formatTaskDate(task.estimatedCompletionDate)}</span>
                 </div>
               )}
               {task.actualCompletionDate && (
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  <span>Completed: {new Date(task.actualCompletionDate).toLocaleDateString()}</span>
+                  <span>Completed: {formatTaskDate(task.actualCompletionDate)}</span>
                 </div>
               )}
               {task.assignedToId && getAssigneeName && (
