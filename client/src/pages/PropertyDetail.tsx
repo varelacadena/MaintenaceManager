@@ -76,6 +76,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import PropertyMap from "@/components/PropertyMap";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import { getUserDisplayName } from "@/utils/taskUtils";
 import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace, User as UserType } from "@shared/schema";
 import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -180,7 +181,7 @@ export default function PropertyDetail() {
   const getAssigneeName = (userId: string) => {
     const u = users.find((usr) => usr.id === userId);
     if (!u) return "Unassigned";
-    return `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username;
+    return getUserDisplayName(u);
   };
 
   const isBuilding = property?.type === "building";

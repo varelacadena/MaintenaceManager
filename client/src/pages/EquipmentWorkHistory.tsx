@@ -8,6 +8,7 @@ import type { Task, Equipment, User as UserType } from "@shared/schema";
 import { Link } from "wouter";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { TaskCard } from "@/components/tasks/TaskCard";
+import { getUserDisplayName } from "@/utils/taskUtils";
 
 export default function EquipmentWorkHistory() {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +34,7 @@ export default function EquipmentWorkHistory() {
   const getAssigneeName = (userId: string) => {
     const user = users.find((u) => u.id === userId);
     if (!user) return "Unassigned";
-    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username;
+    return getUserDisplayName(user);
   };
 
   if (equipmentLoading || tasksLoading) {
