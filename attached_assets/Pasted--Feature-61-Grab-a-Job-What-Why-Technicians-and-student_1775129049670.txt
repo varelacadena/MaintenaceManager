@@ -1,0 +1,106 @@
+# Feature #61 — Grab a Job
+
+## What & Why
+
+Technicians and students need a dedicated way to browse unassigned tasks in their pool and claim them when their originally assigned work can’t be completed. Currently, pool tasks appear mixed in with assigned tasks on the dashboard, with no explicit claim flow. This feature adds a dedicated **Grab a Job** page where techs and students see only available (unassigned) pool tasks and can claim one with a single tap — assigning it to themselves.
+
+-----
+
+## Done Looks Like
+
+- A new **Grab a Job** page accessible from the sidebar for `technician` and `student` roles
+- The page shows only tasks in the user’s role pool (`student_pool` or `technician_pool`) that are NOT yet assigned to a specific person
+- Each task card shows: task name, urgency badge, location/property, executor type, description summary, and **submitted date** (to help techs triage when urgency is equal)
+- A **“Grab This Job”** button on each card opens a confirmation dialog before claiming — sets `assignedToId` to the current user and clears `assignedPool`
+- After claiming, the task disappears from the available list, a success toast fires, and the user is redirected to the task detail page
+- The claim action is **logged to the task’s activity feed** (e.g., “Claimed by Santiago V. · Apr 2, 2026”) so admins have a full audit trail
+- Empty state displayed when no jobs are currently available in the pool
+- Mobile-first, card-based layout — simple and “dummy-proof” per the existing UX philosophy for these roles
+- Sidebar badge showing the count of available pool tasks, loaded **lazily on sidebar mount** (not polled on an interval) with a manual refresh option on the page itself
+
+-----
+
+## Out of Scope (v1)
+
+- Admins do not use this page — they assign tasks through the existing admin workflow
+- `staff` role does not see this page — staff submit requests, they don’t grab tasks
+- Un-claiming / releasing a grabbed task back to the pool — admin can manually reassign if needed
+- Filtering or sorting on the Grab a Job page — keep it simple for v1
+
+-----
+
+## Technical Notes
+
+### Race Condition & Atomicity
+
+The claim endpoint must verify unassigned status and set `assignedToId` in a **single atomic operation**. Two techs could attempt to grab the same job simultaneously — a 409 Conflict response must be returned if the task is already claimed by the time the second request lands. The frontend should surface this gracefully (“Someone just grabbed that one — it’s been removed from your list”).
+
+### Pool Filtering on the Backend
+
+Role-based pool filtering must happen server-side, not on the client. Never trust the frontend to restrict task visibility for routing logic.
+
+### Sidebar Badge — No Polling
+
+The available task count badge should be fetched once when the sidebar loads, not on a recurring interval. Polling across all logged-in techs creates unnecessary server load. A manual refresh button on the Grab a Job page is the right UX tradeoff.
+
+### Activity Log Requirement
+
+Before shipping, confirm the existing task activity log captures the claim event. If not, this must be added to the claim endpoint before release. An untracked claim creates a gap in the admin’s ability to follow up when a task goes silent.
+
+-----
+
+## Tasks
+
+### 1. Backend — Claim Endpoint
+
+Add `POST /api/tasks/:id/claim`:
+
+- Verify task is in the caller’s role pool (`student_pool` or `technician_pool`)
+- Verify task has no `assignedToId` (return **409** if already claimed)
+- Atomically set `assignedToId` to the current user and clear `assignedPool`
+- **Write a claim event to the task activity log**
+- Return the updated task on success
+
+### 2. Backend — Available Pool Tasks Endpoint
+
+Add `GET /api/tasks/available`:
+
+- Return unassigned tasks filtered by the current user’s role pool
+- Only include tasks with status `not_started` or `ready` and no `assignedToId`
+- Include `createdAt` in the response payload for the submitted date display
+
+### 3. Grab a Job Page
+
+Create `/grab` page with a card-based list of available pool tasks:
+
+- Card contents: task name, urgency badge, location, description summary, submitted date
+- “Grab This Job” button with confirmation dialog
+- Empty state when no tasks are available
+- Manual refresh button/control
+- Follow existing `TaskCard` component patterns and shared task utilities
+
+### 4. Sidebar Integration
+
+- Add “Grab a Job” link to sidebar for `technician` and `student` roles
+- Fetch available task count **once on sidebar mount** to populate the badge
+- No live polling
+
+### 5. Post-Claim UX
+
+- On successful claim: show success toast + redirect to task detail page
+- On 409 conflict: show inline error toast + remove the claimed card from the list without a full page reload
+
+-----
+
+## Relevant Files
+
+|File                                      |Relevance                                                  |
+|------------------------------------------|-----------------------------------------------------------|
+|`shared/schema.ts:176-224`                |Task schema — `assignedToId`, `assignedPool`, status fields|
+|`server/routes/tasks.ts`                  |Add claim and available endpoints here                     |
+|`server/storage.ts:866-962`               |Storage layer for task reads/writes                        |
+|`client/src/components/AppSidebar.tsx`    |Add nav link + lazy badge                                  |
+|`client/src/pages/Dashboard.tsx`          |Reference for page structure                               |
+|`client/src/components/tasks/TaskCard.tsx`|Reuse card component patterns                              |
+|`client/src/utils/taskUtils.ts`           |Shared utilities (urgency labels, status formatting)       |
+|`client/src/App.tsx`                      |Register `/grab` route                                     |
