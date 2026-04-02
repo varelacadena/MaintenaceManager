@@ -82,56 +82,13 @@ const GANTT_STATUS_COLORS: Record<string, string> = {
   cancelled: "#ef4444",
 };
 
-const urgencyConfig: Record<string, { color: string; label: string }> = {
-  low: { color: "text-muted-foreground", label: "Low" },
-  medium: { color: "text-amber-500 dark:text-amber-400", label: "Medium" },
-  high: { color: "text-red-500 dark:text-red-400", label: "High" },
-};
-
-const tableBadgeColors: Record<string, string> = {
-  not_started: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
-  needs_estimate: "bg-amber-500 dark:bg-amber-600 text-white border-transparent",
-  waiting_approval: "bg-purple-500 dark:bg-purple-600 text-white border-transparent",
-  ready: "bg-cyan-500 dark:bg-cyan-600 text-white border-transparent",
-  in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
-  on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
-  completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
-  cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
-};
-
-const statusDotColors: Record<string, string> = {
-  not_started: "bg-gray-400 dark:bg-gray-500",
-  needs_estimate: "bg-amber-500 dark:bg-amber-400",
-  waiting_approval: "bg-purple-500 dark:bg-purple-400",
-  ready: "bg-cyan-500 dark:bg-cyan-400",
-  in_progress: "bg-rose-500 dark:bg-rose-400",
-  on_hold: "bg-yellow-500 dark:bg-yellow-400",
-  completed: "bg-emerald-500 dark:bg-emerald-400",
-  cancelled: "bg-red-400 dark:bg-red-500",
-};
-
-const taskStatusConfig = [
-  { key: "not_started", label: "Not Started" },
-  { key: "needs_estimate", label: "Needs Estimate" },
-  { key: "waiting_approval", label: "Estimate Review" },
-  { key: "ready", label: "Ready" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "on_hold", label: "On Hold" },
-  { key: "completed", label: "Completed" },
-];
-
-const avatarColors = [
-  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-purple-500",
-  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-teal-500",
-];
-
-function getAvatarColor(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-}
+import {
+  urgencyConfig,
+  taskStatusBadgeColors as tableBadgeColors,
+  statusDotColors,
+  taskStatusConfig,
+  getAvatarColor,
+} from "@/utils/taskUtils";
 
 type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
 

@@ -71,40 +71,16 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TaskDetailPanel } from "@/components/TaskDetailPanel";
-
-const urgencyConfig: Record<string, { color: string; label: string }> = {
-  low: { color: "text-muted-foreground", label: "Low" },
-  medium: { color: "text-amber-500 dark:text-amber-400", label: "Medium" },
-  high: { color: "text-red-500 dark:text-red-400", label: "High" },
-};
-
-const taskStatusColors: Record<string, string> = {
-  not_started: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
-  needs_estimate: "bg-amber-500 dark:bg-amber-600 text-white border-transparent",
-  waiting_approval: "bg-purple-500 dark:bg-purple-600 text-white border-transparent",
-  in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
-  on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
-  completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
-  cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
-};
-
-const statusDotColors: Record<string, string> = {
-  not_started: "bg-gray-400 dark:bg-gray-500",
-  needs_estimate: "bg-amber-500 dark:bg-amber-400",
-  waiting_approval: "bg-purple-500 dark:bg-purple-400",
-  in_progress: "bg-rose-500 dark:bg-rose-400",
-  on_hold: "bg-yellow-500 dark:bg-yellow-400",
-  completed: "bg-emerald-500 dark:bg-emerald-400",
-  cancelled: "bg-red-400 dark:bg-red-500",
-};
+import {
+  urgencyConfig,
+  taskStatusBadgeColors as taskStatusColors,
+  statusDotColors,
+  taskStatusConfig,
+  getAvatarColor,
+} from "@/utils/taskUtils";
 
 const unifiedStatusConfig = [
-  { key: "not_started", label: "Not Started" },
-  { key: "needs_estimate", label: "Needs Estimate" },
-  { key: "waiting_approval", label: "Estimate Review" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "on_hold", label: "On Hold" },
-  { key: "completed", label: "Completed" },
+  ...taskStatusConfig,
   { key: "cancelled", label: "Cancelled" },
 ];
 
@@ -133,29 +109,7 @@ const projectPriorityConfig: Record<string, { color: string; label: string }> = 
   critical: { color: "text-red-700 dark:text-red-300 font-semibold", label: "Critical" },
 };
 
-const taskStatusConfig = [
-  { key: "not_started", label: "Not Started" },
-  { key: "needs_estimate", label: "Needs Estimate" },
-  { key: "waiting_approval", label: "Estimate Review" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "on_hold", label: "On Hold" },
-  { key: "completed", label: "Completed" },
-];
-
-const avatarColors = [
-  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-purple-500",
-  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-teal-500",
-];
-
-function getAvatarColor(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-}
-
-type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "in_progress" | "on_hold" | "completed";
+type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
 
 type WorkItem =
   | { type: "task"; data: Task }

@@ -38,6 +38,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  drawerUrgencyConfig as urgencyConfig,
+  drawerStatusConfig as statusConfig,
+} from "@/utils/taskUtils";
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -48,52 +52,6 @@ interface TaskDetailDrawerProps {
   onStatusChange: (taskId: string, status: Task["status"]) => void;
   isPending?: boolean;
 }
-
-const urgencyConfig = {
-  high: {
-    badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
-    label: "High Priority",
-  },
-  medium: {
-    badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
-    label: "Medium Priority",
-  },
-  low: {
-    badge: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
-    label: "Low Priority",
-  },
-};
-
-const statusConfig: Record<string, { label: string; color: string }> = {
-  not_started: {
-    label: "Not Started",
-    color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  },
-  needs_estimate: {
-    label: "Needs Estimate",
-    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
-  },
-  waiting_approval: {
-    label: "Waiting Approval",
-    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
-  },
-  ready: {
-    label: "Ready",
-    color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400",
-  },
-  in_progress: {
-    label: "In Progress",
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
-  },
-  completed: {
-    label: "Completed",
-    color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
-  },
-  on_hold: {
-    label: "On Hold",
-    color: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
-  },
-};
 
 export default function TaskDetailDrawer({
   task,

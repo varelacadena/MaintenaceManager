@@ -1,27 +1,13 @@
-
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, User, MapPin, ExternalLink } from "lucide-react";
+import { Calendar, ExternalLink } from "lucide-react";
 import type { Task, Equipment, User as UserType } from "@shared/schema";
 import { Link } from "wouter";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
-
-const statusColors: Record<string, string> = {
-  not_started: "bg-gray-500/10 text-gray-700 dark:text-gray-300 border-gray-500/20",
-  in_progress: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  on_hold: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
-  completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
-};
-
-const urgencyColors = {
-  low: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  medium: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
-  high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
-};
+import { TaskCard } from "@/components/tasks/TaskCard";
 
 export default function EquipmentWorkHistory() {
   const { id } = useParams<{ id: string }>();
@@ -99,68 +85,24 @@ export default function EquipmentWorkHistory() {
           ) : (
             <div className="space-y-3">
               {equipmentTasks.map((task) => {
-                const cardContent = (
-                  <Card className="hover-elevate transition-colors cursor-pointer" data-testid={`task-${task.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold truncate">{task.name}</h3>
-                            <Badge variant="outline" className={statusColors[task.status]}>
-                              {task.status.replace("_", " ")}
-                            </Badge>
-                            <Badge variant="outline" className={urgencyColors[task.urgency]}>
-                              {task.urgency}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {task.description}
-                          </p>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Started: {new Date(task.initialDate).toLocaleDateString()}</span>
-                            </div>
-                            {task.estimatedCompletionDate && (
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                <span>Due: {new Date(task.estimatedCompletionDate).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                            {task.actualCompletionDate && (
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                <span>Completed: {new Date(task.actualCompletionDate).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                            {task.assignedToId && (
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                <span>{getAssigneeName(task.assignedToId)}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span className="capitalize">{task.taskType.replace("_", " ")}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-
                 if (task.status === "completed") {
                   return (
-                    <div key={task.id} onClick={() => setSummaryTaskId(task.id)}>
-                      {cardContent}
+                    <div key={task.id}>
+                      <TaskCard
+                        task={task}
+                        getAssigneeName={getAssigneeName}
+                        onClick={() => setSummaryTaskId(task.id)}
+                      />
                     </div>
                   );
                 }
 
                 return (
                   <Link key={task.id} href={`/tasks/${task.id}`}>
-                    {cardContent}
+                    <TaskCard
+                      task={task}
+                      getAssigneeName={getAssigneeName}
+                    />
                   </Link>
                 );
               })}

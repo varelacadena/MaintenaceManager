@@ -72,61 +72,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const panelStatusDotStyle: Record<string, string> = {
-  not_started: "#9CA3AF",
-  needs_estimate: "#E6A817",
-  waiting_approval: "#7C3AED",
-  in_progress: "#4338CA",
-  on_hold: "#E6A817",
-  completed: "#15803D",
-  cancelled: "#D94F4F",
-};
-
-const panelStatusPillStyle: Record<string, { bg: string; text: string }> = {
-  not_started: { bg: "#4A4A4A", text: "#FFFFFF" },
-  needs_estimate: { bg: "#FEF3C7", text: "#92400E" },
-  waiting_approval: { bg: "#EDE9FE", text: "#7C3AED" },
-  in_progress: { bg: "#EEF2FF", text: "#4338CA" },
-  on_hold: { bg: "#FEF3C7", text: "#92400E" },
-  completed: { bg: "#F0FDF4", text: "#15803D" },
-  cancelled: { bg: "#FEF2F2", text: "#D94F4F" },
-};
-
-const panelStatusLabels: Record<string, string> = {
-  not_started: "NOT STARTED",
-  needs_estimate: "NEEDS ESTIMATE",
-  waiting_approval: "ESTIMATE REVIEW",
-  in_progress: "IN PROGRESS",
-  on_hold: "ON HOLD",
-  completed: "COMPLETED",
-  cancelled: "CANCELLED",
-};
-
-const priorityConfig: Record<string, { color: string; label: string }> = {
-  low: { color: "#9CA3AF", label: "Low" },
-  medium: { color: "#E6A817", label: "Medium" },
-  high: { color: "#D94F4F", label: "High" },
-};
-
-const taskTypeLabels: Record<string, string> = {
-  one_time: "One Time",
-  recurring: "Recurring",
-  preventive: "Preventive",
-};
-
-const avatarColors = [
-  "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",
-  "#F43F5E", "#06B6D4", "#6366F1", "#14B8A6",
-];
-
-function getAvatarColorForId(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-}
+import {
+  panelStatusDotStyle,
+  panelStatusPillStyle,
+  panelStatusLabels,
+  priorityConfig,
+  taskTypeLabels,
+  getAvatarHexColor as getAvatarColorForId,
+} from "@/utils/taskUtils";
 
 interface TaskDetailPanelProps {
   taskId: string;

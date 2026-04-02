@@ -74,7 +74,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import PropertyMap from "@/components/PropertyMap";
-import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace } from "@shared/schema";
+import { TaskCard } from "@/components/tasks/TaskCard";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace, User as UserType } from "@shared/schema";
 import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -151,6 +153,7 @@ export default function PropertyDetail() {
   const [equipmentSearch, setEquipmentSearch] = useState("");
   const [spaceSearch, setSpaceSearch] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
+  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
   const [qrEquipment, setQrEquipment] = useState<Equipment | null>(null);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [manufacturerImageUrl, setManufacturerImageUrl] = useState("");
@@ -169,6 +172,16 @@ export default function PropertyDetail() {
     queryKey: ["/api/properties", id, "tasks"],
     enabled: !!id,
   });
+
+  const { data: users = [] } = useQuery<UserType[]>({
+    queryKey: ["/api/users"],
+  });
+
+  const getAssigneeName = (userId: string) => {
+    const u = users.find((usr) => usr.id === userId);
+    if (!u) return "Unassigned";
+    return `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.username;
+  };
 
   const isBuilding = property?.type === "building";
 
@@ -832,41 +845,28 @@ export default function PropertyDetail() {
                 <p className="text-sm">{taskSearch ? "No tasks match your search" : "No tasks assigned to this property yet"}</p>
               </div>
             ) : (
-              <div className="space-y-1">
-                {filteredTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between gap-2 p-2 rounded-md border hover-elevate cursor-pointer"
-                    onClick={() => navigate(`/tasks/${task.id}`)}
-                    data-testid={`row-task-${task.id}`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <span className="font-medium text-sm block truncate">{task.name}</span>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <Badge variant={task.status === "completed" ? "default" : "secondary"}>
-                          {task.status}
-                        </Badge>
-                        <Badge variant="outline">
-                          {task.urgency}
-                        </Badge>
-                        {task.isCampusWide && (
-                          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
-                            Campus-Wide
-                          </Badge>
-                        )}
-                        {!task.isCampusWide && task.propertyIds && task.propertyIds.length > 0 && (
-                          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
-                            Multi-Building
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(task.initialDate).toLocaleDateString()}
-                        </span>
+              <div className="space-y-3">
+                {filteredTasks.map((task) => {
+                  if (task.status === "completed") {
+                    return (
+                      <div key={task.id}>
+                        <TaskCard
+                          task={task}
+                          getAssigneeName={getAssigneeName}
+                          onClick={() => setSummaryTaskId(task.id)}
+                        />
                       </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  </div>
-                ))}
+                    );
+                  }
+                  return (
+                    <Link key={task.id} href={`/tasks/${task.id}`}>
+                      <TaskCard
+                        task={task}
+                        getAssigneeName={getAssigneeName}
+                      />
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -888,6 +888,12 @@ export default function PropertyDetail() {
           <PropertyResourcesTab propertyId={id!} propertyName={property.name} />
         </TabsContent>
       </Tabs>
+
+      <CompletedTaskSummary
+        taskId={summaryTaskId || ""}
+        open={!!summaryTaskId}
+        onOpenChange={(open) => { if (!open) setSummaryTaskId(null); }}
+      />
 
       <Dialog open={isEditPropertyDialogOpen} onOpenChange={setIsEditPropertyDialogOpen}>
         <DialogContent className="z-50">
