@@ -1,4 +1,3 @@
-import type { User } from "@shared/schema";
 
 export const panelStatusDotStyle: Record<string, string> = {
   not_started: "#9CA3AF",
