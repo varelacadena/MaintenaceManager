@@ -93,7 +93,7 @@ export function Desktop() {
   const progress = (completedCount / task.subtasks.length) * 100;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFFFFF", zoom: 1.8 }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFFFFF", zoom: 3 }}>
       <div
         className="flex items-center gap-5 px-10 py-5 shrink-0"
         style={{ borderBottom: "1px solid #EEEEEE" }}
