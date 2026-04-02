@@ -1017,6 +1017,63 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
 
+  async getAvailablePoolTasks(pool: string): Promise<Task[]> {
+    return await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.assignedPool, pool),
+          isNull(tasks.assignedToId),
+          or(
+            eq(tasks.status, "not_started"),
+            eq(tasks.status, "ready")
+          )
+        )
+      )
+      .orderBy(desc(tasks.createdAt));
+  }
+
+  async getAvailablePoolTaskCount(pool: string): Promise<number> {
+    const result = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.assignedPool, pool),
+          isNull(tasks.assignedToId),
+          or(
+            eq(tasks.status, "not_started"),
+            eq(tasks.status, "ready")
+          )
+        )
+      );
+    return result[0]?.count ?? 0;
+  }
+
+  async claimTask(taskId: string, userId: string, pool: string): Promise<Task | null> {
+    const [task] = await this.db
+      .update(tasks)
+      .set({
+        assignedToId: userId,
+        assignedPool: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.assignedPool, pool),
+          isNull(tasks.assignedToId),
+          or(
+            eq(tasks.status, "not_started"),
+            eq(tasks.status, "ready")
+          )
+        )
+      )
+      .returning();
+    return task || null;
+  }
+
   async deleteTask(id: string): Promise<void> {
     await this.db.delete(tasks).where(eq(tasks.id, id));
   }

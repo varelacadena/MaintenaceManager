@@ -86,6 +86,42 @@ export function registerTaskRoutes(app: Express) {
     }
   });
 
+  app.get("/api/tasks/available", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      if (currentUser.role !== "student" && currentUser.role !== "technician") {
+        return res.status(403).json({ message: "Only students and technicians can browse available jobs" });
+      }
+      const pool = currentUser.role === "student" ? "student_pool" : "technician_pool";
+      const availableTasks = await storage.getAvailablePoolTasks(pool);
+      res.json(availableTasks);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch available tasks");
+    }
+  });
+
+  app.get("/api/tasks/available/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      if (currentUser.role !== "student" && currentUser.role !== "technician") {
+        return res.json({ count: 0 });
+      }
+      const pool = currentUser.role === "student" ? "student_pool" : "technician_pool";
+      const count = await storage.getAvailablePoolTaskCount(pool);
+      res.json({ count });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch available task count");
+    }
+  });
+
   app.get("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
@@ -223,6 +259,53 @@ export function registerTaskRoutes(app: Express) {
       res.json(task);
     } catch (error) {
       handleRouteError(res, error, "Failed to create task");
+    }
+  });
+
+  app.post("/api/tasks/:id/claim", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      if (currentUser.role !== "student" && currentUser.role !== "technician") {
+        return res.status(403).json({ message: "Only students and technicians can claim tasks" });
+      }
+
+      const existingTask = await storage.getTask(req.params.id);
+      if (!existingTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const pool = currentUser.role === "student" ? "student_pool" : "technician_pool";
+      if (existingTask.assignedPool !== pool) {
+        return res.status(403).json({ message: "This task is not in your pool" });
+      }
+
+      const claimedTask = await storage.claimTask(req.params.id, userId, pool);
+      if (!claimedTask) {
+        return res.status(409).json({ message: "This job has already been claimed by someone else" });
+      }
+
+      const displayName = currentUser.firstName && currentUser.lastName
+        ? `${currentUser.firstName} ${currentUser.lastName[0]}.`
+        : currentUser.username;
+
+      try {
+        await storage.createTaskNote({
+          taskId: req.params.id,
+          userId: userId,
+          content: `Claimed by ${displayName}`,
+          noteType: "job_note",
+        });
+      } catch (noteError) {
+        console.error("Failed to create claim activity note:", noteError);
+      }
+
+      res.json(claimedTask);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to claim task");
     }
   });
 

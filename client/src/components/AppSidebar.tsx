@@ -30,8 +30,10 @@ import {
   Bot,
   LogOut,
   BookOpen,
+  Hand,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { Badge } from "@/components/ui/badge";
 
@@ -61,6 +63,7 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
+    { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
@@ -77,6 +80,7 @@ const roleMenus = {
   ],
   student: [
     { title: "My Tasks", url: "/work", icon: ClipboardList },
+    { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
@@ -90,6 +94,11 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
   const menuItems = roleMenus[userRole];
   const notificationCounts = useNotificationCounts();
   const { setOpenMobile, isMobile, setOpen } = useSidebar();
+
+  const { data: availableJobCount } = useQuery<{ count: number }>({
+    queryKey: ["/api/tasks/available/count"],
+    enabled: userRole === "student" || userRole === "technician",
+  });
 
   const handleMouseEnter = () => {
     if (!isMobile) {
@@ -132,6 +141,8 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                   badgeCount = notificationCounts.pendingVehicleReservations;
                 } else if (item.title === "Users" && notificationCounts.pendingSignups > 0) {
                   badgeCount = notificationCounts.pendingSignups;
+                } else if (item.title === "Grab a Job" && availableJobCount && availableJobCount.count > 0) {
+                  badgeCount = availableJobCount.count;
                 }
 
                 return (

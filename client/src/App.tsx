@@ -51,6 +51,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import EmailManagement from "./pages/EmailManagement";
 import AiAgentDashboard from "./pages/AiAgentDashboard";
 import ResourceLibrary from "./pages/ResourceLibrary";
+import GrabAJob from "./pages/GrabAJob";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -178,6 +179,9 @@ function AuthenticatedApp() {
                   return <Dashboard />;
                 }} />
                 <Route path="/work" component={Work} />
+                <Route path="/grab" component={() => (
+                  <RoleGuard allowedRoles={["student", "technician"]}><GrabAJob /></RoleGuard>
+                )} />
                 <Route path="/tasks" component={() => {
                   window.location.replace("/work");
                   return null;
