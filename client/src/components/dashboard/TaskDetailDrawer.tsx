@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task, User as UserType, Property, Vendor } from "@shared/schema";
-import { format, parseISO, isPast } from "date-fns";
+import { parseISO, isPast } from "date-fns";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -137,9 +137,7 @@ export default function TaskDetailDrawer({
   };
 
   const formatDate = (date: Date | string | null) => {
-    if (!date) return "Not set";
-    const d = typeof date === "string" ? parseISO(date) : date;
-    return format(d, "MMM d, yyyy");
+    return formatTaskDate(date, "Not set");
   };
 
   const handleReassignToUser = (userId: string) => {

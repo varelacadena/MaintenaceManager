@@ -198,7 +198,9 @@ export function getUserDisplayName(user: { firstName?: string | null; lastName?:
   return user.username;
 }
 
-export function formatTaskDate(date: string | Date | null | undefined): string {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString();
+export function formatTaskDate(date: string | Date | null | undefined, fallback: string = ""): string {
+  if (!date) return fallback;
+  const d = typeof date === "string" ? new Date(date) : date;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
