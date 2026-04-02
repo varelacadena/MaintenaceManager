@@ -199,7 +199,17 @@ export function getUserDisplayName(user: { firstName?: string | null; lastName?:
 
 export function formatTaskDate(date: string | Date | null | undefined, fallback: string = ""): string {
   if (!date) return fallback;
-  const d = typeof date === "string" ? new Date(date) : date;
+  let d: Date;
+  if (typeof date === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [y, m, day] = date.split("-").map(Number);
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(date);
+    }
+  } else {
+    d = date;
+  }
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
