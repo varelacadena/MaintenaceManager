@@ -1,21 +1,18 @@
-import { useState } from "react";
 import {
   ArrowLeft,
   Pencil,
   Flag,
-  MapPin,
   User,
   Calendar,
   Clock,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   FileText,
   Image as ImageIcon,
   MoreVertical,
   Building2,
   MessageSquare,
   Wrench,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,9 +45,20 @@ const task = {
     { user: "Carlos M.", date: "Mar 30", duration: "45 min" },
     { user: "Carlos M.", date: "Mar 31", duration: "1h 20min" },
   ],
-  messages: 3,
-  parts: 2,
-  resources: { docs: 1, imgs: 2 },
+  messages: [
+    { user: "Prof. Sarah Chen", text: "The air quality has been terrible this week. Students are complaining.", time: "Mar 28, 10:15 AM" },
+    { user: "Carlos Martinez", text: "Inspected the unit. Filter is completely clogged. Ordering replacement now.", time: "Mar 29, 2:30 PM" },
+    { user: "Admin", text: "Parts approved and ordered. Expected delivery Mar 31.", time: "Mar 29, 4:00 PM" },
+  ],
+  parts: [
+    { name: "HVAC Filter 20x25x4 MERV-13", qty: 1, status: "Installed" },
+    { name: "Filter gasket seal", qty: 2, status: "In stock" },
+  ],
+  resources: [
+    { name: "HVAC_Filter_Manual.pdf", type: "PDF" },
+    { name: "filter_before.jpg", type: "IMG" },
+    { name: "unit_photo_204.jpg", type: "IMG" },
+  ],
 };
 
 const statusConfig: Record<string, { bg: string; text: string; dot: string; label: string }> = {
@@ -66,25 +74,11 @@ const urgencyConfig: Record<string, { color: string; label: string }> = {
   high: { color: "#EF4444", label: "High" },
 };
 
-function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ borderBottom: "1px solid #F3F4F6" }}>
-      <button
-        className="flex items-center justify-between w-full px-4 py-3"
-        onClick={() => setOpen(!open)}
-      >
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
-          {title}
-        </span>
-        {open ? (
-          <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-        ) : (
-          <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-        )}
-      </button>
-      {open && <div className="px-4 pb-4">{children}</div>}
-    </div>
+    <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>
+      {children}
+    </p>
   );
 }
 
@@ -98,8 +92,8 @@ export function Mobile() {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFFFFF", maxWidth: 390 }}>
       {/* Header */}
       <div
-        className="flex items-center gap-2 px-4 py-3 shrink-0"
-        style={{ borderBottom: "1px solid #EEEEEE" }}
+        className="flex items-center gap-2 px-4 py-3 shrink-0 sticky top-0 z-10"
+        style={{ borderBottom: "1px solid #EEEEEE", backgroundColor: "#FFFFFF" }}
       >
         <Button size="icon" variant="ghost">
           <ArrowLeft className="w-4 h-4" style={{ color: "#1A1A1A" }} />
@@ -116,20 +110,20 @@ export function Mobile() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem className="text-red-600">Delete Task</DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600 gap-2">
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Task
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Scrollable content */}
+      {/* Scrollable content — everything visible */}
       <div className="flex-1 overflow-y-auto">
-        {/* Title + Status area */}
+        {/* Title + Status */}
         <div className="px-4 pt-4 pb-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
           <div className="flex items-center gap-2 mb-2">
-            <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: status.dot }}
-            />
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: status.dot }} />
             <span
               className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
               style={{ backgroundColor: status.bg, color: status.text }}
@@ -139,9 +133,7 @@ export function Mobile() {
             <div className="flex-1" />
             <div className="flex items-center gap-1">
               <Flag className="w-3 h-3" style={{ color: urgency.color }} />
-              <span className="text-xs font-medium" style={{ color: urgency.color }}>
-                {urgency.label}
-              </span>
+              <span className="text-xs font-medium" style={{ color: urgency.color }}>{urgency.label}</span>
             </div>
           </div>
           <h1 className="text-base font-semibold leading-snug" style={{ color: "#1A1A1A" }}>
@@ -149,68 +141,57 @@ export function Mobile() {
           </h1>
         </div>
 
-        {/* Key info — compact meta rows */}
+        {/* Meta info */}
         <div className="px-4 py-3 space-y-2.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
           <div className="flex items-center gap-3">
             <User className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
             <span className="text-xs" style={{ color: "#6B7280" }}>Assigned to</span>
-            <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>
-              {task.assignedTo}
-            </span>
+            <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.assignedTo}</span>
           </div>
           <div className="flex items-center gap-3">
             <Building2 className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
             <span className="text-xs" style={{ color: "#6B7280" }}>Location</span>
-            <span className="text-xs font-medium ml-auto text-right" style={{ color: "#1A1A1A" }}>
-              {task.location} — {task.subLocation}
-            </span>
+            <span className="text-xs font-medium ml-auto text-right" style={{ color: "#1A1A1A" }}>{task.location} — {task.subLocation}</span>
           </div>
           <div className="flex items-center gap-3">
             <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
             <span className="text-xs" style={{ color: "#6B7280" }}>Due date</span>
-            <span className="text-xs font-medium ml-auto" style={{ color: "#EF4444" }}>
-              {task.dueDate}
-            </span>
+            <span className="text-xs font-medium ml-auto" style={{ color: "#EF4444" }}>{task.dueDate}</span>
           </div>
           <div className="flex items-center gap-3">
             <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
             <span className="text-xs" style={{ color: "#6B7280" }}>Created</span>
-            <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>
-              {task.createdDate}
-            </span>
+            <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.createdDate}</span>
           </div>
           <div className="flex items-center gap-3">
             <User className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
             <span className="text-xs" style={{ color: "#6B7280" }}>Requested by</span>
-            <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>
-              {task.requestedBy}
-            </span>
+            <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.requestedBy}</span>
           </div>
         </div>
 
-        {/* Description */}
-        <Section title="Description">
+        {/* Description — always visible */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <SectionLabel>Description</SectionLabel>
           <p className="text-sm leading-relaxed" style={{ color: "#374151" }}>
             {task.description}
           </p>
-        </Section>
+        </div>
 
-        {/* Subtasks — read-only */}
-        <Section title={`Subtasks (${completedCount}/${task.subtasks.length})`}>
-          <div className="mb-3">
-            <div
-              className="w-full rounded-full overflow-hidden"
-              style={{ height: 4, backgroundColor: "#EEEEEE" }}
-            >
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${progress}%`, backgroundColor: "#4338CA" }}
-              />
-            </div>
+        {/* Subtasks — always visible, read-only */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="flex items-center justify-between mb-2">
+            <SectionLabel>Subtasks</SectionLabel>
+            <span className="text-xs font-medium" style={{ color: "#4338CA" }}>
+              {completedCount}/{task.subtasks.length}
+            </span>
+          </div>
+          <div className="w-full rounded-full overflow-hidden mb-3" style={{ height: 4, backgroundColor: "#EEEEEE" }}>
+            <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: "#4338CA" }} />
           </div>
           <div className="space-y-1">
             {task.subtasks.map((sub, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 px-1">
+              <div key={i} className="flex items-center gap-3 py-1.5 px-1">
                 <span
                   className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
                   style={{
@@ -229,91 +210,99 @@ export function Mobile() {
               </div>
             ))}
           </div>
-        </Section>
+        </div>
 
-        {/* Quick counts row */}
-        <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded" style={{ backgroundColor: "#F3F4F6" }}>
-            <MessageSquare className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
-            <span className="text-xs font-medium" style={{ color: "#374151" }}>
-              {task.messages} messages
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded" style={{ backgroundColor: "#F3F4F6" }}>
-            <Wrench className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
-            <span className="text-xs font-medium" style={{ color: "#374151" }}>
-              {task.parts} parts
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded" style={{ backgroundColor: "#F3F4F6" }}>
-            <FileText className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
-            <span className="text-xs font-medium" style={{ color: "#374151" }}>
-              {task.resources.docs + task.resources.imgs} files
-            </span>
+        {/* Messages — always visible */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <SectionLabel>Messages ({task.messages.length})</SectionLabel>
+          <div className="space-y-3">
+            {task.messages.map((msg, i) => (
+              <div key={i}>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{msg.user}</span>
+                  <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{msg.time}</span>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>{msg.text}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Time Log */}
-        <Section title="Time Log" defaultOpen={false}>
+        {/* Parts — always visible */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <SectionLabel>Parts ({task.parts.length})</SectionLabel>
+          <div className="space-y-2">
+            {task.parts.map((part, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wrench className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
+                  <span className="text-xs" style={{ color: "#1A1A1A" }}>{part.name}</span>
+                  <span className="text-[10px]" style={{ color: "#9CA3AF" }}>x{part.qty}</span>
+                </div>
+                <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
+                  {part.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Time Log — always visible */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="flex items-center justify-between mb-2">
+            <SectionLabel>Time Log</SectionLabel>
+            <span className="text-xs font-medium" style={{ color: "#6B7280" }}>Total: 2h 5min</span>
+          </div>
           <div className="space-y-2">
             {task.timeEntries.map((entry, i) => (
-              <div key={i} className="flex items-center justify-between py-1.5">
+              <div key={i} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>
-                    {entry.user}
-                  </span>
-                  <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                    {entry.date}
-                  </span>
+                  <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{entry.user}</span>
+                  <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{entry.date}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs font-medium px-2 py-0.5 rounded"
-                    style={{ backgroundColor: "#F3F4F6", color: "#374151" }}
-                  >
+                  <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: "#F3F4F6", color: "#374151" }}>
                     {entry.duration}
                   </span>
-                  <Button size="icon" variant="ghost" className="h-7 w-7">
+                  <Button size="icon" variant="ghost">
                     <Pencil className="w-3 h-3" style={{ color: "#9CA3AF" }} />
                   </Button>
                 </div>
               </div>
             ))}
           </div>
-        </Section>
+        </div>
 
-        {/* Resources */}
-        <Section title="Resources" defaultOpen={false}>
+        {/* Resources — always visible */}
+        <div className="px-4 py-3">
+          <SectionLabel>Resources ({task.resources.length})</SectionLabel>
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2 py-1.5 px-1 rounded">
-              <FileText className="w-4 h-4" style={{ color: "#7C3AED" }} />
-              <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#EDE9FE", color: "#7C3AED", backgroundColor: "#EDE9FE" }}>
-                PDF
-              </Badge>
-              <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>
-                HVAC_Filter_Manual.pdf
-              </span>
-            </div>
-            <div className="flex items-center gap-2 py-1.5 px-1 rounded">
-              <ImageIcon className="w-4 h-4" style={{ color: "#6B7280" }} />
-              <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#F3F4F6", color: "#6B7280", backgroundColor: "#F3F4F6" }}>
-                IMG
-              </Badge>
-              <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>
-                filter_before.jpg
-              </span>
-            </div>
-            <div className="flex items-center gap-2 py-1.5 px-1 rounded">
-              <ImageIcon className="w-4 h-4" style={{ color: "#6B7280" }} />
-              <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#F3F4F6", color: "#6B7280", backgroundColor: "#F3F4F6" }}>
-                IMG
-              </Badge>
-              <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>
-                unit_photo_204.jpg
-              </span>
-            </div>
+            {task.resources.map((res, i) => {
+              const isImg = res.type === "IMG";
+              return (
+                <div key={i} className="flex items-center gap-2 py-1.5 px-1 rounded">
+                  {isImg ? (
+                    <ImageIcon className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  ) : (
+                    <FileText className="w-4 h-4" style={{ color: "#7C3AED" }} />
+                  )}
+                  <Badge
+                    variant="outline"
+                    className="text-[10px]"
+                    style={{
+                      borderColor: isImg ? "#F3F4F6" : "#EDE9FE",
+                      color: isImg ? "#6B7280" : "#7C3AED",
+                      backgroundColor: isImg ? "#F3F4F6" : "#EDE9FE",
+                    }}
+                  >
+                    {res.type}
+                  </Badge>
+                  <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>{res.name}</span>
+                </div>
+              );
+            })}
           </div>
-        </Section>
+        </div>
       </div>
     </div>
   );
