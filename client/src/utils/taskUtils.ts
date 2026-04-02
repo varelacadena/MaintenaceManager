@@ -210,6 +210,7 @@ export function formatTaskDate(date: string | Date | null | undefined, fallback:
   } else {
     d = date;
   }
+  if (isNaN(d.getTime())) return fallback;
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }

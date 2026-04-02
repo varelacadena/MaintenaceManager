@@ -13,7 +13,7 @@ interface TaskCardProps {
 export function TaskCard({ task, getAssigneeName, onClick }: TaskCardProps) {
   return (
     <Card
-      className="hover-elevate transition-colors cursor-pointer"
+      className={`hover-elevate transition-colors ${onClick ? "cursor-pointer" : ""}`}
       data-testid={`task-${task.id}`}
       onClick={onClick}
     >
