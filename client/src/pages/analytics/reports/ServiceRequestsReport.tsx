@@ -415,7 +415,7 @@ export default function ServiceRequestsReport() {
                 {data?.detailedRequests?.map(req => (
                   <TableRow key={req.id} data-testid={`row-request-${req.id}`}>
                     <TableCell className="py-2">
-                      <Link href={`/service-requests/${req.id}`}>
+                      <Link href={`/requests/${req.id}`}>
                         <span className="text-xs sm:text-sm text-primary hover:underline font-medium">
                           {req.title}
                         </span>
@@ -470,7 +470,7 @@ export default function ServiceRequestsReport() {
                   .map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="text-sm">
-                        <Link href={`/service-requests/${req.id}`}>
+                        <Link href={`/requests/${req.id}`}>
                           <span className="text-primary hover:underline">{req.title}</span>
                         </Link>
                       </TableCell>
