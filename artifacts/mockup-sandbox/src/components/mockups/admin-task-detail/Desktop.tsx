@@ -10,7 +10,6 @@ import {
   Image as ImageIcon,
   MoreVertical,
   Building2,
-  MessageSquare,
   Wrench,
   Trash2,
   StickyNote,
@@ -81,7 +80,7 @@ const urgencyConfig: Record<string, { color: string; label: string }> = {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>
+    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
       {children}
     </p>
   );
@@ -95,115 +94,109 @@ export function Desktop() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFFFFF" }}>
-      {/* Header */}
       <div
-        className="flex items-center gap-3 px-5 py-3 shrink-0"
+        className="flex items-center gap-4 px-8 py-4 shrink-0"
         style={{ borderBottom: "1px solid #EEEEEE" }}
       >
         <Button size="icon" variant="ghost">
-          <ArrowLeft className="w-4 h-4" style={{ color: "#1A1A1A" }} />
+          <ArrowLeft className="w-5 h-5" style={{ color: "#1A1A1A" }} />
         </Button>
-        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: status.dot }} />
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: status.dot }} />
         <span
-          className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+          className="text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded"
           style={{ backgroundColor: status.bg, color: status.text }}
         >
           {status.label}
         </span>
-        <div className="flex items-center gap-1 ml-2">
-          <Flag className="w-3 h-3" style={{ color: urgency.color }} />
-          <span className="text-xs font-medium" style={{ color: urgency.color }}>{urgency.label}</span>
+        <div className="flex items-center gap-1.5 ml-3">
+          <Flag className="w-4 h-4" style={{ color: urgency.color }} />
+          <span className="text-sm font-medium" style={{ color: urgency.color }}>{urgency.label}</span>
         </div>
-        <span className="text-xs font-medium ml-2" style={{ color: "#EF4444" }}>Due {task.dueDate}</span>
+        <span className="text-sm font-medium ml-3" style={{ color: "#EF4444" }}>Due {task.dueDate}</span>
         <div className="flex-1" />
-        <Button size="sm" variant="outline" className="gap-1.5" style={{ borderColor: "#E5E7EB" }}>
-          <Pencil className="w-3 h-3" />
+        <Button variant="outline" className="gap-2" style={{ borderColor: "#E5E7EB" }}>
+          <Pencil className="w-4 h-4" />
           Edit
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="icon" variant="ghost">
-              <MoreVertical className="w-4 h-4" style={{ color: "#6B7280" }} />
+              <MoreVertical className="w-5 h-5" style={{ color: "#6B7280" }} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="text-red-600 gap-2">
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
               Delete Task
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Two-column layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left — main info, scrollable */}
         <div className="flex-1 overflow-y-auto">
-          {/* Title + meta */}
-          <div className="px-5 pt-5 pb-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <h1 className="text-lg font-semibold leading-snug mb-4" style={{ color: "#1A1A1A" }}>
+          <div className="px-8 pt-8 pb-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
+            <h1 className="text-2xl font-semibold leading-snug mb-6" style={{ color: "#1A1A1A" }}>
               {task.name}
             </h1>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-              <div className="flex items-center gap-2">
-                <User className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-xs" style={{ color: "#6B7280" }}>Assigned to</span>
-                <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.assignedTo}</span>
+            <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+              <div className="flex items-center gap-3">
+                <User className="w-4.5 h-4.5 shrink-0" style={{ color: "#9CA3AF" }} />
+                <span className="text-sm" style={{ color: "#6B7280" }}>Assigned to</span>
+                <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.assignedTo}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Building2 className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-xs" style={{ color: "#6B7280" }}>Location</span>
-                <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.location} — {task.subLocation}</span>
+              <div className="flex items-center gap-3">
+                <Building2 className="w-4.5 h-4.5 shrink-0" style={{ color: "#9CA3AF" }} />
+                <span className="text-sm" style={{ color: "#6B7280" }}>Location</span>
+                <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.location} — {task.subLocation}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-xs" style={{ color: "#6B7280" }}>Due date</span>
-                <span className="text-xs font-medium ml-auto" style={{ color: "#EF4444" }}>{task.dueDate}</span>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4.5 h-4.5 shrink-0" style={{ color: "#9CA3AF" }} />
+                <span className="text-sm" style={{ color: "#6B7280" }}>Due date</span>
+                <span className="text-sm font-medium ml-auto" style={{ color: "#EF4444" }}>{task.dueDate}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-xs" style={{ color: "#6B7280" }}>Created</span>
-                <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.createdDate}</span>
+              <div className="flex items-center gap-3">
+                <Clock className="w-4.5 h-4.5 shrink-0" style={{ color: "#9CA3AF" }} />
+                <span className="text-sm" style={{ color: "#6B7280" }}>Created</span>
+                <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.createdDate}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <User className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-xs" style={{ color: "#6B7280" }}>Requested by</span>
-                <span className="text-xs font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.requestedBy}</span>
+              <div className="flex items-center gap-3">
+                <User className="w-4.5 h-4.5 shrink-0" style={{ color: "#9CA3AF" }} />
+                <span className="text-sm" style={{ color: "#6B7280" }}>Requested by</span>
+                <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>{task.requestedBy}</span>
               </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
             <SectionLabel>Description</SectionLabel>
-            <p className="text-sm leading-relaxed" style={{ color: "#374151" }}>
+            <p className="text-base leading-relaxed" style={{ color: "#374151" }}>
               {task.description}
             </p>
           </div>
 
-          {/* Subtasks */}
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <div className="flex items-center justify-between mb-2">
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
+            <div className="flex items-center justify-between gap-2 mb-3">
               <SectionLabel>Subtasks</SectionLabel>
-              <span className="text-xs font-medium" style={{ color: "#4338CA" }}>{completedCount}/{task.subtasks.length}</span>
+              <span className="text-sm font-medium" style={{ color: "#4338CA" }}>{completedCount}/{task.subtasks.length}</span>
             </div>
-            <div className="w-full rounded-full overflow-hidden mb-3" style={{ height: 4, backgroundColor: "#EEEEEE" }}>
+            <div className="w-full rounded-full overflow-hidden mb-4" style={{ height: 6, backgroundColor: "#EEEEEE" }}>
               <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: "#4338CA" }} />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {task.subtasks.map((sub, i) => (
-                <div key={i} className="flex items-center gap-3 py-1.5 px-1">
+                <div key={i} className="flex items-center gap-3 py-2 px-2">
                   <span
-                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
                     style={{
                       borderColor: sub.completed ? "#4338CA" : "#D1D5DB",
                       backgroundColor: sub.completed ? "#4338CA" : "transparent",
                     }}
                   >
-                    {sub.completed && <CheckCircle2 className="w-2.5 h-2.5" style={{ color: "#FFF" }} />}
+                    {sub.completed && <CheckCircle2 className="w-3 h-3" style={{ color: "#FFF" }} />}
                   </span>
                   <span
-                    className={`text-sm ${sub.completed ? "line-through" : ""}`}
+                    className={`text-base ${sub.completed ? "line-through" : ""}`}
                     style={{ color: sub.completed ? "#9CA3AF" : "#1A1A1A" }}
                   >
                     {sub.name}
@@ -213,55 +206,51 @@ export function Desktop() {
             </div>
           </div>
 
-          {/* Messages */}
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
             <SectionLabel>Messages ({task.messages.length})</SectionLabel>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {task.messages.map((msg, i) => (
                 <div key={i}>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{msg.user}</span>
-                    <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{msg.time}</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{msg.user}</span>
+                    <span className="text-xs" style={{ color: "#9CA3AF" }}>{msg.time}</span>
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>{msg.text}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: "#374151" }}>{msg.text}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
             <SectionLabel>Notes ({task.notes.length})</SectionLabel>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {task.notes.map((note, i) => (
                 <div key={i}>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <StickyNote className="w-3 h-3" style={{ color: "#F59E0B" }} />
-                    <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{note.user}</span>
-                    <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{note.time}</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <StickyNote className="w-4 h-4" style={{ color: "#F59E0B" }} />
+                    <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{note.user}</span>
+                    <span className="text-xs" style={{ color: "#9CA3AF" }}>{note.time}</span>
                   </div>
-                  <p className="text-xs leading-relaxed ml-5" style={{ color: "#374151" }}>{note.text}</p>
+                  <p className="text-sm leading-relaxed ml-6" style={{ color: "#374151" }}>{note.text}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Right sidebar — parts, time, resources */}
-        <div className="w-64 shrink-0 overflow-y-auto" style={{ borderLeft: "1px solid #EEEEEE", backgroundColor: "#FAFAFA" }}>
-          {/* Parts */}
-          <div className="p-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+        <div className="w-80 shrink-0 overflow-y-auto" style={{ borderLeft: "1px solid #EEEEEE", backgroundColor: "#FAFAFA" }}>
+          <div className="p-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
             <SectionLabel>Parts ({task.parts.length})</SectionLabel>
-            <div className="space-y-2.5">
+            <div className="space-y-4">
               {task.parts.map((part, i) => (
                 <div key={i}>
-                  <div className="flex items-center gap-2">
-                    <Wrench className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                    <span className="text-xs leading-snug" style={{ color: "#1A1A1A" }}>{part.name}</span>
+                  <div className="flex items-center gap-2.5">
+                    <Wrench className="w-4.5 h-4.5 shrink-0" style={{ color: "#9CA3AF" }} />
+                    <span className="text-sm leading-snug" style={{ color: "#1A1A1A" }}>{part.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 ml-5.5 mt-0.5">
-                    <span className="text-[10px]" style={{ color: "#9CA3AF" }}>Qty: {part.qty}</span>
-                    <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
+                  <div className="flex items-center gap-3 ml-7 mt-1">
+                    <span className="text-xs" style={{ color: "#9CA3AF" }}>Qty: {part.qty}</span>
+                    <Badge variant="outline" className="text-xs" style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
                       {part.status}
                     </Badge>
                   </div>
@@ -270,25 +259,24 @@ export function Desktop() {
             </div>
           </div>
 
-          {/* Time Log */}
-          <div className="p-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <div className="flex items-center justify-between mb-2">
+          <div className="p-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
+            <div className="flex items-center justify-between gap-2 mb-3">
               <SectionLabel>Time Log</SectionLabel>
-              <span className="text-xs font-medium" style={{ color: "#6B7280" }}>2h 5min</span>
+              <span className="text-sm font-medium" style={{ color: "#6B7280" }}>2h 5min</span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {task.timeEntries.map((entry, i) => (
-                <div key={i} className="flex items-center justify-between py-1">
+                <div key={i} className="flex items-center justify-between gap-2 py-1.5">
                   <div>
-                    <span className="text-xs font-medium block" style={{ color: "#1A1A1A" }}>{entry.user}</span>
-                    <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{entry.date}</span>
+                    <span className="text-sm font-medium block" style={{ color: "#1A1A1A" }}>{entry.user}</span>
+                    <span className="text-xs" style={{ color: "#9CA3AF" }}>{entry.date}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: "#FFFFFF", color: "#374151", border: "1px solid #E5E7EB" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium px-2.5 py-1 rounded" style={{ backgroundColor: "#FFFFFF", color: "#374151", border: "1px solid #E5E7EB" }}>
                       {entry.duration}
                     </span>
                     <Button size="icon" variant="ghost">
-                      <Pencil className="w-3 h-3" style={{ color: "#9CA3AF" }} />
+                      <Pencil className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
                     </Button>
                   </div>
                 </div>
@@ -296,22 +284,21 @@ export function Desktop() {
             </div>
           </div>
 
-          {/* Resources */}
-          <div className="p-4">
+          <div className="p-6">
             <SectionLabel>Resources ({task.resources.length})</SectionLabel>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {task.resources.map((res, i) => {
                 const isImg = res.type === "IMG";
                 return (
-                  <div key={i} className="flex items-center gap-2 py-1.5 px-1 rounded">
+                  <div key={i} className="flex items-center gap-3 py-2 px-2 rounded">
                     {isImg ? (
-                      <ImageIcon className="w-4 h-4 shrink-0" style={{ color: "#6B7280" }} />
+                      <ImageIcon className="w-5 h-5 shrink-0" style={{ color: "#6B7280" }} />
                     ) : (
-                      <FileText className="w-4 h-4 shrink-0" style={{ color: "#7C3AED" }} />
+                      <FileText className="w-5 h-5 shrink-0" style={{ color: "#7C3AED" }} />
                     )}
                     <Badge
                       variant="outline"
-                      className="text-[10px]"
+                      className="text-xs"
                       style={{
                         borderColor: isImg ? "#F3F4F6" : "#EDE9FE",
                         color: isImg ? "#6B7280" : "#7C3AED",
@@ -320,7 +307,7 @@ export function Desktop() {
                     >
                       {res.type}
                     </Badge>
-                    <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>{res.name}</span>
+                    <span className="text-sm truncate flex-1" style={{ color: "#374151" }}>{res.name}</span>
                   </div>
                 );
               })}
