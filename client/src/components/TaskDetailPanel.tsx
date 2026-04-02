@@ -59,7 +59,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem, TaskNote } from "@shared/schema";
+import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
 import { TaskEditMode } from "./TaskEditMode";
 import { SubtaskNote } from "./SubtaskNote";
 import { SubtaskPhotos } from "./SubtaskPhotos";
@@ -208,7 +208,7 @@ export function TaskDetailPanel({
     queryKey: ["/api/inventory"],
   });
 
-  const { data: timeEntries = [] } = useQuery<any[]>({
+  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries/task", taskId],
     queryFn: async () => {
       const res = await fetch(`/api/time-entries/task/${taskId}`);
@@ -229,7 +229,7 @@ export function TaskDetailPanel({
   });
 
   const totalMinutes = useMemo(() => {
-    return timeEntries.reduce((sum: number, e: any) => {
+    return timeEntries.reduce((sum: number, e: TimeEntry) => {
       if (e.durationMinutes) return sum + e.durationMinutes;
       if (e.startTime && e.endTime) {
         return sum + Math.round((new Date(e.endTime).getTime() - new Date(e.startTime).getTime()) / 60000);
@@ -1348,7 +1348,7 @@ export function TaskDetailPanel({
             {timeEntries.length === 0 ? (
               <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>No time entries yet</p>
             ) : (
-              timeEntries.map((entry: any) => {
+              timeEntries.map((entry: TimeEntry) => {
                 const entryUser = allUsers?.find(u => u.id === entry.userId);
                 const isRunning = entry.startTime && !entry.endTime;
                 const duration = entry.durationMinutes
@@ -1369,11 +1369,6 @@ export function TaskDetailPanel({
                         <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                           {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : "No start time"}
                         </p>
-                        {entry.description && (
-                          <p className="text-xs mt-0.5 truncate" style={{ color: "#6B7280" }}>
-                            {entry.description}
-                          </p>
-                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
                         <span
@@ -2175,7 +2170,7 @@ export function TaskDetailPanel({
                 <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No time entries</p>
               ) : (
                 <div className="space-y-3">
-                  {timeEntries.map((entry: any) => {
+                  {timeEntries.map((entry: TimeEntry) => {
                     const entryUser = allUsers?.find(u => u.id === entry.userId);
                     const isRunning = entry.startTime && !entry.endTime;
                     const duration = entry.durationMinutes
