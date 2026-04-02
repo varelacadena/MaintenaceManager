@@ -228,7 +228,6 @@ export function Desktop() {
               ))}
             </div>
           </div>
-        </div>
 
           {/* Notes */}
           <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
