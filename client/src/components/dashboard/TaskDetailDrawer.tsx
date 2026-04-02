@@ -41,6 +41,9 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   drawerUrgencyConfig as urgencyConfig,
   drawerStatusConfig as statusConfig,
+  getInitials as getInitialsShared,
+  getUserDisplayName as getUserDisplayNameShared,
+  formatTaskDate,
 } from "@/utils/taskUtils";
 
 interface TaskDetailDrawerProps {
@@ -126,17 +129,11 @@ export default function TaskDetailDrawer({
 
   const getInitials = (user?: UserType | null) => {
     if (!user) return "?";
-    if (user.firstName && user.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`;
-    }
-    return user.username?.[0]?.toUpperCase() || "?";
+    return getInitialsShared(user);
   };
 
   const getUserDisplayName = (user: UserType) => {
-    if (user.firstName) {
-      return `${user.firstName} ${user.lastName || ""}`.trim();
-    }
-    return user.username;
+    return getUserDisplayNameShared(user);
   };
 
   const formatDate = (date: Date | string | null) => {
