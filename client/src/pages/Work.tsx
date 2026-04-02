@@ -359,12 +359,12 @@ function TaskTableRow({
             return (
               <>
                 {ext.isHelper && (
-                  <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
+                  <Badge variant="outline" className="shrink-0 text-xs px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
                     Helper
                   </Badge>
                 )}
                 {ext.helperCount != null && ext.helperCount > 0 && (
-                  <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0" data-testid={`badge-helpers-count-${task.id}`}>
+                  <Badge variant="secondary" className="shrink-0 text-xs px-1.5 py-0" data-testid={`badge-helpers-count-${task.id}`}>
                     {ext.helperCount} Helper{ext.helperCount > 1 ? "s" : ""}
                   </Badge>
                 )}
@@ -390,7 +390,7 @@ function TaskTableRow({
           >
             {assignee ? (
               <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
-                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-[10px] font-medium`}>
+                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-xs font-medium`}>
                   {assigneeInitials}
                 </AvatarFallback>
               </Avatar>
@@ -438,7 +438,7 @@ function TaskTableRow({
             onSave={handleInlineEdit}
           />
           {isOverdue && (
-            <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
+            <span className="text-xs font-medium text-destructive whitespace-nowrap">Overdue</span>
           )}
         </div>
       </TableCell>
@@ -455,7 +455,7 @@ function TaskTableRow({
             >
               <Badge
                 variant="outline"
-                className={`${taskStatusColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                className={`${taskStatusColors[task.status] || ""} text-xs font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
               >
                 <SelectValue />
               </Badge>
@@ -483,7 +483,7 @@ function TaskTableRow({
                 e.stopPropagation();
                 onReviewEstimates?.(task.id);
               }}
-              className="text-[10px]"
+              className="text-xs"
               data-testid={`button-review-estimates-${task.id}`}
             >
               Review & Approve
@@ -1673,12 +1673,12 @@ export default function Work() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Badge className={`text-[10px] ${projectStatusBadgeColors[project.status] || ""}`} data-testid={`badge-project-status-${project.id}`}>
+                                <Badge className={`text-xs ${projectStatusBadgeColors[project.status] || ""}`} data-testid={`badge-project-status-${project.id}`}>
                                   {statusLabel[project.status] || project.status}
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className={`text-[10px] ${priorityCfg.color}`} data-testid={`badge-project-priority-${project.id}`}>
+                                <Badge variant="outline" className={`text-xs ${priorityCfg.color}`} data-testid={`badge-project-priority-${project.id}`}>
                                   <Flag className="w-3 h-3 mr-0.5" />
                                   {priorityCfg.label}
                                 </Badge>
@@ -2261,7 +2261,7 @@ function ParentTaskRowGroup({
             />
             <Badge
               variant="outline"
-              className="text-[10px] shrink-0 no-default-hover-elevate no-default-active-elevate"
+              className="text-xs shrink-0 no-default-hover-elevate no-default-active-elevate"
               data-testid={`badge-subtask-count-${task.id}`}
             >
               {completedSubTasks}/{childSubTasks.length} complete
@@ -2285,7 +2285,7 @@ function ParentTaskRowGroup({
             >
               {assignee ? (
                 <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
-                  <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-[10px] font-medium`}>
+                  <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-xs font-medium`}>
                     {assigneeInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -2333,7 +2333,7 @@ function ParentTaskRowGroup({
               onSave={handleInlineEdit}
             />
             {isOverdue && (
-              <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
+              <span className="text-xs font-medium text-destructive whitespace-nowrap">Overdue</span>
             )}
           </div>
         </TableCell>
@@ -2350,7 +2350,7 @@ function ParentTaskRowGroup({
               >
                 <Badge
                   variant="outline"
-                  className={`${taskStatusColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                  className={`${taskStatusColors[task.status] || ""} text-xs font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
                 >
                   <SelectValue />
                 </Badge>
@@ -2378,7 +2378,7 @@ function ParentTaskRowGroup({
                   e.stopPropagation();
                   onReviewEstimates?.(task.id);
                 }}
-                className="text-[10px]"
+                className="text-xs"
                 data-testid={`button-review-estimates-${task.id}`}
               >
                 Review & Approve
@@ -2577,7 +2577,7 @@ function ProjectRowGroup({
             >
               <Badge
                 variant="outline"
-                className={`${taskStatusColors[projectStatusToUnified] || taskStatusColors.not_started} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                className={`${taskStatusColors[projectStatusToUnified] || taskStatusColors.not_started} text-xs font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
               >
                 <SelectValue />
               </Badge>

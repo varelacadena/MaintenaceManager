@@ -160,7 +160,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                         <item.icon className="w-4 h-4 shrink-0" />
                         <span className="truncate">{item.title}</span>
                         {badgeCount > 0 && (
-                          <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-medium text-white group-data-[collapsible=icon]:hidden" data-testid={`badge-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <span className="ml-auto flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white group-data-[collapsible=icon]:hidden" data-testid={`badge-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                             {badgeCount > 9 ? "9+" : badgeCount}
                           </span>
                         )}
@@ -181,7 +181,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
           </Avatar>
           <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="text-xs font-medium truncate">{userName}</p>
-            <p className="text-[10px] text-muted-foreground capitalize">{userRole}</p>
+            <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
           </div>
           <button
             onClick={async () => {

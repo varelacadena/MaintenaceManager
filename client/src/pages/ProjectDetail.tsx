@@ -332,7 +332,7 @@ function ProjectTaskTableRow({
           >
             {assignee ? (
               <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
-                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-[10px] font-medium`}>
+                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-xs font-medium`}>
                   {assigneeInitials}
                 </AvatarFallback>
               </Avatar>
@@ -380,7 +380,7 @@ function ProjectTaskTableRow({
             onSave={handleInlineEdit}
           />
           {isOverdue && (
-            <span className="text-[10px] font-medium text-destructive whitespace-nowrap">Overdue</span>
+            <span className="text-xs font-medium text-destructive whitespace-nowrap">Overdue</span>
           )}
         </div>
       </TableCell>
@@ -397,7 +397,7 @@ function ProjectTaskTableRow({
             >
               <Badge
                 variant="outline"
-                className={`${tableBadgeColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                className={`${tableBadgeColors[task.status] || ""} text-xs font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
               >
                 <SelectValue />
               </Badge>
@@ -425,7 +425,7 @@ function ProjectTaskTableRow({
                 e.stopPropagation();
                 onReviewEstimates?.(task.id);
               }}
-              className="text-[10px]"
+              className="text-xs"
               data-testid={`button-review-estimates-${task.id}`}
             >
               Review & Approve
@@ -531,7 +531,7 @@ function MobileTaskCard({
           </div>
           <Badge
             variant="outline"
-            className={`${tableBadgeColors[task.status] || ""} text-[10px] font-semibold uppercase tracking-wider shrink-0 no-default-hover-elevate no-default-active-elevate`}
+            className={`${tableBadgeColors[task.status] || ""} text-xs font-semibold uppercase tracking-wider shrink-0 no-default-hover-elevate no-default-active-elevate`}
           >
             {task.status.replace(/_/g, " ")}
           </Badge>
@@ -566,7 +566,7 @@ function MobileTaskCard({
                 e.preventDefault();
                 onReviewEstimates?.(task.id);
               }}
-              className="text-[10px]"
+              className="text-xs"
               data-testid={`button-review-estimates-${task.id}`}
             >
               Review & Approve
@@ -1101,7 +1101,7 @@ export default function ProjectDetail() {
                 <div className="text-xl font-bold" data-testid="text-budget">
                   ${(project.budgetAmount || 0).toLocaleString()}
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">allocated</div>
+                <div className="text-xs text-muted-foreground mt-0.5">allocated</div>
               </CardContent>
             </Card>
             <Card>
@@ -1119,7 +1119,7 @@ export default function ProjectDetail() {
                   {daysLeft !== null ? daysLeft : "—"}
                 </div>
                 {daysLeft !== null && daysLeft < 0 && (
-                  <div className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">past due</div>
+                  <div className="text-xs text-red-500 dark:text-red-400 mt-0.5">past due</div>
                 )}
               </CardContent>
             </Card>
@@ -1259,7 +1259,7 @@ export default function ProjectDetail() {
                     <div key={date}>
                       <div className="flex items-center gap-2 my-3">
                         <div className="flex-1 h-px bg-border" />
-                        <span className="text-[11px] text-muted-foreground font-medium">{date}</span>
+                        <span className="text-xs text-muted-foreground font-medium">{date}</span>
                         <div className="flex-1 h-px bg-border" />
                       </div>
                       {dateComments.map((comment) => {
@@ -1268,7 +1268,7 @@ export default function ProjectDetail() {
                           return (
                             <div key={comment.id} className="flex items-center gap-2 py-1.5" data-testid={`comment-system-${comment.id}`}>
                               <Avatar className="w-7 h-7 shrink-0">
-                                <AvatarFallback className="bg-muted text-[10px] font-bold text-muted-foreground">SYS</AvatarFallback>
+                                <AvatarFallback className="bg-muted text-xs font-bold text-muted-foreground">SYS</AvatarFallback>
                               </Avatar>
                               <span className="text-sm text-muted-foreground">{comment.content}</span>
                             </div>
@@ -1278,14 +1278,14 @@ export default function ProjectDetail() {
                         return (
                           <div key={comment.id} className="flex gap-2 py-1.5" data-testid={`comment-${comment.id}`}>
                             <Avatar className="w-7 h-7 shrink-0">
-                              <AvatarFallback className={`${getAvatarColor(comment.senderId)} text-white text-[10px] font-medium`}>
+                              <AvatarFallback className={`${getAvatarColor(comment.senderId)} text-white text-xs font-medium`}>
                                 {sender.initials}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-baseline gap-2 flex-wrap">
                                 <span className="font-medium text-sm">{sender.name}</span>
-                                <span className="text-[11px] text-muted-foreground">
+                                <span className="text-xs text-muted-foreground">
                                   {comment.createdAt ? format(new Date(comment.createdAt), "h:mm a") : ""}
                                 </span>
                               </div>

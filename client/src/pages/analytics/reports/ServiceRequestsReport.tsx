@@ -157,7 +157,7 @@ export default function ServiceRequestsReport() {
     };
     const config = statusMap[status] || { className: "" };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${config.className}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${config.className}`}>
         {status.replace(/_/g, " ")}
       </Badge>
     );
@@ -170,7 +170,7 @@ export default function ServiceRequestsReport() {
       low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${urgencyMap[urgency] || ""}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${urgencyMap[urgency] || ""}`}>
         {urgency}
       </Badge>
     );

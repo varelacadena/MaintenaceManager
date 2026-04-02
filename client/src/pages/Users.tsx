@@ -741,7 +741,7 @@ export default function Users() {
           <TabsTrigger value="pending" data-testid="tab-pending" className="gap-1.5">
             Pending
             {pendingUsers.filter((p) => p.status === "pending").length > 0 && (
-              <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 text-[9px] font-medium text-white px-1" data-testid="badge-pending-count">
+              <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white px-1" data-testid="badge-pending-count">
                 {pendingUsers.filter((p) => p.status === "pending").length}
               </span>
             )}
@@ -873,8 +873,8 @@ export default function Users() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm truncate">{pu.firstName} {pu.lastName}</span>
-                            <Badge variant="outline" className="text-[10px]">{pu.requestedRole}</Badge>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusColors[pu.status] || ""}`}>
+                            <Badge variant="outline" className="text-xs">{pu.requestedRole}</Badge>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${statusColors[pu.status] || ""}`}>
                               {pu.status}
                             </span>
                           </div>

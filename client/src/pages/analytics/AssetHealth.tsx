@@ -135,13 +135,13 @@ export default function AssetHealth() {
   };
 
   const getConditionBadge = (condition: string | null) => {
-    if (!condition) return <Badge variant="secondary" className="text-[10px] sm:text-xs">Unknown</Badge>;
+    if (!condition) return <Badge variant="secondary" className="text-xs sm:text-xs">Unknown</Badge>;
     const lower = condition.toLowerCase();
-    if (lower === "good") return <Badge variant="default" className="bg-green-600 text-[10px] sm:text-xs">Good</Badge>;
-    if (lower === "fair") return <Badge variant="default" className="bg-yellow-600 text-[10px] sm:text-xs">Fair</Badge>;
-    if (lower === "poor") return <Badge variant="default" className="bg-red-600 text-[10px] sm:text-xs">Poor</Badge>;
-    if (lower === "needs replacement") return <Badge variant="destructive" className="text-[10px] sm:text-xs">Replace</Badge>;
-    return <Badge variant="secondary" className="text-[10px] sm:text-xs">{condition}</Badge>;
+    if (lower === "good") return <Badge variant="default" className="bg-green-600 text-xs sm:text-xs">Good</Badge>;
+    if (lower === "fair") return <Badge variant="default" className="bg-yellow-600 text-xs sm:text-xs">Fair</Badge>;
+    if (lower === "poor") return <Badge variant="default" className="bg-red-600 text-xs sm:text-xs">Poor</Badge>;
+    if (lower === "needs replacement") return <Badge variant="destructive" className="text-xs sm:text-xs">Replace</Badge>;
+    return <Badge variant="secondary" className="text-xs sm:text-xs">{condition}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
@@ -153,7 +153,7 @@ export default function AssetHealth() {
     };
     const config = statusMap[status] || { variant: "secondary" as const };
     return (
-      <Badge variant={config.variant} className={`text-[10px] sm:text-xs ${config.className || ""}`}>
+      <Badge variant={config.variant} className={`text-xs sm:text-xs ${config.className || ""}`}>
         {status.replace(/_/g, " ")}
       </Badge>
     );
@@ -166,7 +166,7 @@ export default function AssetHealth() {
       low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${urgencyMap[urgency] || ""}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${urgencyMap[urgency] || ""}`}>
         {urgency}
       </Badge>
     );
@@ -182,7 +182,7 @@ export default function AssetHealth() {
       landscaping: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${colors[category] || ""}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${colors[category] || ""}`}>
         {category.charAt(0).toUpperCase() + category.slice(1)}
       </Badge>
     );
@@ -363,7 +363,7 @@ export default function AssetHealth() {
                       <TableCell className="text-xs sm:text-sm text-right py-2">{asset.workOrderCount}</TableCell>
                       <TableCell className="text-xs sm:text-sm text-right py-2 hidden sm:table-cell">${asset.totalMaintenanceCost.toLocaleString()}</TableCell>
                       <TableCell className="py-2">
-                        <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                        <Badge variant="destructive" className="text-xs sm:text-xs">
                           {asset.workOrderCount >= 10 ? "Replace" : "Evaluate"}
                         </Badge>
                       </TableCell>

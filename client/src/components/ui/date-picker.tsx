@@ -71,7 +71,7 @@ export function DatePicker({
             nav_button_next: "absolute right-0",
             table: "w-full border-collapse",
             head_row: "flex",
-            head_cell: "text-muted-foreground rounded-md w-7 font-medium text-[10px]",
+            head_cell: "text-muted-foreground rounded-md w-7 font-medium text-xs",
             row: "flex w-full mt-1",
             cell: "h-7 w-7 text-center text-xs p-0 relative",
             day: "h-7 w-7 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground text-xs",

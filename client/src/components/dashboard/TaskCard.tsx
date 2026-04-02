@@ -204,13 +204,13 @@ export default function TaskCard({
             <div className="flex items-center gap-2 flex-wrap">
               <Badge
                 variant="outline"
-                className={cn("text-[10px] px-1.5 py-0", status.color)}
+                className={cn("text-xs px-1.5 py-0", status.color)}
               >
                 {status.label}
               </Badge>
               <Badge
                 variant="outline"
-                className={cn("text-[10px] px-1.5 py-0 capitalize", urgency.badge)}
+                className={cn("text-xs px-1.5 py-0 capitalize", urgency.badge)}
               >
                 {task.urgency}
               </Badge>
@@ -218,7 +218,7 @@ export default function TaskCard({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "text-[10px] px-1.5 py-0",
+                    "text-xs px-1.5 py-0",
                     isOverdue
                       ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border-red-200 dark:border-red-700"
                       : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200 dark:border-blue-700"
@@ -235,7 +235,7 @@ export default function TaskCard({
                 {assignee ? (
                   <div className="flex items-center gap-1.5">
                     <Avatar className="w-5 h-5">
-                      <AvatarFallback className="text-[10px]">
+                      <AvatarFallback className="text-xs">
                         {getInitials(assignee)}
                       </AvatarFallback>
                     </Avatar>

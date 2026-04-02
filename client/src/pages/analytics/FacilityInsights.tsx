@@ -90,7 +90,7 @@ export default function FacilityInsights() {
       road: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
     };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${colors[type] || ""}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${colors[type] || ""}`}>
         {type.charAt(0).toUpperCase() + type.slice(1)}
       </Badge>
     );
@@ -226,7 +226,7 @@ export default function FacilityInsights() {
                       <TableCell className="py-2">
                         <div className="flex items-center gap-1">
                           <Progress value={completionRate} className="h-1.5 sm:h-2 flex-1" />
-                          <span className="text-[10px] sm:text-xs text-muted-foreground w-7">{completionRate}%</span>
+                          <span className="text-xs sm:text-xs text-muted-foreground w-7">{completionRate}%</span>
                         </div>
                       </TableCell>
                     </TableRow>

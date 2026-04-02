@@ -126,7 +126,7 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
           <p className={`font-medium truncate ${isMobile ? 'text-sm' : 'text-xs'}`}>
             {attachment.label || attachment.fileName}
           </p>
-          <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-[10px]'}`}>
+          <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-xs'}`}>
             {isMockFile ? "File unavailable" : attachment.fileType}
           </p>
         </div>

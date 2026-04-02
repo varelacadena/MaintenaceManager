@@ -155,7 +155,7 @@ export default function FleetReport() {
     };
     const config = statusMap[status] || { className: "" };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${config.className}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${config.className}`}>
         {status.replace(/_/g, " ")}
       </Badge>
     );
@@ -171,7 +171,7 @@ export default function FleetReport() {
     };
     const config = statusMap[status] || { className: "" };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${config.className}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${config.className}`}>
         {status.replace(/_/g, " ")}
       </Badge>
     );

@@ -623,7 +623,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
                       Estimate pending approval
                     </p>
-                    <p className="text-[11px] mt-0.5 text-amber-700 dark:text-amber-400">
+                    <p className="text-xs mt-0.5 text-amber-700 dark:text-amber-400">
                       This task cannot be completed until the estimate is approved by an admin.
                     </p>
                   </div>
@@ -637,7 +637,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   data-testid="card-instructions"
                 >
                   <p
-                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    className="text-xs uppercase font-medium mb-2 text-muted-foreground"
                     style={{ letterSpacing: "0.05em" }}
                   >
                     Instructions
@@ -662,7 +662,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   data-testid="card-description"
                 >
                   <p
-                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    className="text-xs uppercase font-medium mb-2 text-muted-foreground"
                     style={{ letterSpacing: "0.05em" }}
                   >
                     Description
@@ -679,7 +679,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   data-testid="card-student-helpers"
                 >
                   <p
-                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    className="text-xs uppercase font-medium mb-2 text-muted-foreground"
                     style={{ letterSpacing: "0.05em" }}
                   >
                     Student Helpers ({taskHelpers.length})
@@ -702,7 +702,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <p
-                      className="text-[10px] uppercase font-medium text-muted-foreground"
+                      className="text-xs uppercase font-medium text-muted-foreground"
                       style={{ letterSpacing: "0.05em" }}
                     >
                       Subtasks
@@ -783,7 +783,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <p
-                      className="text-[10px] uppercase font-medium text-muted-foreground"
+                      className="text-xs uppercase font-medium text-muted-foreground"
                       style={{ letterSpacing: "0.05em" }}
                     >
                       Checklist
@@ -852,18 +852,18 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               >
                 <div className="flex items-center justify-between mb-2">
                   <p
-                    className="text-[10px] uppercase font-medium text-muted-foreground"
+                    className="text-xs uppercase font-medium text-muted-foreground"
                     style={{ letterSpacing: "0.05em" }}
                   >
                     Notes
                   </p>
                   {saveIndicator === "saving" && (
-                    <span className="text-[10px] text-primary">
+                    <span className="text-xs text-primary">
                       Saving...
                     </span>
                   )}
                   {saveIndicator === "saved" && (
-                    <span className="text-[10px] text-green-600 dark:text-green-400">
+                    <span className="text-xs text-green-600 dark:text-green-400">
                       Saved
                     </span>
                   )}
@@ -896,7 +896,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                           <p className="text-xs text-foreground">
                             {note.content}
                           </p>
-                          <p className="text-[10px] mt-1 text-muted-foreground">
+                          <p className="text-xs mt-1 text-muted-foreground">
                             {note.createdAt && format(new Date(note.createdAt), "h:mm a")}
                           </p>
                         </div>
@@ -906,7 +906,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
                 {uploads.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-[10px] uppercase font-medium mb-2 text-muted-foreground tracking-wide">
+                    <p className="text-xs uppercase font-medium mb-2 text-muted-foreground tracking-wide">
                       Photos ({uploads.length})
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -959,7 +959,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                         {contactName}
                       </p>
                       {contactPhone && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Tap to call &middot; {contactPhone}
                         </p>
                       )}
@@ -1001,7 +1001,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                         Estimate / Quote
                       </p>
                       {existingQuote && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {task.estimateStatus === "waiting_approval"
                             ? `Pending approval \u00B7 $${(existingQuote.estimatedCost || 0).toFixed(2)}`
                             : task.estimateStatus === "approved"
@@ -1101,7 +1101,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                   data-testid="card-parts-list"
                 >
                   <p
-                    className="text-[10px] uppercase font-medium mb-2 text-muted-foreground"
+                    className="text-xs uppercase font-medium mb-2 text-muted-foreground"
                     style={{ letterSpacing: "0.05em" }}
                   >
                     Parts Added
@@ -1117,7 +1117,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                             {part.partName}
                           </p>
                           {part.notes && (
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {part.notes}
                             </p>
                           )}
@@ -1126,7 +1126,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                           <p className="text-sm text-foreground">
                             Qty: {part.quantity}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             ${Number(part.cost).toFixed(2)}
                           </p>
                         </div>
@@ -1273,7 +1273,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                 Mark as complete
               </button>
               {estimateBlocksCompletion && (
-                <p className="text-[11px] text-center mt-1 text-amber-600 dark:text-amber-400" data-testid="text-estimate-block-reason">
+                <p className="text-xs text-center mt-1 text-amber-600 dark:text-amber-400" data-testid="text-estimate-block-reason">
                   Estimate must be approved before completing
                 </p>
               )}
@@ -1327,7 +1327,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                         minimumFractionDigits: 2,
                       })}
                     </p>
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
                       {quote.status === "approved" ? "Approved" : "Pending approval"}
                     </p>
                   </div>
@@ -1541,7 +1541,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                       data-testid={`resource-row-${resource.id}`}
                     >
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${isVideo ? "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400" : "bg-violet-100 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400"}`}
+                        className={`px-2 py-0.5 rounded text-xs font-semibold uppercase shrink-0 ${isVideo ? "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400" : "bg-violet-100 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400"}`}
                       >
                         {isVideo ? "VID" : "PDF"}
                       </span>

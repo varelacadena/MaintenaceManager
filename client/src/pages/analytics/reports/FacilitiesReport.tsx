@@ -100,7 +100,7 @@ export default function FacilitiesReport() {
       road: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
     };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${colors[type] || ""}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${colors[type] || ""}`}>
         {type.charAt(0).toUpperCase() + type.slice(1)}
       </Badge>
     );
@@ -115,7 +115,7 @@ export default function FacilitiesReport() {
     };
     const config = statusMap[status] || { variant: "secondary" as const };
     return (
-      <Badge variant={config.variant} className={`text-[10px] sm:text-xs ${config.className || ""}`}>
+      <Badge variant={config.variant} className={`text-xs sm:text-xs ${config.className || ""}`}>
         {status.replace(/_/g, " ")}
       </Badge>
     );
@@ -128,7 +128,7 @@ export default function FacilitiesReport() {
       low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     };
     return (
-      <Badge variant="secondary" className={`text-[10px] sm:text-xs ${urgencyMap[urgency] || ""}`}>
+      <Badge variant="secondary" className={`text-xs sm:text-xs ${urgencyMap[urgency] || ""}`}>
         {urgency}
       </Badge>
     );

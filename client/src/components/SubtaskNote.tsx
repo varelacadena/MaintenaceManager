@@ -70,7 +70,7 @@ export function SubtaskNote({ subtaskId, disabled, testIdPrefix = "subtask" }: S
         data-testid={`${testIdPrefix}-note-${subtaskId}`}
       />
       {saveNoteMutation.isPending && (
-        <span className="absolute bottom-1 right-2 text-[10px]" style={{ color: "#9CA3AF" }}>Saving...</span>
+        <span className="absolute bottom-1 right-2 text-xs" style={{ color: "#9CA3AF" }}>Saving...</span>
       )}
     </div>
   );

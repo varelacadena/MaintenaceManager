@@ -440,7 +440,7 @@ export default function Messages() {
                           </AvatarFallback>
                         </Avatar>
                         {conv.unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-md">
+                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-md">
                             {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                           </span>
                         )}
@@ -457,7 +457,7 @@ export default function Messages() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 no-default-hover-elevate">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 no-default-hover-elevate">
                             {conv.user.role}
                           </Badge>
                         </div>
@@ -467,7 +467,7 @@ export default function Messages() {
                             {conv.lastMessage.content}
                           </p>
                         )}
-                        <p className="text-[10px] text-muted-foreground/70 mt-1 truncate">
+                        <p className="text-xs text-muted-foreground/70 mt-1 truncate">
                           {conv.relatedRequestIds.size > 0 && `${conv.relatedRequestIds.size} request${conv.relatedRequestIds.size > 1 ? "s" : ""}`}
                           {conv.relatedRequestIds.size > 0 && conv.relatedTaskIds.size > 0 && " • "}
                           {conv.relatedTaskIds.size > 0 && `${conv.relatedTaskIds.size} task${conv.relatedTaskIds.size > 1 ? "s" : ""}`}
@@ -504,7 +504,7 @@ export default function Messages() {
                     <div>
                       <h2 className="font-semibold">{getDisplayName(selectedConversation.user)}</h2>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0 h-4">
                           {selectedConversation.user.role}
                         </Badge>
                         {selectedConversation.user.email && (
@@ -572,7 +572,7 @@ export default function Messages() {
                           )}
                           {showContextChange && (
                             <div className="text-center my-2">
-                              <span className="text-[10px] text-muted-foreground/70">
+                              <span className="text-xs text-muted-foreground/70">
                                 Re: {currentContext.label}
                               </span>
                             </div>
@@ -584,7 +584,7 @@ export default function Messages() {
                             <div className={`flex items-end gap-2 max-w-[70%] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
                               {!isOwn && (
                                 <Avatar className={`w-7 h-7 ${getAvatarColor(message.senderId)} flex-shrink-0`}>
-                                  <AvatarFallback className="text-white text-[10px]">
+                                  <AvatarFallback className="text-white text-xs">
                                     {getInitials(selectedConversation.user)}
                                   </AvatarFallback>
                                 </Avatar>
@@ -663,7 +663,7 @@ export default function Messages() {
                     <Send className="w-5 h-5" />
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                <p className="text-xs text-muted-foreground mt-2 text-center">
                   Press Enter to send, Shift + Enter for new line
                 </p>
               </div>

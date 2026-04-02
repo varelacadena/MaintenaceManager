@@ -114,7 +114,7 @@ function RadialProgress({ completed, total, strokeColor }: { completed: number; 
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-[10px] font-bold tabular-nums">{Math.round(pct)}%</span>
+        <span className="text-xs font-bold tabular-nums">{Math.round(pct)}%</span>
       </div>
     </div>
   );
@@ -390,7 +390,7 @@ export default function AdminDashboard({
         )}>
           {task.name}
         </p>
-        <span className="text-[10px] text-muted-foreground shrink-0">{firstName.split(" ")[0]}</span>
+        <span className="text-xs text-muted-foreground shrink-0">{firstName.split(" ")[0]}</span>
       </div>
     );
 
@@ -643,11 +643,11 @@ export default function AdminDashboard({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-background rounded-md p-3 text-center border shadow-sm">
                     <p className="text-2xl font-bold text-indigo-600" data-testid="text-ai-pending">{aiStats.pending}</p>
-                    <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Pending</p>
+                    <p className="text-xs uppercase text-muted-foreground tracking-wider">Pending</p>
                   </div>
                   <div className="bg-background rounded-md p-3 text-center border shadow-sm">
                     <p className="text-2xl font-bold text-indigo-600" data-testid="text-ai-auto-applied">{aiStats.autoApplied}</p>
-                    <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Auto-Applied</p>
+                    <p className="text-xs uppercase text-muted-foreground tracking-wider">Auto-Applied</p>
                   </div>
                 </div>
                 {pendingAiLogs.length > 0 && (
@@ -740,10 +740,10 @@ export default function AdminDashboard({
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium line-clamp-1">{req.title}</p>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {req.createdAt ? format(new Date(req.createdAt), "MMM d") : "N/A"}
                             </span>
-                            <span className="text-[10px] text-muted-foreground capitalize">
+                            <span className="text-xs text-muted-foreground capitalize">
                               {req.status?.replace("_", " ")}
                             </span>
                           </div>

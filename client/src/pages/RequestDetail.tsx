@@ -265,12 +265,12 @@ export default function RequestDetail() {
                   {request.title}
                 </h1>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-1.5 py-0 h-4" data-testid="badge-status">
+                  <Badge variant={getStatusVariant(request.status)} className="text-xs px-1.5 py-0 h-4" data-testid="badge-status">
                     {getStatusLabel(request.status)}
                   </Badge>
                   <Badge 
                     variant="outline" 
-                    className={`text-[10px] px-1.5 py-0 h-4 capitalize ${getPriorityColor(request.urgency)}`}
+                    className={`text-xs px-1.5 py-0 h-4 capitalize ${getPriorityColor(request.urgency)}`}
                     data-testid="badge-urgency"
                   >
                     {request.urgency}
@@ -481,7 +481,7 @@ export default function RequestDetail() {
                           className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <span className="text-[10px] font-medium text-muted-foreground mb-0.5" data-testid={`text-sender-${message.id}`}>
+                          <span className="text-xs font-medium text-muted-foreground mb-0.5" data-testid={`text-sender-${message.id}`}>
                             {senderName}
                           </span>
                           <div
@@ -495,7 +495,7 @@ export default function RequestDetail() {
                               {message.content}
                             </p>
                           </div>
-                          <span className="text-[10px] text-muted-foreground mt-0.5">
+                          <span className="text-xs text-muted-foreground mt-0.5">
                             {message.createdAt &&
                               new Date(message.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',

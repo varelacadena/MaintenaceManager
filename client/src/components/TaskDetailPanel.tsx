@@ -637,7 +637,7 @@ export function TaskDetailPanel({
 
       {/* Task title section */}
       <div className="px-5 py-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
-        <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+        <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
           TASK
         </p>
         <h2
@@ -658,7 +658,7 @@ export function TaskDetailPanel({
         style={{ borderBottom: "1px solid #EEEEEE" }}
       >
         <div>
-          <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+          <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
             LOCATION
           </p>
           <p className="text-sm font-medium mt-1" style={{ color: "#1A1A1A" }}>
@@ -669,7 +669,7 @@ export function TaskDetailPanel({
           )}
         </div>
         <div>
-          <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+          <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
             TIME LOGGED
           </p>
           <p className="text-sm font-medium mt-1" style={{ color: "#1A1A1A" }}>
@@ -679,7 +679,7 @@ export function TaskDetailPanel({
         {isFullscreen && (
           <>
             <div>
-              <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+              <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
                 ASSIGNED TO
               </p>
               <div className="flex items-center gap-2 mt-1">
@@ -700,7 +700,7 @@ export function TaskDetailPanel({
               </div>
             </div>
             <div>
-              <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+              <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
                 TYPE
               </p>
               <p className="text-sm font-medium mt-1" style={{ color: "#1A1A1A" }}>
@@ -714,7 +714,7 @@ export function TaskDetailPanel({
       {/* Description */}
       {task.description && (
         <div className="px-5 py-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
-          <p className="text-[11px] font-medium tracking-wider uppercase mb-2" style={{ color: "#9CA3AF" }}>
+          <p className="text-xs font-medium tracking-wider uppercase mb-2" style={{ color: "#9CA3AF" }}>
             DESCRIPTION
           </p>
           <p className="text-xs leading-relaxed" style={{ color: "#1A1A1A", lineHeight: "1.55" }}>
@@ -735,19 +735,19 @@ export function TaskDetailPanel({
           <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Resources</span>
           <div className="flex items-center gap-1.5 ml-auto">
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              className="text-xs px-1.5 py-0.5 rounded font-medium"
               style={{ backgroundColor: "#EDE9FE", color: "#7C3AED" }}
             >
               {docCount} docs
             </span>
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              className="text-xs px-1.5 py-0.5 rounded font-medium"
               style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}
             >
               {imgCount} img
             </span>
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              className="text-xs px-1.5 py-0.5 rounded font-medium"
               style={{ backgroundColor: "#FFF1F2", color: "#F43F5E" }}
             >
               {vidCount} vid
@@ -787,7 +787,7 @@ export function TaskDetailPanel({
                   >
                     <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
                     <span
-                      className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                      className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
                       style={{ backgroundColor: badgeBg, color: badgeColor }}
                     >
                       {typeLabel}
@@ -807,7 +807,7 @@ export function TaskDetailPanel({
       {/* Subtasks section */}
       <div className="px-5 py-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+          <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
             SUBTASKS
           </p>
           <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
@@ -930,7 +930,7 @@ export function TaskDetailPanel({
             <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
             Messages
             {taskMessages.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
                 {taskMessages.length}
               </span>
             )}
@@ -957,7 +957,7 @@ export function TaskDetailPanel({
                         className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}
                         data-testid={`panel-message-${msg.id}`}
                       >
-                        <p className="text-[11px] font-medium mb-0.5" style={{ color: "#6B7280" }}>
+                        <p className="text-xs font-medium mb-0.5" style={{ color: "#6B7280" }}>
                           {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
                         </p>
                         <div
@@ -969,7 +969,7 @@ export function TaskDetailPanel({
                         >
                           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                         </div>
-                        <p className="text-[10px] mt-0.5" style={{ color: "#9CA3AF" }}>
+                        <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
                           {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
                         </p>
                       </div>
@@ -1019,7 +1019,7 @@ export function TaskDetailPanel({
             <Package className="w-4 h-4" style={{ color: "#6B7280" }} />
             Parts Used
             {taskParts.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
                 {taskParts.length}
               </span>
             )}
@@ -1203,7 +1203,7 @@ export function TaskDetailPanel({
             <StickyNote className="w-4 h-4" style={{ color: "#6B7280" }} />
             Notes
             {taskNotes.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#FEF3C7", color: "#92400E" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#FEF3C7", color: "#92400E" }}>
                 {taskNotes.length}
               </span>
             )}
@@ -1236,7 +1236,7 @@ export function TaskDetailPanel({
                             {noteAuthor ? `${noteAuthor.firstName || ""} ${noteAuthor.lastName || ""}`.trim() || noteAuthor.username : "Unknown"}
                           </span>
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                            className="text-xs px-1.5 py-0.5 rounded font-medium"
                             style={{
                               backgroundColor: note.noteType === "recommendation" ? "#EDE9FE" : "#F3F4F6",
                               color: note.noteType === "recommendation" ? "#7C3AED" : "#6B7280",
@@ -1278,7 +1278,7 @@ export function TaskDetailPanel({
                             {note.content}
                           </p>
                         )}
-                        <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>
+                        <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
                           {note.createdAt ? format(new Date(note.createdAt), "MMM d, h:mm a") : ""}
                         </p>
                       </div>
@@ -1332,7 +1332,7 @@ export function TaskDetailPanel({
             <History className="w-4 h-4" style={{ color: "#6B7280" }} />
             History
             {timeEntries.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
                 {timeEntries.length}
               </span>
             )}
@@ -1459,7 +1459,7 @@ export function TaskDetailPanel({
 
       {/* Actions section */}
       <div className="p-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
-        <p className="text-[11px] font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
+        <p className="text-xs font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           ACTIONS
         </p>
         <div className={isMobile ? "grid grid-cols-2 gap-1" : "space-y-1"}>
@@ -1495,7 +1495,7 @@ export function TaskDetailPanel({
 
       {/* Details section */}
       <div className="p-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
-        <p className="text-[11px] font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
+        <p className="text-xs font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           DETAILS
         </p>
         <div className="space-y-3">
@@ -1546,7 +1546,7 @@ export function TaskDetailPanel({
 
       {/* AI Scheduling */}
       <div className="p-4">
-        <p className="text-[11px] font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
+        <p className="text-xs font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           AI SCHEDULING
         </p>
         <button
@@ -1839,7 +1839,7 @@ export function TaskDetailPanel({
           </Button>
           <span className={`${isMobile ? "w-2 h-2" : "w-2.5 h-2.5"} rounded-full shrink-0`} style={{ backgroundColor: statusDot }} />
           <span
-            className={`${isMobile ? "text-[10px]" : "text-xs"} font-semibold uppercase tracking-wider px-2.5 py-1 rounded`}
+            className={`${isMobile ? "text-xs" : "text-xs"} font-semibold uppercase tracking-wider px-2.5 py-1 rounded`}
             style={{ backgroundColor: statusPill.bg, color: statusPill.text }}
           >
             {statusLabel}
@@ -2266,7 +2266,7 @@ export function TaskDetailPanel({
                       >
                         <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
                         <span
-                          className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                          className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
                           style={{ backgroundColor: badgeBg, color: badgeColor }}
                         >
                           {typeLabel}
@@ -2307,7 +2307,7 @@ export function TaskDetailPanel({
 
         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: statusDot }} />
         <span
-          className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+          className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
           style={{ backgroundColor: statusPill.bg, color: statusPill.text }}
         >
           {statusLabel}

@@ -138,7 +138,7 @@ export default function NotificationsWidget() {
       <Bell className="h-5 w-5" />
       {unreadCount > 0 && (
         <span
-          className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-[10px] font-medium bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+          className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-xs font-medium bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
         >
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>

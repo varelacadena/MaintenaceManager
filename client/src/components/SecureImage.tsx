@@ -49,7 +49,7 @@ export function SecureImage({ uploadId, objectUrl, fileName, className, alt }: S
     return (
       <div className={`flex flex-col items-center justify-center bg-destructive/10 ${className ?? ""}`}>
         <AlertCircle className="w-6 h-6 text-destructive" />
-        <span className="text-[10px] text-destructive mt-1">Unavailable</span>
+        <span className="text-xs text-destructive mt-1">Unavailable</span>
       </div>
     );
   }

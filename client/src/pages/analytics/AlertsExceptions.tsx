@@ -79,28 +79,28 @@ export default function AlertsExceptions() {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case "high":
-        return <Badge variant="destructive" className="text-[10px] sm:text-xs">High</Badge>;
+        return <Badge variant="destructive" className="text-xs sm:text-xs">High</Badge>;
       case "medium":
-        return <Badge variant="default" className="bg-yellow-600 text-[10px] sm:text-xs">Medium</Badge>;
+        return <Badge variant="default" className="bg-yellow-600 text-xs sm:text-xs">Medium</Badge>;
       case "low":
-        return <Badge variant="secondary" className="text-[10px] sm:text-xs">Low</Badge>;
+        return <Badge variant="secondary" className="text-xs sm:text-xs">Low</Badge>;
       default:
-        return <Badge variant="secondary" className="text-[10px] sm:text-xs">{severity}</Badge>;
+        return <Badge variant="secondary" className="text-xs sm:text-xs">{severity}</Badge>;
     }
   };
 
   const getTypeBadge = (type: string) => {
     switch (type) {
       case "overdue":
-        return <Badge variant="outline" className="border-red-500 text-red-600 dark:text-red-400 text-[10px] sm:text-xs">Overdue</Badge>;
+        return <Badge variant="outline" className="border-red-500 text-red-600 dark:text-red-400 text-xs sm:text-xs">Overdue</Badge>;
       case "sla_breach":
-        return <Badge variant="outline" className="border-orange-500 text-orange-600 dark:text-orange-400 text-[10px] sm:text-xs">SLA</Badge>;
+        return <Badge variant="outline" className="border-orange-500 text-orange-600 dark:text-orange-400 text-xs sm:text-xs">SLA</Badge>;
       case "high_failure":
-        return <Badge variant="outline" className="border-purple-500 text-purple-600 dark:text-purple-400 text-[10px] sm:text-xs">Failure</Badge>;
+        return <Badge variant="outline" className="border-purple-500 text-purple-600 dark:text-purple-400 text-xs sm:text-xs">Failure</Badge>;
       case "recurring_issue":
-        return <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs">Recurring</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 text-xs sm:text-xs">Recurring</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px] sm:text-xs">{type}</Badge>;
+        return <Badge variant="outline" className="text-xs sm:text-xs">{type}</Badge>;
     }
   };
 
@@ -230,15 +230,15 @@ export default function AlertsExceptions() {
           <CardContent className="p-3 sm:p-4 pt-0">
             <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
               <div className="p-2 sm:p-4 rounded-lg bg-muted/50 text-center">
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Total Created</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Created</p>
                 <p className="text-lg sm:text-2xl font-bold">{trends.reduce((sum, t) => sum + t.created, 0)}</p>
               </div>
               <div className="p-2 sm:p-4 rounded-lg bg-muted/50 text-center">
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Completed</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
                 <p className="text-lg sm:text-2xl font-bold">{trends.reduce((sum, t) => sum + t.completed, 0)}</p>
               </div>
               <div className="p-2 sm:p-4 rounded-lg bg-muted/50 text-center">
-                <p className="text-[10px] sm:text-sm text-muted-foreground">High Priority</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">High Priority</p>
                 <p className="text-lg sm:text-2xl font-bold text-red-600 dark:text-red-400">{trends.reduce((sum, t) => sum + t.high, 0)}</p>
               </div>
             </div>
@@ -260,7 +260,7 @@ export default function AlertsExceptions() {
                     <div key={alert.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium truncate">{alert.title}</p>
-                        <p className="text-[10px] text-muted-foreground">{getTypeBadge(alert.type)}</p>
+                        <p className="text-xs text-muted-foreground">{getTypeBadge(alert.type)}</p>
                       </div>
                       <Link href={getRelatedLink(alert)}>
                         <Button size="sm" variant="ghost" className="text-xs h-6 px-2">View</Button>

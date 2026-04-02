@@ -563,7 +563,7 @@ export default function MobileTaskDetail() {
 
           {/* Task section */}
           <div className="px-4 py-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
-            <p className="text-[11px] font-medium tracking-wider uppercase mb-1.5" style={{ color: "#9CA3AF" }}>
+            <p className="text-xs font-medium tracking-wider uppercase mb-1.5" style={{ color: "#9CA3AF" }}>
               TASK
             </p>
             <h1 className="text-base font-medium leading-tight mb-1" style={{ color: "#1A1A1A" }} data-testid="text-mobile-task-title">
@@ -577,7 +577,7 @@ export default function MobileTaskDetail() {
           {/* Meta grid */}
           <div className="grid grid-cols-2 divide-x divide-[#EEEEEE]" style={{ borderBottom: "1px solid #EEEEEE" }}>
             <div className="px-4 py-3">
-              <p className="text-[11px] font-medium tracking-wider uppercase mb-1" style={{ color: "#9CA3AF" }}>
+              <p className="text-xs font-medium tracking-wider uppercase mb-1" style={{ color: "#9CA3AF" }}>
                 LOCATION
               </p>
               <div className="flex items-start gap-1.5">
@@ -587,13 +587,13 @@ export default function MobileTaskDetail() {
                     {property?.name || "—"}
                   </p>
                   {property?.address && (
-                    <p className="text-[11px]" style={{ color: "#6B7280" }}>{property.address}</p>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>{property.address}</p>
                   )}
                 </div>
               </div>
             </div>
             <div className="px-4 py-3">
-              <p className="text-[11px] font-medium tracking-wider uppercase mb-1" style={{ color: "#9CA3AF" }}>
+              <p className="text-xs font-medium tracking-wider uppercase mb-1" style={{ color: "#9CA3AF" }}>
                 TIME LOGGED
               </p>
               <div className="flex items-center justify-between">
@@ -601,7 +601,7 @@ export default function MobileTaskDetail() {
                   <Clock className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
                   <p className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{totalTime}</p>
                   {activeTimerEntry && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium animate-pulse" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium animate-pulse" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
                       Running
                     </span>
                   )}
@@ -640,7 +640,7 @@ export default function MobileTaskDetail() {
           {/* Description */}
           {task.description && (
             <div className="px-4 py-3" style={{ borderBottom: "1px solid #EEEEEE" }}>
-              <p className="text-[11px] font-medium tracking-wider uppercase mb-1.5" style={{ color: "#9CA3AF" }}>
+              <p className="text-xs font-medium tracking-wider uppercase mb-1.5" style={{ color: "#9CA3AF" }}>
                 DESCRIPTION
               </p>
               <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#374151", lineHeight: 1.55 }} data-testid="text-mobile-description">
@@ -659,13 +659,13 @@ export default function MobileTaskDetail() {
               <FileText className="w-4 h-4" style={{ color: "#6B7280" }} />
               <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Resources</span>
               <div className="flex items-center gap-1.5 ml-auto">
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: "#EDE9FE", color: "#7C3AED" }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: "#EDE9FE", color: "#7C3AED" }}>
                   {docCount} docs
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
                   {imgCount} img
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: "#FFF1F2", color: "#F43F5E" }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: "#FFF1F2", color: "#F43F5E" }}>
                   {vidCount} vid
                 </span>
                 {resourcesExpanded ? (
@@ -713,7 +713,7 @@ export default function MobileTaskDetail() {
                         data-testid={`mobile-resource-item-${upload.id}`}
                       >
                         <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0" style={{ backgroundColor: badgeBg, color: badgeColor }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ backgroundColor: badgeBg, color: badgeColor }}>
                           {typeLabel}
                         </span>
                         <span className="text-xs truncate flex-1" style={{ color: "#374151" }}>
@@ -732,7 +732,7 @@ export default function MobileTaskDetail() {
         {/* Subtasks card */}
         <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#FFFFFF", border: "1px solid #EEEEEE" }}>
           <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: taskStarted && totalSubtasks > 0 ? undefined : "1px solid #EEEEEE" }}>
-            <p className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
+            <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
               SUBTASKS
             </p>
             <span className="text-sm font-medium" style={{ color: "#1A1A1A" }} data-testid="text-mobile-subtask-count">
@@ -859,7 +859,7 @@ export default function MobileTaskDetail() {
             <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
             <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>Messages</span>
             {taskMessages.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
                 {taskMessages.length}
               </span>
             )}
@@ -874,7 +874,7 @@ export default function MobileTaskDetail() {
             <Package className="w-4 h-4" style={{ color: "#6B7280" }} />
             <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>Parts Used</span>
             {taskParts.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
                 {taskParts.length}
               </span>
             )}
@@ -888,7 +888,7 @@ export default function MobileTaskDetail() {
             <History className="w-4 h-4" style={{ color: "#6B7280" }} />
             <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>History</span>
             {(timeEntries?.length || 0) > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
                 {timeEntries?.length}
               </span>
             )}
@@ -1149,7 +1149,7 @@ export default function MobileTaskDetail() {
                 <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
                 <p className="text-sm font-semibold text-foreground">Messages</p>
                 {taskMessages.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
                     {taskMessages.length}
                   </span>
                 )}
@@ -1171,7 +1171,7 @@ export default function MobileTaskDetail() {
                       className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}
                       data-testid={`message-item-${msg.id}`}
                     >
-                      <p className="text-[11px] font-medium mb-0.5" style={{ color: "#6B7280" }}>
+                      <p className="text-xs font-medium mb-0.5" style={{ color: "#6B7280" }}>
                         {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
                       </p>
                       <div
@@ -1183,7 +1183,7 @@ export default function MobileTaskDetail() {
                       >
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                       </div>
-                      <p className="text-[10px] mt-0.5" style={{ color: "#9CA3AF" }}>
+                      <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
                         {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
                       </p>
                     </div>
@@ -1238,7 +1238,7 @@ export default function MobileTaskDetail() {
                 <Package className="w-4 h-4" style={{ color: "#6B7280" }} />
                 <p className="text-sm font-semibold text-foreground">Parts Used</p>
                 {taskParts.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
                     {taskParts.length}
                   </span>
                 )}

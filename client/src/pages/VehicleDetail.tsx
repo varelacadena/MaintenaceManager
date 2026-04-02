@@ -146,10 +146,10 @@ function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
+                          <span className="text-xs font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
                         </div>
                       </button>
-                      <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
+                      <span className="text-xs font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
                         {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
                       </span>
                     </div>
@@ -249,10 +249,10 @@ function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] 
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-[10px] font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
+                          <span className="text-xs font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
                         </div>
                       </button>
-                      <span className="text-[11px] font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
+                      <span className="text-xs font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
                         {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
                       </span>
                     </div>

@@ -381,7 +381,7 @@ function SummaryContent({
                 <p className="text-muted-foreground text-xs">Urgency</p>
                 <Badge
                   variant="outline"
-                  className={`${urgencyColors[task.urgency] || ""} text-[10px] no-default-hover-elevate`}
+                  className={`${urgencyColors[task.urgency] || ""} text-xs no-default-hover-elevate`}
                 >
                   {task.urgency.charAt(0).toUpperCase() + task.urgency.slice(1)}
                 </Badge>
@@ -602,7 +602,7 @@ function SummaryContent({
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge
                         variant="outline"
-                        className={`${statusColors[sub.status] || ""} text-[10px] no-default-hover-elevate`}
+                        className={`${statusColors[sub.status] || ""} text-xs no-default-hover-elevate`}
                       >
                         {statusLabels[sub.status] || sub.status}
                       </Badge>
