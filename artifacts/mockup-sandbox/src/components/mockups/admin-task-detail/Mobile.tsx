@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Wrench,
   Trash2,
+  StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,10 @@ const task = {
     { name: "HVAC_Filter_Manual.pdf", type: "PDF" },
     { name: "filter_before.jpg", type: "IMG" },
     { name: "unit_photo_204.jpg", type: "IMG" },
+  ],
+  notes: [
+    { user: "Carlos Martinez", text: "Noticed corrosion around the filter housing. May need full housing replacement next quarter.", time: "Mar 30, 3:45 PM" },
+    { user: "Admin", text: "Flagged for Q3 maintenance budget review.", time: "Mar 31, 9:00 AM" },
   ],
 };
 
@@ -223,6 +228,23 @@ export function Mobile() {
                   <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{msg.time}</span>
                 </div>
                 <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>{msg.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes — always visible */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <SectionLabel>Notes ({task.notes.length})</SectionLabel>
+          <div className="space-y-3">
+            {task.notes.map((note, i) => (
+              <div key={i}>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <StickyNote className="w-3 h-3" style={{ color: "#F59E0B" }} />
+                  <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>{note.user}</span>
+                  <span className="text-[10px]" style={{ color: "#9CA3AF" }}>{note.time}</span>
+                </div>
+                <p className="text-xs leading-relaxed ml-5" style={{ color: "#374151" }}>{note.text}</p>
               </div>
             ))}
           </div>
