@@ -140,7 +140,7 @@ app.use((req, res, next) => {
   try {
     const backfilled = await storage.backfillTaskPools();
     if (backfilled > 0) {
-      console.log(`Backfilled ${backfilled} tasks into technician_pool`);
+      console.log(`Backfilled ${backfilled} unassigned tasks into their respective pools`);
     }
   } catch (err) {
     console.error("Failed to backfill task pools:", err);

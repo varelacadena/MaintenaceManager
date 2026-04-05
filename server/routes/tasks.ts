@@ -376,7 +376,8 @@ export function registerTaskRoutes(app: Express) {
 
       const updateData: any = { ...restBody };
 
-      if (updateData.assignedToId !== undefined || updateData.assignedVendorId !== undefined) {
+      const needsPoolSync = updateData.assignedToId !== undefined || updateData.assignedVendorId !== undefined || updateData.executorType !== undefined;
+      if (needsPoolSync) {
         const existingTask = await storage.getTask(req.params.id);
         const newAssignedToId = updateData.assignedToId !== undefined ? updateData.assignedToId : existingTask?.assignedToId;
         const newAssignedVendorId = updateData.assignedVendorId !== undefined ? updateData.assignedVendorId : existingTask?.assignedVendorId;
@@ -387,13 +388,6 @@ export function registerTaskRoutes(app: Express) {
         } else {
           const execType = updateData.executorType || existingTask?.executorType || "technician";
           updateData.assignedPool = execType === "student" ? "student_pool" : "technician_pool";
-        }
-      }
-
-      if (updateData.executorType !== undefined && !updateData.assignedToId && !updateData.assignedVendorId) {
-        const existingTask = await storage.getTask(req.params.id);
-        if (!existingTask?.assignedToId && !existingTask?.assignedVendorId) {
-          updateData.assignedPool = updateData.executorType === "student" ? "student_pool" : "technician_pool";
         }
       }
 
