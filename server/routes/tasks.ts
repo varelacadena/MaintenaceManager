@@ -172,9 +172,17 @@ export function registerTaskRoutes(app: Express) {
       const userId = req.userId;
       const { checklists, checklistGroups, helperUserIds, ...taskPayload } = req.body;
       
+      const effectiveExecutorType = taskPayload.executorType || "technician";
+      const hasDirectAssignee = !!taskPayload.assignedToId || !!taskPayload.assignedVendorId;
+      const effectivePool = hasDirectAssignee 
+        ? null 
+        : (taskPayload.assignedPool || (effectiveExecutorType === "student" ? "student_pool" : "technician_pool"));
+
       const taskData = insertTaskSchema.parse({
         ...taskPayload,
         createdById: userId,
+        executorType: effectiveExecutorType,
+        assignedPool: effectivePool,
         initialDate: taskPayload.initialDate ? new Date(taskPayload.initialDate) : new Date(),
         estimatedCompletionDate: taskPayload.estimatedCompletionDate ? new Date(taskPayload.estimatedCompletionDate) : undefined,
       });
@@ -368,6 +376,27 @@ export function registerTaskRoutes(app: Express) {
 
       const updateData: any = { ...restBody };
 
+      if (updateData.assignedToId !== undefined || updateData.assignedVendorId !== undefined) {
+        const existingTask = await storage.getTask(req.params.id);
+        const newAssignedToId = updateData.assignedToId !== undefined ? updateData.assignedToId : existingTask?.assignedToId;
+        const newAssignedVendorId = updateData.assignedVendorId !== undefined ? updateData.assignedVendorId : existingTask?.assignedVendorId;
+        const hasDirectAssignee = !!newAssignedToId || !!newAssignedVendorId;
+        
+        if (hasDirectAssignee) {
+          updateData.assignedPool = null;
+        } else {
+          const execType = updateData.executorType || existingTask?.executorType || "technician";
+          updateData.assignedPool = execType === "student" ? "student_pool" : "technician_pool";
+        }
+      }
+
+      if (updateData.executorType !== undefined && !updateData.assignedToId && !updateData.assignedVendorId) {
+        const existingTask = await storage.getTask(req.params.id);
+        if (!existingTask?.assignedToId && !existingTask?.assignedVendorId) {
+          updateData.assignedPool = updateData.executorType === "student" ? "student_pool" : "technician_pool";
+        }
+      }
+
       if (updateData.status === "ready") {
         updateData.status = "not_started";
       }
@@ -514,6 +543,10 @@ export function registerTaskRoutes(app: Express) {
 
       const subTaskName = name || `${parentTask.name} — ${assetName}`;
 
+      const subExecType = parentTask.executorType || "technician";
+      const subHasAssignee = !!parentTask.assignedToId;
+      const subPool = subHasAssignee ? null : (subExecType === "student" ? "student_pool" : "technician_pool");
+
       const subTaskData: any = {
         name: subTaskName,
         description: description || parentTask.description,
@@ -525,7 +558,8 @@ export function registerTaskRoutes(app: Express) {
         areaId: parentTask.areaId,
         propertyId: equipmentId ? (await storage.getEquipmentItem(equipmentId))?.propertyId || parentTask.propertyId : parentTask.propertyId,
         spaceId: equipmentId ? (await storage.getEquipmentItem(equipmentId))?.spaceId || parentTask.spaceId : parentTask.spaceId,
-        executorType: parentTask.executorType,
+        executorType: subExecType,
+        assignedPool: subPool,
         instructions: parentTask.instructions,
         requiresPhoto: parentTask.requiresPhoto,
         createdById: req.userId,

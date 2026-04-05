@@ -969,10 +969,25 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
 
+  private normalizeTaskPool(data: any): any {
+    const normalized = { ...data };
+    if (!normalized.executorType) {
+      normalized.executorType = "technician";
+    }
+    const hasDirectAssignee = !!normalized.assignedToId || !!normalized.assignedVendorId;
+    if (hasDirectAssignee) {
+      normalized.assignedPool = null;
+    } else if (!normalized.assignedPool) {
+      normalized.assignedPool = normalized.executorType === "student" ? "student_pool" : "technician_pool";
+    }
+    return normalized;
+  }
+
   async createTask(taskData: InsertTask): Promise<Task> {
+    const normalized = this.normalizeTaskPool(taskData);
     const [task] = await this.db
       .insert(tasks)
-      .values(taskData)
+      .values(normalized)
       .returning();
     return task;
   }
@@ -981,15 +996,13 @@ export class DatabaseStorage implements IStorage {
     taskData: InsertTask,
     checklistData: Omit<InsertTaskChecklist, 'taskId'>[]
   ): Promise<{ task: Task; checklists: TaskChecklist[] }> {
-    // Use transaction to ensure atomicity
+    const normalizedTaskData = this.normalizeTaskPool(taskData);
     return await this.db.transaction(async (tx) => {
-      // Create task first
       const [task] = await tx
         .insert(tasks)
-        .values(taskData)
+        .values(normalizedTaskData)
         .returning();
 
-      // Create checklists if any
       let createdChecklists: TaskChecklist[] = [];
       if (checklistData.length > 0) {
         const checklistItems = checklistData.map((item, index) => ({
@@ -1049,6 +1062,37 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result[0]?.count ?? 0;
+  }
+
+  async backfillTaskPools(): Promise<number> {
+    const unassignedTasks = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          isNull(tasks.assignedToId),
+          or(
+            isNull(tasks.assignedPool),
+            isNull(tasks.executorType)
+          ),
+          or(
+            eq(tasks.status, "not_started"),
+            eq(tasks.status, "ready")
+          )
+        )
+      );
+    
+    let count = 0;
+    for (const task of unassignedTasks) {
+      const execType = task.executorType || "technician";
+      const pool = execType === "student" ? "student_pool" : "technician_pool";
+      await this.db
+        .update(tasks)
+        .set({ executorType: execType, assignedPool: pool })
+        .where(eq(tasks.id, task.id));
+      count++;
+    }
+    return count;
   }
 
   async claimTask(taskId: string, userId: string, pool: string): Promise<Task | null> {
@@ -1364,9 +1408,9 @@ export class DatabaseStorage implements IStorage {
     taskData: InsertTask,
     groups: { name: string; sortOrder?: number; items: { text: string; isCompleted?: boolean; sortOrder?: number }[] }[]
   ): Promise<{ task: Task; groups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] }> {
+    const normalizedTaskData = this.normalizeTaskPool(taskData);
     return await this.db.transaction(async (tx) => {
-      // Create task first
-      const [task] = await tx.insert(tasks).values(taskData).returning();
+      const [task] = await tx.insert(tasks).values(normalizedTaskData).returning();
 
       // Create groups and items
       const createdGroups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] = [];

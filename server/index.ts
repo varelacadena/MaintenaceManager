@@ -137,6 +137,15 @@ app.use((req, res, next) => {
   // Apply all database migrations
   await applyMigrations();
 
+  try {
+    const backfilled = await storage.backfillTaskPools();
+    if (backfilled > 0) {
+      console.log(`Backfilled ${backfilled} tasks into technician_pool`);
+    }
+  } catch (err) {
+    console.error("Failed to backfill task pools:", err);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
