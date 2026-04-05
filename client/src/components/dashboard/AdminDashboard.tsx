@@ -279,7 +279,7 @@ export default function AdminDashboard({
     let filtered = [...tasks];
     if (boardFilter === "today") {
       filtered = filtered.filter(t => {
-        if (!t.initialDate) return false;
+        if (!t.initialDate) return t.urgency === "high";
         const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
         return taskDate.getTime() === today.getTime();
       });
