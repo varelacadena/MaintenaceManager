@@ -285,7 +285,7 @@ export default function AdminDashboard({
       });
     } else {
       filtered = filtered.filter(t => {
-        if (!t.initialDate) return true;
+        if (!t.initialDate) return t.urgency === "high";
         const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
         return taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime();
       });
