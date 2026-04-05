@@ -1038,6 +1038,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(tasks.assignedPool, pool),
           isNull(tasks.assignedToId),
+          isNull(tasks.assignedVendorId),
           or(
             eq(tasks.status, "not_started"),
             eq(tasks.status, "ready")
@@ -1055,6 +1056,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(tasks.assignedPool, pool),
           isNull(tasks.assignedToId),
+          isNull(tasks.assignedVendorId),
           or(
             eq(tasks.status, "not_started"),
             eq(tasks.status, "ready")
@@ -1071,6 +1073,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           isNull(tasks.assignedToId),
+          isNull(tasks.assignedVendorId),
           or(
             isNull(tasks.assignedPool),
             isNull(tasks.executorType)
@@ -1108,6 +1111,7 @@ export class DatabaseStorage implements IStorage {
           eq(tasks.id, taskId),
           eq(tasks.assignedPool, pool),
           isNull(tasks.assignedToId),
+          isNull(tasks.assignedVendorId),
           or(
             eq(tasks.status, "not_started"),
             eq(tasks.status, "ready")

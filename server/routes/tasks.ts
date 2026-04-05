@@ -544,7 +544,7 @@ export function registerTaskRoutes(app: Express) {
       const subTaskName = name || `${parentTask.name} — ${assetName}`;
 
       const subExecType = parentTask.executorType || "technician";
-      const subHasAssignee = !!parentTask.assignedToId;
+      const subHasAssignee = !!parentTask.assignedToId || !!parentTask.assignedVendorId;
       const subPool = subHasAssignee ? null : (subExecType === "student" ? "student_pool" : "technician_pool");
 
       const subTaskData: any = {
