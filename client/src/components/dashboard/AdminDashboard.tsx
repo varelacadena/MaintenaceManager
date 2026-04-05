@@ -277,14 +277,22 @@ export default function AdminDashboard({
 
   const boardTasks = useMemo(() => {
     let filtered = [...tasks];
+    const isOverdue = (t: typeof tasks[0]) => {
+      if (!t.initialDate || t.status === "completed") return false;
+      const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
+      return taskDate.getTime() < today.getTime();
+    };
+
     if (boardFilter === "today") {
       filtered = filtered.filter(t => {
+        if (isOverdue(t)) return true;
         if (!t.initialDate) return t.urgency === "high";
         const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
         return taskDate.getTime() === today.getTime();
       });
     } else {
       filtered = filtered.filter(t => {
+        if (isOverdue(t)) return true;
         if (!t.initialDate) return t.urgency === "high";
         const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
         return taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime();
