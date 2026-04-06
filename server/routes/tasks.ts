@@ -4,7 +4,7 @@ import { isAuthenticated } from "../replitAuth";
 import { requireAdmin, requireTechnicianOrAdmin, requireTaskExecutorOrAdmin, requireTaskAccess, canAccessTask, getCurrentUser } from "../middleware";
 import { handleRouteError, syncProjectStatusFromTasks, getAuthUser } from "../routeUtils";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "../notifications";
-import { insertTaskSchema, insertPartUsedSchema, insertTaskNoteSchema, insertTaskChecklistSchema, partsUsed } from "@shared/schema";
+import { insertTaskSchema, insertPartUsedSchema, insertTaskNoteSchema, partsUsed } from "@shared/schema";
 import { z } from "zod";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
@@ -170,7 +170,7 @@ export function registerTaskRoutes(app: Express) {
   app.post("/api/tasks", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const { checklists, checklistGroups, helperUserIds, ...taskPayload } = req.body;
+      const { checklistGroups, helperUserIds, ...taskPayload } = req.body;
       
       const effectiveExecutorType = taskPayload.executorType || "technician";
       const hasDirectAssignee = !!taskPayload.assignedToId || !!taskPayload.assignedVendorId;
@@ -197,22 +197,12 @@ export function registerTaskRoutes(app: Express) {
         })),
       })).optional();
 
-      const flatChecklistSchema = z.array(z.object({
-        text: z.string().min(1, "Checklist item text is required"),
-        isCompleted: z.boolean().optional().default(false),
-        sortOrder: z.number().optional(),
-      })).optional();
-      
       const validatedGroups = checklistGroupSchema.parse(checklistGroups);
-      const validatedFlatChecklists = flatChecklistSchema.parse(checklists);
 
       let task;
       
       if (validatedGroups && validatedGroups.length > 0) {
         const result = await storage.createTaskWithChecklistGroups(taskData, validatedGroups);
-        task = result.task;
-      } else if (validatedFlatChecklists && validatedFlatChecklists.length > 0) {
-        const result = await storage.createTaskWithChecklists(taskData, validatedFlatChecklists);
         task = result.task;
       } else {
         task = await storage.createTask(taskData);
@@ -1051,69 +1041,6 @@ export function registerTaskRoutes(app: Express) {
       res.json({ success: true });
     } catch (error) {
       handleRouteError(res, error, "Failed to delete task note");
-    }
-  });
-
-  app.get("/api/tasks/:taskId/checklists", isAuthenticated, async (req: any, res) => {
-    try {
-      const checklists = await storage.getChecklistsByTask(req.params.taskId);
-      res.json(checklists);
-    } catch (error) {
-      handleRouteError(res, error, "Failed to fetch task checklists");
-    }
-  });
-
-  app.post("/api/tasks/:taskId/checklists", isAuthenticated, requireAdmin, async (req: any, res) => {
-    try {
-      const checklistData = {
-        taskId: req.params.taskId,
-        text: req.body.text,
-        isCompleted: req.body.isCompleted || false,
-        sortOrder: req.body.sortOrder || 0,
-      };
-      const checklist = await storage.createTaskChecklist(checklistData);
-      res.json(checklist);
-    } catch (error) {
-      handleRouteError(res, error, "Failed to create task checklist");
-    }
-  });
-
-  app.patch("/api/task-checklists/:id", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
-    try {
-      const userId = req.userId;
-      
-      const existingChecklist = await storage.getTaskChecklist(req.params.id);
-      if (!existingChecklist) {
-        return res.status(404).json({ message: "Checklist item not found" });
-      }
-      
-      if (!existingChecklist.taskId) {
-        return res.status(403).json({ message: "Forbidden: Checklist has no associated task" });
-      }
-      
-      const hasAccess = await canAccessTask(userId, existingChecklist.taskId);
-      if (!hasAccess) {
-        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
-      }
-      const isHelper = await storage.isTaskHelper(existingChecklist.taskId, userId);
-      if (isHelper) {
-        return res.status(403).json({ message: "Forbidden: Student helpers cannot modify checklists" });
-      }
-      
-      const validated = insertTaskChecklistSchema.partial().parse(req.body);
-      const checklist = await storage.updateTaskChecklist(req.params.id, validated);
-      res.json(checklist);
-    } catch (error) {
-      handleRouteError(res, error, "Failed to update task checklist");
-    }
-  });
-
-  app.delete("/api/task-checklists/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
-    try {
-      await storage.deleteTaskChecklist(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      handleRouteError(res, error, "Failed to delete task checklist");
     }
   });
 

@@ -11,7 +11,6 @@ import {
   messages,
   uploads,
   taskNotes,
-  taskChecklists,
   taskChecklistGroups,
   taskChecklistItems,
   checklistTemplates,
@@ -61,8 +60,6 @@ import {
   type InsertUpload,
   type TaskNote,
   type InsertTaskNote,
-  type TaskChecklist,
-  type InsertTaskChecklist,
   type TaskChecklistGroup,
   type InsertTaskChecklistGroup,
   type TaskChecklistItem,
@@ -230,7 +227,6 @@ export interface IStorage {
   }): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
-  createTaskWithChecklists(task: InsertTask, checklists: Omit<InsertTaskChecklist, 'taskId'>[]): Promise<{ task: Task; checklists: TaskChecklist[] }>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<void>;
   updateTaskStatus(id: string, status: string, onHoldReason?: string, actualCompletionDate?: Date): Promise<Task | undefined>;
@@ -268,15 +264,7 @@ export interface IStorage {
   updateTaskNote(id: string, content: string): Promise<TaskNote>;
   deleteTaskNote(id: string): Promise<void>;
 
-  // Task checklist operations (legacy flat model)
-  getChecklistsByTask(taskId: string): Promise<TaskChecklist[]>;
-  getTaskChecklist(id: string): Promise<TaskChecklist | undefined>;
-  createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist>;
-  updateTaskChecklist(id: string, data: Partial<InsertTaskChecklist>): Promise<TaskChecklist | undefined>;
-  deleteTaskChecklist(id: string): Promise<void>;
-  createTaskChecklists(checklists: InsertTaskChecklist[]): Promise<TaskChecklist[]>;
-
-  // Task checklist group/item operations (named checklists)
+  // Task checklist group/item operations
   getChecklistGroupsByTask(taskId: string): Promise<(TaskChecklistGroup & { items: TaskChecklistItem[] })[]>;
   getChecklistGroup(id: string): Promise<TaskChecklistGroup | undefined>;
   createChecklistGroup(group: InsertTaskChecklistGroup): Promise<TaskChecklistGroup>;
@@ -992,35 +980,6 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
 
-  async createTaskWithChecklists(
-    taskData: InsertTask,
-    checklistData: Omit<InsertTaskChecklist, 'taskId'>[]
-  ): Promise<{ task: Task; checklists: TaskChecklist[] }> {
-    const normalizedTaskData = this.normalizeTaskPool(taskData);
-    return await this.db.transaction(async (tx) => {
-      const [task] = await tx
-        .insert(tasks)
-        .values(normalizedTaskData)
-        .returning();
-
-      let createdChecklists: TaskChecklist[] = [];
-      if (checklistData.length > 0) {
-        const checklistItems = checklistData.map((item, index) => ({
-          taskId: task.id,
-          text: item.text,
-          isCompleted: item.isCompleted || false,
-          sortOrder: item.sortOrder ?? index,
-        }));
-        createdChecklists = await tx
-          .insert(taskChecklists)
-          .values(checklistItems)
-          .returning();
-      }
-
-      return { task, checklists: createdChecklists };
-    });
-  }
-
   async updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined> {
     const [task] = await this.db
       .update(tasks)
@@ -1303,44 +1262,7 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(taskNotes).where(eq(taskNotes.id, id));
   }
 
-  // Task checklist operations
-  async getChecklistsByTask(taskId: string): Promise<TaskChecklist[]> {
-    return await this.db
-      .select()
-      .from(taskChecklists)
-      .where(eq(taskChecklists.taskId, taskId))
-      .orderBy(taskChecklists.sortOrder);
-  }
-
-  async getTaskChecklist(id: string): Promise<TaskChecklist | undefined> {
-    const [checklist] = await this.db.select().from(taskChecklists).where(eq(taskChecklists.id, id));
-    return checklist;
-  }
-
-  async createTaskChecklist(checklist: InsertTaskChecklist): Promise<TaskChecklist> {
-    const [result] = await this.db.insert(taskChecklists).values(checklist).returning();
-    return result;
-  }
-
-  async updateTaskChecklist(id: string, data: Partial<InsertTaskChecklist>): Promise<TaskChecklist | undefined> {
-    const [result] = await this.db
-      .update(taskChecklists)
-      .set(data)
-      .where(eq(taskChecklists.id, id))
-      .returning();
-    return result;
-  }
-
-  async deleteTaskChecklist(id: string): Promise<void> {
-    await this.db.delete(taskChecklists).where(eq(taskChecklists.id, id));
-  }
-
-  async createTaskChecklists(checklists: InsertTaskChecklist[]): Promise<TaskChecklist[]> {
-    if (checklists.length === 0) return [];
-    return await this.db.insert(taskChecklists).values(checklists).returning();
-  }
-
-  // Task checklist group/item operations (named checklists)
+  // Task checklist group/item operations
   async getChecklistGroupsByTask(taskId: string): Promise<(TaskChecklistGroup & { items: TaskChecklistItem[] })[]> {
     const groups = await this.db
       .select()
