@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Car, Check, Edit, Image, Save, X, Wrench, Sparkles, CheckCircle2,
-  AlertTriangle, ExternalLink, Fuel, ShieldAlert, ShieldCheck
+  AlertTriangle, ExternalLink, Fuel, ShieldAlert, ShieldCheck, ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -107,6 +107,9 @@ export default function VehicleCheckInVerification() {
           ? "The vehicle has been marked as available for new reservations."
           : "The vehicle has been marked as needing maintenance.",
       });
+      if (checkInLog?.vehicleId) {
+        setLocation(`/vehicles/${checkInLog.vehicleId}`);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -191,9 +194,20 @@ export default function VehicleCheckInVerification() {
 
   return (
     <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      {vehicle && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setLocation(`/vehicles/${vehicle.id}`)}
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Vehicle
+        </Button>
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Check-In Verification</h2>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">Check-In Verification</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {vehicle ? (
               <Link href={`/vehicles/${vehicle.id}`}>
@@ -213,7 +227,7 @@ export default function VehicleCheckInVerification() {
         </div>
         <div className="flex gap-2">
           {!isEditing ? (
-            <Button onClick={handleStartEdit} data-testid="button-edit">
+            <Button onClick={handleStartEdit} data-testid="button-edit" className="w-full sm:w-auto">
               <Edit className="mr-2 h-4 w-4" />
               Edit Details
             </Button>
@@ -248,7 +262,7 @@ export default function VehicleCheckInVerification() {
             <CardDescription>Overview of the completed trip</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground text-xs">Requestor</Label>
                 <p className="font-medium text-sm" data-testid="text-requestor">
@@ -354,7 +368,7 @@ export default function VehicleCheckInVerification() {
               </>
             ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground text-xs">Fuel Level</Label>
                     <div className="flex items-center gap-1 mt-0.5">
@@ -469,12 +483,12 @@ export default function VehicleCheckInVerification() {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     disabled={!checklistComplete || updateVehicleStatusMutation.isPending}
-                    className="flex-1"
+                    className="w-full sm:flex-1"
                     data-testid="button-return-to-service"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -504,7 +518,7 @@ export default function VehicleCheckInVerification() {
                   <Button
                     variant="outline"
                     disabled={!checklistComplete || updateVehicleStatusMutation.isPending}
-                    className="flex-1"
+                    className="w-full sm:flex-1"
                     data-testid="button-confirm-maintenance"
                   >
                     <Wrench className="h-4 w-4 mr-2" />
@@ -542,19 +556,21 @@ export default function VehicleCheckInVerification() {
       {!hasIssues && !isLowFuel && !needsCleaning && (
         <Card>
           <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">No Issues Reported</p>
-                <p className="text-xs text-muted-foreground">
-                  The vehicle was returned in good condition and is already available for new reservations.
-                </p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 shrink-0 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">No Issues Reported</p>
+                  <p className="text-xs text-muted-foreground">
+                    The vehicle was returned in good condition and is already available for new reservations.
+                  </p>
+                </div>
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" className="ml-auto" data-testid="button-confirm-available">
+                  <Button size="sm" className="w-full sm:w-auto shrink-0" data-testid="button-confirm-available">
                     <Check className="h-3 w-3 mr-1" />
                     Confirm Available
                   </Button>

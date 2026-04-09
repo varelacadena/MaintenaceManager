@@ -1,22 +1,19 @@
 import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon } from "lucide-react";
+import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon, LogIn, LogOut, Eye } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, Upload, User, VehicleMaintenanceLog, VehicleDocument } from "@shared/schema";
+import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, User, VehicleMaintenanceLog, VehicleDocument } from "@shared/schema";
 import { format } from "date-fns";
-import { Image, FileText, CheckCircle, XCircle, AlertTriangle, User as UserIcon } from "lucide-react";
+import { AlertTriangle, User as UserIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
 import { useToast } from "@/hooks/use-toast";
-import { useFileDownload } from "@/hooks/use-download";
-import { AlertCircle } from "lucide-react";
-import { SecureImage } from "@/components/SecureImage";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
@@ -40,232 +37,6 @@ const statusColors = {
   needs_cleaning: "secondary",
   out_of_service: "destructive",
 } as const;
-
-function CheckOutLogCard({ log, users }: { log: VehicleCheckOutLog; users: User[] }) {
-  const { data: uploads } = useQuery<Upload[]>({
-    queryKey: [`/api/uploads/vehicle-checkout/${log.id}`],
-  });
-  const { downloadFile } = useFileDownload();
-
-  const user = users.find(u => u.id === log.userId);
-
-  return (
-    <Card data-testid={`card-checkout-log-${log.id}`}>
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <CardTitle className="text-sm sm:text-base">
-            {log.checkOutTime ? format(new Date(log.checkOutTime), "MMM d, yyyy h:mm a") : "Date unavailable"}
-          </CardTitle>
-          {log.adminOverride && (
-            <Badge variant="secondary" className="text-xs self-start sm:self-auto">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              Admin Override
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <UserIcon className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Checked out by:</span>
-              <span className="text-sm font-medium">
-                {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Unknown'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Mileage:</span>
-              <span className="text-sm font-medium">{log.startMileage?.toLocaleString()} mi</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Fuel Level:</span>
-              <Badge variant="secondary" className="text-xs capitalize">{log.fuelLevel}</Badge>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              {log.cleanlinessConfirmed ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <span className="text-sm text-green-600 dark:text-green-400">Cleanliness Confirmed</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Cleanliness Not Confirmed</span>
-                </>
-              )}
-            </div>
-            {log.digitalSignature && (
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Digital Signature:</span>
-                <span className="text-sm font-medium">Signed</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {log.damageNotes && (
-          <>
-            <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Damage Notes</p>
-              <p className="text-sm">{log.damageNotes}</p>
-            </div>
-          </>
-        )}
-
-        {uploads && uploads.length > 0 && (
-          <>
-            <Separator />
-            <div>
-              <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Image className="w-4 h-4" />
-                Documentation Photos
-              </p>
-              <div className="flex flex-wrap gap-4">
-                {uploads.map((upload) => (
-                    <div key={upload.id} className="flex flex-col gap-1.5 w-[140px]">
-                      <button
-                        onClick={() => downloadFile(upload.id, upload.objectUrl)}
-                        className="relative aspect-square overflow-hidden rounded-lg border bg-muted hover-elevate group transition-all text-left"
-                        data-testid={`link-upload-${upload.id}`}
-                      >
-                        {upload.fileType.startsWith('image/') ? (
-                          <SecureImage
-                            uploadId={upload.id}
-                            objectUrl={upload.objectUrl}
-                            fileName={upload.fileName}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center">
-                            <FileText className="w-8 h-8 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-xs font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
-                        </div>
-                      </button>
-                      <span className="text-xs font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
-                        {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function CheckInLogCard({ log, users }: { log: VehicleCheckInLog; users: User[] }) {
-  const { data: uploads } = useQuery<Upload[]>({
-    queryKey: [`/api/uploads/vehicle-checkin/${log.id}`],
-  });
-  const { downloadFile } = useFileDownload();
-
-  const user = users.find(u => u.id === log.userId);
-
-  return (
-    <Card data-testid={`card-checkin-log-${log.id}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm sm:text-base">
-          {log.checkInTime ? format(new Date(log.checkInTime), "MMM d, yyyy h:mm a") : "Date unavailable"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <UserIcon className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Checked in by:</span>
-              <span className="text-sm font-medium">
-                {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Unknown'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Mileage:</span>
-              <span className="text-sm font-medium">{log.endMileage?.toLocaleString()} mi</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Fuel Level:</span>
-              <Badge variant="secondary" className="text-xs capitalize">{log.fuelLevel}</Badge>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Cleanliness Status:</span>
-              <Badge variant={log.cleanlinessStatus === 'clean' ? 'default' : 'secondary'} className="text-xs">
-                {log.cleanlinessStatus}
-              </Badge>
-            </div>
-          </div>
-        </div>
-
-        {log.issues && (
-          <>
-            <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-                Issues Reported
-              </p>
-              <p className="text-sm text-destructive">{log.issues}</p>
-            </div>
-          </>
-        )}
-
-        {uploads && uploads.length > 0 && (
-          <>
-            <Separator />
-            <div>
-              <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Image className="w-4 h-4" />
-                Documentation Photos
-              </p>
-              <div className="flex flex-wrap gap-4">
-                {uploads.map((upload) => (
-                    <div key={upload.id} className="flex flex-col gap-1.5 w-[140px]">
-                      <button
-                        onClick={() => downloadFile(upload.id, upload.objectUrl)}
-                        className="relative aspect-square overflow-hidden rounded-lg border bg-muted hover-elevate group transition-all text-left"
-                        data-testid={`link-upload-${upload.id}`}
-                      >
-                        {upload.fileType.startsWith('image/') ? (
-                          <SecureImage
-                            uploadId={upload.id}
-                            objectUrl={upload.objectUrl}
-                            fileName={upload.fileName}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center">
-                            <FileText className="w-8 h-8 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-xs font-medium bg-background/90 px-2 py-1 rounded-full shadow-sm">View Full</span>
-                        </div>
-                      </button>
-                      <span className="text-xs font-medium text-muted-foreground truncate px-0.5" title={upload.fileName}>
-                        {upload.fileName.startsWith('DASH_') ? "Dash & Fuel" : "Damage Documentation"}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 
 export default function VehicleDetail() {
   const { id } = useParams();
@@ -464,14 +235,16 @@ export default function VehicleDetail() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="documents" className="text-xs sm:text-sm">Documents</TabsTrigger>
-          <TabsTrigger value="reservations" className="text-xs sm:text-sm">Reservations</TabsTrigger>
-          <TabsTrigger value="logbook" className="text-xs sm:text-sm">Logbook</TabsTrigger>
-          <TabsTrigger value="maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
-          <TabsTrigger value="qr-code" className="text-xs sm:text-sm">QR Code</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap">Overview</TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs sm:text-sm whitespace-nowrap">Documents</TabsTrigger>
+            <TabsTrigger value="reservations" className="text-xs sm:text-sm whitespace-nowrap">Reservations</TabsTrigger>
+            <TabsTrigger value="logbook" className="text-xs sm:text-sm whitespace-nowrap">Logbook</TabsTrigger>
+            <TabsTrigger value="maintenance" className="text-xs sm:text-sm whitespace-nowrap">Maintenance</TabsTrigger>
+            <TabsTrigger value="qr-code" className="text-xs sm:text-sm whitespace-nowrap">QR Code</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
@@ -781,32 +554,63 @@ export default function VehicleDetail() {
         <TabsContent value="reservations" className="space-y-4">
           {reservations && reservations.length > 0 ? (
             <div className="space-y-4">
-              {reservations.map((reservation) => (
-                <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <CardTitle className="text-sm sm:text-base md:text-lg">
-                        {format(new Date(reservation.startDate), "MMM d, yyyy")} - {format(new Date(reservation.endDate), "MMM d, yyyy")}
-                      </CardTitle>
-                      <Badge variant={reservation.status === "completed" ? "default" : "secondary"} className="text-xs self-start sm:self-auto">
-                        {reservation.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between items-start gap-2 text-sm">
-                      <span className="text-muted-foreground shrink-0">Purpose</span>
-                      <span className="text-right break-words">{reservation.purpose}</span>
-                    </div>
-                    {reservation.notes && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Notes: </span>
-                        <span className="break-words">{reservation.notes}</span>
+              {reservations.map((reservation) => {
+                const resCheckOut = checkOutLogs?.find(co => co.reservationId === reservation.id);
+                const resCheckIn = resCheckOut ? checkInLogs?.find(ci => ci.checkOutLogId === resCheckOut.id) : undefined;
+
+                const getReservationStatusBadge = () => {
+                  if (reservation.status === "completed") return { label: "Completed", variant: "default" as const };
+                  if (reservation.status === "pending_review") return { label: "Needs Review", variant: "destructive" as const };
+                  if (reservation.status === "active" && resCheckIn) return { label: "Returned", variant: "secondary" as const };
+                  if (reservation.status === "active") return { label: "Checked Out", variant: "secondary" as const };
+                  if (reservation.status === "approved") return { label: "Approved", variant: "default" as const };
+                  if (reservation.status === "cancelled") return { label: "Cancelled", variant: "secondary" as const };
+                  return { label: reservation.status?.replace(/_/g, " ") || "Pending", variant: "secondary" as const };
+                };
+
+                const statusBadge = getReservationStatusBadge();
+
+                return (
+                  <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <CardTitle className="text-sm sm:text-base md:text-lg">
+                          {format(new Date(reservation.startDate), "MMM d, yyyy")} - {format(new Date(reservation.endDate), "MMM d, yyyy")}
+                        </CardTitle>
+                        <Badge variant={statusBadge.variant} className="text-xs self-start sm:self-auto capitalize">
+                          {statusBadge.label}
+                        </Badge>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between items-start gap-2 text-sm">
+                        <span className="text-muted-foreground shrink-0">Purpose</span>
+                        <span className="text-right break-words">{reservation.purpose}</span>
+                      </div>
+                      {reservation.notes && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Notes: </span>
+                          <span className="break-words">{reservation.notes}</span>
+                        </div>
+                      )}
+
+                      {reservation.status === "pending_review" && resCheckIn && canManageVehicles && (
+                        <>
+                          <Separator />
+                          <Button
+                            onClick={() => navigate(`/vehicle-checkin-verify/${resCheckIn.id}`)}
+                            className="w-full sm:w-auto"
+                            data-testid={`button-review-checkin-${reservation.id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Review Check-In
+                          </Button>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
@@ -820,41 +624,173 @@ export default function VehicleDetail() {
         </TabsContent>
 
         <TabsContent value="logbook" className="space-y-3">
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Check-Out Logs</h3>
-              {checkOutLogs && checkOutLogs.length > 0 ? (
-                <div className="space-y-3 sm:space-y-4">
-                  {checkOutLogs.map((log) => (
-                    <CheckOutLogCard key={log.id} log={log} users={users || []} />
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                    <p className="text-sm text-muted-foreground">No check-out logs</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+          {(() => {
+            const trips = (checkOutLogs || []).map(co => {
+              const reservation = reservations?.find(r => r.id === co.reservationId);
+              const checkIn = checkInLogs?.find(ci => ci.checkOutLogId === co.id);
+              const coUser = users?.find(u => u.id === co.userId);
+              return { checkOut: co, checkIn, reservation, user: coUser };
+            }).sort((a, b) => {
+              const aTime = a.checkOut.checkOutTime ? new Date(a.checkOut.checkOutTime).getTime() : 0;
+              const bTime = b.checkOut.checkOutTime ? new Date(b.checkOut.checkOutTime).getTime() : 0;
+              return bTime - aTime;
+            });
 
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Check-In Logs</h3>
-              {checkInLogs && checkInLogs.length > 0 ? (
-                <div className="space-y-3 sm:space-y-4">
-                  {checkInLogs.map((log) => (
-                    <CheckInLogCard key={log.id} log={log} users={users || []} />
-                  ))}
-                </div>
-              ) : (
+            if (trips.length === 0) {
+              return (
                 <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                    <p className="text-sm text-muted-foreground">No check-in logs</p>
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                    <ClipboardList className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base sm:text-lg font-medium">No trip history</p>
+                    <p className="text-sm text-muted-foreground text-center">Vehicle usage logs will appear here after check-outs</p>
                   </CardContent>
                 </Card>
-              )}
-            </div>
-          </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {trips.map(({ checkOut, checkIn, reservation, user: tripUser }) => {
+                  const isPendingReview = reservation?.status === "pending_review";
+                  const milesDriven = checkIn && checkOut.startMileage ? checkIn.endMileage - checkOut.startMileage : null;
+
+                  return (
+                    <Card key={checkOut.id} data-testid={`card-trip-${checkOut.id}`}>
+                      <CardHeader className="pb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="min-w-0">
+                            <CardTitle className="text-sm sm:text-base">
+                              {reservation
+                                ? `${format(new Date(reservation.startDate), "MMM d, yyyy")} - ${format(new Date(reservation.endDate), "MMM d, yyyy")}`
+                                : checkOut.checkOutTime ? format(new Date(checkOut.checkOutTime), "MMM d, yyyy") : "Date unavailable"
+                              }
+                            </CardTitle>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {tripUser && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <UserIcon className="w-3 h-3" />
+                                  {`${tripUser.firstName || ''} ${tripUser.lastName || ''}`.trim() || tripUser.username}
+                                </span>
+                              )}
+                              {reservation?.purpose && (
+                                <span className="text-xs text-muted-foreground">
+                                  {reservation.purpose}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                            {isPendingReview ? (
+                              <Badge variant="destructive" className="text-xs">Needs Review</Badge>
+                            ) : checkIn ? (
+                              <Badge variant="default" className="text-xs">Completed</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">Checked Out</Badge>
+                            )}
+                            {checkOut.adminOverride && (
+                              <Badge variant="secondary" className="text-xs">
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                Override
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className="w-7 h-7 rounded-full border-2 border-foreground/20 flex items-center justify-center bg-background">
+                                <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
+                              </div>
+                              <div className="w-0.5 h-full min-h-[2rem] bg-border" />
+                            </div>
+                            <div className="flex-1 pb-2">
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Check-Out</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Time</span>
+                                  <p className="font-medium text-xs sm:text-sm">{checkOut.checkOutTime ? format(new Date(checkOut.checkOutTime), "M/d/yy h:mm a") : "N/A"}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Mileage</span>
+                                  <p className="font-medium text-xs sm:text-sm">{checkOut.startMileage?.toLocaleString()} mi</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Fuel</span>
+                                  <Badge variant="secondary" className="text-xs capitalize mt-0.5">{checkOut.fuelLevel}</Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center bg-background ${checkIn ? 'border-foreground/20' : 'border-dashed border-muted-foreground/30'}`}>
+                                <LogIn className={`w-3.5 h-3.5 ${checkIn ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              {checkIn ? (
+                                <>
+                                  <p className="text-xs font-medium text-muted-foreground mb-1">Check-In</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                    <div>
+                                      <span className="text-muted-foreground text-xs">Time</span>
+                                      <p className="font-medium text-xs sm:text-sm">{checkIn.checkInTime ? format(new Date(checkIn.checkInTime), "M/d/yy h:mm a") : "N/A"}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground text-xs">Mileage</span>
+                                      <p className="font-medium text-xs sm:text-sm">{checkIn.endMileage?.toLocaleString()} mi</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground text-xs">Fuel</span>
+                                      <Badge variant="secondary" className="text-xs capitalize mt-0.5">{checkIn.fuelLevel}</Badge>
+                                    </div>
+                                  </div>
+                                  {milesDriven !== null && (
+                                    <p className="text-xs text-muted-foreground mt-1">{milesDriven.toLocaleString()} miles driven</p>
+                                  )}
+                                  {checkIn.cleanlinessStatus && checkIn.cleanlinessStatus !== 'clean' && (
+                                    <Badge variant="secondary" className="text-xs mt-1 capitalize">{checkIn.cleanlinessStatus.replace(/_/g, " ")}</Badge>
+                                  )}
+                                  {checkIn.issues && (
+                                    <div className="mt-2">
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3 text-destructive" />
+                                        Issues Reported
+                                      </p>
+                                      <p className="text-xs text-destructive mt-0.5">{checkIn.issues}</p>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">Not yet returned</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {isPendingReview && checkIn && canManageVehicles && (
+                          <>
+                            <Separator />
+                            <Button
+                              onClick={() => navigate(`/vehicle-checkin-verify/${checkIn.id}`)}
+                              className="w-full sm:w-auto"
+                              data-testid={`button-review-trip-${checkOut.id}`}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Review Check-In
+                            </Button>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="maintenance" className="space-y-4">
