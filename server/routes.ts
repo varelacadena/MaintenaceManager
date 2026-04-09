@@ -19,6 +19,7 @@ import { registerProjectRoutes } from "./routes/projects";
 import { registerResourceRoutes } from "./routes/resources";
 import { registerAiRoutes } from "./routes/ai";
 import { registerSignupRoutes } from "./routes/signup";
+import { registerEmailRoutes } from "./routes/email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
@@ -38,6 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerVehicleRoutes(app);
   registerAnalyticsRoutes(app);
   registerProjectRoutes(app);
+  registerEmailRoutes(app);
   registerResourceRoutes(app);
   registerAiRoutes(app);
 

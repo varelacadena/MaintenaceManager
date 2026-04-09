@@ -105,7 +105,9 @@ import * as workOrderStorage from "./workOrders";
 import * as vehicleStorage from "./vehicles";
 import * as messagingStorage from "./messaging";
 import * as projectStorage from "./projects";
-import * as miscStorage from "./misc";
+import * as uploadStorage from "./uploads";
+import * as emergencyContactStorage from "./emergencyContacts";
+import * as aiAgentLogStorage from "./aiAgentLogs";
 import * as resourceStorage from "./resources";
 
 export interface IStorage {
@@ -691,25 +693,25 @@ export class DatabaseStorage implements IStorage {
   createQuoteAttachment = projectStorage.createQuoteAttachment;
   deleteQuoteAttachment = projectStorage.deleteQuoteAttachment;
 
-  createUpload = miscStorage.createUpload;
-  getUploadsByRequest = miscStorage.getUploadsByRequest;
-  getUploadsByTask = miscStorage.getUploadsByTask;
-  getUploadsByEquipment = miscStorage.getUploadsByEquipment;
-  getUploadsByVehicleCheckOutLog = miscStorage.getUploadsByVehicleCheckOutLog;
-  getUploadsByVehicleCheckInLog = miscStorage.getUploadsByVehicleCheckInLog;
-  getUpload = miscStorage.getUpload;
-  deleteUpload = miscStorage.deleteUpload;
-  getEmergencyContacts = miscStorage.getEmergencyContacts;
-  getActiveEmergencyContact = miscStorage.getActiveEmergencyContact;
-  getEmergencyContact = miscStorage.getEmergencyContact;
-  createEmergencyContact = miscStorage.createEmergencyContact;
-  updateEmergencyContact = miscStorage.updateEmergencyContact;
-  deleteEmergencyContact = miscStorage.deleteEmergencyContact;
-  setActiveEmergencyContact = miscStorage.setActiveEmergencyContact;
-  clearActiveEmergencyContact = miscStorage.clearActiveEmergencyContact;
-  createAiAgentLog = miscStorage.createAiAgentLog;
-  getAiAgentLogs = miscStorage.getAiAgentLogs;
-  updateAiAgentLog = miscStorage.updateAiAgentLog;
+  createUpload = uploadStorage.createUpload;
+  getUploadsByRequest = uploadStorage.getUploadsByRequest;
+  getUploadsByTask = uploadStorage.getUploadsByTask;
+  getUploadsByEquipment = uploadStorage.getUploadsByEquipment;
+  getUploadsByVehicleCheckOutLog = uploadStorage.getUploadsByVehicleCheckOutLog;
+  getUploadsByVehicleCheckInLog = uploadStorage.getUploadsByVehicleCheckInLog;
+  getUpload = uploadStorage.getUpload;
+  deleteUpload = uploadStorage.deleteUpload;
+  getEmergencyContacts = emergencyContactStorage.getEmergencyContacts;
+  getActiveEmergencyContact = emergencyContactStorage.getActiveEmergencyContact;
+  getEmergencyContact = emergencyContactStorage.getEmergencyContact;
+  createEmergencyContact = emergencyContactStorage.createEmergencyContact;
+  updateEmergencyContact = emergencyContactStorage.updateEmergencyContact;
+  deleteEmergencyContact = emergencyContactStorage.deleteEmergencyContact;
+  setActiveEmergencyContact = emergencyContactStorage.setActiveEmergencyContact;
+  clearActiveEmergencyContact = emergencyContactStorage.clearActiveEmergencyContact;
+  createAiAgentLog = aiAgentLogStorage.createAiAgentLog;
+  getAiAgentLogs = aiAgentLogStorage.getAiAgentLogs;
+  updateAiAgentLog = aiAgentLogStorage.updateAiAgentLog;
 
   getResourceCategories = resourceStorage.getResourceCategories;
   createResourceCategory = resourceStorage.createResourceCategory;
