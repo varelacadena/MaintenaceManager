@@ -1,41 +1,15 @@
-import {
-  Car, Camera, MapPin, ClipboardList, CircleCheck, Check,
-  Gauge, Fuel, Sparkles, AlertTriangle, MessageSquare, ImagePlus,
-  Navigation, CheckCircle, Wrench, ChevronLeft, KeyRound,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ObjectUploader } from "@/components/ObjectUploader";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
-import {
-  useVehicleCheckIn,
-  FUEL_OPTIONS,
-} from "./useVehicleCheckIn";
-import { FuelLevelSelector, SubStepDots, StepProgress } from "./CheckInComponents";
+import { Car } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { useVehicleCheckIn } from "./useVehicleCheckIn";
+import { StepProgress } from "./CheckInComponents";
+import { SummaryStep, InspectionStep, CompleteStep } from "./CheckInSteps";
 
 export default function VehicleCheckIn() {
+  const ctx = useVehicleCheckIn();
+
   const {
-    checkOutLogId, setLocation, user, toast,
-    dashPhoto, setDashPhoto, interiorPhoto, setInteriorPhoto, damagePhotos, setDamagePhotos,
-    step, setStep, slideDirection, isAnimating, outcome, setOutcome,
-    inspSubStep, setInspSubStep, inspSlideDir, inspIsAnimating,
-    ciMileage, setCiMileage, ciFuelLevel, setCiFuelLevel,
-    ciIsClean, setCiIsClean, ciHasIssues, setCiHasIssues,
-    ciIssues, setCiIssues, ciReturnNotes, setCiReturnNotes,
-    fuelViolationAck, setFuelViolationAck, cleanlinessViolationAck, setCleanlinessViolationAck,
-    keyReturned, setKeyReturned,
-    checkOutLog, isLoading, vehicle, reservation, lockbox, hasLockbox,
-    advanceStep, goBackStep, advanceInspSubStep, goBackInspSubStep,
-    getUploadParameters, handleFileUpload,
-    checkInMutation, handleCheckInSubmit,
-    milesDriven, isLowFuel, isDirty, milesDrivenPreview,
-    animationClass, inspAnimClass, activeSubSteps, inspSubStepIndex,
-  } = useVehicleCheckIn();
+    step, vehicle, checkOutLog, isLoading, animationClass,
+  } = ctx;
 
   if (isLoading) {
     return (
@@ -73,668 +47,72 @@ export default function VehicleCheckIn() {
       <div className="overflow-hidden">
         <div className={`transition-all duration-300 ease-in-out ${animationClass}`}>
 
-          {/* ── SUMMARY ── */}
           {step === "summary" && (
-            <Card>
-              <CardHeader className="text-center pb-2">
-                <div className="flex justify-center mb-3">
-                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Navigation className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-                <CardTitle className="text-xl">Welcome Back!</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Let's wrap up your trip. Here's a summary of your journey.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-muted/50 rounded-md p-4 space-y-3">
-                  <p className="text-sm font-semibold">Trip Summary</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Vehicle</p>
-                      <p className="font-medium">{vehicle.make} {vehicle.model}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Vehicle ID</p>
-                      <p className="font-medium">{vehicle.vehicleId}</p>
-                    </div>
-                    {reservation && (
-                      <>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Reservation Start</p>
-                          <p className="font-medium">{format(new Date(reservation.startDate), "MMM d 'at' h:mm a")}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Reservation End</p>
-                          <p className="font-medium">{format(new Date(reservation.endDate), "MMM d 'at' h:mm a")}</p>
-                        </div>
-                      </>
-                    )}
-                    <div>
-                      <p className="text-muted-foreground text-xs">Starting Mileage</p>
-                      <p className="font-medium">{checkOutLog.startMileage?.toLocaleString()} mi</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Fuel at Checkout</p>
-                      <p className="font-medium capitalize">{checkOutLog.fuelLevel || "N/A"}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">
-                    Please ensure the vehicle is <strong>parked</strong>, <strong>clean</strong>, and has at least <strong>½ tank of fuel</strong> before completing your return inspection.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="flex flex-col gap-2 pt-1">
-                  <Button
-                    onClick={() => { setInspSubStep("mileage"); advanceStep("inspection"); }}
-                    className="w-full"
-                    data-testid="button-start-inspection"
-                  >
-                    Start Return Inspection
-                  </Button>
-                  <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="w-full">
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <SummaryStep
+              vehicle={vehicle}
+              checkOutLog={checkOutLog}
+              reservation={ctx.reservation}
+              setInspSubStep={ctx.setInspSubStep}
+              advanceStep={ctx.advanceStep}
+              setLocation={ctx.setLocation}
+            />
           )}
 
-          {/* ── INSPECTION (sub-stepped) ── */}
           {step === "inspection" && (
-            <Card>
-              <div className="px-6 pt-4">
-                <SubStepDots total={activeSubSteps.length} currentIndex={inspSubStepIndex} />
-              </div>
-              <div className="overflow-hidden">
-                <div className={`transition-all duration-300 ease-in-out ${inspAnimClass}`}>
-                  <CardContent className="pt-2">
-
-                    {/* SUB: MILEAGE */}
-                    {inspSubStep === "mileage" && (
-                      <div className="space-y-5">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Gauge className="h-7 w-7 text-primary" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">What's the ending mileage?</h3>
-                          <p className="text-sm text-muted-foreground">Enter the current odometer reading</p>
-                        </div>
-                        <div className="space-y-1">
-                          <Input
-                            type="number"
-                            value={ciMileage || ""}
-                            onChange={(e) => setCiMileage(parseInt(e.target.value) || 0)}
-                            className="text-center text-2xl font-bold h-14"
-                            placeholder="0"
-                            data-testid="input-end-mileage"
-                          />
-                          <p className="text-xs text-muted-foreground text-center">miles</p>
-                        </div>
-                        {ciMileage > 0 && milesDrivenPreview >= 0 && (
-                          <div className="text-center p-3 bg-muted/50 rounded-md">
-                            <p className="text-xs text-muted-foreground">Miles driven this trip</p>
-                            <p className="text-xl font-bold">{milesDrivenPreview.toLocaleString()} mi</p>
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => advanceInspSubStep("fuel")}
-                            disabled={!ciMileage || ciMileage < (checkOutLog.startMileage || 0)}
-                            className="w-full"
-                            data-testid="button-mileage-next"
-                          >
-                            Next
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackStep("summary")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SUB: FUEL */}
-                    {inspSubStep === "fuel" && (
-                      <div className="space-y-5">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Fuel className="h-7 w-7 text-primary" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">What's the fuel level?</h3>
-                          <p className="text-sm text-muted-foreground">Please refuel to at least ½ tank before returning</p>
-                        </div>
-                        <FuelLevelSelector value={ciFuelLevel} onChange={(v) => { setCiFuelLevel(v); setFuelViolationAck(false); }} />
-                        {isLowFuel && ciFuelLevel && (
-                          <div className="space-y-2">
-                            <Alert variant="destructive" className="py-2">
-                              <Fuel className="h-4 w-4" />
-                              <AlertDescription className="text-sm">
-                                You agreed to return with at least ½ tank of fuel. Please refuel before completing check-in if possible.
-                              </AlertDescription>
-                            </Alert>
-                            <div className="bg-muted/50 rounded-md p-3 flex items-start gap-2">
-                              <Checkbox
-                                id="fuel-violation-ack"
-                                checked={fuelViolationAck}
-                                onCheckedChange={(v) => setFuelViolationAck(v === true)}
-                                data-testid="checkbox-fuel-violation"
-                              />
-                              <label htmlFor="fuel-violation-ack" className="text-xs leading-relaxed cursor-pointer text-muted-foreground">
-                                I am unable to refuel at this time. I acknowledge this is a policy violation and understand it will be recorded on my account.
-                              </label>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => advanceInspSubStep("cleanliness")}
-                            disabled={!ciFuelLevel || (isLowFuel && !fuelViolationAck)}
-                            className="w-full"
-                            data-testid="button-fuel-next"
-                          >
-                            Next
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("mileage")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SUB: CLEANLINESS */}
-                    {inspSubStep === "cleanliness" && (
-                      <div className="space-y-5">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Sparkles className="h-7 w-7 text-primary" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">Is the vehicle clean?</h3>
-                          <p className="text-sm text-muted-foreground">You agreed to return the vehicle clean</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => { setCiIsClean(true); setCleanlinessViolationAck(false); }}
-                            data-testid="cleanliness-clean"
-                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
-                              ciIsClean === true
-                                ? "border-green-500 bg-green-50 dark:bg-green-950/20"
-                                : "border-muted hover-elevate"
-                            }`}
-                          >
-                            <Sparkles className={`h-8 w-8 ${ciIsClean === true ? "text-green-600" : "text-muted-foreground"}`} />
-                            <span className={`text-sm font-medium ${ciIsClean === true ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}`}>
-                              Yes, it's clean
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setCiIsClean(false); setCleanlinessViolationAck(false); }}
-                            data-testid="cleanliness-dirty"
-                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
-                              ciIsClean === false
-                                ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                                : "border-muted hover-elevate"
-                            }`}
-                          >
-                            <AlertTriangle className={`h-8 w-8 ${ciIsClean === false ? "text-red-600" : "text-muted-foreground"}`} />
-                            <span className={`text-sm font-medium ${ciIsClean === false ? "text-red-700 dark:text-red-400" : "text-muted-foreground"}`}>
-                              Needs cleaning
-                            </span>
-                          </button>
-                        </div>
-                        {isDirty && (
-                          <div className="space-y-2">
-                            <Alert variant="destructive" className="py-2">
-                              <Sparkles className="h-4 w-4" />
-                              <AlertDescription className="text-sm">
-                                You agreed to return the vehicle clean. Please clean it before completing check-in if possible.
-                              </AlertDescription>
-                            </Alert>
-                            <div className="bg-muted/50 rounded-md p-3 flex items-start gap-2">
-                              <Checkbox
-                                id="cleanliness-violation-ack"
-                                checked={cleanlinessViolationAck}
-                                onCheckedChange={(v) => setCleanlinessViolationAck(v === true)}
-                                data-testid="checkbox-cleanliness-violation"
-                              />
-                              <label htmlFor="cleanliness-violation-ack" className="text-xs leading-relaxed cursor-pointer text-muted-foreground">
-                                I am unable to clean the vehicle at this time. I acknowledge this is a policy violation and will be recorded on my account.
-                              </label>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => advanceInspSubStep("issues")}
-                            disabled={ciIsClean === null || (isDirty && !cleanlinessViolationAck)}
-                            className="w-full"
-                            data-testid="button-cleanliness-next"
-                          >
-                            Next
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("fuel")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SUB: ISSUES */}
-                    {inspSubStep === "issues" && (
-                      <div className="space-y-5">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Wrench className="h-7 w-7 text-primary" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">Any mechanical issues?</h3>
-                          <p className="text-sm text-muted-foreground">Report problems, damage, or safety concerns</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => { setCiHasIssues(false); setCiIssues(""); }}
-                            data-testid="issues-none"
-                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
-                              ciHasIssues === false
-                                ? "border-primary bg-primary/10"
-                                : "border-muted hover-elevate"
-                            }`}
-                          >
-                            <CheckCircle className={`h-8 w-8 ${ciHasIssues === false ? "text-primary" : "text-muted-foreground"}`} />
-                            <span className={`text-sm font-medium ${ciHasIssues === false ? "text-primary" : "text-muted-foreground"}`}>
-                              No issues
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setCiHasIssues(true)}
-                            data-testid="issues-yes"
-                            className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
-                              ciHasIssues === true
-                                ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
-                                : "border-muted hover-elevate"
-                            }`}
-                          >
-                            <Wrench className={`h-8 w-8 ${ciHasIssues === true ? "text-amber-600" : "text-muted-foreground"}`} />
-                            <span className={`text-sm font-medium ${ciHasIssues === true ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}`}>
-                              Report issue
-                            </span>
-                          </button>
-                        </div>
-                        {ciHasIssues === true && (
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Describe the issue</Label>
-                            <Textarea
-                              placeholder="e.g., Engine warning light on, brake noise, tire damage..."
-                              value={ciIssues}
-                              onChange={(e) => setCiIssues(e.target.value)}
-                              className="min-h-[80px]"
-                              data-testid="input-issues"
-                            />
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => advanceInspSubStep("photos")}
-                            disabled={ciHasIssues === null || (ciHasIssues === true && !ciIssues.trim())}
-                            className="w-full"
-                            data-testid="button-issues-next"
-                          >
-                            Next
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("cleanliness")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SUB: PHOTOS */}
-                    {inspSubStep === "photos" && (
-                      <div className="space-y-5">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                              <Camera className="h-7 w-7 text-amber-600 dark:text-amber-400" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">Upload your return photos</h3>
-                          <p className="text-sm text-muted-foreground">Dash and interior photos are required</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Camera className="h-4 w-4 text-muted-foreground" />
-                            <Label className="font-semibold text-sm">
-                              Dash Photo <span className="text-destructive">*</span>
-                            </Label>
-                            {dashPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
-                          </div>
-                          {!dashPhoto ? (
-                            <ObjectUploader
-                              maxNumberOfFiles={1}
-                              maxFileSize={10485760}
-                              onGetUploadParameters={getUploadParameters}
-                              onComplete={(res) => handleFileUpload(res, "dash")}
-                              onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
-                              buttonClassName="w-full bg-amber-600 text-white"
-                            >
-                              <Camera className="mr-2 h-4 w-4" />
-                              Upload Dash Photo
-                            </ObjectUploader>
-                          ) : (
-                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800 flex items-center justify-between">
-                              <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
-                                <Check className="h-4 w-4" /> {dashPhoto.fileName}
-                              </p>
-                              <Button variant="ghost" size="sm" onClick={() => setDashPhoto(null)}>Remove</Button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-muted-foreground" />
-                            <Label className="font-semibold text-sm">
-                              Interior Photo <span className="text-destructive">*</span>
-                            </Label>
-                            {interiorPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
-                          </div>
-                          {!interiorPhoto ? (
-                            <ObjectUploader
-                              maxNumberOfFiles={1}
-                              maxFileSize={10485760}
-                              onGetUploadParameters={getUploadParameters}
-                              onComplete={(res) => handleFileUpload(res, "interior")}
-                              onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
-                              buttonClassName="w-full bg-blue-600 text-white"
-                            >
-                              <Camera className="mr-2 h-4 w-4" />
-                              Upload Interior Photo
-                            </ObjectUploader>
-                          ) : (
-                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800 flex items-center justify-between">
-                              <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
-                                <Check className="h-4 w-4" /> {interiorPhoto.fileName}
-                              </p>
-                              <Button variant="ghost" size="sm" onClick={() => setInteriorPhoto(null)}>Remove</Button>
-                            </div>
-                          )}
-                        </div>
-
-                        {ciHasIssues === true && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <ImagePlus className="h-4 w-4 text-muted-foreground" />
-                              <Label className="font-semibold text-sm">
-                                Issue Photos <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-                              </Label>
-                            </div>
-                            <ObjectUploader
-                              maxNumberOfFiles={5}
-                              maxFileSize={10485760}
-                              onGetUploadParameters={getUploadParameters}
-                              onComplete={(res) => handleFileUpload(res, "damage")}
-                              onError={(err) => toast({ title: "Upload failed", description: err.message, variant: "destructive" })}
-                              buttonClassName="w-full bg-primary text-primary-foreground"
-                            >
-                              <Camera className="mr-2 h-4 w-4" />
-                              Upload Photos
-                            </ObjectUploader>
-                            {damagePhotos.length > 0 && (
-                              <div className="space-y-2">
-                                {damagePhotos.map((file, index) => (
-                                  <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                                    <span className="text-sm truncate flex-1">{file.fileName}</span>
-                                    <Button variant="ghost" size="sm" onClick={() => setDamagePhotos(damagePhotos.filter((_, i) => i !== index))}>Remove</Button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => advanceInspSubStep("notes")}
-                            disabled={!dashPhoto || !interiorPhoto}
-                            className="w-full"
-                            data-testid="button-photos-next"
-                          >
-                            Next
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("issues")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SUB: NOTES */}
-                    {inspSubStep === "notes" && (
-                      <div className="space-y-5">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                              <MessageSquare className="h-7 w-7 text-primary" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">Any final notes?</h3>
-                          <p className="text-sm text-muted-foreground">General observations — optional, won't trigger maintenance</p>
-                        </div>
-                        <Textarea
-                          placeholder="e.g., Great trip, returned on time, parked in lot B..."
-                          value={ciReturnNotes}
-                          onChange={(e) => setCiReturnNotes(e.target.value)}
-                          className="min-h-[100px]"
-                          data-testid="input-return-notes"
-                        />
-                        <div className="flex flex-col gap-2">
-                          {hasLockbox ? (
-                            <>
-                              <Button
-                                onClick={() => advanceInspSubStep("keyReturn")}
-                                className="w-full"
-                                data-testid="button-notes-next"
-                              >
-                                Continue
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => { setCiReturnNotes(""); advanceInspSubStep("keyReturn"); }}
-                                className="w-full"
-                                data-testid="button-skip-notes"
-                              >
-                                Skip Notes — Continue
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                onClick={() => handleCheckInSubmit(ciReturnNotes)}
-                                disabled={checkInMutation.isPending}
-                                className="w-full"
-                                data-testid="button-submit-checkin"
-                              >
-                                {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => handleCheckInSubmit("")}
-                                disabled={checkInMutation.isPending}
-                                className="w-full"
-                                data-testid="button-skip-notes"
-                              >
-                                Skip — Complete Check-In
-                              </Button>
-                            </>
-                          )}
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("photos")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SUB: KEY RETURN */}
-                    {inspSubStep === "keyReturn" && (
-                      <div className="space-y-5" data-testid="key-return-section">
-                        <div className="text-center space-y-2">
-                          <div className="flex justify-center">
-                            <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                              <KeyRound className="h-7 w-7 text-amber-600 dark:text-amber-400" />
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold">Return the Key</h3>
-                          <p className="text-sm text-muted-foreground">Please return the vehicle key to the lockbox drop slot</p>
-                        </div>
-
-                        <div className="rounded-md border border-amber-500/30 bg-amber-50 dark:bg-amber-900/10 p-4 space-y-3">
-                          <div className="flex items-start gap-3">
-                            <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-sm font-medium" data-testid="text-lockbox-name">
-                                {lockbox?.name || "Lockbox"}
-                              </p>
-                              <p className="text-sm text-muted-foreground" data-testid="text-lockbox-location">
-                                {lockbox?.location || "See admin for location"}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-amber-800 dark:text-amber-200">
-                            Drop the key into the lockbox's key return slot. You do not need a code to return the key.
-                          </p>
-                        </div>
-
-                        <div className="flex items-start gap-3 p-3 rounded-md border">
-                          <Checkbox
-                            id="key-returned"
-                            checked={keyReturned}
-                            onCheckedChange={(checked) => setKeyReturned(checked === true)}
-                            data-testid="checkbox-key-returned"
-                          />
-                          <Label htmlFor="key-returned" className="text-sm leading-snug cursor-pointer">
-                            I have returned the key to the lockbox
-                          </Label>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => handleCheckInSubmit(ciReturnNotes)}
-                            disabled={!keyReturned || checkInMutation.isPending}
-                            className="w-full"
-                            data-testid="button-complete-checkin-key"
-                          >
-                            {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
-                          </Button>
-                          <Button variant="ghost" onClick={() => goBackInspSubStep("notes")} className="w-full text-sm">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                  </CardContent>
-                </div>
-              </div>
-            </Card>
+            <InspectionStep
+              activeSubSteps={ctx.activeSubSteps}
+              inspSubStepIndex={ctx.inspSubStepIndex}
+              inspAnimClass={ctx.inspAnimClass}
+              inspSubStep={ctx.inspSubStep}
+              ciMileage={ctx.ciMileage}
+              setCiMileage={ctx.setCiMileage}
+              checkOutLog={checkOutLog}
+              milesDrivenPreview={ctx.milesDrivenPreview}
+              advanceInspSubStep={ctx.advanceInspSubStep}
+              goBackStep={ctx.goBackStep}
+              goBackInspSubStep={ctx.goBackInspSubStep}
+              ciFuelLevel={ctx.ciFuelLevel}
+              setCiFuelLevel={ctx.setCiFuelLevel}
+              isLowFuel={ctx.isLowFuel}
+              fuelViolationAck={ctx.fuelViolationAck}
+              setFuelViolationAck={ctx.setFuelViolationAck}
+              ciIsClean={ctx.ciIsClean}
+              setCiIsClean={ctx.setCiIsClean}
+              isDirty={ctx.isDirty}
+              cleanlinessViolationAck={ctx.cleanlinessViolationAck}
+              setCleanlinessViolationAck={ctx.setCleanlinessViolationAck}
+              ciHasIssues={ctx.ciHasIssues}
+              setCiHasIssues={ctx.setCiHasIssues}
+              ciIssues={ctx.ciIssues}
+              setCiIssues={ctx.setCiIssues}
+              dashPhoto={ctx.dashPhoto}
+              setDashPhoto={ctx.setDashPhoto}
+              interiorPhoto={ctx.interiorPhoto}
+              setInteriorPhoto={ctx.setInteriorPhoto}
+              damagePhotos={ctx.damagePhotos}
+              setDamagePhotos={ctx.setDamagePhotos}
+              getUploadParameters={ctx.getUploadParameters}
+              handleFileUpload={ctx.handleFileUpload}
+              toast={ctx.toast}
+              ciReturnNotes={ctx.ciReturnNotes}
+              setCiReturnNotes={ctx.setCiReturnNotes}
+              hasLockbox={ctx.hasLockbox}
+              lockbox={ctx.lockbox}
+              keyReturned={ctx.keyReturned}
+              setKeyReturned={ctx.setKeyReturned}
+              checkInMutation={ctx.checkInMutation}
+              handleCheckInSubmit={ctx.handleCheckInSubmit}
+            />
           )}
 
-          {/* ── COMPLETE ── */}
-          {step === "complete" && outcome && (
-            <Card>
-              <CardContent className="flex flex-col items-center text-center py-10 gap-6">
-                <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <CircleCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold">Vehicle Returned!</h3>
-                  <p className="text-muted-foreground mt-1">Thank you for completing your return inspection.</p>
-                </div>
-
-                <div className="w-full space-y-2">
-                  {outcome.hasIssues && (
-                    <Alert className="border-amber-500/50 bg-amber-500/10 text-left">
-                      <Wrench className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-                        A <strong>high-priority maintenance task</strong> has been created for the admin team. The vehicle is flagged for review.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {outcome.fuelViolationAcknowledged && (
-                    <Alert className="border-red-500/50 bg-red-500/10 text-left">
-                      <Fuel className="h-4 w-4 text-red-600 dark:text-red-400" />
-                      <AlertDescription className="text-red-800 dark:text-red-200 text-sm">
-                        <strong>Low fuel return recorded</strong> on your account. Please return with at least ½ tank next time.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {outcome.cleanlinessViolationAcknowledged && (
-                    <Alert className="border-red-500/50 bg-red-500/10 text-left">
-                      <Sparkles className="h-4 w-4 text-red-600 dark:text-red-400" />
-                      <AlertDescription className="text-red-800 dark:text-red-200 text-sm">
-                        <strong>Unclean return recorded</strong> on your account. Please return the vehicle clean next time.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {!outcome.hasIssues && !outcome.fuelViolationAcknowledged && !outcome.cleanlinessViolationAcknowledged && (
-                    <Alert className="border-green-500/50 bg-green-500/10 text-left">
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <AlertDescription className="text-green-800 dark:text-green-200 text-sm">
-                        Vehicle returned in good condition. It has been <strong>marked as available</strong> for the next reservation.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-
-                <div className="w-full bg-muted/50 rounded-md p-4 text-left space-y-2">
-                  <p className="text-sm font-semibold">Trip Stats</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-muted-foreground">Vehicle</span>
-                    <span className="font-medium">{vehicle.make} {vehicle.model}</span>
-                    <span className="text-muted-foreground">Miles Driven</span>
-                    <span className="font-medium">{milesDriven.toLocaleString()} mi</span>
-                    <span className="text-muted-foreground">Returned</span>
-                    <span className="font-medium">{format(new Date(), "MMM d 'at' h:mm a")}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 w-full">
-                  {checkOutLog.reservationId && (
-                    <Button
-                      onClick={() => setLocation(`/vehicle-reservation-details/${checkOutLog.reservationId}`)}
-                      variant="outline"
-                      className="w-full"
-                      data-testid="button-view-details"
-                    >
-                      View Reservation Details
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => setLocation("/my-reservations")}
-                    variant="outline"
-                    className="w-full"
-                    data-testid="button-back-reservations"
-                  >
-                    Back to My Reservations
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          {step === "complete" && ctx.outcome && (
+            <CompleteStep
+              outcome={ctx.outcome}
+              vehicle={vehicle}
+              milesDriven={ctx.milesDriven}
+              checkOutLog={checkOutLog}
+              setLocation={ctx.setLocation}
+            />
           )}
 
         </div>

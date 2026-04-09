@@ -3,6 +3,7 @@ import { TaskEditMode } from "../TaskEditMode";
 import { MobileTaskHeader, MobileStatusBar } from "./MobileTaskHeader";
 import { MobileTaskContent } from "./MobileTaskContent";
 import { MobileTaskDialogs } from "./MobileTaskDialogs";
+import { MobileTaskDialogsExtra } from "./MobileTaskDialogsExtra";
 
 export default function MobileTaskDetail() {
   const ctx = useMobileTaskDetail();
@@ -50,6 +51,7 @@ export default function MobileTaskDetail() {
       </div>
 
       <MobileTaskDialogs ctx={ctx} />
+      <MobileTaskDialogsExtra ctx={ctx} />
     </div>
   );
 }
