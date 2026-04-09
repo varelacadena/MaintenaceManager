@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,53 +8,63 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
-import Landing from "@/pages/Landing";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ResetPassword from "@/pages/ResetPassword";
-import RequestAccess from "@/pages/RequestAccess";
-import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/Dashboard";
-import Requests from "@/pages/Requests";
-import RequestDetail from "@/pages/RequestDetail";
-import NewRequest from "@/pages/NewRequest";
-import Work from "@/pages/Work";
-import TaskDetail from "@/pages/TaskDetail";
-import MobileTaskDetail from "@/components/MobileTaskDetail";
 import { useIsMobile } from "@/hooks/use-mobile";
-import NewTask from "@/pages/NewTask";
-import EditTask from "@/pages/EditTask";
-import Messages from "@/pages/Messages";
-import Calendar from "@/pages/Calendar";
-import Users from "@/pages/Users";
-import Credentials from "@/pages/Credentials";
-import Vendors from "@/pages/Vendors";
-import Inventory from "@/pages/Inventory";
-import AdminTaskDetailPage from "@/pages/AdminTaskDetailPage";
-import Settings from "@/pages/Settings";
-import PropertyMapPage from "./pages/PropertyMapPage";
-import PropertyDetail from "./pages/PropertyDetail";
-import EquipmentWorkHistory from "./pages/EquipmentWorkHistory";
-import Vehicles from "./pages/Vehicles";
-import VehicleDetail from "./pages/VehicleDetail";
-import VehicleQRRedirect from "./pages/VehicleQRRedirect";
-import VehicleEdit from "@/pages/VehicleEdit";
-import MyReservations from "./pages/MyReservations";
-import VehicleCheckOut from "./pages/VehicleCheckOut";
-import VehicleCheckIn from "./pages/VehicleCheckIn";
-import VehicleCheckInVerification from "./pages/VehicleCheckInVerification";
-import VehicleReservations from "./pages/VehicleReservations";
-import VehicleReservationDetails from "./pages/VehicleReservationDetails";
 import { ScrollToTop } from "./components/ScrollToTop";
-import AnalyticsDashboard from "./pages/analytics/AnalyticsDashboard";
 import RoleGuard from "./components/RoleGuard";
 import NotificationsWidget from "./components/NotificationsWidget";
-import ProjectDetail from "./pages/ProjectDetail";
-import EmailManagement from "./pages/EmailManagement";
-import AiAgentDashboard from "./pages/AiAgentDashboard";
-import ResourceLibrary from "./pages/ResourceLibrary";
-import GrabAJob from "./pages/GrabAJob";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import DomainErrorBoundary from "@/components/DomainErrorBoundary";
+
+const Landing = lazy(() => import("@/pages/Landing"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const RequestAccess = lazy(() => import("@/pages/RequestAccess"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Requests = lazy(() => import("@/pages/Requests"));
+const RequestDetail = lazy(() => import("@/pages/RequestDetail"));
+const NewRequest = lazy(() => import("@/pages/NewRequest"));
+const Work = lazy(() => import("@/pages/Work"));
+const TaskDetail = lazy(() => import("@/pages/TaskDetail"));
+const MobileTaskDetail = lazy(() => import("@/components/MobileTaskDetail"));
+const NewTask = lazy(() => import("@/pages/NewTask"));
+const EditTask = lazy(() => import("@/pages/EditTask"));
+const Messages = lazy(() => import("@/pages/Messages"));
+const Calendar = lazy(() => import("@/pages/Calendar"));
+const Users = lazy(() => import("@/pages/Users"));
+const Credentials = lazy(() => import("@/pages/Credentials"));
+const Vendors = lazy(() => import("@/pages/Vendors"));
+const Inventory = lazy(() => import("@/pages/Inventory"));
+const AdminTaskDetailPage = lazy(() => import("@/pages/AdminTaskDetailPage"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const PropertyMapPage = lazy(() => import("./pages/PropertyMapPage"));
+const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
+const EquipmentWorkHistory = lazy(() => import("./pages/EquipmentWorkHistory"));
+const Vehicles = lazy(() => import("./pages/Vehicles"));
+const VehicleDetail = lazy(() => import("./pages/VehicleDetail"));
+const VehicleQRRedirect = lazy(() => import("./pages/VehicleQRRedirect"));
+const VehicleEdit = lazy(() => import("@/pages/VehicleEdit"));
+const MyReservations = lazy(() => import("./pages/MyReservations"));
+const VehicleCheckOut = lazy(() => import("./pages/VehicleCheckOut"));
+const VehicleCheckIn = lazy(() => import("./pages/VehicleCheckIn"));
+const VehicleCheckInVerification = lazy(() => import("./pages/VehicleCheckInVerification"));
+const VehicleReservations = lazy(() => import("./pages/VehicleReservations"));
+const VehicleReservationDetails = lazy(() => import("./pages/VehicleReservationDetails"));
+const AnalyticsDashboard = lazy(() => import("./pages/analytics/AnalyticsDashboard"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const EmailManagement = lazy(() => import("./pages/EmailManagement"));
+const AiAgentDashboard = lazy(() => import("./pages/AiAgentDashboard"));
+const ResourceLibrary = lazy(() => import("./pages/ResourceLibrary"));
+const GrabAJob = lazy(() => import("./pages/GrabAJob"));
+
+function SuspenseFallback() {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[40vh]">
+      <div className="text-center text-muted-foreground text-sm">Loading...</div>
+    </div>
+  );
+}
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -75,14 +86,14 @@ function AuthenticatedApp() {
 
   if (!isAuthenticated) {
     const path = window.location.pathname;
-    if (path === "/forgot-password") return <ForgotPassword />;
-    if (path === "/reset-password") return <ResetPassword />;
-    if (path === "/request-access") return <RequestAccess />;
+    if (path === "/forgot-password") return <Suspense fallback={<SuspenseFallback />}><ForgotPassword /></Suspense>;
+    if (path === "/reset-password") return <Suspense fallback={<SuspenseFallback />}><ResetPassword /></Suspense>;
+    if (path === "/request-access") return <Suspense fallback={<SuspenseFallback />}><RequestAccess /></Suspense>;
     if (path && path !== "/" && path !== "/login") {
       const fullUrl = path + window.location.search + window.location.hash;
       sessionStorage.setItem("returnUrl", fullUrl);
     }
-    return <Landing />;
+    return <Suspense fallback={<SuspenseFallback />}><Landing /></Suspense>;
   }
   const isMobileTaskDetail = isMobileView && /^\/tasks\/[^/]+$/.test(currentPath) && !currentPath.endsWith("/edit") && !currentPath.endsWith("/new") && !window.location.search.includes("view=full");
 
@@ -96,12 +107,12 @@ function AuthenticatedApp() {
 
   if (isMobileTaskDetail) {
     if (user?.role === "technician") {
-      return <Route path="/tasks/:id" component={TaskDetail} />;
+      return <Suspense fallback={<SuspenseFallback />}><DomainErrorBoundary domain="Work Orders & Tasks"><Route path="/tasks/:id" component={TaskDetail} /></DomainErrorBoundary></Suspense>;
     }
     if (user?.role === "admin") {
-      return <Route path="/tasks/:id" component={AdminTaskDetailPage} />;
+      return <Suspense fallback={<SuspenseFallback />}><DomainErrorBoundary domain="Work Orders & Tasks"><Route path="/tasks/:id" component={AdminTaskDetailPage} /></DomainErrorBoundary></Suspense>;
     }
-    return <MobileTaskDetail />;
+    return <Suspense fallback={<SuspenseFallback />}><DomainErrorBoundary domain="Work Orders & Tasks"><MobileTaskDetail /></DomainErrorBoundary></Suspense>;
   }
 
   return (
@@ -169,100 +180,174 @@ function AuthenticatedApp() {
               )}
               <ScrollToTop />
               <ErrorBoundary>
+              <Suspense fallback={<SuspenseFallback />}>
               <Switch>
-                {/* Routes accessible to all authenticated users */}
-                <Route path="/" component={() => {
-                  if (user?.role === "student" || user?.role === "technician") {
-                    window.location.replace("/work");
-                    return null;
-                  }
-                  return <Dashboard />;
-                }} />
-                <Route path="/work" component={Work} />
+                {/* Work Orders & Tasks */}
+                <Route path="/" component={() => (
+                  <DomainErrorBoundary domain="Work Orders & Tasks">
+                    {(() => {
+                      if (user?.role === "student" || user?.role === "technician") {
+                        window.location.replace("/work");
+                        return null;
+                      }
+                      return <Dashboard />;
+                    })()}
+                  </DomainErrorBoundary>
+                )} />
+                <Route path="/work" component={() => (
+                  <DomainErrorBoundary domain="Work Orders & Tasks"><Work /></DomainErrorBoundary>
+                )} />
                 <Route path="/grab" component={() => (
-                  <RoleGuard allowedRoles={["student", "technician"]}><GrabAJob /></RoleGuard>
+                  <DomainErrorBoundary domain="Work Orders & Tasks">
+                    <RoleGuard allowedRoles={["student", "technician"]}><GrabAJob /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/tasks" component={() => {
                   window.location.replace("/work");
                   return null;
                 }} />
                 <Route path="/tasks/new" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
+                  <DomainErrorBoundary domain="Work Orders & Tasks">
+                    <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/tasks/:id/edit" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><EditTask /></RoleGuard>
+                  <DomainErrorBoundary domain="Work Orders & Tasks">
+                    <RoleGuard allowedRoles={["admin"]}><EditTask /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
-                <Route path="/tasks/:id" component={TaskDetailResponsive} />
-                <Route path="/messages" component={Messages} />
-                <Route path="/settings" component={Settings} />
+                <Route path="/tasks/:id" component={() => (
+                  <DomainErrorBoundary domain="Work Orders & Tasks"><TaskDetailResponsive /></DomainErrorBoundary>
+                )} />
 
-                {/* Protected routes - check user role and redirect students */}
+                {/* Service Requests */}
                 <Route path="/requests" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><Requests /></RoleGuard>
+                  <DomainErrorBoundary domain="Service Requests">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><Requests /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/requests/:id" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><RequestDetail /></RoleGuard>
+                  <DomainErrorBoundary domain="Service Requests">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><RequestDetail /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/new-request" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><NewRequest /></RoleGuard>
+                  <DomainErrorBoundary domain="Service Requests">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><NewRequest /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Messaging */}
+                <Route path="/messages" component={() => (
+                  <DomainErrorBoundary domain="Messaging"><Messages /></DomainErrorBoundary>
+                )} />
+
+                {/* Settings */}
+                <Route path="/settings" component={() => (
+                  <DomainErrorBoundary domain="Settings"><Settings /></DomainErrorBoundary>
+                )} />
+
+                {/* Calendar */}
                 <Route path="/calendar" component={() => (
-                  <RoleGuard allowedRoles={["admin", "technician"]}><Calendar /></RoleGuard>
+                  <DomainErrorBoundary domain="Calendar">
+                    <RoleGuard allowedRoles={["admin", "technician"]}><Calendar /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Facilities & Properties */}
                 <Route path="/properties" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><PropertyMapPage /></RoleGuard>
+                  <DomainErrorBoundary domain="Facilities & Properties">
+                    <RoleGuard allowedRoles={["admin"]}><PropertyMapPage /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/properties/:id" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><PropertyDetail /></RoleGuard>
+                  <DomainErrorBoundary domain="Facilities & Properties">
+                    <RoleGuard allowedRoles={["admin"]}><PropertyDetail /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/equipment/:id/work-history" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><EquipmentWorkHistory /></RoleGuard>
+                  <DomainErrorBoundary domain="Facilities & Properties">
+                    <RoleGuard allowedRoles={["admin"]}><EquipmentWorkHistory /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Users & Vendors */}
                 <Route path="/users" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><Users /></RoleGuard>
+                  <DomainErrorBoundary domain="Users & Vendors">
+                    <RoleGuard allowedRoles={["admin"]}><Users /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/credentials" component={() => {
                   window.location.replace("/users");
                   return null;
                 }} />
                 <Route path="/vendors" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><Vendors /></RoleGuard>
+                  <DomainErrorBoundary domain="Users & Vendors">
+                    <RoleGuard allowedRoles={["admin"]}><Vendors /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Inventory */}
                 <Route path="/inventory" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><Inventory /></RoleGuard>
+                  <DomainErrorBoundary domain="Inventory">
+                    <RoleGuard allowedRoles={["admin"]}><Inventory /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Vehicle Fleet */}
                 <Route path="/vehicles" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><Vehicles /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin"]}><Vehicles /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
-                <Route path="/vehicles/:id" component={() => {
-                  if (user?.role === "admin") return <VehicleDetail />;
-                  return <VehicleQRRedirect />;
-                }} />
+                <Route path="/vehicles/:id" component={() => (
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    {user?.role === "admin" ? <VehicleDetail /> : <VehicleQRRedirect />}
+                  </DomainErrorBoundary>
+                )} />
                 <Route path="/vehicles/:id/edit" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><VehicleEdit /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin"]}><VehicleEdit /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/my-reservations" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><MyReservations /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><MyReservations /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-reservations" component={() => {
                   window.location.replace("/vehicles?tab=reservations");
                   return null;
                 }} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleReservationDetails /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleReservationDetails /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-checkout/:reservationId" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckOut /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckOut /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-checkin/:checkOutLogId" component={() => (
-                  <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckIn /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckIn /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-checkin-verify/:checkInLogId" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><VehicleCheckInVerification /></RoleGuard>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin"]}><VehicleCheckInVerification /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Analytics */}
                 <Route path="/analytics" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><AnalyticsDashboard /></RoleGuard>
+                  <DomainErrorBoundary domain="Analytics">
+                    <RoleGuard allowedRoles={["admin"]}><AnalyticsDashboard /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Redirects (no error boundary needed) */}
                 <Route path="/emergency-contacts" component={() => {
                   window.location.replace("/settings?tab=emergency");
                   return null;
@@ -271,20 +356,35 @@ function AuthenticatedApp() {
                   window.location.replace("/work");
                   return null;
                 }} />
+
+                {/* Projects */}
                 <Route path="/projects/:id" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><ProjectDetail /></RoleGuard>
+                  <DomainErrorBoundary domain="Projects">
+                    <RoleGuard allowedRoles={["admin"]}><ProjectDetail /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Admin Tools */}
                 <Route path="/email-management" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><EmailManagement /></RoleGuard>
+                  <DomainErrorBoundary domain="Admin Tools">
+                    <RoleGuard allowedRoles={["admin"]}><EmailManagement /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/ai-agent" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><AiAgentDashboard /></RoleGuard>
+                  <DomainErrorBoundary domain="Admin Tools">
+                    <RoleGuard allowedRoles={["admin"]}><AiAgentDashboard /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/resources" component={() => (
-                  <RoleGuard allowedRoles={["admin"]}><ResourceLibrary /></RoleGuard>
+                  <DomainErrorBoundary domain="Admin Tools">
+                    <RoleGuard allowedRoles={["admin"]}><ResourceLibrary /></RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
+
+                {/* Catch-all */}
                 <Route component={NotFound} />
               </Switch>
+              </Suspense>
               </ErrorBoundary>
             </main>
           </div>
