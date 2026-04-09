@@ -45,7 +45,9 @@ import { statusColors, urgencyColors } from "./constants";
 import { MultiPropertyDisplay, TaskResourcesSection } from "./helpers";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
 import { AdminDialogs } from "./AdminDialogs";
+import { AdminDialogsA } from "./AdminDialogsA";
 import { AdminDialogsExtra } from "./AdminDialogsExtra";
+import { AdminDialogsB } from "./AdminDialogsB";
 import { AdminDetailSection } from "./AdminDetailSection";
 import { AdminCollapsibleSections } from "./AdminCollapsibleSections";
 import type { TaskDetailContext } from "./useTaskDetail";
@@ -493,7 +495,9 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
       </div>
 
       <AdminDialogs ctx={ctx} />
+      <AdminDialogsA ctx={ctx} />
       <AdminDialogsExtra ctx={ctx} />
+      <AdminDialogsB ctx={ctx} />
     </div>
   );
 }

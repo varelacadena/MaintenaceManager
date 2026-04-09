@@ -5,6 +5,7 @@ import { TechnicianMoreTab } from "./TechnicianMoreTab";
 import { TechnicianBottomBar } from "./TechnicianBottomBar";
 import { TechnicianDialogs } from "./TechnicianDialogs";
 import { TechnicianDialogsExtra } from "./TechnicianDialogsExtra";
+import { TechnicianDialogsMore } from "./TechnicianDialogsMore";
 export type { TechnicianTaskDetailProps } from "./types";
 import type { TechnicianTaskDetailProps } from "./types";
 
@@ -186,6 +187,8 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         setIsScanPartOpen={setIsScanPartOpen}
         handleScanPart={handleScanPart}
         setIsPartModalOpen={hook.setIsPartModalOpen}
+      />
+      <TechnicianDialogsMore
         isEquipmentInfoOpen={props.isEquipmentInfoOpen}
         setIsEquipmentInfoOpen={props.setIsEquipmentInfoOpen}
         scannedEquipment={props.scannedEquipment}
@@ -196,6 +199,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         isVehicleInfoOpen={props.isVehicleInfoOpen}
         setIsVehicleInfoOpen={props.setIsVehicleInfoOpen}
         scannedVehicle={props.scannedVehicle}
+        safeNavigate={safeNavigate}
       />
     </div>
   );
