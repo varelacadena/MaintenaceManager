@@ -1348,9 +1348,16 @@ export default function MobileTaskDetail() {
                   {selectedInventoryItemId && (() => {
                     const selectedItem = inventoryItems.find((i) => i.id === selectedInventoryItemId);
                     const qty = Number(selectedItem?.quantity) || 0;
+                    const isOut = selectedItem?.stockStatus === "out" || (selectedItem?.trackingMode === "counted" && qty <= 0);
+                    const isLow = selectedItem?.stockStatus === "low" || (selectedItem?.trackingMode === "counted" && selectedItem?.minQuantity && qty <= Number(selectedItem.minQuantity) && qty > 0);
                     return (
                       <div className="p-2 rounded-md text-sm bg-muted text-foreground" data-testid="text-mobile-selected-item">
-                        <span className="font-medium">{selectedItem?.name}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{selectedItem?.name}</span>
+                          <Badge variant={isOut ? "destructive" : isLow ? "outline" : "secondary"} className="text-[10px] shrink-0">
+                            {isOut ? "Out" : isLow ? "Low" : "Stocked"}
+                          </Badge>
+                        </div>
                         <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
