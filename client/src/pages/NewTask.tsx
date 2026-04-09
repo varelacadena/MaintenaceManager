@@ -138,16 +138,8 @@ export default function NewTask() {
     enabled: user?.role === "admin" || user?.role === "technician",
   });
 
-  const adminUsers = users.filter(u => u.role === "admin");
   const technicianUsers = users.filter(u => u.role === "technician");
-  const staffUsers = users.filter(u => u.role === "staff");
   const studentUsers = users.filter(u => u.role === "student");
-  const technicianUserGroups = [
-    { label: "Admins", items: adminUsers },
-    { label: "Technicians", items: technicianUsers },
-    { label: "Staff", items: staffUsers },
-    { label: "Students", items: studentUsers },
-  ].filter(group => group.items.length > 0);
 
   const { data: vendors = [] } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
@@ -1242,17 +1234,12 @@ export default function NewTask() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {technicianUserGroups.map((group) => (
-                                    <SelectGroup key={group.label}>
-                                      <SelectLabel>{group.label}</SelectLabel>
-                                      {group.items.map((user) => (
-                                        <SelectItem key={user.id} value={user.id}>
-                                          {user.firstName && user.lastName
-                                            ? `${user.firstName} ${user.lastName}`
-                                            : user.username}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectGroup>
+                                  {technicianUsers.map((user) => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                      {user.firstName && user.lastName
+                                        ? `${user.firstName} ${user.lastName}`
+                                        : user.username}
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
