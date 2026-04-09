@@ -609,7 +609,7 @@ export function TaskDetailPanel({
         className={`grid px-5 py-4 ${isFullscreen ? (isMobile ? "grid-cols-2 gap-4" : "grid-cols-4 gap-4") : "grid-cols-1 gap-3"}`}
         style={{ borderBottom: "1px solid #EEEEEE" }}
       >
-        <div className={`flex items-center gap-3 ${isFullscreen ? "" : ""}`}>
+        <div className="flex items-center gap-3">
           <UserIcon className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
           <span className="text-xs" style={{ color: "#6B7280" }}>Assigned</span>
           <div className="flex items-center gap-1.5 ml-auto">
@@ -796,38 +796,34 @@ export function TaskDetailPanel({
               const isSubCompleted = subtask.status === "completed";
               const isExpanded = expandedSubtasks.has(subtask.id);
               const isLocked = !isStarted && !isCompleted;
+              const isReadOnly = !isFullscreen;
 
               return (
                 <div key={subtask.id} data-testid={`panel-subtask-${subtask.id}`}>
                   <div
-                    className="flex items-center gap-3 py-2.5 px-2 rounded cursor-pointer transition-opacity"
-                    style={isLocked ? { opacity: 0.45 } : undefined}
-                    onClick={() => !isLocked && toggleSubtaskExpanded(subtask.id)}
+                    className={`flex items-center gap-3 py-2.5 px-2 rounded transition-opacity ${isReadOnly ? "" : "cursor-pointer"}`}
+                    style={isLocked && !isReadOnly ? { opacity: 0.45 } : undefined}
+                    onClick={() => !isLocked && !isReadOnly && toggleSubtaskExpanded(subtask.id)}
                   >
-                    <button
-                      className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
+                    <span
+                      className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
                       style={{
                         borderColor: isSubCompleted ? "#4338CA" : "#D1D5DB",
                         backgroundColor: isSubCompleted ? "#4338CA" : "transparent",
                       }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isLocked && !isCompleted) handleSubtaskToggle(subtask);
-                      }}
-                      disabled={isLocked || isCompleted}
                       data-testid={`checkbox-subtask-${subtask.id}`}
                     >
                       {isSubCompleted && (
                         <CheckCircle2 className="w-3 h-3" style={{ color: "#FFFFFF" }} />
                       )}
-                    </button>
+                    </span>
                     <span
                       className={`text-sm flex-1 ${isSubCompleted ? "line-through" : ""}`}
                       style={{ color: isSubCompleted ? "#9CA3AF" : "#1A1A1A" }}
                     >
                       {subtask.name}
                     </span>
-                    {!isLocked && (
+                    {!isLocked && !isReadOnly && (
                       isExpanded ? (
                         <ChevronDown className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
                       ) : (
@@ -836,7 +832,7 @@ export function TaskDetailPanel({
                     )}
                   </div>
 
-                  {isExpanded && !isLocked && (
+                  {isExpanded && !isLocked && !isReadOnly && (
                     <div className="ml-8 pb-3 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <SubtaskPhotos subtaskId={subtask.id} disabled={isCompleted} testIdPrefix="panel-subtask" />
