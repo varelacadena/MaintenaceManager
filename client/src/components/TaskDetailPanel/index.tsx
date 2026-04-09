@@ -1,20 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
   Maximize2,
@@ -55,40 +43,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import { useAuth } from "@/hooks/useAuth";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
+import type { User, Property, TimeEntry } from "@shared/schema";
 import { TaskEditMode } from "../TaskEditMode";
 import { SubtaskNote } from "../SubtaskNote";
 import { SubtaskPhotos } from "../SubtaskPhotos";
-import { BarcodeScanner } from "../BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
-import { UploadLabelDialog } from "@/components/UploadLabelDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  panelStatusDotStyle,
-  panelStatusPillStyle,
-  panelStatusLabels,
-  priorityConfig,
-  taskTypeLabels,
-  getAvatarHexColor as getAvatarColorForId,
-} from "@/utils/taskUtils";
+import { taskTypeLabels, panelStatusLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
+import { useTaskDetailPanel } from "./useTaskDetailPanel";
+import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 
 interface TaskDetailPanelProps {
   taskId: string;
@@ -109,463 +71,32 @@ export function TaskDetailPanel({
   properties,
   hideFullscreenToggle,
 }: TaskDetailPanelProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const isAdmin = user?.role === "admin";
-  const isMobile = useIsMobile();
+  const ctx = useTaskDetailPanel({ taskId, isFullscreen, onClose, allUsers, properties });
 
-  const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
-  const [resourcesExpanded, setResourcesExpanded] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
-  const [isPartsOpen, setIsPartsOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [newMessageText, setNewMessageText] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
-  const [newPartQuantity, setNewPartQuantity] = useState("1");
-  const [newPartNotes, setNewPartNotes] = useState("");
-  const [inventorySearchQuery, setInventorySearchQuery] = useState("");
-  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState("");
-
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
-  const [isLogTimeDialogOpen, setIsLogTimeDialogOpen] = useState(false);
-  const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
-  const [newNoteContent, setNewNoteContent] = useState("");
-  const [newNoteType, setNewNoteType] = useState("job_note");
-  const [logTimeDuration, setLogTimeDuration] = useState("");
-  const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
-  const [editTimeDuration, setEditTimeDuration] = useState("");
-  const [deleteTimeEntryId, setDeleteTimeEntryId] = useState<string | null>(null);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editNoteContent, setEditNoteContent] = useState("");
-  const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
-  const [isFileUploading, setIsFileUploading] = useState(false);
-  const [pendingUploadForLabel, setPendingUploadForLabel] = useState<{
-    fileName: string;
-    fileType: string;
-    objectUrl: string;
-    previewUrl?: string;
-  } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const { data: task, isLoading } = useQuery<Task>({
-    queryKey: ["/api/tasks", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/tasks/${taskId}`);
-      if (!res.ok) throw new Error("Failed to fetch task");
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: subtasks } = useQuery<Task[]>({
-    queryKey: ["/api/tasks", taskId, "subtasks"],
-    queryFn: async () => {
-      const res = await fetch(`/api/tasks/${taskId}/subtasks`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: uploads } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/task", taskId, "includeSubtasks"],
-    queryFn: async () => {
-      const res = await fetch(`/api/uploads/task/${taskId}?includeSubtasks=true`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: taskMessages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/messages/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-    refetchInterval: (isMessagesOpen || (isFullscreen && isAdmin)) ? 5000 : false,
-  });
-
-  const { data: taskParts = [] } = useQuery<PartUsed[]>({
-    queryKey: ["/api/parts/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/parts/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
-    queryKey: ["/api/inventory"],
-  });
-
-  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
-    queryKey: ["/api/time-entries/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/time-entries/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: taskNotes = [] } = useQuery<TaskNote[]>({
-    queryKey: ["/api/task-notes/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/task-notes/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const totalMinutes = useMemo(() => {
-    return timeEntries.reduce((sum: number, e: TimeEntry) => {
-      if (e.durationMinutes) return sum + e.durationMinutes;
-      if (e.startTime && e.endTime) {
-        return sum + Math.round((new Date(e.endTime).getTime() - new Date(e.startTime).getTime()) / 60000);
-      }
-      return sum;
-    }, 0);
-  }, [timeEntries]);
-
-  const docCount = uploads?.filter(u => !u.fileType.startsWith("image/") && !u.fileType.startsWith("video/")).length || 0;
-  const imgCount = uploads?.filter(u => u.fileType.startsWith("image/")).length || 0;
-  const vidCount = uploads?.filter(u => u.fileType.startsWith("video/")).length || 0;
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const res = await apiRequest("POST", "/api/messages", { taskId, content });
-      return res.json();
-    },
-    onSuccess: () => {
-      setNewMessageText("");
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to send message.", variant: "destructive" }),
-  });
-
-  const markMessagesReadMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", `/api/messages/task/${taskId}/mark-read`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-    },
-  });
-
-  const addPartMutation = useMutation({
-    mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string; inventoryItemId?: string }) => {
-      const res = await apiRequest("POST", "/api/parts", partData);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/parts/task", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      setNewPartQuantity("1");
-      setNewPartNotes("");
-      setInventorySearchQuery("");
-      setSelectedInventoryItemId("");
-      setIsAddPartFormOpen(false);
-      toast({ title: "Part added" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to add part.", variant: "destructive" }),
-  });
-
-  const messagesVisible = isMessagesOpen || (isFullscreen && isAdmin);
-  useEffect(() => {
-    if (messagesVisible && taskMessages.length > 0) {
-      const hasUnread = taskMessages.some((m: Message) => !m.read && m.senderId !== user?.id);
-      if (hasUnread) {
-        markMessagesReadMutation.mutate();
-      }
-    }
-  }, [messagesVisible, taskMessages.length]);
-
-  useEffect(() => {
-    if (isMessagesOpen) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    }
-  }, [isMessagesOpen, taskMessages.length]);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async (newStatus: string) => {
-      return apiRequest("PATCH", `/api/tasks/${taskId}`, { status: newStatus });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
-      toast({ title: "Task updated", description: "Status changed." });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
-    },
-  });
-
-  const updateSubtaskStatusMutation = useMutation({
-    mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
-      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "subtasks"] });
-    },
-  });
-
-  const deleteTaskMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/tasks/${taskId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Task deleted", description: "Task has been permanently removed." });
-      onClose();
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete task.", variant: "destructive" });
-    },
-  });
-
-  const addNoteMutation = useMutation({
-    mutationFn: async ({ content, noteType }: { content: string; noteType: string }) => {
-      return apiRequest("POST", "/api/task-notes", { taskId, content, noteType });
-    },
-    onSuccess: () => {
-      setNewNoteContent("");
-      setNewNoteType("job_note");
-      setIsAddNoteDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", taskId] });
-      toast({ title: "Note added" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to add note.", variant: "destructive" }),
-  });
-
-  const updateNoteMutation = useMutation({
-    mutationFn: async ({ noteId, content }: { noteId: string; content: string }) => {
-      return apiRequest("PATCH", `/api/task-notes/${noteId}`, { content });
-    },
-    onSuccess: () => {
-      setEditingNoteId(null);
-      setEditNoteContent("");
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", taskId] });
-      toast({ title: "Note updated" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to update note.", variant: "destructive" }),
-  });
-
-  const deleteNoteMutation = useMutation({
-    mutationFn: async (noteId: string) => {
-      return apiRequest("DELETE", `/api/task-notes/${noteId}`);
-    },
-    onSuccess: () => {
-      setDeleteNoteId(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", taskId] });
-      toast({ title: "Note deleted" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to delete note.", variant: "destructive" }),
-  });
-
-  const updateTimeEntryMutation = useMutation({
-    mutationFn: async ({ entryId, durationMinutes }: { entryId: string; durationMinutes: number }) => {
-      return apiRequest("PATCH", `/api/time-entries/${entryId}`, { durationMinutes });
-    },
-    onSuccess: () => {
-      setEditingTimeEntryId(null);
-      setEditTimeDuration("");
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
-      toast({ title: "Time entry updated" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to update time entry.", variant: "destructive" }),
-  });
-
-  const deleteTimeEntryMutation = useMutation({
-    mutationFn: async (entryId: string) => {
-      return apiRequest("DELETE", `/api/time-entries/${entryId}`);
-    },
-    onSuccess: () => {
-      setDeleteTimeEntryId(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
-      toast({ title: "Time entry deleted" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to delete time entry.", variant: "destructive" }),
-  });
-
-  const logTimeMutation = useMutation({
-    mutationFn: async (durationMinutes: number) => {
-      const now = new Date();
-      const startTime = new Date(now.getTime() - durationMinutes * 60000);
-      return apiRequest("POST", "/api/time-entries", {
-        taskId,
-        durationMinutes,
-        startTime: startTime.toISOString(),
-        endTime: now.toISOString(),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
-      setLogTimeDuration("");
-      setIsLogTimeDialogOpen(false);
-      toast({ title: "Time logged" });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to log time.", variant: "destructive" }),
-  });
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setIsFileUploading(true);
-    try {
-      const paramRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-      if (!paramRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL } = await paramRes.json();
-      const isMock = uploadURL.startsWith("https://mock-storage.local/");
-      let objectUrl = uploadURL;
-      if (!isMock) {
-        const uploadRes = await fetch(uploadURL, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
-        });
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        objectUrl = uploadURL.split("?")[0];
-      }
-      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
-      setPendingUploadForLabel({
-        fileName: file.name,
-        fileType: file.type || "application/octet-stream",
-        objectUrl,
-        previewUrl,
-      });
-    } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
-    } finally {
-      setIsFileUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const [isPanelUploadLabelSaving, setIsPanelUploadLabelSaving] = useState(false);
-
-  const handlePanelUploadLabelSave = async (label: string) => {
-    if (!pendingUploadForLabel || isPanelUploadLabelSaving) return;
-    setIsPanelUploadLabelSaving(true);
-    try {
-      await apiRequest("PUT", "/api/uploads", {
-        taskId,
-        fileName: pendingUploadForLabel.fileName,
-        fileType: pendingUploadForLabel.fileType,
-        objectUrl: pendingUploadForLabel.objectUrl,
-        label,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
-      toast({ title: "File uploaded" });
-      if (pendingUploadForLabel.previewUrl) URL.revokeObjectURL(pendingUploadForLabel.previewUrl);
-      setPendingUploadForLabel(null);
-    } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
-    } finally {
-      setIsPanelUploadLabelSaving(false);
-    }
-  };
-
-  const handlePanelUploadLabelCancel = async () => {
-    if (!pendingUploadForLabel || isPanelUploadLabelSaving) return;
-    setIsPanelUploadLabelSaving(true);
-    try {
-      await apiRequest("PUT", "/api/uploads", {
-        taskId,
-        fileName: pendingUploadForLabel.fileName,
-        fileType: pendingUploadForLabel.fileType,
-        objectUrl: pendingUploadForLabel.objectUrl,
-        label: pendingUploadForLabel.fileName,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
-      toast({ title: "File uploaded" });
-      if (pendingUploadForLabel.previewUrl) URL.revokeObjectURL(pendingUploadForLabel.previewUrl);
-      setPendingUploadForLabel(null);
-    } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
-    } finally {
-      setIsPanelUploadLabelSaving(false);
-    }
-  };
-
-  const property = task?.propertyId
-    ? properties?.find((p) => p.id === task.propertyId)
-    : null;
-
-  const assignee = task?.assignedToId
-    ? allUsers?.find((u) => u.id === task.assignedToId)
-    : null;
-
-  const assigneeInitials = assignee
-    ? (assignee.firstName && assignee.lastName
-        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
-        : (assignee.username?.[0] || "?")
-      ).toUpperCase()
-    : null;
-
-  const assigneeName = assignee
-    ? assignee.firstName && assignee.lastName
-      ? `${assignee.firstName} ${assignee.lastName}`
-      : assignee.username || "Unknown"
-    : "Unassigned";
-
-  const completedSubtasks = subtasks?.filter((s) => s.status === "completed").length || 0;
-  const totalSubtasks = subtasks?.length || 0;
-  const allSubtasksComplete = totalSubtasks > 0 && completedSubtasks === totalSubtasks;
-  const isStarted = task?.status === "in_progress";
-  const isCompleted = task?.status === "completed";
-  const isNotStarted = task?.status === "not_started";
-
-  const urg = priorityConfig[task?.urgency || "low"] || priorityConfig.low;
-
-  const isOverdue = task?.estimatedCompletionDate
-    && task.status !== "completed"
-    && new Date(task.estimatedCompletionDate) < new Date();
-
-  const toggleSubtaskExpanded = (id: string) => {
-    setExpandedSubtasks((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const handleStartTask = () => {
-    updateStatusMutation.mutate("in_progress");
-  };
-
-  const handleMarkComplete = () => {
-    if (!allSubtasksComplete && totalSubtasks > 0) {
-      toast({
-        title: "Cannot complete task",
-        description: "All subtasks must be completed first.",
-        variant: "destructive",
-      });
-      return;
-    }
-    updateStatusMutation.mutate("completed");
-  };
-
-  const handleSubtaskToggle = (subtask: Task) => {
-    if (!isStarted) return;
-    const newStatus = subtask.status === "completed" ? "not_started" : "completed";
-    updateSubtaskStatusMutation.mutate({ subtaskId: subtask.id, status: newStatus });
-  };
+  const {
+    user, isAdmin, isMobile, task, isLoading, subtasks, uploads,
+    taskMessages, taskParts, inventoryItems, timeEntries, taskNotes,
+    totalMinutes, docCount, imgCount, vidCount,
+    expandedSubtasks, resourcesExpanded, setResourcesExpanded,
+    deleteDialogOpen, setDeleteDialogOpen, isEditMode, setIsEditMode,
+    isMessagesOpen, setIsMessagesOpen, isPartsOpen, setIsPartsOpen,
+    isHistoryOpen, setIsHistoryOpen, newMessageText, setNewMessageText,
+    messagesEndRef, isAddPartFormOpen, setIsAddPartFormOpen,
+    newPartQuantity, setNewPartQuantity, newPartNotes, setNewPartNotes,
+    inventorySearchQuery, setInventorySearchQuery, selectedInventoryItemId,
+    setSelectedInventoryItemId, isNotesOpen, setIsNotesOpen,
+    setIsAddNoteDialogOpen, setIsLogTimeDialogOpen, setIsScanDialogOpen,
+    editingNoteId, setEditingNoteId, editNoteContent, setEditNoteContent,
+    setDeleteNoteId, isFileUploading, fileInputRef,
+    setEditingTimeEntryId, setEditTimeDuration, setDeleteTimeEntryId,
+    sendMessageMutation, addPartMutation, updateStatusMutation,
+    updateNoteMutation, handleFileUpload,
+    property, assignee, assigneeInitials, assigneeName,
+    completedSubtasks, totalSubtasks, allSubtasksComplete,
+    isStarted, isCompleted, isNotStarted, urg, isOverdue,
+    toggleSubtaskExpanded, handleStartTask, handleMarkComplete,
+    statusPill, statusDot, statusLabel,
+  } = ctx;
 
   if (isLoading || !task) {
     return (
@@ -579,13 +110,8 @@ export function TaskDetailPanel({
     );
   }
 
-  const statusPill = panelStatusPillStyle[task.status] || panelStatusPillStyle.not_started;
-  const statusDot = panelStatusDotStyle[task.status] || panelStatusDotStyle.not_started;
-  const statusLabel = panelStatusLabels[task.status] || "UNKNOWN";
-
   const mainContent = (
     <div className={isMobile && isFullscreen ? "flex-1" : "flex-1 overflow-y-auto"} data-testid="panel-main-content">
-      {/* Task title + description section */}
       <div className="px-5 py-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
         <h2
           className="text-base font-semibold leading-snug"
@@ -604,7 +130,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Info grid — always shows all key fields */}
       <div
         className={`grid px-5 py-4 ${isFullscreen ? (isMobile ? "grid-cols-2 gap-4" : "grid-cols-4 gap-4") : "grid-cols-1 gap-3"}`}
         style={{ borderBottom: "1px solid #EEEEEE" }}
@@ -668,7 +193,6 @@ export function TaskDetailPanel({
         </div>
       </div>
 
-      {/* Resources row */}
       <div
         className="px-5 py-3 cursor-pointer"
         style={{ borderBottom: "1px solid #EEEEEE" }}
@@ -749,7 +273,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Subtasks section */}
       <div className="px-5 py-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-medium tracking-wider uppercase" style={{ color: "#9CA3AF" }}>
@@ -760,7 +283,6 @@ export function TaskDetailPanel({
           </span>
         </div>
 
-        {/* Progress bar */}
         {isStarted && totalSubtasks > 0 && (
           <div className="w-full rounded-full overflow-hidden mb-3" style={{ height: "4px", backgroundColor: "#EEEEEE" }}>
             <div
@@ -773,7 +295,6 @@ export function TaskDetailPanel({
           </div>
         )}
 
-        {/* Completion warning */}
         {isStarted && totalSubtasks > 0 && !allSubtasksComplete && (
           <div
             className="flex items-center gap-2 text-xs py-2 px-3 rounded mb-3"
@@ -785,7 +306,6 @@ export function TaskDetailPanel({
           </div>
         )}
 
-        {/* Subtask rows */}
         {totalSubtasks === 0 ? (
           <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>
             No subtasks
@@ -847,7 +367,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Completed banner */}
       {isCompleted && (
         <div
           className="mx-5 my-4 flex items-center gap-2 text-sm py-3 px-4 rounded-lg"
@@ -859,7 +378,6 @@ export function TaskDetailPanel({
         </div>
       )}
 
-      {/* Messages section */}
       <div style={{ borderBottom: "1px solid #EEEEEE" }}>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
@@ -948,7 +466,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Parts Used section */}
       <div style={{ borderBottom: "1px solid #EEEEEE" }}>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
@@ -1177,7 +694,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Notes section */}
       <div style={{ borderBottom: "1px solid #EEEEEE" }}>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
@@ -1306,7 +822,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* History section */}
       <div>
         <button
           className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
@@ -1407,7 +922,6 @@ export function TaskDetailPanel({
       style={{ borderLeft: isMobile ? "none" : "1px solid #EEEEEE", borderTop: isMobile ? "1px solid #EEEEEE" : "none", backgroundColor: "#FFFFFF" }}
       data-testid="panel-right-sidebar"
     >
-      {/* Status section */}
       <div className="p-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
         <div className="flex items-center gap-2 mb-3">
           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusDot }} />
@@ -1443,7 +957,6 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Actions section */}
       <div className="p-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
         <p className="text-xs font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           ACTIONS
@@ -1479,7 +992,6 @@ export function TaskDetailPanel({
         </div>
       </div>
 
-      {/* Details section */}
       <div className="p-4" style={{ borderBottom: "1px solid #EEEEEE" }}>
         <p className="text-xs font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           DETAILS
@@ -1530,7 +1042,6 @@ export function TaskDetailPanel({
         </div>
       </div>
 
-      {/* AI Scheduling */}
       <div className="p-4">
         <p className="text-xs font-medium tracking-wider uppercase mb-3" style={{ color: "#9CA3AF" }}>
           AI SCHEDULING
@@ -1545,7 +1056,6 @@ export function TaskDetailPanel({
         </button>
       </div>
 
-      {/* Admin actions in fullscreen sidebar */}
       {isAdmin && (
         <div className="p-4" style={{ borderTop: "1px solid #EEEEEE" }}>
           <div className={isMobile ? "flex gap-2" : "space-y-2"}>
@@ -1576,222 +1086,6 @@ export function TaskDetailPanel({
       )}
     </div>
   ) : null;
-
-  const taskDialogs = (
-    <>
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent data-testid="dialog-delete-task">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. The task and all its subtasks will be permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTaskMutation.mutate()}
-              disabled={deleteTaskMutation.isPending}
-              data-testid="button-confirm-delete"
-              style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
-            >
-              {deleteTaskMutation.isPending ? "Deleting..." : "Delete task"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen}>
-        <DialogContent data-testid="dialog-add-note">
-          <DialogHeader>
-            <DialogTitle>Add Note</DialogTitle>
-            <DialogDescription>Add a note to this task.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Select value={newNoteType} onValueChange={setNewNoteType}>
-              <SelectTrigger data-testid="select-note-type">
-                <SelectValue placeholder="Note type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="job_note">Job Note</SelectItem>
-                <SelectItem value="recommendation">Recommendation</SelectItem>
-              </SelectContent>
-            </Select>
-            <Textarea
-              placeholder="Write your note..."
-              value={newNoteContent}
-              onChange={(e) => setNewNoteContent(e.target.value)}
-              rows={4}
-              data-testid="input-note-content"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setIsAddNoteDialogOpen(false)}
-              data-testid="button-cancel-note"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => addNoteMutation.mutate({ content: newNoteContent, noteType: newNoteType })}
-              disabled={!newNoteContent.trim() || addNoteMutation.isPending}
-              data-testid="button-save-note"
-            >
-              {addNoteMutation.isPending ? "Saving..." : "Save Note"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isLogTimeDialogOpen} onOpenChange={setIsLogTimeDialogOpen}>
-        <DialogContent data-testid="dialog-log-time">
-          <DialogHeader>
-            <DialogTitle>Log Time</DialogTitle>
-            <DialogDescription>Record time spent on this task.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (minutes)</label>
-              <Input
-                type="number"
-                min="1"
-                placeholder="e.g. 30"
-                value={logTimeDuration}
-                onChange={(e) => setLogTimeDuration(e.target.value)}
-                data-testid="input-time-duration"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setIsLogTimeDialogOpen(false)}
-              data-testid="button-cancel-time"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => logTimeMutation.mutate(parseInt(logTimeDuration, 10))}
-              disabled={!logTimeDuration || parseInt(logTimeDuration, 10) <= 0 || logTimeMutation.isPending}
-              data-testid="button-save-time"
-            >
-              {logTimeMutation.isPending ? "Saving..." : "Log Time"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <BarcodeScanner
-        open={isScanDialogOpen}
-        onOpenChange={setIsScanDialogOpen}
-        onScan={(code: string) => {
-          setIsScanDialogOpen(false);
-          toast({ title: "Scanned", description: `Code: ${code}` });
-        }}
-        title="Scan Barcode / QR Code"
-        description="Scan an equipment or inventory barcode to look it up."
-      />
-
-      <UploadLabelDialog
-        open={!!pendingUploadForLabel}
-        fileName={pendingUploadForLabel?.fileName || ""}
-        fileType={pendingUploadForLabel?.fileType || ""}
-        filePreviewUrl={pendingUploadForLabel?.previewUrl}
-        saving={isPanelUploadLabelSaving}
-        onSave={handlePanelUploadLabelSave}
-        onCancel={handlePanelUploadLabelCancel}
-      />
-
-      <Dialog open={!!editingTimeEntryId} onOpenChange={(open) => { if (!open) { setEditingTimeEntryId(null); setEditTimeDuration(""); } }}>
-        <DialogContent data-testid="dialog-edit-time-entry">
-          <DialogHeader>
-            <DialogTitle>Edit Time Entry</DialogTitle>
-            <DialogDescription>Update the duration of this time entry.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (minutes)</label>
-              <Input
-                type="number"
-                min="0"
-                value={editTimeDuration}
-                onChange={(e) => setEditTimeDuration(e.target.value)}
-                data-testid="input-edit-time-duration"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => { setEditingTimeEntryId(null); setEditTimeDuration(""); }}
-              data-testid="button-cancel-edit-time"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (editingTimeEntryId) {
-                  updateTimeEntryMutation.mutate({
-                    entryId: editingTimeEntryId,
-                    durationMinutes: parseInt(editTimeDuration, 10) || 0,
-                  });
-                }
-              }}
-              disabled={updateTimeEntryMutation.isPending}
-              data-testid="button-save-edit-time"
-            >
-              {updateTimeEntryMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!deleteTimeEntryId} onOpenChange={(open) => { if (!open) setDeleteTimeEntryId(null); }}>
-        <AlertDialogContent data-testid="dialog-delete-time-entry">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete time entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This time entry will be permanently removed from this task.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete-time">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { if (deleteTimeEntryId) deleteTimeEntryMutation.mutate(deleteTimeEntryId); }}
-              disabled={deleteTimeEntryMutation.isPending}
-              data-testid="button-confirm-delete-time"
-              style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
-            >
-              {deleteTimeEntryMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!deleteNoteId} onOpenChange={(open) => { if (!open) setDeleteNoteId(null); }}>
-        <AlertDialogContent data-testid="dialog-delete-note">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this note?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This note will be permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete-note">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { if (deleteNoteId) deleteNoteMutation.mutate(deleteNoteId); }}
-              disabled={deleteNoteMutation.isPending}
-              data-testid="button-confirm-delete-note"
-              style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
-            >
-              {deleteNoteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
 
   if (isEditMode && task) {
     return (
@@ -2266,7 +1560,7 @@ export function TaskDetailPanel({
             </div>
           </div>
         </div>
-        {taskDialogs}
+        <TaskDetailPanelDialogs ctx={ctx} />
       </div>
     );
   }
@@ -2277,7 +1571,6 @@ export function TaskDetailPanel({
       style={{ backgroundColor: "#FFFFFF" }}
       data-testid="task-detail-panel"
     >
-      {/* Top bar */}
       <div
         className="flex items-center gap-2 px-4 py-3 shrink-0"
         style={{ borderBottom: "1px solid #EEEEEE" }}
@@ -2374,12 +1667,11 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      {/* Content area */}
       <div className={isMobile && isFullscreen ? "flex flex-col flex-1 overflow-y-auto" : "flex flex-1 overflow-hidden"}>
         {mainContent}
         {rightSidebar}
       </div>
-      {taskDialogs}
+      <TaskDetailPanelDialogs ctx={ctx} />
     </div>
   );
 }
