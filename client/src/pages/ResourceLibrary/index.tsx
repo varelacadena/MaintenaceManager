@@ -38,6 +38,7 @@ import {
 import ResourceCard from "@/components/ResourceCard";
 import { useResourceLibrary } from "./useResourceLibrary";
 import { ResourceLibraryDialogs } from "./ResourceLibraryDialogs";
+import { ResourceLibraryDialogsExtra } from "./ResourceLibraryDialogsExtra";
 
 type ResourceFolder = {
   id: string;
@@ -319,6 +320,7 @@ export default function ResourceLibrary() {
       )}
 
       <ResourceLibraryDialogs {...ctx} />
+      <ResourceLibraryDialogsExtra {...ctx} />
 
       <DragOverlay>
         {activeDrag && (

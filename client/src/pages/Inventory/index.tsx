@@ -26,6 +26,7 @@ import {
   CATEGORIES,
 } from "./useInventory";
 import { InventoryDialogs } from "./InventoryDialogs";
+import { InventoryDialogsExtra } from "./InventoryDialogsExtra";
 import { InventoryItemList } from "./InventoryItemList";
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -157,6 +158,7 @@ export default function Inventory() {
       </div>
 
       <InventoryDialogs ctx={ctx} />
+      <InventoryDialogsExtra ctx={ctx} />
     </div>
   );
 }

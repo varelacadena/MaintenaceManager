@@ -2,6 +2,7 @@ import { useMobileTaskDetail } from "./useMobileTaskDetail";
 import { TaskEditMode } from "../TaskEditMode";
 import { MobileTaskHeader, MobileStatusBar } from "./MobileTaskHeader";
 import { MobileTaskContent } from "./MobileTaskContent";
+import { MobileTaskContentExtra } from "./MobileTaskContentExtra";
 import { MobileTaskDialogs } from "./MobileTaskDialogs";
 import { MobileTaskDialogsExtra } from "./MobileTaskDialogsExtra";
 
@@ -48,6 +49,7 @@ export default function MobileTaskDetail() {
       <div className="flex-1 overflow-y-auto pb-24 px-4 pt-4 space-y-3">
         <MobileStatusBar task={task} />
         <MobileTaskContent ctx={ctx} />
+        <MobileTaskContentExtra ctx={ctx} />
       </div>
 
       <MobileTaskDialogs ctx={ctx} />
