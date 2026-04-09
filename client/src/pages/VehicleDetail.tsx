@@ -721,6 +721,15 @@ export default function VehicleDetail() {
                                   <Badge variant="secondary" className="text-xs capitalize mt-0.5">{checkOut.fuelLevel}</Badge>
                                 </div>
                               </div>
+                              {checkOut.damageNotes && (
+                                <div className="mt-1.5">
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 text-destructive" />
+                                    Pre-existing Damage
+                                  </p>
+                                  <p className="text-xs mt-0.5">{checkOut.damageNotes}</p>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -753,6 +762,9 @@ export default function VehicleDetail() {
                                   )}
                                   {checkIn.cleanlinessStatus && checkIn.cleanlinessStatus !== 'clean' && (
                                     <Badge variant="secondary" className="text-xs mt-1 capitalize">{checkIn.cleanlinessStatus.replace(/_/g, " ")}</Badge>
+                                  )}
+                                  {checkIn.returnNotes && (
+                                    <p className="text-xs text-muted-foreground mt-1">{checkIn.returnNotes}</p>
                                   )}
                                   {checkIn.issues && (
                                     <div className="mt-2">
