@@ -1407,28 +1407,64 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
                     ?.filter((item) =>
                       item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
                     )
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className="px-3 py-2 cursor-pointer text-sm border-b border-border/50 text-foreground hover-elevate"
-                        onClick={() => {
-                          setSelectedInventoryItemId(item.id);
-                          setInventorySearchQuery(item.name);
-                        }}
-                      >
-                        {item.name}
-                      </div>
-                    ))}
+                    .map((item) => {
+                      const qty = Number(item.quantity) || 0;
+                      const isOut = item.stockStatus === "out" || (item.trackingMode === "counted" && qty <= 0);
+                      const isLow = item.stockStatus === "low" || (item.trackingMode === "counted" && item.minQuantity && qty <= Number(item.minQuantity) && qty > 0);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`px-3 py-2 cursor-pointer text-sm border-b border-border/50 hover-elevate ${isOut ? "opacity-50" : "text-foreground"}`}
+                          onClick={() => {
+                            setSelectedInventoryItemId(item.id);
+                            setInventorySearchQuery(item.name);
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium truncate">{item.name}</span>
+                            <Badge variant={isOut ? "destructive" : isLow ? "outline" : "secondary"} className="text-[10px] shrink-0">
+                              {isOut ? "Out" : isLow ? "Low" : "Stocked"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {item.location || "No location set"}
+                            </span>
+                            {item.trackingMode === "counted" && (
+                              <span className="flex items-center gap-1">
+                                <Package className="w-3 h-3" />
+                                {qty} {item.unit || "pcs"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
 
-              {selectedInventoryItemId && (
-                <div
-                  className="p-2 rounded-md text-sm font-medium bg-muted text-foreground"
-                >
-                  {inventoryItems.find((i) => i.id === selectedInventoryItemId)?.name}
-                </div>
-              )}
+              {selectedInventoryItemId && (() => {
+                const selectedItem = inventoryItems.find((i) => i.id === selectedInventoryItemId);
+                const qty = Number(selectedItem?.quantity) || 0;
+                return (
+                  <div className="p-2 rounded-md text-sm bg-muted text-foreground">
+                    <span className="font-medium">{selectedItem?.name}</span>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {selectedItem?.location || "No location set"}
+                      </span>
+                      {selectedItem?.trackingMode === "counted" && (
+                        <span className="flex items-center gap-1">
+                          <Package className="w-3 h-3" />
+                          {qty} {selectedItem?.unit || "pcs"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
