@@ -60,10 +60,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
-import { TaskEditMode } from "./TaskEditMode";
-import { SubtaskNote } from "./SubtaskNote";
-import { SubtaskPhotos } from "./SubtaskPhotos";
-import { BarcodeScanner } from "./BarcodeScanner";
+import { TaskEditMode } from "../TaskEditMode";
+import { SubtaskNote } from "../SubtaskNote";
+import { SubtaskPhotos } from "../SubtaskPhotos";
+import { BarcodeScanner } from "../BarcodeScanner";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
 import {
@@ -1685,7 +1685,7 @@ export function TaskDetailPanel({
       <BarcodeScanner
         open={isScanDialogOpen}
         onOpenChange={setIsScanDialogOpen}
-        onScan={(code) => {
+        onScan={(code: string) => {
           setIsScanDialogOpen(false);
           toast({ title: "Scanned", description: `Code: ${code}` });
         }}
