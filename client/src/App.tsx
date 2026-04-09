@@ -202,10 +202,12 @@ function AuthenticatedApp() {
                     <RoleGuard allowedRoles={["student", "technician"]}><GrabAJob /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
-                <Route path="/tasks" component={() => {
-                  window.location.replace("/work");
-                  return null;
-                }} />
+                <Route path="/tasks" component={() => (
+                  <DomainErrorBoundary domain="Work Orders & Tasks">{(() => {
+                    window.location.replace("/work");
+                    return null;
+                  })()}</DomainErrorBoundary>
+                )} />
                 <Route path="/tasks/new" component={() => (
                   <DomainErrorBoundary domain="Work Orders & Tasks">
                     <RoleGuard allowedRoles={["admin"]}><NewTask /></RoleGuard>
@@ -277,10 +279,12 @@ function AuthenticatedApp() {
                     <RoleGuard allowedRoles={["admin"]}><Users /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
-                <Route path="/credentials" component={() => {
-                  window.location.replace("/users");
-                  return null;
-                }} />
+                <Route path="/credentials" component={() => (
+                  <DomainErrorBoundary domain="Users & Vendors">{(() => {
+                    window.location.replace("/users");
+                    return null;
+                  })()}</DomainErrorBoundary>
+                )} />
                 <Route path="/vendors" component={() => (
                   <DomainErrorBoundary domain="Users & Vendors">
                     <RoleGuard allowedRoles={["admin"]}><Vendors /></RoleGuard>
@@ -315,10 +319,12 @@ function AuthenticatedApp() {
                     <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><MyReservations /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
-                <Route path="/vehicle-reservations" component={() => {
-                  window.location.replace("/vehicles?tab=reservations");
-                  return null;
-                }} />
+                <Route path="/vehicle-reservations" component={() => (
+                  <DomainErrorBoundary domain="Vehicle Fleet">{(() => {
+                    window.location.replace("/vehicles?tab=reservations");
+                    return null;
+                  })()}</DomainErrorBoundary>
+                )} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
                     <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleReservationDetails /></RoleGuard>
@@ -347,15 +353,19 @@ function AuthenticatedApp() {
                   </DomainErrorBoundary>
                 )} />
 
-                {/* Redirects (no error boundary needed) */}
-                <Route path="/emergency-contacts" component={() => {
-                  window.location.replace("/settings?tab=emergency");
-                  return null;
-                }} />
-                <Route path="/projects" component={() => {
-                  window.location.replace("/work");
-                  return null;
-                }} />
+                {/* Redirects */}
+                <Route path="/emergency-contacts" component={() => (
+                  <DomainErrorBoundary domain="Settings">{(() => {
+                    window.location.replace("/settings?tab=emergency");
+                    return null;
+                  })()}</DomainErrorBoundary>
+                )} />
+                <Route path="/projects" component={() => (
+                  <DomainErrorBoundary domain="Projects">{(() => {
+                    window.location.replace("/work");
+                    return null;
+                  })()}</DomainErrorBoundary>
+                )} />
 
                 {/* Projects */}
                 <Route path="/projects/:id" component={() => (
@@ -382,7 +392,9 @@ function AuthenticatedApp() {
                 )} />
 
                 {/* Catch-all */}
-                <Route component={NotFound} />
+                <Route component={() => (
+                  <DomainErrorBoundary domain="General"><NotFound /></DomainErrorBoundary>
+                )} />
               </Switch>
               </Suspense>
               </ErrorBoundary>
