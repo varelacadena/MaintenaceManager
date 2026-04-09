@@ -160,6 +160,15 @@ export const insertTaskHelperSchema = createInsertSchema(taskHelpers).omit({ id:
 export type InsertTaskHelper = z.infer<typeof insertTaskHelperSchema>;
 export type TaskHelper = typeof taskHelpers.$inferSelect;
 
+export type TaskHelperWithUser = TaskHelper & {
+  user: { id: string; name: string; email: string; role: string };
+};
+
+export type TaskWithHelpers = Task & {
+  helpers: TaskHelperWithUser[];
+  isHelper: boolean;
+};
+
 export const taskDependencies = pgTable("task_dependencies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
