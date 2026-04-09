@@ -1,0 +1,113 @@
+Refactor this CMMS app to use a domain-isolated modular architecture. 
+This is a structural refactor only — do not change any existing functionality, 
+UI, or business logic. The app must work exactly the same after the refactor 
+as it does before. Complete all subtasks in order.
+
+---
+
+SUBTASK 1 — LAZY LOAD ALL ROUTES IN App.tsx
+
+- Convert every static page import at the top of App.tsx to use React.lazy()
+- Wrap the entire <Routes> block in a <Suspense> component with a 
+  fallback={<div className="flex items-center justify-center h-screen">
+  <Spinner /></div>} (reuse whatever loading/spinner component already exists)
+- Do not change any route paths, layouts, or navigation logic
+- Example pattern to follow:
+    BEFORE: import TaskDetail from './pages/TaskDetail'
+    AFTER:  const TaskDetail = lazy(() => import('./pages/TaskDetail'))
+
+---
+
+SUBTASK 2 — ADD PER-DOMAIN ERROR BOUNDARIES
+
+- Create a reusable DomainErrorBoundary component at 
+  client/src/components/DomainErrorBoundary.tsx
+- It must accept two props: domain (string) and children
+- When a child crashes, it should display a contained error card (not 
+  full screen) showing: the domain name, "Something went wrong in this 
+  section", and a "Reload" button that calls window.location.reload()
+- Style it to match the existing app (use existing Tailwind classes and 
+  color palette)
+- In App.tsx, wrap each domain's route group with its own 
+  DomainErrorBoundary. Group routes by these domains:
+    - Work Orders (all /tasks and /work* routes)
+    - Vehicles (all /vehicle* routes)
+    - Inventory (all /inventor* routes)
+    - Facilities (all /facilit* and /building* routes)
+    - Analytics (all /analytic* and /report* routes)
+    - Messaging (all /message* and /chat* routes)
+    - Admin / Settings (all /settings*, /admin*, /user* routes)
+    - Everything else gets wrapped in a General boundary
+- Keep the existing top-level error boundary as a last-resort fallback
+
+---
+
+SUBTASK 3 — SPLIT storage.ts INTO DOMAIN FILES
+
+- Read the full current storage.ts to understand all methods before touching it
+- Create a folder: server/storage/
+- Split the methods into these domain files inside that folder:
+    workOrderStorage.ts   ← all task/work order methods
+    vehicleStorage.ts     ← all vehicle methods
+    inventoryStorage.ts   ← all inventory methods
+    facilityStorage.ts    ← all facility/building methods
+    analyticsStorage.ts   ← all reporting/analytics methods
+    messagingStorage.ts   ← all messaging/notification methods
+    userStorage.ts        ← all user/auth methods
+    index.ts              ← re-exports everything from all domain files
+- The index.ts must re-export all named exports so that any existing 
+  import of storage.ts still works if updated to import from server/storage/
+- Update all server-side route files to import from the new domain storage 
+  files instead of the old storage.ts
+- Do not delete storage.ts until all imports are confirmed updated
+- Verify the app still runs after this step before continuing
+
+---
+
+SUBTASK 4 — SPLIT schema.ts INTO DOMAIN FILES
+
+- Read the full current schema.ts before touching it
+- Create a folder: shared/schema/ (or db/schema/ — match existing convention)
+- Split table definitions into domain files:
+    workOrders.ts    ← tasks, work order related tables
+    vehicles.ts      ← vehicle related tables
+    inventory.ts     ← inventory related tables
+    facilities.ts    ← facility/building related tables
+    users.ts         ← user, auth, role related tables
+    messaging.ts     ← messages, notifications tables
+    index.ts         ← re-exports everything from all domain files
+- The index.ts must re-export all named exports so existing code that 
+  imports from the old schema path can be updated in one sweep
+- Update all import references (both client and server) to use the new 
+  schema domain files
+- Do not delete schema.ts until all imports are confirmed updated
+- Verify the app still runs after this step before continuing
+
+---
+
+SUBTASK 5 — DECOMPOSE GIANT PAGE FILES
+
+- Identify any page component file over 1,000 lines
+- For each one:
+    1. Create a subfolder named after that page 
+       (e.g. pages/TaskDetail/ or domains/work-orders/TaskDetail/)
+    2. Move the existing file to index.tsx inside that folder
+    3. Extract logical sections into focused child components in that folder:
+       - Each extracted component should be under 300 lines
+       - Extract data fetching and state into a custom hook (useXxx.ts) 
+         in the same folder
+       - The index.tsx should become an orchestrator under ~200 lines 
+         that composes the child components
+    4. Do not change any prop interfaces, exported types, or the 
+       component's external API
+- Priority order: TaskDetail.tsx first, then Work.tsx, then any others
+
+---
+
+FINAL CHECKS (run after all subtasks complete)
+
+- Confirm the dev server starts with no errors
+- Confirm no TypeScript errors are introduced (run tsc --noEmit)
+- Confirm all existing routes still resolve to the correct pages
+- Confirm no existing API calls or database queries were changed
+- List any files that were deleted and confirm they had no remaining importers

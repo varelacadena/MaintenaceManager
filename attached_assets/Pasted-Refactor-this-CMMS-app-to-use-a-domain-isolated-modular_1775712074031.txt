@@ -1,0 +1,182 @@
+Refactor this CMMS app to use a domain-isolated modular architecture.
+This is a structural refactor only — do not change any existing functionality,
+UI, or business logic. The app must work exactly the same after the refactor
+as it does before. Complete all subtasks in order.
+
+---
+
+SUBTASK 1 — LAZY LOAD ALL ROUTES IN App.tsx
+
+- Convert every static page import at the top of App.tsx to use React.lazy()
+- Wrap the entire <Routes> block in a <Suspense> component with a
+  fallback={<div className="flex items-center justify-center h-screen">
+  <Spinner /></div>} (reuse whatever loading/spinner component already exists)
+- Do not change any route paths, layouts, or navigation logic
+- Example pattern to follow:
+    BEFORE: import TaskDetail from './pages/TaskDetail'
+    AFTER:  const TaskDetail = lazy(() => import('./pages/TaskDetail'))
+
+---
+
+SUBTASK 2 — ADD PER-DOMAIN ERROR BOUNDARIES
+
+- Create a reusable DomainErrorBoundary component at
+  client/src/components/DomainErrorBoundary.tsx
+- It must accept two props: domain (string) and children
+- When a child crashes, it should display a contained error card (not
+  full screen) showing: the domain name, "Something went wrong in this
+  section", and a "Reload" button that calls window.location.reload()
+- Style it to match the existing app (use existing Tailwind classes and
+  color palette)
+- In App.tsx, wrap each domain's route group with its own
+  DomainErrorBoundary using these groupings:
+
+    Work Orders & Tasks     → all /task*, /work-order*, /job* routes
+    Service Requests        → all /service-request*, /request* routes
+    Vehicle Fleet           → all /vehicle*, /fleet*, /check-in*, 
+                              /check-out*, /reservation* routes
+    Inventory & Parts       → all /inventor*, /parts*, /barcode* routes
+    Facilities              → all /facilit*, /propert*, /map*, 
+                              /equipment* routes
+    Analytics & Reporting   → all /analytic*, /report*, /dashboard* routes
+    Messaging               → all /message*, /chat* routes
+    Notifications           → all /notification* routes
+    Projects                → all /project* routes
+    Calendar                → all /calendar*, /schedule* routes
+    Resource Library        → all /resource*, /library*, /document* routes
+    User Management         → all /user*, /admin*, /role* routes
+    Vendor Management       → all /vendor*, /contractor* routes
+    Emergency Contacts      → all /emergency*, /contact* routes
+    Email Management        → all /email*, /template* routes
+    AI Agent                → all /ai*, /agent*, /assistant* routes
+    Authentication          → all /login*, /signup*, /auth*, 
+                              /reset-password*, /forgot-password*, 
+                              /request-access* routes
+    File Uploads            → all /upload*, /file*, /attachment* routes
+    Settings                → all /setting*, /config* routes
+    Equipment Work History  → all /equipment-history*, /work-history* routes
+    General (catch-all)     → any route not matched above
+
+- Keep the existing top-level error boundary as a last-resort fallback
+
+---
+
+SUBTASK 3 — SPLIT storage.ts INTO DOMAIN FILES
+
+- Read the full current storage.ts completely before making any changes
+- Create a folder: server/storage/
+- Split all methods into these domain files inside that folder:
+
+    workOrderStorage.ts       ← tasks, subtasks, work orders, job board
+    serviceRequestStorage.ts  ← service requests, triage
+    vehicleStorage.ts         ← vehicles, reservations, check-in, 
+                                 check-out, QR codes
+    inventoryStorage.ts       ← parts, supplies, barcode records, 
+                                 parts-to-task links
+    facilityStorage.ts        ← properties, facilities, maps, 
+                                 equipment per facility
+    analyticsStorage.ts       ← reports, metrics, performance data
+    messagingStorage.ts       ← messages, threads, conversations
+    notificationStorage.ts    ← notifications, push events
+    projectStorage.ts         ← projects, project-task links
+    calendarStorage.ts        ← calendar events, scheduled items
+    resourceStorage.ts        ← documents, library folders, files
+    userStorage.ts            ← users, roles, credentials, access requests
+    vendorStorage.ts          ← vendors, contractors
+    emergencyContactStorage.ts← emergency contacts directory
+    emailStorage.ts           ← email templates, email logs
+    aiStorage.ts              ← AI agent logs, prompts, history
+    authStorage.ts            ← authentication, sessions, password resets
+    fileStorage.ts            ← file upload records, attachments
+    settingsStorage.ts        ← app configuration, system settings
+    equipmentHistoryStorage.ts← equipment maintenance history records
+    index.ts                  ← re-exports everything from all domain files
+
+- The index.ts must re-export all named exports so that any existing
+  import of storage.ts still works once updated to import from 
+  server/storage/index.ts
+- If any method is shared across domains (e.g. a utility used by both
+  tasks and projects), place it in a shared/storageUtils.ts file inside
+  the same folder and import it where needed
+- Update all server-side route files to import from the new domain 
+  storage files
+- Do not delete the original storage.ts until all imports are confirmed 
+  updated and the app runs without errors
+- Verify the app starts and all API routes respond before continuing
+
+---
+
+SUBTASK 4 — SPLIT schema.ts INTO DOMAIN FILES
+
+- Read the full current schema.ts completely before making any changes
+- Create a folder: shared/schema/ (or match the existing convention)
+- Split all table definitions into these domain files:
+
+    workOrders.ts         ← tasks, subtasks, work order tables
+    serviceRequests.ts    ← service request tables
+    vehicles.ts           ← vehicle, reservation, check-in tables
+    inventory.ts          ← parts, supplies, barcode tables
+    facilities.ts         ← property, facility, equipment tables
+    analytics.ts          ← report, metric tables (if any)
+    messaging.ts          ← message, thread tables
+    notifications.ts      ← notification tables
+    projects.ts           ← project tables
+    calendar.ts           ← calendar event tables
+    resources.ts          ← document, library, folder tables
+    users.ts              ← user, role, credential tables
+    vendors.ts            ← vendor, contractor tables
+    emergencyContacts.ts  ← emergency contact tables
+    email.ts              ← email template, email log tables
+    ai.ts                 ← AI agent log, prompt history tables
+    auth.ts               ← session, password reset, auth tables
+    files.ts              ← file upload, attachment tables
+    settings.ts           ← settings, configuration tables
+    equipmentHistory.ts   ← equipment maintenance history tables
+    index.ts              ← re-exports everything from all domain files
+
+- The index.ts must re-export all named exports so existing code can 
+  be migrated by updating only the import path
+- If any table is referenced across domains (e.g. a users table used 
+  in tasks), import it from its owner domain file — do not duplicate it
+- Update all import references across both client and server to use the
+  new schema domain files
+- Do not delete the original schema.ts until all imports are confirmed 
+  updated and the app runs without errors
+- Verify the app starts and no TypeScript errors are introduced before 
+  continuing
+
+---
+
+SUBTASK 5 — DECOMPOSE GIANT PAGE FILES
+
+- Identify every page component file over 1,000 lines
+- For each one, in this priority order:
+    1. TaskDetail (largest, highest priority)
+    2. Work.tsx / WorkOrders page
+    3. Any remaining files over 1,000 lines
+
+- For each oversized file:
+    1. Create a subfolder named after the page
+       (e.g. pages/TaskDetail/ or pages/WorkOrders/)
+    2. Move the existing file to index.tsx inside that folder
+    3. Extract logical sections into focused child components 
+       in the same folder — each under 300 lines
+    4. Extract all data fetching and state management into a 
+       custom hook file (e.g. useTaskDetail.ts) in the same folder
+    5. Reduce index.tsx to an orchestrator of ~200 lines that 
+       composes the child components
+    6. Do not change any prop interfaces, exported types, 
+       or the component's external API
+
+---
+
+FINAL CHECKS (run after all subtasks complete)
+
+- Confirm the dev server starts with no TypeScript errors (run tsc --noEmit)
+- Confirm all 20 domain areas are reachable by navigating to their routes
+- Confirm no existing API calls, database queries, or business logic 
+  were modified
+- Confirm the AI Agent feature still connects to OpenAI correctly
+- Confirm authentication flow works end to end (login → protected route)
+- List every file that was deleted and confirm it had no remaining importers
+- Provide a summary of: files created, files deleted, files modified
