@@ -2302,19 +2302,15 @@ export function TaskDetailPanel({
           </div>
         )}
 
-        {isFullscreen && (
-          <>
-            <div className="flex items-center gap-1.5">
-              <Flag className="w-3 h-3" style={{ color: urg.color }} />
-              <span className="text-xs font-medium" style={{ color: urg.color }}>{urg.label}</span>
-            </div>
+        <div className="flex items-center gap-1.5">
+          <Flag className="w-3 h-3" style={{ color: urg.color }} />
+          <span className="text-xs font-medium" style={{ color: urg.color }}>{urg.label}</span>
+        </div>
 
-            {task.estimatedCompletionDate && (
-              <span className="text-xs font-medium ml-2" style={{ color: isOverdue ? "#D94F4F" : "#6B7280" }}>
-                {new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </span>
-            )}
-          </>
+        {task.estimatedCompletionDate && (
+          <span className="text-xs font-medium ml-2" style={{ color: isOverdue ? "#D94F4F" : "#6B7280" }}>
+            {new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </span>
         )}
 
         {!hideFullscreenToggle && (
