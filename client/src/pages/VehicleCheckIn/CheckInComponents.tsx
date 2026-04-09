@@ -1,5 +1,11 @@
-import { Check } from "lucide-react";
+import { Check, MapPin, ClipboardList, CircleCheck } from "lucide-react";
 import { STEPS, FUEL_OPTIONS, type Step } from "./useVehicleCheckIn";
+
+const STEP_ICONS: Record<string, any> = {
+  MapPin,
+  ClipboardList,
+  CircleCheck,
+};
 
 export function FuelLevelSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -78,7 +84,7 @@ export function StepProgress({ currentStep }: { currentStep: Step }) {
       {STEPS.map((step, index) => {
         const isCompleted = index < currentIndex;
         const isCurrent = step.id === currentStep;
-        const Icon = step.icon;
+        const Icon = STEP_ICONS[step.icon] || CircleCheck;
         return (
           <div key={step.id} className="flex items-center flex-1">
             <div className="flex flex-col items-center gap-1">

@@ -31,13 +31,21 @@ import {
   HelpCircle,
   Settings,
   QrCode,
+  BookOpen,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getCategoryStyle } from "@/lib/categoryColors";
 import { Link } from "wouter";
 import PropertyMap from "@/components/PropertyMap";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
-import { usePropertyDetail, EQUIPMENT_CATEGORIES } from "./usePropertyDetail";
+import { usePropertyDetail, EQUIPMENT_CATEGORIES, type FormData } from "./usePropertyDetail";
 import { PropertyDialogs } from "./PropertyDialogs";
 import { PropertyResourcesTab } from "./PropertyResourcesTab";
 
@@ -88,6 +96,7 @@ export default function PropertyDetail() {
     onSubmit, onPropertySubmit, onSpaceSubmit,
     handleEditSpace, handleDeleteSpace, handleEditProperty,
     handleEditEquipment, handleDeleteEquipment,
+    navigate, spaceFilteredEquipment, categoryFilteredEquipment,
     categories, filteredEquipment, groupedEquipment, filteredSpaces, filteredTasks,
     getAssigneeName,
   } = ctx;
