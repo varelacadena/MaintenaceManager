@@ -2,7 +2,8 @@ import { Car } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useVehicleCheckIn } from "./useVehicleCheckIn";
 import { StepProgress } from "./CheckInComponents";
-import { SummaryStep, InspectionStep, CompleteStep } from "./CheckInSteps";
+import { SummaryStep, CompleteStep } from "./CheckInSteps";
+import { InspectionStep } from "./CheckInInspectionStep";
 
 export default function VehicleCheckIn() {
   const ctx = useVehicleCheckIn();

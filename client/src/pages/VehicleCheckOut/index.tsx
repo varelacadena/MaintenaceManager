@@ -9,9 +9,11 @@ import {
   AdvisoryKeyRevealStep,
   SafetyStep,
   ResponsibilityStep,
+} from "./CheckOutComponents";
+import {
   CheckoutStep,
   CompleteStep,
-} from "./CheckOutComponents";
+} from "./CheckOutSteps";
 
 export default function VehicleCheckOut() {
   const ctx = useVehicleCheckOut();

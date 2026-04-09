@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useUsers } from './useUsers';
 import { UserDialogs } from './UserDialogs';
+import { UserDialogsExtra } from './UserDialogsExtra';
 
 export default function Users() {
   const ctx = useUsers();
@@ -444,6 +445,7 @@ export default function Users() {
       </Tabs>
 
       <UserDialogs ctx={ctx} />
+      <UserDialogsExtra ctx={ctx} />
     </div>
   );
 }
