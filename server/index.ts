@@ -2,8 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { log, setupVite, serveStatic } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { registerRoutes } from "./routes";
-import { applyMigrations } from "./applyMigrations";
-import { db, pool } from "./db";
+import { pool } from "./db";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import { seedDatabase } from "./seed";
@@ -134,8 +133,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Apply all database migrations
-  await applyMigrations();
+  // Schema is applied via drizzle-kit push (e.g. npm start); SQL migrations / applyInventoryTriggers are not run here.
 
   try {
     const backfilled = await storage.backfillTaskPools();
