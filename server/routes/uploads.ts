@@ -32,7 +32,20 @@ export function registerUploadRoutes(app: Express) {
 
       let objectKey: string;
 
-      if (rawPath.startsWith("https://storage.googleapis.com/")) {
+      if (rawPath.includes(".supabase.co/storage/v1/object/")) {
+        try {
+          const url = new URL(rawPath);
+          const m = url.pathname.match(
+            /\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/(.+)$/
+          );
+          if (!m?.[1]) {
+            return res.status(400).json({ message: "Cannot resolve Supabase image path" });
+          }
+          objectKey = decodeURIComponent(m[1]);
+        } catch {
+          return res.status(400).json({ message: "Invalid Supabase image URL" });
+        }
+      } else if (rawPath.startsWith("https://storage.googleapis.com/")) {
         const urlPath = new URL(rawPath).pathname;
         const uploadsMatch = urlPath.match(/\/uploads\/(.+)$/);
         if (uploadsMatch) {
@@ -251,6 +264,24 @@ export function registerUploadRoutes(app: Express) {
           console.error("Error getting signed download URL:", error);
           return res.status(500).json({ message: "Failed to generate download URL" });
         }
+      }
+
+      if (upload.objectUrl.includes(".supabase.co/storage/v1/object/")) {
+        try {
+          const { getDownloadUrl } = await import("../objectStorage");
+          const url = new URL(upload.objectUrl);
+          const m = url.pathname.match(
+            /\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/(.+)$/
+          );
+          if (m?.[1]) {
+            const objectPath = decodeURIComponent(m[1]);
+            const downloadUrl = await getDownloadUrl(objectPath);
+            return res.json({ downloadUrl, fileName: upload.fileName });
+          }
+        } catch (error) {
+          console.error("Error generating signed URL from Supabase objectUrl:", error);
+        }
+        return res.status(400).json({ message: "File cannot be downloaded - invalid Supabase URL" });
       }
 
       if (upload.objectUrl.startsWith('https://storage.googleapis.com/')) {
