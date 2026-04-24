@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && mkdir -p dist/migrations && cp -r server/migrations/* dist/migrations/",
     "start": "drizzle-kit push --force && NODE_ENV=production node dist/index.js",
     "check": "tsc",
@@ -60,7 +60,9 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
+    "cross-env": "^7.0.3",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.1",
     "drizzle-kit": "^0.31.4",
     "drizzle-zod": "^0.7.1",
