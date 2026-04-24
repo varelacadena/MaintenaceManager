@@ -8,7 +8,6 @@ import {
   integer,
   boolean,
   doublePrecision,
-  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -39,8 +38,8 @@ export const projects = pgTable("projects", {
   description: text("description"),
   status: projectStatusEnum("status").notNull().default("planning"),
   priority: projectPriorityEnum("priority").notNull().default("medium"),
-  propertyId: uuid("property_id").references(() => properties.id),
-  spaceId: uuid("space_id").references(() => spaces.id),
+  propertyId: varchar("property_id").references(() => properties.id),
+  spaceId: varchar("space_id").references(() => spaces.id),
   areaId: varchar("area_id").references(() => areas.id),
   startDate: timestamp("start_date"),
   targetEndDate: timestamp("target_end_date"),
