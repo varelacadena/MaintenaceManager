@@ -17,7 +17,6 @@ import { registerVehicleRoutes } from "./routes/vehicles";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerResourceRoutes } from "./routes/resources";
-import { registerAiRoutes } from "./routes/ai";
 import { registerSignupRoutes } from "./routes/signup";
 import { registerEmailRoutes } from "./routes/email";
 
@@ -41,7 +40,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProjectRoutes(app);
   registerEmailRoutes(app);
   registerResourceRoutes(app);
-  registerAiRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

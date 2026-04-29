@@ -2,14 +2,13 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin } from "../middleware";
-import { handleRouteError, getAuthUser } from "../routeUtils";
+import { handleRouteError } from "../routeUtils";
 import {
   insertAvailabilityScheduleSchema,
   insertUserSkillSchema,
   insertTaskDependencySchema,
   insertSlaConfigSchema,
 } from "@shared/schema";
-import { z } from "zod";
 
 export function registerAiRoutes(app: Express) {
   // ─── Availability Schedules ──────────────────────────────────────────────
@@ -115,80 +114,6 @@ export function registerAiRoutes(app: Express) {
     }
   });
 
-  // ─── AI Agent Logs ────────────────────────────────────────────────────────
-  app.get("/api/ai-logs", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const { status, entityType, limit } = req.query;
-      const logs = await storage.getAiAgentLogs({
-        status: status as string,
-        entityType: entityType as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-      });
-      res.json(logs);
-    } catch (error) {
-      handleRouteError(res, error, "Failed to fetch AI logs");
-    }
-  });
-
-  app.patch("/api/ai-logs/:id", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const user = await getAuthUser(req);
-      if (!user) return res.status(401).json({ message: "Unauthorized" });
-      const aiLogSchema = z.object({ status: z.enum(["approved", "rejected"]) });
-      const { status } = aiLogSchema.parse(req.body);
-      const log = await storage.updateAiAgentLog(req.params.id, { status, reviewedBy: user.id });
-      if (!log) return res.status(404).json({ message: "Log not found" });
-
-      if (status === "approved") {
-        const { aiAgent } = await import("../aiAgent");
-        await aiAgent.applyApprovedAction(log);
-      }
-
-      res.json(log);
-    } catch (error: any) {
-      handleRouteError(res, error, "Failed to update AI log");
-    }
-  });
-
-  // ─── AI Triage trigger ────────────────────────────────────────────────────
-  app.post("/api/ai/triage/:requestId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const request = await storage.getServiceRequest(req.params.requestId);
-      if (!request) return res.status(404).json({ message: "Request not found" });
-      const { aiAgent } = await import("../aiAgent");
-      const log = await aiAgent.triageServiceRequest(request);
-      res.json(log);
-    } catch (error: any) {
-      handleRouteError(res, error, "Failed to run AI triage");
-    }
-  });
-
-  // ─── AI Schedule suggestion ───────────────────────────────────────────────
-  app.post("/api/ai/schedule/:taskId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const task = await storage.getTask(req.params.taskId);
-      if (!task) return res.status(404).json({ message: "Task not found" });
-      const { aiAgent } = await import("../aiAgent");
-      const log = await aiAgent.suggestTaskSchedule(task);
-      res.json(log);
-    } catch (error: any) {
-      handleRouteError(res, error, "Failed to generate schedule suggestion");
-    }
-  });
-
-  // ─── AI Project schedule ──────────────────────────────────────────────────
-  app.post("/api/ai/project-schedule/:projectId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const project = await storage.getProject(req.params.projectId);
-      if (!project) return res.status(404).json({ message: "Project not found" });
-      const { aiAgent } = await import("../aiAgent");
-      const logs = await aiAgent.scheduleProject(req.params.projectId);
-      res.json(logs);
-    } catch (error: any) {
-      handleRouteError(res, error, "Failed to generate project schedule");
-    }
-  });
-
   // ─── Equipment PM schedule ────────────────────────────────────────────────
   app.get("/api/equipment/:id/pm-schedule", isAuthenticated, async (req, res) => {
     try {
@@ -213,25 +138,4 @@ export function registerAiRoutes(app: Express) {
     }
   });
 
-  // ─── AI Stats ─────────────────────────────────────────────────────────────
-  app.get("/api/ai-stats", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const allLogs = await storage.getAiAgentLogs({});
-      const pending = allLogs.filter((l: any) => l.status === "pending_review").length;
-      const approved = allLogs.filter((l: any) => l.status === "approved").length;
-      const rejected = allLogs.filter((l: any) => l.status === "rejected").length;
-      const autoApplied = allLogs.filter((l: any) => l.status === "auto_applied").length;
-      const total = allLogs.length;
-      const acceptanceRate = (approved + autoApplied) > 0 ? Math.round(((approved + autoApplied) / Math.max(total - pending, 1)) * 100) : 0;
-      const pendingLogs = allLogs.filter((l: any) => l.status === "pending_review");
-      const pendingByAction: Record<string, number> = {};
-      for (const log of pendingLogs) {
-        const action = (log as any).action || "other";
-        pendingByAction[action] = (pendingByAction[action] || 0) + 1;
-      }
-      res.json({ pending, approved, rejected, autoApplied, total, acceptanceRate, pendingByAction });
-    } catch (error) {
-      handleRouteError(res, error, "Failed to fetch AI stats");
-    }
-  });
 }

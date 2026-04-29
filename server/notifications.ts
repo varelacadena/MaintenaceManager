@@ -9,42 +9,17 @@ function formatDate(d: Date | string | null | undefined): string {
   return date.toLocaleString();
 }
 
-let connectionSettings: any;
-
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  if (!hostname) {
-    throw new Error('REPLIT_CONNECTORS_HOSTNAME is not set - Resend connector unavailable');
+function getCredentials() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("Resend API key env var is not set.");
   }
-
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error('Replit identity token not found - Resend connector unavailable');
-  }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings?.api_key)) {
-    throw new Error('Resend connector not connected or missing API key. Please set up the Resend integration.');
-  }
-  return { apiKey: connectionSettings.settings.api_key, fromEmail: connectionSettings.settings.from_email };
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+  return { apiKey, fromEmail };
 }
 
 async function getUncachableResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
+  const { apiKey, fromEmail } = getCredentials();
   return {
     client: new Resend(apiKey),
     fromEmail
@@ -103,23 +78,15 @@ async function logEmail(
 
 export interface NotificationService {
   sendEmail(to: string, subject: string, body: string): Promise<void>;
-  sendSMS(to: string, message: string): Promise<void>;
 }
 
 class ProductionNotificationService implements NotificationService {
-  private smsEnabled: boolean;
-
-  constructor() {
-    this.smsEnabled = !!process.env.TWILIO_ACCOUNT_SID;
-  }
-
   async sendEmail(to: string, subject: string, body: string): Promise<void> {
     try {
       const { client, fromEmail } = await getUncachableResendClient();
-      const senderEmail = 'onboarding@resend.dev';
 
       const { error } = await client.emails.send({
-        from: senderEmail,
+        from: fromEmail,
         to,
         subject,
         text: body
@@ -133,41 +100,6 @@ class ProductionNotificationService implements NotificationService {
       console.error(`[EMAIL] Failed to send email to ${to} (subject: "${subject}"):`, error);
       console.log(`[EMAIL FALLBACK] To: ${to}, Subject: ${subject}, Body: ${body}`);
       throw error;
-    }
-  }
-
-  async sendSMS(to: string, message: string): Promise<void> {
-    try {
-      if (this.smsEnabled && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
-        const auth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
-
-        const response = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${auth}`,
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-              To: to,
-              From: process.env.TWILIO_PHONE_NUMBER,
-              Body: message
-            })
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Twilio API error: ${response.statusText}`);
-        }
-        console.log(`[SMS] Sent via Twilio to ${to}`);
-        return;
-      }
-
-      console.log(`[SMS] To: ${to}, Message: ${message}`);
-      console.log('NOTE: Configure Twilio credentials for production SMS delivery');
-    } catch (error) {
-      console.error('Failed to send SMS:', error);
     }
   }
 }
@@ -231,12 +163,6 @@ export async function notifyTaskCreated(
       );
     }
 
-    if (assignee.phoneNumber) {
-      await notificationService.sendSMS(
-        assignee.phoneNumber,
-        `New ${request.urgency} priority maintenance request: ${request.title}`
-      );
-    }
   }
 }
 
@@ -274,12 +200,6 @@ export async function notifyStatusChange(
     );
   }
 
-  if (requester.phoneNumber) {
-    await notificationService.sendSMS(
-      requester.phoneNumber,
-      `Your request "${request.title}" ${message}.`
-    );
-  }
 }
 
 export async function notifyTaskAssigned(
@@ -304,12 +224,6 @@ export async function notifyTaskAssigned(
     );
   }
 
-  if (assignedTo.phoneNumber) {
-    await notificationService.sendSMS(
-      assignedTo.phoneNumber,
-      `New task assigned: ${request.title} (${request.urgency} priority)`
-    );
-  }
 }
 
 export async function notifyNewServiceRequest(

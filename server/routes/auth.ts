@@ -154,22 +154,10 @@ export function registerAuthRoutes(app: Express) {
 
       try {
         const { Resend } = await import("resend");
-        const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-        if (!hostname) throw new Error("REPLIT_CONNECTORS_HOSTNAME not set");
-        const xReplitToken = process.env.REPL_IDENTITY
-          ? "repl " + process.env.REPL_IDENTITY
-          : process.env.WEB_REPL_RENEWAL
-          ? "depl " + process.env.WEB_REPL_RENEWAL
-          : null;
-        if (!xReplitToken) throw new Error("Replit identity token not found");
-        const connectionSettings = await fetch(
-          "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
-          { headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken } }
-        ).then((r) => r.json()).then((d) => d.items?.[0]);
-        if (!connectionSettings?.settings?.api_key) throw new Error("Resend not configured");
-
-        const resend = new Resend(connectionSettings.settings.api_key);
-        const fromEmail = connectionSettings.settings.from_email || "onboarding@resend.dev";
+        const resendApiKey = process.env.RESEND_API_KEY;
+        if (!resendApiKey) throw new Error("Resend API key env var is not set");
+        const resend = new Resend(resendApiKey);
+        const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
         const displayName = user.firstName ? user.firstName : user.username;
 
         await resend.emails.send({

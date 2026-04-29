@@ -54,7 +54,6 @@ const VehicleReservationDetails = lazy(() => import("./pages/VehicleReservationD
 const AnalyticsDashboard = lazy(() => import("./pages/analytics/AnalyticsDashboard"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const EmailManagement = lazy(() => import("./pages/EmailManagement"));
-const AiAgentDashboard = lazy(() => import("./pages/AiAgentDashboard"));
 const ResourceLibrary = lazy(() => import("./pages/ResourceLibrary"));
 const GrabAJob = lazy(() => import("./pages/GrabAJob"));
 
@@ -378,11 +377,6 @@ function AuthenticatedApp() {
                 <Route path="/email-management" component={() => (
                   <DomainErrorBoundary domain="Admin Tools">
                     <RoleGuard allowedRoles={["admin"]}><EmailManagement /></RoleGuard>
-                  </DomainErrorBoundary>
-                )} />
-                <Route path="/ai-agent" component={() => (
-                  <DomainErrorBoundary domain="Admin Tools">
-                    <RoleGuard allowedRoles={["admin"]}><AiAgentDashboard /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/resources" component={() => (

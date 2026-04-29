@@ -1,10 +1,6 @@
 
-const { Pool } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
-const ws = require('ws');
-
-const neonConfig = require('@neondatabase/serverless').neonConfig;
-neonConfig.webSocketConstructor = ws;
 
 async function testAndReset() {
   const pool = new Pool({
