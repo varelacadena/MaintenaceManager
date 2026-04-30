@@ -53,14 +53,14 @@ export default function ForgotPassword() {
             Forgot Password
           </CardTitle>
           <CardDescription className="text-center text-sm text-foreground/80">
-            Enter your username and we'll send a recovery link to your email address.
+            Enter your username or email and we'll send a recovery link to your email address on file.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-8 pb-8">
           {submitted ? (
             <div className="space-y-5">
               <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-md text-sm text-green-800 dark:text-green-300">
-                If an account with that username exists and has an email address on file, a recovery link has been sent. Please check your inbox.
+                If an account with that username or email exists and has an email address on file, a recovery link has been sent. Please check your inbox.
               </div>
               <Link href="/login">
                 <Button variant="outline" className="w-full" data-testid="button-back-to-login">
@@ -72,12 +72,12 @@ export default function ForgotPassword() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-sm font-semibold text-foreground">
-                  Username
+                  Username or email
                 </Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder="Enter your username or email"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);

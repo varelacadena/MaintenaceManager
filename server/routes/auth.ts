@@ -130,14 +130,18 @@ export function registerAuthRoutes(app: Express) {
 
   app.post("/api/auth/forgot-password", passwordRecoveryLimiter, async (req, res) => {
     const { username } = req.body;
-    const genericResponse = { message: "If an account with that username exists and has an email address, a recovery email has been sent." };
+    const genericResponse = { message: "If an account with that username or email exists and has an email address, a recovery email has been sent." };
 
     if (!username || typeof username !== "string") {
       return res.json(genericResponse);
     }
 
     try {
-      const user = await storage.getUserByUsername(username.trim());
+      const trimmed = username.trim();
+      let user = await storage.getUserByUsername(trimmed);
+      if (!user) {
+        user = await storage.getUserByEmail(trimmed);
+      }
       if (!user || !user.email) {
         return res.json(genericResponse);
       }
@@ -155,6 +159,9 @@ export function registerAuthRoutes(app: Express) {
       try {
         const { Resend } = await import("resend");
         const resendApiKey = process.env.RESEND_API_KEY;
+        console.log(
+          `[PASSWORD RESET] Before Resend send — RESEND_API_KEY set: ${Boolean(resendApiKey)}, to: ${user.email}`,
+        );
         if (!resendApiKey) throw new Error("Resend API key env var is not set");
         const resend = new Resend(resendApiKey);
         const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
