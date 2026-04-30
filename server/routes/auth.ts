@@ -159,15 +159,12 @@ export function registerAuthRoutes(app: Express) {
       try {
         const { Resend } = await import("resend");
         const resendApiKey = process.env.RESEND_API_KEY;
-        console.log(
-          `[PASSWORD RESET] Before Resend send — RESEND_API_KEY set: ${Boolean(resendApiKey)}, to: ${user.email}`,
-        );
         if (!resendApiKey) throw new Error("Resend API key env var is not set");
         const resend = new Resend(resendApiKey);
         const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
         const displayName = user.firstName ? user.firstName : user.username;
 
-        await resend.emails.send({
+        const { error: sendError } = await resend.emails.send({
           from: fromEmail,
           to: user.email,
           subject: "Password Reset Request – Hartland Maintenance",
@@ -181,8 +178,9 @@ export function registerAuthRoutes(app: Express) {
             <p>— Hartland Maintenance System</p>
           `,
         });
-
-        console.log(`[PASSWORD RESET] Email sent to ${user.email} for user ${user.username}`);
+        if (sendError) {
+          throw new Error(`Resend API error: ${sendError.message}`);
+        }
       } catch (emailError) {
         console.error("[PASSWORD RESET] Failed to send email:", emailError);
       }
@@ -224,7 +222,6 @@ export function registerAuthRoutes(app: Express) {
       await storage.updateUserPassword(resetToken.userId, hashedPassword);
       await storage.markResetTokenUsed(token.trim());
 
-      console.log(`[PASSWORD RESET] Password successfully reset for userId ${resetToken.userId}`);
       return res.json({ message: "Your password has been reset successfully. You can now log in." });
     } catch (error) {
       console.error("[PASSWORD RESET] reset-password error:", error);
