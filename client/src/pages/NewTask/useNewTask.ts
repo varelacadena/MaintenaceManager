@@ -283,9 +283,9 @@ export function useNewTask() {
               failedCount++;
               continue;
             }
-            const { url, objectPath } = await uploadUrlRes.json();
-            
-            const uploadRes = await fetch(url, {
+            const { uploadURL, objectPath } = await uploadUrlRes.json();
+
+            const uploadRes = await fetch(uploadURL, {
               method: "PUT",
               body: file,
               headers: { "Content-Type": file.type || "application/octet-stream" },
@@ -303,7 +303,7 @@ export function useNewTask() {
               body: JSON.stringify({
                 fileName: file.name,
                 fileType: file.type || "application/octet-stream",
-                objectUrl: url.split("?")[0],
+                objectUrl: uploadURL.split("?")[0],
                 objectPath: objectPath,
                 equipmentId: newEquipment.id,
               }),

@@ -10,6 +10,8 @@ interface ObjectUploaderProps {
   onGetUploadParameters: () => Promise<{
     method: "PUT";
     url: string;
+    /** Bucket-relative path from POST /api/objects/upload (preferred over parsing the PUT URL). */
+    objectPath?: string;
   }>;
   onComplete?: (result: any) => void;
   onError?: (error: Error) => void;
@@ -54,7 +56,8 @@ export function ObjectUploader({
       }
 
       try {
-        const { url } = await onGetUploadParameters();
+        const params = await onGetUploadParameters();
+        const url = params.url;
 
         const isMock = url.startsWith("https://mock-storage.local/");
 
@@ -87,6 +90,9 @@ export function ObjectUploader({
           throw new Error(`Upload failed: ${response.statusText}`);
         }
 
+        const fallbackPath = url.includes("?")
+          ? new URL(url).pathname.split("/").slice(2).join("/")
+          : url.split("/").slice(3).join("/");
         successful.push({
           file,
           name: file.name,
@@ -96,7 +102,7 @@ export function ObjectUploader({
           uploadURL: url.split("?")[0],
           objectUrl: url.split("?")[0],
           url: url.split("?")[0],
-          objectPath: url.includes('?') ? new URL(url).pathname.split('/').slice(2).join('/') : url.split('/').slice(3).join('/'),
+          objectPath: params.objectPath ?? fallbackPath,
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Upload failed";

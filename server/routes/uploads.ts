@@ -24,27 +24,23 @@ export function registerUploadRoutes(app: Express) {
 
   app.get("/api/objects/image", isAuthenticated, async (req, res) => {
     try {
-      const { getDownloadUrl, getPrivateDir } = await import("../objectStorage");
       let rawPath = req.query.path as string;
+      const { getDownloadUrl, getPrivateDir, parseSupabaseStorageUrl } =
+        await import("../objectStorage");
       if (!rawPath) {
         return res.status(400).json({ message: "path query parameter is required" });
       }
 
       let objectKey: string;
+      let supabaseBucket: string | undefined;
 
-      if (rawPath.includes(".supabase.co/storage/v1/object/")) {
-        try {
-          const url = new URL(rawPath);
-          const m = url.pathname.match(
-            /\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/(.+)$/
-          );
-          if (!m?.[1]) {
-            return res.status(400).json({ message: "Cannot resolve Supabase image path" });
-          }
-          objectKey = decodeURIComponent(m[1]);
-        } catch {
-          return res.status(400).json({ message: "Invalid Supabase image URL" });
+      if (rawPath.includes(".supabase.co/storage/")) {
+        const parsed = parseSupabaseStorageUrl(rawPath);
+        if (!parsed) {
+          return res.status(400).json({ message: "Cannot resolve Supabase image path" });
         }
+        objectKey = parsed.objectPath;
+        supabaseBucket = parsed.bucket;
       } else if (rawPath.startsWith("https://storage.googleapis.com/")) {
         const urlPath = new URL(rawPath).pathname;
         const uploadsMatch = urlPath.match(/\/uploads\/(.+)$/);
@@ -70,7 +66,7 @@ export function registerUploadRoutes(app: Express) {
         objectKey = rawPath;
       }
 
-      const signedUrl = await getDownloadUrl(objectKey);
+      const signedUrl = await getDownloadUrl(objectKey, supabaseBucket);
       return res.redirect(302, signedUrl);
     } catch (error) {
       handleRouteError(res, error, "Failed to serve image");
@@ -266,16 +262,16 @@ export function registerUploadRoutes(app: Express) {
         }
       }
 
-      if (upload.objectUrl.includes(".supabase.co/storage/v1/object/")) {
+      if (upload.objectUrl.includes(".supabase.co/storage/")) {
         try {
-          const { getDownloadUrl } = await import("../objectStorage");
-          const url = new URL(upload.objectUrl);
-          const m = url.pathname.match(
-            /\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/(.+)$/
-          );
-          if (m?.[1]) {
-            const objectPath = decodeURIComponent(m[1]);
-            const downloadUrl = await getDownloadUrl(objectPath);
+          const { getDownloadUrl, parseSupabaseStorageUrl } =
+            await import("../objectStorage");
+          const parsed = parseSupabaseStorageUrl(upload.objectUrl);
+          if (parsed) {
+            const downloadUrl = await getDownloadUrl(
+              parsed.objectPath,
+              parsed.bucket
+            );
             return res.json({ downloadUrl, fileName: upload.fileName });
           }
         } catch (error) {

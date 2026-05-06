@@ -119,8 +119,8 @@ export function useVehicleCheckIn() {
       const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
       throw new Error(error.message || "Failed to get upload URL");
     }
-    const { uploadURL } = await response.json();
-    return { method: "PUT" as const, url: uploadURL };
+    const { uploadURL, objectPath } = await response.json();
+    return { method: "PUT" as const, url: uploadURL, objectPath };
   };
 
   const handleFileUpload = (result: any, type: "dash" | "interior" | "damage") => {

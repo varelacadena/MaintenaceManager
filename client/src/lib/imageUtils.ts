@@ -8,7 +8,7 @@ export function toDisplayUrl(url: string | null | undefined): string {
   if (url.startsWith("https://storage.googleapis.com/")) {
     return `/api/objects/image?path=${encodeURIComponent(url)}`;
   }
-  if (url.includes(".supabase.co/storage/v1/object/")) {
+  if (url.includes(".supabase.co/storage/")) {
     return `/api/objects/image?path=${encodeURIComponent(url)}`;
   }
   return url;

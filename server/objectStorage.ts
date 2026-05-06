@@ -86,10 +86,75 @@ export async function getSignedUploadUrl(): Promise<{
   return { uploadURL: data.signedUrl, objectPath };
 }
 
-export async function getDownloadUrl(key: string): Promise<string> {
+function decodeStoragePathSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+/**
+ * Parse a Supabase project storage URL into bucket + object path for createSignedUrl.
+ * Handles standard object URLs, signed-upload object URLs (`.../object/upload/sign/...`),
+ * and image-transformation (render) URLs.
+ */
+export function parseSupabaseStorageUrl(rawUrl: string): {
+  bucket: string;
+  objectPath: string;
+} | null {
+  if (!rawUrl.includes(".supabase.co/storage/")) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  const pathname = url.pathname;
+
+  const uploadSignMatch = pathname.match(
+    /^\/storage\/v1\/object\/upload\/sign\/([^/]+)\/(.+)$/
+  );
+  if (uploadSignMatch?.[1] && uploadSignMatch[2]) {
+    return {
+      bucket: uploadSignMatch[1],
+      objectPath: decodeStoragePathSegment(uploadSignMatch[2]),
+    };
+  }
+
+  const objectMatch = pathname.match(
+    /^\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/
+  );
+  if (objectMatch?.[1] && objectMatch[2]) {
+    return {
+      bucket: objectMatch[1],
+      objectPath: decodeStoragePathSegment(objectMatch[2]),
+    };
+  }
+
+  const renderMatch = pathname.match(
+    /^\/storage\/v1\/render\/image\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/
+  );
+  if (renderMatch?.[1] && renderMatch[2]) {
+    return {
+      bucket: renderMatch[1],
+      objectPath: decodeStoragePathSegment(renderMatch[2]),
+    };
+  }
+
+  return null;
+}
+
+export async function getDownloadUrl(
+  key: string,
+  bucketOverride?: string
+): Promise<string> {
   const path = key.replace(/^\/+/, "");
+  const bucket = bucketOverride?.trim() || getBucketName();
   const { data, error } = await getStorageClient()
-    .from(getBucketName())
+    .from(bucket)
     .createSignedUrl(path, 3600);
 
   if (error) {
