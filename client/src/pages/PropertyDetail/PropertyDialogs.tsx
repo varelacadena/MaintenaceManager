@@ -1,8 +1,14 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import QRCode from "react-qr-code";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { FileAttachment } from "@/components/FileAttachment";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   Select,
   SelectContent,
@@ -26,26 +32,60 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Printer, Upload, X, QrCode } from "lucide-react";
+import { Loader2, Printer, Trash2, Upload, X, QrCode } from "lucide-react";
 import { EQUIPMENT_CATEGORIES, type PropertyDetailContext } from "./usePropertyDetail";
+import type { Upload as UploadType } from "@shared/schema";
 
 export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
+  const [attachmentLabel, setAttachmentLabel] = useState("manual");
+  const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null);
   const {
     id, toast,
     isEditPropertyDialogOpen, setIsEditPropertyDialogOpen,
     isCreateDialogOpen, setIsCreateDialogOpen,
     isSpaceDialogOpen, setIsSpaceDialogOpen,
     isQrDialogOpen, setIsQrDialogOpen,
+    fileViewerEquipment,
+    isEquipmentFilesDialogOpen, setIsEquipmentFilesDialogOpen,
     editingEquipment, setEditingEquipment,
     editingSpace, setEditingSpace,
     qrEquipment,
+    equipmentImageUrl, setEquipmentImageUrl,
     manufacturerImageUrl, setManufacturerImageUrl,
+    pendingEquipmentUploads, setPendingEquipmentUploads,
     uploadObjectPathRef,
     propertyForm, form, spaceForm,
     onPropertySubmit, onSubmit, onSpaceSubmit,
     updatePropertyMutation, createEquipmentMutation, updateEquipmentMutation,
     createSpaceMutation, updateSpaceMutation,
   } = ctx;
+  const equipmentIdForUploads = editingEquipment?.id ?? "";
+  const { data: equipmentUploads = [], isLoading: isLoadingEquipmentUploads } = useQuery<UploadType[]>({
+    queryKey: ["/api/equipment", equipmentIdForUploads, "uploads"],
+    enabled: isCreateDialogOpen && !!equipmentIdForUploads,
+  });
+  const fileViewerEquipmentId = fileViewerEquipment?.id ?? "";
+  const { data: fileViewerUploads = [], isLoading: isLoadingFileViewerUploads } = useQuery<UploadType[]>({
+    queryKey: ["/api/equipment", fileViewerEquipmentId, "uploads"],
+    enabled: isEquipmentFilesDialogOpen && !!fileViewerEquipmentId,
+  });
+
+  const handleDeleteEquipmentUpload = async (uploadId: string) => {
+    try {
+      setDeletingUploadId(uploadId);
+      await apiRequest("DELETE", `/api/uploads/${uploadId}`);
+      await queryClient.invalidateQueries({ queryKey: ["/api/equipment", equipmentIdForUploads, "uploads"] });
+      toast({ title: "Attachment removed" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to remove attachment",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingUploadId(null);
+    }
+  };
 
   return (
     <>
@@ -221,6 +261,57 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
               />
 
               <div className="space-y-2">
+                <FormLabel>Equipment Picture (Optional)</FormLabel>
+                <p className="text-xs text-muted-foreground">Main photo used in equipment profile cards and detail views.</p>
+                {equipmentImageUrl ? (
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={equipmentImageUrl}
+                      alt="Equipment"
+                      className="w-24 h-24 object-cover rounded-md border"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEquipmentImageUrl("")}
+                      data-testid="button-remove-equipment-image"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <ObjectUploader
+                    accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                    maxFileSize={10485760}
+                    onGetUploadParameters={async () => {
+                      const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
+                      const data = await res.json();
+                      uploadObjectPathRef.current = data.objectPath || "";
+                      return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+                    }}
+                    onComplete={(result: any) => {
+                      const file = result.successful?.[0];
+                      if (file) {
+                        const objectPath = uploadObjectPathRef.current;
+                        const displayUrl = objectPath
+                          ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
+                          : (file.url || file.objectUrl || file.uploadURL);
+                        setEquipmentImageUrl(displayUrl);
+                      }
+                    }}
+                    onError={() => toast({ title: "Upload failed", variant: "destructive" })}
+                    buttonVariant="outline"
+                    buttonTestId="button-upload-equipment-image"
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    Upload equipment photo
+                  </ObjectUploader>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <FormLabel>Manufacturer Image (Optional)</FormLabel>
                 <p className="text-xs text-muted-foreground">Upload a label, manual cover, or product photo. Displayed when scanning this equipment.</p>
                 {manufacturerImageUrl ? (
@@ -249,7 +340,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                       const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
                       const data = await res.json();
                       uploadObjectPathRef.current = data.objectPath || "";
-                      return { method: "PUT" as const, url: data.uploadURL };
+                      return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
                     }}
                     onComplete={(result: any) => {
                       const file = result.successful?.[0];
@@ -271,6 +362,114 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <FormLabel>Manuals, Plates, and Other Files (Optional)</FormLabel>
+                <p className="text-xs text-muted-foreground">Upload PDFs/images and link them to this equipment when you save.</p>
+                <div className="flex items-center gap-2">
+                  <Select value={attachmentLabel} onValueChange={setAttachmentLabel}>
+                    <SelectTrigger className="w-56" data-testid="select-equipment-upload-label">
+                      <SelectValue placeholder="Select file type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="manufacturer-plate">Manufacturer Plate</SelectItem>
+                      <SelectItem value="other-photo">Other Photo</SelectItem>
+                      <SelectItem value="other-file">Other File</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <ObjectUploader
+                    maxNumberOfFiles={5}
+                    maxFileSize={15728640}
+                    accept=".pdf,.doc,.docx,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                    onGetUploadParameters={async () => {
+                      const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
+                      const data = await res.json();
+                      return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+                    }}
+                    onComplete={(result: any) => {
+                      const added = (result.successful || []).map((file: any) => ({
+                        fileName: file.fileName || file.name || "attachment",
+                        fileType: file.type || "application/octet-stream",
+                        objectUrl: file.objectUrl || file.url || file.uploadURL,
+                        objectPath: file.objectPath,
+                        label: attachmentLabel,
+                      }));
+                      if (added.length > 0) {
+                        setPendingEquipmentUploads((prev) => [...prev, ...added]);
+                        toast({ title: "Files uploaded", description: `${added.length} file(s) ready to attach` });
+                      }
+                    }}
+                    onError={() => toast({ title: "Upload failed", variant: "destructive" })}
+                    buttonVariant="outline"
+                    buttonTestId="button-upload-equipment-attachments"
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    Add files
+                  </ObjectUploader>
+                </div>
+                {pendingEquipmentUploads.length > 0 && (
+                  <div className="space-y-2 rounded-md border p-2">
+                    {pendingEquipmentUploads.map((upload, index) => (
+                      <div key={`${upload.fileName}-${index}`} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="min-w-0">
+                          <div className="truncate">{upload.fileName}</div>
+                          <Badge variant="secondary" className="mt-1 capitalize">{(upload.label || "other-file").replace("-", " ")}</Badge>
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setPendingEquipmentUploads((prev) => prev.filter((_, i) => i !== index))}
+                          data-testid={`button-remove-equipment-upload-${index}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {editingEquipment && (
+                <div className="space-y-2">
+                  <FormLabel>Existing Equipment Files</FormLabel>
+                  <p className="text-xs text-muted-foreground">Current manuals, manufacturer plates, and reference files for this equipment.</p>
+                  {isLoadingEquipmentUploads ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading attachments...
+                    </div>
+                  ) : equipmentUploads.length === 0 ? (
+                    <div className="text-xs text-muted-foreground rounded-md border p-2">No saved files yet.</div>
+                  ) : (
+                    <div className="space-y-2 rounded-md border p-2">
+                      {equipmentUploads.map((upload) => (
+                        <div key={upload.id} className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <FileAttachment attachment={upload} />
+                          </div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            disabled={deletingUploadId === upload.id}
+                            onClick={() => handleDeleteEquipmentUpload(upload.id)}
+                            data-testid={`button-delete-existing-equipment-upload-${upload.id}`}
+                            title="Remove attachment"
+                          >
+                            {deletingUploadId === upload.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <DialogFooter>
                 <Button
                   type="button"
@@ -278,7 +477,9 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                   onClick={() => {
                     setIsCreateDialogOpen(false);
                     setEditingEquipment(null);
+                    setEquipmentImageUrl("");
                     setManufacturerImageUrl("");
+                    setPendingEquipmentUploads([]);
                     form.reset({
                       propertyId: id || "", name: "", category: "general",
                       description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
@@ -359,6 +560,68 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEquipmentFilesDialogOpen} onOpenChange={setIsEquipmentFilesDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Equipment Pictures and Files</DialogTitle>
+            <DialogDescription>
+              {fileViewerEquipment?.name || "Equipment"} attachments and images.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(fileViewerEquipment as any)?.imageUrl || (fileViewerEquipment as any)?.manufacturerImageUrl ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(fileViewerEquipment as any)?.imageUrl && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Equipment Photo</p>
+                    <img
+                      src={toDisplayUrl((fileViewerEquipment as any).imageUrl)}
+                      alt="Equipment"
+                      className="w-full max-h-44 object-cover rounded-md border"
+                    />
+                  </div>
+                )}
+                {(fileViewerEquipment as any)?.manufacturerImageUrl && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Manufacturer Image</p>
+                    <img
+                      src={toDisplayUrl((fileViewerEquipment as any).manufacturerImageUrl)}
+                      alt="Manufacturer"
+                      className="w-full max-h-44 object-cover rounded-md border"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground rounded-md border p-2">No images saved for this equipment.</div>
+            )}
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Attached Files</p>
+              {isLoadingFileViewerUploads ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading files...
+                </div>
+              ) : fileViewerUploads.length === 0 ? (
+                <div className="text-xs text-muted-foreground rounded-md border p-2">No files attached yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {fileViewerUploads.map((upload) => (
+                    <FileAttachment key={upload.id} attachment={upload} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsEquipmentFilesDialogOpen(false)} data-testid="button-close-equipment-files">
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

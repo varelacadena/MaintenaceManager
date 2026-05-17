@@ -25,7 +25,6 @@ interface MutationDeps {
   partNotes: string;
 
   setActiveTimer: (v: string | null) => void;
-  setNewMessage: (v: string) => void;
   setIsEquipmentInfoOpen: (v: boolean) => void;
   setIsVehicleInfoOpen: (v: boolean) => void;
   setIsAddSubTaskDialogOpen: (v: boolean) => void;
@@ -64,7 +63,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     toast, navigate, safeNavigate,
     quickInventoryName, quickInventoryQuantity, quickInventoryUnit,
     selectedInventoryItemId, partQuantity, partNotes,
-    setActiveTimer, setNewMessage,
+    setActiveTimer,
     setIsEquipmentInfoOpen, setIsVehicleInfoOpen, setIsAddSubTaskDialogOpen,
     setIsStopTimerDialogOpen, setIsHoldReasonDialogOpen, setHoldReason,
     setIsQuickAddInventoryOpen, setSelectedInventoryItemId,
@@ -92,44 +91,6 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
-  });
-
-  const markAsReadMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      return await apiRequest("POST", `/api/messages/task/${taskId}/mark-read`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to mark messages as read", variant: "destructive" });
-    },
-  });
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", "/api/messages", { taskId: id, content });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      setNewMessage("");
-      toast({ title: "Message sent" });
-    },
-    onError: () => toast({ title: "Failed to send message", variant: "destructive" }),
-  });
-
-  const deleteMessageMutation = useMutation({
-    mutationFn: async (messageId: string) => {
-      return await apiRequest("DELETE", `/api/messages/${messageId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      toast({ title: "Message deleted" });
-    },
-    onError: () => toast({ title: "Failed to delete message", variant: "destructive" }),
   });
 
   const updateStatusMutation = useMutation({
@@ -538,9 +499,6 @@ export function useTaskDetailMutations(deps: MutationDeps) {
 
   return {
     addSubTaskMutation,
-    markAsReadMutation,
-    sendMessageMutation,
-    deleteMessageMutation,
     updateStatusMutation,
     updateSubtaskStatusMutation,
     updateTaskMutation,

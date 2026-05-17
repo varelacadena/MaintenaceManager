@@ -18,6 +18,7 @@ import {
   Droplets,
   Trees,
   FileText,
+  Paperclip,
   Calendar,
   Search,
   Building2,
@@ -27,6 +28,7 @@ import {
   Settings,
   QrCode,
 } from "lucide-react";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import { EQUIPMENT_CATEGORIES, type FormData } from "./usePropertyDetail";
 import type { PropertyDetailContext } from "./usePropertyDetail";
 
@@ -58,9 +60,10 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
     equipmentSearch, setEquipmentSearch,
     selectedCategory, setSelectedCategory,
     selectedSpaceId, setSelectedSpaceId,
-    setEditingEquipment, setManufacturerImageUrl,
+    setEditingEquipment, setEquipmentImageUrl, setManufacturerImageUrl, setPendingEquipmentUploads,
     setIsCreateDialogOpen,
     setQrEquipment, setIsQrDialogOpen,
+    setFileViewerEquipment, setIsEquipmentFilesDialogOpen,
     form,
     isBuilding, canEdit,
     equipment, spaces,
@@ -102,7 +105,9 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                 size="sm"
                 onClick={() => {
                   setEditingEquipment(null);
+                  setEquipmentImageUrl("");
                   setManufacturerImageUrl("");
+                  setPendingEquipmentUploads([]);
                   form.reset({
                     propertyId: id || "", name: "", category: "general",
                     description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
@@ -159,10 +164,14 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                 size="sm"
                 onClick={() => {
                   setEditingEquipment(null);
+                  setEquipmentImageUrl("");
+                  setManufacturerImageUrl("");
+                  setPendingEquipmentUploads([]);
                   form.reset({
                     propertyId: id || "", name: "",
                     category: (selectedCategory as FormData["category"]) || "general",
                     description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
+                    manufacturerImageUrl: "",
                   });
                   setIsCreateDialogOpen(true);
                 }}
@@ -176,6 +185,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
           <div className="space-y-1">
             {filteredEquipment.map((item) => {
               const Icon = categoryIcons[item.category] || categoryIcons[item.category.toLowerCase()] || HelpCircle;
+              const thumbnailUrl = toDisplayUrl((item as any).imageUrl || (item as any).manufacturerImageUrl);
               return (
                 <div
                   key={item.id}
@@ -183,7 +193,15 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                   data-testid={`card-equipment-${item.id}`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    {thumbnailUrl ? (
+                      <img
+                        src={thumbnailUrl}
+                        alt={`${item.name} thumbnail`}
+                        className="w-10 h-10 rounded-md object-cover border flex-shrink-0 bg-muted"
+                      />
+                    ) : (
+                      <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">{item.name}</span>
@@ -197,6 +215,18 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setFileViewerEquipment(item);
+                        setIsEquipmentFilesDialogOpen(true);
+                      }}
+                      title="View pictures and files"
+                      data-testid={`button-files-${item.id}`}
+                    >
+                      <Paperclip className="w-3 h-3 text-primary" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"

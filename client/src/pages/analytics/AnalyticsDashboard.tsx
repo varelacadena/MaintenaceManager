@@ -1,18 +1,23 @@
-import { useState, lazy, Suspense } from "react";
-import { 
-  ClipboardList, 
-  Users, 
-  Settings, 
-  Building2, 
-  Car, 
-  FileText, 
+import { lazy, Suspense } from "react";
+import {
+  ClipboardList,
+  Users,
+  Settings,
+  Building2,
+  Car,
+  FileText,
   Bell,
   BarChart3,
-  FolderKanban
+  FolderKanban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  AnalyticsFilterProvider,
+  useAnalyticsFilters,
+  type ReportTab,
+} from "./useAnalyticsFilters";
 
 const WorkOrdersReport = lazy(() => import("./reports/WorkOrdersReport"));
 const TechniciansReport = lazy(() => import("./reports/TechniciansReport"));
@@ -24,67 +29,71 @@ const AlertsReport = lazy(() => import("./reports/AlertsReport"));
 const ProjectsReport = lazy(() => import("./reports/ProjectsReport"));
 const KeyMetricsReport = lazy(() => import("./reports/KeyMetricsReport"));
 
-type ReportTab = "key-metrics" | "work-orders" | "technicians" | "assets" | "facilities" | "fleet" | "requests" | "alerts" | "projects";
-
-const reportTabs = [
+const reportTabs: {
+  id: ReportTab;
+  title: string;
+  description: string;
+  icon: typeof BarChart3;
+  color: string;
+}[] = [
   {
-    id: "key-metrics" as ReportTab,
+    id: "key-metrics",
     title: "Overview",
     description: "Key metrics summary",
     icon: BarChart3,
     color: "bg-slate-100 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400",
   },
   {
-    id: "work-orders" as ReportTab,
+    id: "work-orders",
     title: "Work Orders",
     description: "Task status and trends",
     icon: ClipboardList,
     color: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
   },
   {
-    id: "technicians" as ReportTab,
+    id: "technicians",
     title: "Team",
     description: "Team performance",
     icon: Users,
     color: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
   },
   {
-    id: "assets" as ReportTab,
+    id: "assets",
     title: "Assets",
     description: "Equipment health",
     icon: Settings,
     color: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
   },
   {
-    id: "facilities" as ReportTab,
+    id: "facilities",
     title: "Facilities",
-    description: "Building analytics",
+    description: "Property and space analytics",
     icon: Building2,
     color: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
   },
   {
-    id: "fleet" as ReportTab,
+    id: "fleet",
     title: "Fleet",
     description: "Vehicle usage",
     icon: Car,
     color: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
   },
   {
-    id: "requests" as ReportTab,
+    id: "requests",
     title: "Requests",
     description: "Service requests",
     icon: FileText,
     color: "bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400",
   },
   {
-    id: "alerts" as ReportTab,
+    id: "alerts",
     title: "Alerts",
     description: "Issues & overdue",
     icon: Bell,
     color: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
   },
   {
-    id: "projects" as ReportTab,
+    id: "projects",
     title: "Projects",
     description: "Project overview",
     icon: FolderKanban,
@@ -108,8 +117,9 @@ function LoadingSkeleton() {
   );
 }
 
-export default function AnalyticsDashboard() {
-  const [activeTab, setActiveTab] = useState<ReportTab>("key-metrics");
+function AnalyticsDashboardContent() {
+  const { activeTab, setActiveTab } = useAnalyticsFilters();
+  const activeTabMeta = reportTabs.find((t) => t.id === activeTab);
 
   const renderActiveReport = () => {
     switch (activeTab) {
@@ -132,7 +142,7 @@ export default function AnalyticsDashboard() {
       case "projects":
         return <ProjectsReport />;
       default:
-        return <WorkOrdersReport />;
+        return <KeyMetricsReport />;
     }
   };
 
@@ -169,9 +179,23 @@ export default function AnalyticsDashboard() {
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
 
+      {activeTabMeta && (
+        <p className="text-sm text-muted-foreground -mt-1" data-testid="analytics-tab-description">
+          {activeTabMeta.description}
+        </p>
+      )}
+
       <Suspense fallback={<LoadingSkeleton />}>
         {renderActiveReport()}
       </Suspense>
     </div>
+  );
+}
+
+export default function AnalyticsDashboard() {
+  return (
+    <AnalyticsFilterProvider>
+      <AnalyticsDashboardContent />
+    </AnalyticsFilterProvider>
   );
 }

@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -25,36 +24,37 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Search, Plus, Trash2, Edit, ArrowRight } from "lucide-react";
+import { Search, Trash2, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ServiceRequest } from "@shared/schema";
-import { serviceRequestStatusLabels as statusLabels } from "@/lib/constants";
-
-const statusColors: Record<string, string> = {
-  pending: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
-  under_review: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  converted_to_task: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
-  rejected: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
-};
-
-const urgencyColors = {
-  low: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  medium: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20",
-  high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
-};
+import {
+  getServiceRequestStatusLabel,
+  getServiceRequestUrgencyLabel,
+  serviceRequestStatusBadgeColors,
+  serviceRequestUrgencyBadgeColors,
+} from "@/lib/serviceRequestLabels";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 export default function Requests() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [urgencyFilter, setUrgencyFilter] = useState("all");
-  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
 
-  const { data: requests = [], isLoading } = useQuery<ServiceRequest[]>({
+  const {
+    data: requests = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
   });
 
@@ -67,25 +67,19 @@ export default function Requests() {
     retry: false,
   });
 
-  // Fetch individual requesters for requests where we don't have user data
-  const requesterIds = Array.from(new Set(requests.map(r => r.requesterId)));
+  const requesterIds = Array.from(new Set(requests.map((r) => r.requesterId)));
   const { data: requesters = {} } = useQuery<Record<string, any>>({
     queryKey: ["/api/users/requesters", requesterIds],
     queryFn: async () => {
-      if (users.length > 0) return {}; // Use users list if available
-      
+      if (users.length > 0) return {};
       const requesterData: Record<string, any> = {};
       await Promise.all(
         requesterIds.map(async (id) => {
           try {
-            const response = await fetch(`/api/users/${id}`, {
-              credentials: 'include',
-            });
-            if (response.ok) {
-              requesterData[id] = await response.json();
-            }
-          } catch (error) {
-            // Silently fail for individual users
+            const response = await fetch(`/api/users/${id}`, { credentials: "include" });
+            if (response.ok) requesterData[id] = await response.json();
+          } catch {
+            /* ignore */
           }
         })
       );
@@ -95,9 +89,7 @@ export default function Requests() {
   });
 
   const deleteRequestMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/service-requests/${id}`);
-    },
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/service-requests/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       toast({ title: "Request deleted successfully" });
@@ -107,66 +99,20 @@ export default function Requests() {
     },
   });
 
-  const rejectRequestMutation = useMutation({
-    mutationFn: async ({ requestId, reason, requesterId, title }: { 
-      requestId: string; 
-      reason: string;
-      requesterId: string;
-      title: string;
-    }) => {
-      // Update request status to rejected
-      await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
-        status: "rejected",
-        rejectionReason: reason
-      });
-
-      // Send message to requester
-      await apiRequest("POST", "/api/messages", {
-        requestId,
-        content: `Your service request "${title}" has been rejected.\n\nReason: ${reason}`
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      toast({ title: "Request rejected and requester notified" });
-      setRejectionReasons({});
-    },
-    onError: () => {
-      toast({ title: "Failed to reject request", variant: "destructive" });
-    },
-  });
-
-  const handleRejectRequest = (requestId: string, requesterId: string, title: string) => {
-    const reason = rejectionReasons[requestId];
-    if (!reason?.trim()) {
-      toast({ title: "Please provide a rejection reason", variant: "destructive" });
-      return;
-    }
-    rejectRequestMutation.mutate({ requestId, reason, requesterId, title });
-  };
-
-  // Helper functions
   const getRequesterName = (requesterId: string) => {
-    // First try the users list
-    if (users && users.length > 0) {
+    if (users?.length) {
       const requester = users.find((u: any) => u.id === requesterId);
-      if (requester) {
-        return `${requester.firstName} ${requester.lastName}`;
-      }
+      if (requester) return `${requester.firstName} ${requester.lastName}`;
     }
-    
-    // Fall back to individual requester data
-    if (requesters && requesters[requesterId]) {
-      const requester = requesters[requesterId];
-      return `${requester.firstName} ${requester.lastName}`;
+    if (requesters[requesterId]) {
+      const r = requesters[requesterId];
+      return `${r.firstName} ${r.lastName}`;
     }
-    
     return "Unknown";
   };
 
   const getPropertyName = (propertyId: string | null) => {
     if (!propertyId) return "Not specified";
-    if (!properties || properties.length === 0) return "Unknown";
     const property = properties.find((p: any) => p.id === propertyId);
     return property?.name || "Unknown";
   };
@@ -175,40 +121,105 @@ export default function Requests() {
     const query = searchQuery.toLowerCase();
     const requesterName = getRequesterName(request.requesterId).toLowerCase();
     const propertyName = getPropertyName(request.propertyId).toLowerCase();
-    
     const matchesSearch =
       request.id.toLowerCase().includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
       propertyName.includes(query);
-    
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesUrgency = urgencyFilter === "all" || request.urgency === urgencyFilter;
     return matchesSearch && matchesStatus && matchesUrgency;
   });
 
-  const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
-  const isStaff = user?.role === "staff";
+  const canReviewRequests = user?.role === "admin";
+  const isSubmitterView = user?.role !== "admin";
 
-  // Technician and admin have same permissions for service requests
-  const canManageRequests = isTechnicianOrAdmin;
+  const canDeleteRequest = (request: ServiceRequest) =>
+    user?.role === "admin" || request.requesterId === user?.id;
 
   if (isLoading || usersLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">Loading...</div>
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-muted-foreground">Loading requests...</p>
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="p-3 md:p-4 max-w-lg">
+        <AnalyticsReportError
+          title="Could not load requests"
+          message={error instanceof Error ? error.message : "Something went wrong."}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
+
+  const renderActions = (request: ServiceRequest) => (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => navigate(`/requests/${request.id}`)}
+        data-testid={`button-review-${request.id}`}
+      >
+        {canReviewRequests ? "Review" : "View"}
+      </Button>
+      {canDeleteRequest(request) && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              data-testid={`button-delete-${request.id}`}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this service request. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteRequestMutation.mutate(request.id)}
+                data-testid={`button-confirm-delete-${request.id}`}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </div>
+  );
 
   return (
     <div className="p-3 md:p-4 space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="space-y-0.5">
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Service Requests</h1>
-          <p className="text-sm text-muted-foreground">Manage and review all maintenance requests</p>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
+            {isSubmitterView ? "My Service Requests" : "Service Requests"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isSubmitterView
+              ? "View and track requests you have submitted"
+              : "Manage and review all maintenance requests"}
+          </p>
         </div>
+        {isSubmitterView && (
+          <Button onClick={() => navigate("/new-request")} data-testid="button-new-request">
+            New Request
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -229,9 +240,10 @@ export default function Requests() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Awaiting Review</SelectItem>
-            <SelectItem value="converted_to_task">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="pending">{getServiceRequestStatusLabel("pending")}</SelectItem>
+            <SelectItem value="under_review">{getServiceRequestStatusLabel("under_review")}</SelectItem>
+            <SelectItem value="converted_to_task">{getServiceRequestStatusLabel("converted_to_task")}</SelectItem>
+            <SelectItem value="rejected">{getServiceRequestStatusLabel("rejected")}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -250,10 +262,52 @@ export default function Requests() {
 
       {filteredRequests.length === 0 ? (
         <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <p className="text-muted-foreground">No requests found</p>
+          <CardContent className="py-4">
+            <EmptyState
+              icon={ClipboardList}
+              title={requests.length === 0 ? "No service requests yet" : "No matching requests"}
+              description={
+                requests.length === 0
+                  ? "Submit a maintenance request to get started."
+                  : "Try adjusting your search or filters."
+              }
+              actionLabel={isSubmitterView ? "New Request" : undefined}
+              actionHref={isSubmitterView ? "/new-request" : undefined}
+              testId="requests-empty"
+            />
           </CardContent>
         </Card>
+      ) : isMobile ? (
+        <div className="space-y-3">
+          {filteredRequests.map((request) => (
+            <Card key={request.id} data-testid={`card-request-${request.id}`}>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{request.title}</p>
+                    <p className="text-xs text-muted-foreground" data-testid={`text-requester-${request.id}`}>
+                      {getRequesterName(request.requesterId)}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn("shrink-0 border-0 text-xs", serviceRequestStatusBadgeColors[request.status])}
+                  >
+                    {getServiceRequestStatusLabel(request.status)}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>{getPropertyName(request.propertyId)}</span>
+                  <span>·</span>
+                  <Badge variant="outline" className={cn("border-0 text-xs", serviceRequestUrgencyBadgeColors[request.urgency])}>
+                    {getServiceRequestUrgencyLabel(request.urgency)}
+                  </Badge>
+                </div>
+                {renderActions(request)}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : (
         <Card className="border-0 shadow-md">
           <CardContent className="p-0">
@@ -264,100 +318,60 @@ export default function Requests() {
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Requester</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Title</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Urgency</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submitted</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRequests.map((request) => {
-                    const requesterUser = users.find((u: any) => u.id === request.requesterId) || requesters[request.requesterId];
-                    const requesterName = getRequesterName(request.requesterId);
-                    const nameParts = requesterName.split(' ');
-                    const firstName = nameParts[0] || '';
-                    const lastName = nameParts.slice(1).join(' ') || '';
-                    
-                    return (
-                      <tr 
-                        key={request.id} 
-                        className="border-b border-border/40 hover-elevate transition-all duration-150"
-                        data-testid={`card-request-${request.id}`}
-                      >
-                        <td className="px-6 py-5">
-                          <div className="font-medium text-sm" data-testid={`text-requester-${request.id}`}>
-                            {requesterName}
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="max-w-xs truncate text-sm font-medium">{request.title}</div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="text-sm text-muted-foreground">
-                            {new Date(request.createdAt!).toLocaleDateString('en-US', { 
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })} at {new Date(request.createdAt!).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <Badge 
-                            variant="outline" 
-                            className={cn("font-medium border-0", statusColors[request.status])}
-                          >
-                            {statusLabels[request.status] || request.status}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => navigate(`/requests/${request.id}`)}
-                              data-testid={`button-review-${request.id}`}
-                            >
-                              Review
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  data-testid={`button-delete-${request.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete this service request. This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteRequestMutation.mutate(request.id)}
-                                    data-testid={`button-confirm-delete-${request.id}`}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {filteredRequests.map((request) => (
+                    <tr
+                      key={request.id}
+                      className="border-b border-border/40 hover-elevate transition-all duration-150"
+                      data-testid={`card-request-${request.id}`}
+                    >
+                      <td className="px-6 py-5">
+                        <div className="font-medium text-sm" data-testid={`text-requester-${request.id}`}>
+                          {getRequesterName(request.requesterId)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="max-w-xs truncate text-sm font-medium">{request.title}</div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <Badge variant="outline" className={cn("border-0 font-medium", serviceRequestUrgencyBadgeColors[request.urgency])}>
+                          {getServiceRequestUrgencyLabel(request.urgency)}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(request.createdAt!).toLocaleDateString("en-US", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}{" "}
+                          at{" "}
+                          {new Date(request.createdAt!).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <Badge
+                          variant="outline"
+                          className={cn("font-medium border-0", serviceRequestStatusBadgeColors[request.status])}
+                        >
+                          {getServiceRequestStatusLabel(request.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-5">{renderActions(request)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

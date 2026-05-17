@@ -13,7 +13,7 @@ import {
   vehicleMaintenanceSchedules, vehicleDocuments,
 } from "./vehicles";
 import { inventoryItems, partsUsed } from "./inventory";
-import { messages, notifications } from "./messaging";
+import { notifications } from "./messaging";
 import { uploads, emergencyContacts } from "./misc";
 import {
   projects, projectTeamMembers, projectVendors, quotes, quoteAttachments,
@@ -24,7 +24,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   tasksCreated: many(tasks, { relationName: "task_creator" }),
   tasksAssigned: many(tasks, { relationName: "task_assignee" }),
   timeEntries: many(timeEntries),
-  messages: many(messages),
   taskNotes: many(taskNotes),
   uploads: many(uploads),
   vehicleReservations: many(vehicleReservations),
@@ -77,7 +76,6 @@ export const serviceRequestsRelations = relations(serviceRequests, ({ one, many 
     references: [subdivisions.id],
   }),
   tasks: many(tasks),
-  messages: many(messages),
   uploads: many(uploads),
 }));
 
@@ -136,7 +134,6 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   subTasks: many(tasks, { relationName: "task_subtasks" }),
   timeEntries: many(timeEntries),
   partsUsed: many(partsUsed),
-  messages: many(messages),
   taskNotes: many(taskNotes),
   uploads: many(uploads),
   checklistGroups: many(taskChecklistGroups),
@@ -162,21 +159,6 @@ export const partsUsedRelations = relations(partsUsed, ({ one }) => ({
   inventoryItem: one(inventoryItems, {
     fields: [partsUsed.inventoryItemId],
     references: [inventoryItems.id],
-  }),
-}));
-
-export const messagesRelations = relations(messages, ({ one }) => ({
-  task: one(tasks, {
-    fields: [messages.taskId],
-    references: [tasks.id],
-  }),
-  request: one(serviceRequests, {
-    fields: [messages.requestId],
-    references: [serviceRequests.id],
-  }),
-  sender: one(users, {
-    fields: [messages.senderId],
-    references: [users.id],
   }),
 }));
 

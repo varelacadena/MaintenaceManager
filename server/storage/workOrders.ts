@@ -150,6 +150,15 @@ export async function getTask(id: string): Promise<Task | undefined> {
   return task;
 }
 
+export async function getTaskByRequestId(requestId: string): Promise<Task | undefined> {
+  const [task] = await db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.requestId, requestId))
+    .limit(1);
+  return task;
+}
+
 export async function createTask(taskData: InsertTask): Promise<Task> {
   const normalized = normalizeTaskPool(taskData);
   const [task] = await db

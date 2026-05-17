@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, AlertTriangle, DollarSign, Wrench, Calendar, User, ChevronDown, ChevronUp } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
+import { hasActiveAnalyticsFilters } from "../analyticsReportUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -44,42 +50,44 @@ interface AssetData {
 type KpiModalType = "total" | "issues" | "highFailure" | "poorCondition" | "cost" | null;
 
 export default function AssetsReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-    spaceId: "",
-  });
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
+  const { handleExport, isExporting } = useAnalyticsExport("assets", () => buildQueryString());
 
   const [selectedAsset, setSelectedAsset] = useState<AssetData | null>(null);
   const [kpiModal, setKpiModal] = useState<KpiModalType>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
+  const queryString = buildQueryString();
 
-  const { data = [], isLoading } = useQuery<AssetData[]>({
-    queryKey: ["/api/analytics/assets", filters],
+  const { data: summary = [], isLoading: summaryLoading, isError, refetch } = useQuery<AssetData[]>({
+    queryKey: ["/api/analytics/assets/summary", filters],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/assets?${buildQueryString()}`);
-      if (!response.ok) throw new Error("Failed to fetch analytics");
+      const response = await fetch(`/api/analytics/assets/summary?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch asset analytics");
       return response.json();
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=assets&format=${format}&${queryString}`, "_blank");
-  };
+  const {
+    data: details = [],
+    isError: detailsError,
+    refetch: refetchDetails,
+  } = useQuery<AssetData[]>({
+    queryKey: ["/api/analytics/assets", filters, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/assets?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch asset details");
+      return response.json();
+    },
+  });
+
+  const detailsById = new Map(details.map((a) => [a.equipmentId, a]));
+  const data = summary.map((asset) => ({
+    ...asset,
+    serviceHistory: detailsById.get(asset.equipmentId)?.serviceHistory ?? [],
+  }));
+  const isLoading = summaryLoading;
 
   const totalAssets = data.length;
   const assetsWithIssues = data.filter(a => a.workOrderCount > 0).length;
@@ -113,7 +121,7 @@ export default function AssetsReport() {
       case "issues":
         return { title: "Assets With Issues", description: "Equipment that has had at least one work order" };
       case "highFailure":
-        return { title: "High Failure Assets", description: "Equipment with 5 or more work orders - may need evaluation or replacement" };
+        return { title: "Frequent Service Assets", description: "Equipment with 5 or more work orders in the last 90 days — may need evaluation or replacement" };
       case "poorCondition":
         return { title: "Poor Condition Assets", description: "Equipment marked as 'Poor' or 'Needs Replacement' condition" };
       case "cost":
@@ -189,6 +197,19 @@ export default function AssetsReport() {
     );
   };
 
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-3 md:space-y-4">
@@ -207,9 +228,22 @@ export default function AssetsReport() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {totalAssets === 0 ? (
+        <AnalyticsEmptyState
+          title="No assets match these filters"
+          description="Adjust the date range or property filter to see equipment analytics."
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         <div className="cursor-pointer hover-elevate" onClick={() => setKpiModal("total")} data-testid="kpi-total-assets">
           <KpiCard
@@ -229,7 +263,7 @@ export default function AssetsReport() {
         </div>
         <div className="cursor-pointer hover-elevate" onClick={() => setKpiModal("highFailure")} data-testid="kpi-high-failure">
           <KpiCard
-            title="High Failure"
+            title="Frequent Service (90d)"
             value={highFailureAssets}
             subtitle="5+ work orders - click for details"
             icon={AlertTriangle}
@@ -329,7 +363,7 @@ export default function AssetsReport() {
           <CardHeader className="p-3 sm:p-4 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
               <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
-              High Failure Assets
+              Frequent Service Assets (90d)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 pt-0">
@@ -368,6 +402,9 @@ export default function AssetsReport() {
             </ScrollArea>
           </CardContent>
         </Card>
+      )}
+
+        </>
       )}
 
       <Dialog open={kpiModal !== null} onOpenChange={() => setKpiModal(null)}>

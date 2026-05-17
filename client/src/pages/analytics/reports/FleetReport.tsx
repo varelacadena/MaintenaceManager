@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Car, Calendar, DollarSign, CheckCircle2, XCircle, Wrench, Clock, TrendingUp } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { hasActiveAnalyticsFilters } from "../analyticsReportUtils";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -10,20 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
+import { StatusPieChart, CountBarChart, SimpleCountLineChart } from "@/components/analytics/AnalyticsCharts";
 
 interface DetailedReservation {
   id: string;
@@ -72,55 +65,61 @@ interface FleetOverview {
   detailedVehicles: DetailedVehicle[];
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  available: "hsl(142, 76%, 36%)",
-  in_use: "hsl(221, 83%, 53%)",
-  needs_maintenance: "hsl(0, 84%, 60%)",
-  needs_cleaning: "hsl(45, 93%, 47%)",
-};
-
 export default function FleetReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-    spaceId: "",
-  });
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
   const [detailDialog, setDetailDialog] = useState<{ open: boolean; type: string; title: string }>({
     open: false,
     type: "",
     title: "",
   });
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
+  const queryString = buildQueryString();
+  const { handleExport, isExporting } = useAnalyticsExport("fleet-detailed", () => buildQueryString());
 
-  const { data, isLoading } = useQuery<FleetOverview>({
-    queryKey: ["/api/analytics/fleet", filters],
+  const { data: summary, isLoading: summaryLoading, isError, refetch } = useQuery<FleetOverview>({
+    queryKey: ["/api/analytics/fleet/summary", filters],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/fleet?${buildQueryString()}`);
+      const response = await fetch(`/api/analytics/fleet/summary?${queryString}`);
       if (!response.ok) throw new Error("Failed to fetch fleet analytics");
       return response.json();
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=fleet-detailed&format=${format}&${queryString}`, "_blank");
-  };
+  const { data: details, isError: detailsError, refetch: refetchDetails } = useQuery<FleetOverview>({
+    queryKey: ["/api/analytics/fleet", filters, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/fleet?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch fleet details");
+      return response.json();
+    },
+  });
+
+  const data = summary
+    ? {
+        ...summary,
+        detailedReservations: details?.detailedReservations ?? [],
+        detailedVehicles: details?.detailedVehicles ?? [],
+      }
+    : undefined;
+  const isLoading = summaryLoading;
 
   const openDetailDialog = (type: string, title: string) => {
     setDetailDialog({ open: true, type, title });
   };
+
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -133,18 +132,6 @@ export default function FleetReport() {
       </div>
     );
   }
-
-  const statusData = data?.byStatus?.map(s => ({
-    name: s.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-    value: s.count,
-    color: STATUS_COLORS[s.status] || "#9ca3af",
-  })) || [];
-
-  const categoryData = data?.byCategory || [];
-  const trendData = data?.reservationsByMonth?.map(m => ({
-    month: m.month.split('-')[1],
-    Reservations: m.count,
-  })) || [];
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { className: string }> = {
@@ -183,9 +170,21 @@ export default function FleetReport() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {data && data.totalVehicles === 0 ? (
+        <AnalyticsEmptyState
+          title="No fleet data matches these filters"
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("vehicles", "All Vehicles")}>
           <KpiCard
@@ -213,93 +212,44 @@ export default function FleetReport() {
           />
         </div>
         <KpiCard
-          title="Utilization"
+          title="Reservation Utilization"
           value={`${data?.avgUtilizationRate || 0}%`}
+          subtitle="Reserved vehicle-days in period"
           icon={TrendingUp}
           variant={data?.avgUtilizationRate && data.avgUtilizationRate >= 70 ? "success" : "warning"}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Vehicle Status</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [value, 'Count']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-2">
-                {statusData.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs">{item.name}</span>
-                    </div>
-                    <span className="font-medium">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">By Category</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={categoryData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis dataKey="category" type="category" tick={{ fontSize: 10 }} width={60} />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(221, 83%, 53%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Reservation Trend</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <ResponsiveContainer width="100%" height={150}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="Reservations" stroke="hsl(221, 83%, 53%)" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {data?.byStatus && data.byStatus.length > 0 && (
+          <StatusPieChart data={data.byStatus} title="Vehicle status" />
+        )}
+        {data?.byCategory && data.byCategory.length > 0 && (
+          <CountBarChart
+            title="By category"
+            testId="chart-fleet-category"
+            data={data.byCategory.map((c) => ({
+              name: c.category,
+              value: c.count,
+            }))}
+          />
+        )}
+        {data?.reservationsByMonth && data.reservationsByMonth.length > 0 && (
+          <SimpleCountLineChart
+            title="Reservation trend"
+            testId="chart-fleet-reservations"
+            valueLabel="Reservations"
+            data={data.reservationsByMonth.map((m) => ({
+              label: m.month.includes("-") ? m.month.split("-")[1] : m.month,
+              value: m.count,
+            }))}
+          />
+        )}
       </div>
 
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Vehicle Inventory</CardTitle>
+          <CardTitle className="text-xs sm:text-sm font-medium">Vehicle Inventory</CardTitle>          <CardTitle className="text-xs sm:text-sm font-medium">Vehicle Inventory</CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 pt-0">
           <ScrollArea className="w-full h-[300px]">
@@ -459,6 +409,8 @@ export default function FleetReport() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }

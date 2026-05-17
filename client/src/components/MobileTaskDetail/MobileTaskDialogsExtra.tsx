@@ -3,10 +3,8 @@ import { Input } from "@/components/ui/input";
 import {
   MapPin,
   X,
-  Send,
   Plus,
   Search,
-  MessageSquare,
   Package,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,17 +18,14 @@ interface MobileTaskDialogsExtraProps {
 export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
   const {
     task, user, isAdmin,
-    allUsers, taskMessages, taskParts, inventoryItems,
-    isMessagesSheetOpen, setIsMessagesSheetOpen,
-    newMessageText, setNewMessageText,
+    taskParts, inventoryItems,
     isPartsSheetOpen, setIsPartsSheetOpen,
-    messagesEndRef,
     isAddPartFormOpen, setIsAddPartFormOpen,
     newPartQuantity, setNewPartQuantity,
     newPartNotes, setNewPartNotes,
     inventorySearchQuery, setInventorySearchQuery,
     selectedInventoryItemId, setSelectedInventoryItemId,
-    sendMessageMutation, addPartMutation,
+    addPartMutation,
     id,
   } = ctx;
 
@@ -38,94 +33,6 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
 
   return (
     <>
-      {isMessagesSheetOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
-          onClick={() => setIsMessagesSheetOpen(false)}
-        >
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="relative w-full bg-card rounded-t-2xl flex flex-col"
-            style={{ height: "80vh", maxHeight: "80vh" }}
-            onClick={(e) => e.stopPropagation()}
-            data-testid="sheet-messages"
-          >
-            <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid #EEEEEE" }}>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
-                <p className="text-sm font-semibold text-foreground">Messages</p>
-                {taskMessages.length > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
-                    {taskMessages.length}
-                  </span>
-                )}
-              </div>
-              <button onClick={() => setIsMessagesSheetOpen(false)} data-testid="button-close-messages">
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-              {taskMessages.length === 0 ? (
-                <p className="text-xs text-center py-8" style={{ color: "#9CA3AF" }}>No messages yet</p>
-              ) : (
-                taskMessages.map((msg) => {
-                  const sender = allUsers?.find(u => u.id === msg.senderId);
-                  const isOwnMessage = msg.senderId === user?.id;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}
-                      data-testid={`message-item-${msg.id}`}
-                    >
-                      <p className="text-xs font-medium mb-0.5" style={{ color: "#6B7280" }}>
-                        {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
-                      </p>
-                      <div
-                        className="rounded-xl px-3 py-2 max-w-[80%]"
-                        style={{
-                          backgroundColor: isOwnMessage ? "#4338CA" : "#F3F4F6",
-                          color: isOwnMessage ? "#FFFFFF" : "#1A1A1A",
-                        }}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                      </div>
-                      <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
-                        {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
-                      </p>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            <div className="shrink-0 px-4 py-3 flex gap-2" style={{ borderTop: "1px solid #EEEEEE" }}>
-              <Input
-                value={newMessageText}
-                onChange={(e) => setNewMessageText(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && newMessageText.trim()) {
-                    e.preventDefault();
-                    sendMessageMutation.mutate(newMessageText.trim());
-                  }
-                }}
-                data-testid="input-mobile-message"
-              />
-              <Button
-                size="icon"
-                style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                onClick={() => newMessageText.trim() && sendMessageMutation.mutate(newMessageText.trim())}
-                disabled={!newMessageText.trim() || sendMessageMutation.isPending}
-                data-testid="button-send-message"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isPartsSheetOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-end justify-center"

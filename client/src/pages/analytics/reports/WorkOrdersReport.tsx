@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { 
@@ -11,7 +10,10 @@ import {
   CircleDashed,
   ArrowUpRight
 } from "lucide-react";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,18 +22,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-} from "recharts";
+  StatusPieChart,
+  UrgencyBarChart,
+  MonthlyTrendChart,
+  PropertyBarChart,
+  CountBarChart,
+} from "@/components/analytics/AnalyticsCharts";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { formatTaskTypeLabel, hasActiveAnalyticsFilters } from "../analyticsReportUtils";
 
 interface DetailedWorkOrder {
   id: string;
@@ -72,75 +71,53 @@ interface WorkOrderOverview {
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; count: number; completed: number }[];
   overdueWorkOrders: number;
+  byTaskType?: { taskType: string; count: number }[];
+  byCategory?: { category: string; count: number }[];
+  byRequesterRole?: { role: string; count: number }[];
   detailedRecords: DetailedWorkOrder[];
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  completed: "#22c55e",
-  in_progress: "#3b82f6",
-  on_hold: "#eab308",
-  not_started: "#9ca3af",
-};
-
-const URGENCY_COLORS: Record<string, string> = {
-  high: "#ef4444",
-  medium: "#eab308",
-  low: "#22c55e",
-};
-
 export default function WorkOrdersReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    spaceId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-  });
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
+  const queryString = buildQueryString();
+  const { handleExport, isExporting } = useAnalyticsExport("work-orders-complete", () => buildQueryString());
 
-  const { data, isLoading } = useQuery<WorkOrderOverview>({
-    queryKey: ["/api/analytics/work-orders", filters],
+  const { data: summary, isLoading: summaryLoading, isError, refetch } = useQuery<WorkOrderOverview>({
+    queryKey: ["/api/analytics/work-orders/summary", filters],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/work-orders?${buildQueryString()}`);
+      const response = await fetch(`/api/analytics/work-orders/summary?${queryString}`);
       if (!response.ok) throw new Error("Failed to fetch analytics");
       return response.json();
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=work-orders-complete&format=${format}&${queryString}`, "_blank");
-  };
+  const { data: details, isLoading: detailsLoading, isError: detailsError, refetch: refetchDetails } = useQuery<WorkOrderOverview>({
+    queryKey: ["/api/analytics/work-orders", filters, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/work-orders?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch work order details");
+      return response.json();
+    },
+  });
 
-  const statusData = data?.byStatus.map(s => ({
-    name: s.status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase()),
-    value: s.count,
-    color: STATUS_COLORS[s.status] || "#9ca3af",
-    percentage: data.totalWorkOrders > 0 ? Math.round((s.count / data.totalWorkOrders) * 100) : 0,
-  })) || [];
+  const data = summary;
+  const isLoading = summaryLoading;
+  const detailedRecords = details?.detailedRecords ?? [];
 
-  const urgencyData = data?.byUrgency.map(u => ({
-    name: u.urgency.charAt(0).toUpperCase() + u.urgency.slice(1),
-    value: u.count,
-    color: URGENCY_COLORS[u.urgency] || "#9ca3af",
-    percentage: data.totalWorkOrders > 0 ? Math.round((u.count / data.totalWorkOrders) * 100) : 0,
-  })) || [];
-
-  const trendData = data?.monthlyTrend.map(m => ({
-    month: m.month.split('-')[1],
-    Created: m.count,
-    Completed: m.completed,
-  })) || [];
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -160,12 +137,26 @@ export default function WorkOrdersReport() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         showStatusFilter
+        statusFilterVariant="work-order"
         showUrgencyFilter
         showTechnicianFilter
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {data && data.totalWorkOrders === 0 ? (
+        <AnalyticsEmptyState
+          title="No work orders match these filters"
+          description="Adjust the date range or clear filters to see work order analytics."
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="col-span-1" data-testid="card-total-work-orders">
           <CardContent className="p-4">
@@ -238,117 +229,38 @@ export default function WorkOrdersReport() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {data && <StatusPieChart data={data.byStatus} title="Work order status" />}
+        {data && <UrgencyBarChart data={data.byUrgency} title="Work orders by priority" />}
         <Card className="lg:col-span-1">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Work Order Status</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [value, 'Count']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-2">
-                {statusData.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs">{item.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{item.value}</span>
-                      <span className="text-xs text-muted-foreground">{item.percentage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Priority Levels</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={urgencyData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {urgencyData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [value, 'Count']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-2">
-                {urgencyData.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs">{item.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{item.value}</span>
-                      <span className="text-xs text-muted-foreground">{item.percentage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Performance Metrics</CardTitle>
+            <CardTitle className="text-sm font-medium">Performance metrics</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 space-y-3">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
                 <CircleDashed className="w-4 h-4 text-gray-500" />
-                <span className="text-sm">Not Started</span>
+                <span className="text-sm">Not started</span>
               </div>
               <span className="font-semibold">{data?.notStartedWorkOrders || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
                 <PauseCircle className="w-4 h-4 text-yellow-500" />
-                <span className="text-sm">On Hold</span>
+                <span className="text-sm">On hold</span>
               </div>
               <span className="font-semibold">{data?.onHoldWorkOrders || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-500" />
-                <span className="text-sm">Avg Resolution</span>
+                <span className="text-sm">Avg time to start</span>
+              </div>
+              <span className="font-semibold">{data?.avgResponseTimeHours || 0}h</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-green-600" />
+                <span className="text-sm">Avg resolution</span>
               </div>
               <span className="font-semibold">{data?.avgResolutionTimeHours || 0}h</span>
             </div>
@@ -356,61 +268,38 @@ export default function WorkOrdersReport() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Trend</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Line type="monotone" dataKey="Created" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="Completed" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        {data?.byTaskType && data.byTaskType.length > 0 && (
+          <CountBarChart
+            title="By work order type"
+            testId="chart-task-type"
+            data={data.byTaskType.map((t) => ({ name: formatTaskTypeLabel(t.taskType), value: t.count }))}
+          />
+        )}
+        {data?.byCategory && data.byCategory.length > 0 && (
+          <CountBarChart
+            title="By request category"
+            testId="chart-request-category"
+            data={data.byCategory.map((c) => ({ name: c.category, value: c.count }))}
+          />
+        )}
+        {data?.byRequesterRole && data.byRequesterRole.length > 0 && (
+          <CountBarChart
+            title="By requester role"
+            testId="chart-requester-role"
+            data={data.byRequesterRole.map((r) => ({ name: r.role, value: r.count }))}
+          />
+        )}
+      </div>
 
-        <Card>
-          <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between gap-1">
-            <CardTitle className="text-sm font-medium">Work Orders by Building</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <ScrollArea className="h-[200px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Building</TableHead>
-                    <TableHead className="text-xs text-right">Count</TableHead>
-                    <TableHead className="text-xs text-right">%</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data?.byProperty.slice(0, 8).map((item) => (
-                    <TableRow key={item.propertyId}>
-                      <TableCell className="py-2">
-                        <Link href={`/properties/${item.propertyId}`}>
-                          <span className="text-sm text-primary hover:underline cursor-pointer">
-                            {item.propertyName}
-                          </span>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-sm text-right py-2 font-medium">{item.count}</TableCell>
-                      <TableCell className="text-sm text-right py-2 text-muted-foreground">
-                        {data.totalWorkOrders > 0 ? Math.round((item.count / data.totalWorkOrders) * 100) : 0}%
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {data && <MonthlyTrendChart data={data.monthlyTrend} title="Monthly work order trend" />}
+        {data && (
+          <PropertyBarChart
+            data={data.byProperty.map((p) => ({ propertyName: p.propertyName, count: p.count }))}
+            title="Work orders by property"
+          />
+        )}
       </div>
 
       <Card>
@@ -418,7 +307,7 @@ export default function WorkOrdersReport() {
           <div>
             <CardTitle className="text-sm font-medium">Work Orders Detail</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              {data?.detailedRecords?.length || 0} records found
+              {detailsLoading ? "Loading…" : `${detailedRecords.length} records found`}
             </p>
           </div>
           <Link href="/work">
@@ -437,14 +326,14 @@ export default function WorkOrdersReport() {
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs">Priority</TableHead>
                   <TableHead className="text-xs">Assigned To</TableHead>
-                  <TableHead className="text-xs">Building</TableHead>
+                  <TableHead className="text-xs">Property</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Space</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Start Date</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Due Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.detailedRecords?.map(record => (
+                {detailedRecords.map(record => (
                   <TableRow key={record.id} data-testid={`row-workorder-${record.id}`}>
                     <TableCell className="py-2">
                       <Link href={`/tasks/${record.id}`}>
@@ -483,8 +372,7 @@ export default function WorkOrdersReport() {
                         variant="outline"
                         className="text-xs"
                         style={{
-                          borderColor: URGENCY_COLORS[record.urgency],
-                          color: URGENCY_COLORS[record.urgency],
+                          borderColor: record.urgency === "high" ? "#ef4444" : record.urgency === "medium" ? "#eab308" : "#22c55e", color: record.urgency === "high" ? "#ef4444" : record.urgency === "medium" ? "#eab308" : "#22c55e",
                         }}
                       >
                         {record.urgency}
@@ -510,6 +398,8 @@ export default function WorkOrdersReport() {
           </ScrollArea>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }

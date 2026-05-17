@@ -13,12 +13,14 @@ export const priorityColors: Record<string, string> = {
   critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
 };
 
-export const serviceRequestStatusLabels: Record<string, string> = {
-  pending: "Pending Review",
-  under_review: "Under Review",
-  converted_to_task: "Approved",
-  rejected: "Rejected",
-};
+export {
+  serviceRequestStatusLabels,
+  serviceRequestUrgencyLabels,
+  serviceRequestStatusBadgeColors,
+  serviceRequestUrgencyBadgeColors,
+  getServiceRequestStatusLabel,
+  getServiceRequestUrgencyLabel,
+} from "./serviceRequestLabels";
 
 export const taskStatusLabels: Record<string, string> = {
   not_started: "Not Started",

@@ -658,19 +658,6 @@ export function registerTaskRoutes(app: Express) {
           noteType: "job_note"
         });
 
-        if (updatedTask.requestId) {
-          await storage.createMessage({
-            requestId: updatedTask.requestId,
-            senderId: (req as any).userId,
-            content: `Task "${updatedTask.name}" has been placed on hold. Reason: ${onHoldReason}`
-          });
-        }
-      } else if (normalizedStatus === "completed" && updatedTask.requestId) {
-        await storage.createMessage({
-          requestId: updatedTask.requestId,
-          senderId: (req as any).userId,
-          content: `Task "${updatedTask.name}" has been completed.`
-        });
       }
 
       const autoCreateVehicleMaintenanceLog = async (completedTask: any) => {

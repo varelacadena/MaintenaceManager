@@ -309,8 +309,13 @@ export function registerUploadRoutes(app: Express) {
     }
   });
 
-  app.get("/api/uploads/request/:requestId", isAuthenticated, async (req, res) => {
+  app.get("/api/uploads/request/:requestId", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      const hasAccess = await canAccessServiceRequest(userId, req.params.requestId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: Cannot access these uploads" });
+      }
       const uploads = await storage.getUploadsByRequest(req.params.requestId);
       res.json(uploads);
     } catch (error) {

@@ -254,22 +254,15 @@ export function useProjectDetail() {
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({
-      taskId, newStatus, onHoldReason, requestId, taskName,
+      taskId, newStatus, onHoldReason,
     }: {
-      taskId: string; newStatus: StatusType; onHoldReason?: string; requestId?: string | null; taskName?: string;
+      taskId: string; newStatus: StatusType; onHoldReason?: string;
     }) => {
       const updateData: any = { status: newStatus };
       if (newStatus === "on_hold" && onHoldReason) {
         updateData.onHoldReason = onHoldReason;
       }
-      const response = await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
-      if (newStatus === "on_hold" && onHoldReason && requestId) {
-        await apiRequest("POST", "/api/messages", {
-          requestId,
-          content: `Your task "${taskName}" has been placed on hold.\n\nReason: ${onHoldReason}`,
-        });
-      }
-      return response;
+      return await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
     },
     onSuccess: () => {
       setIsHoldReasonDialogOpen(false);
@@ -281,7 +274,6 @@ export function useProjectDetail() {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
         queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       }, 300);
     },
     onError: (error: any) => {
@@ -310,8 +302,6 @@ export function useProjectDetail() {
         taskId: pendingStatusChange.taskId,
         newStatus: pendingStatusChange.newStatus,
         onHoldReason: holdReason,
-        requestId: pendingStatusChange.task.requestId,
-        taskName: pendingStatusChange.task.name,
       });
     }
   };

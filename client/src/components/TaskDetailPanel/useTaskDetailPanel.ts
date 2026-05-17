@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
+import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
 import {
   panelStatusDotStyle,
   panelStatusPillStyle,
@@ -38,11 +38,8 @@ export function useTaskDetailPanel({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isPartsOpen, setIsPartsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [newMessageText, setNewMessageText] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
   const [newPartQuantity, setNewPartQuantity] = useState("1");
@@ -102,17 +99,6 @@ export function useTaskDetailPanel({
     enabled: !!taskId,
   });
 
-  const { data: taskMessages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/messages/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-    refetchInterval: (isMessagesOpen || (isFullscreen && isAdmin)) ? 5000 : false,
-  });
-
   const { data: taskParts = [] } = useQuery<PartUsed[]>({
     queryKey: ["/api/parts/task", taskId],
     queryFn: async () => {
@@ -161,29 +147,6 @@ export function useTaskDetailPanel({
   const imgCount = uploads?.filter(u => u.fileType.startsWith("image/")).length || 0;
   const vidCount = uploads?.filter(u => u.fileType.startsWith("video/")).length || 0;
 
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const res = await apiRequest("POST", "/api/messages", { taskId, content });
-      return res.json();
-    },
-    onSuccess: () => {
-      setNewMessageText("");
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-    },
-    onError: () => toast({ title: "Error", description: "Failed to send message.", variant: "destructive" }),
-  });
-
-  const markMessagesReadMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", `/api/messages/task/${taskId}/mark-read`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-    },
-  });
-
   const addPartMutation = useMutation({
     mutationFn: async (partData: { taskId: string; partName: string; quantity: string; cost: number; notes?: string; inventoryItemId?: string }) => {
       const res = await apiRequest("POST", "/api/parts", partData);
@@ -201,22 +164,6 @@ export function useTaskDetailPanel({
     },
     onError: () => toast({ title: "Error", description: "Failed to add part.", variant: "destructive" }),
   });
-
-  const messagesVisible = isMessagesOpen || (isFullscreen && isAdmin);
-  useEffect(() => {
-    if (messagesVisible && taskMessages.length > 0) {
-      const hasUnread = taskMessages.some((m: Message) => !m.read && m.senderId !== user?.id);
-      if (hasUnread) {
-        markMessagesReadMutation.mutate();
-      }
-    }
-  }, [messagesVisible, taskMessages.length]);
-
-  useEffect(() => {
-    if (isMessagesOpen) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    }
-  }, [isMessagesOpen, taskMessages.length]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -500,7 +447,6 @@ export function useTaskDetailPanel({
     isLoading,
     subtasks,
     uploads,
-    taskMessages,
     taskParts,
     inventoryItems,
     timeEntries,
@@ -517,15 +463,10 @@ export function useTaskDetailPanel({
     setDeleteDialogOpen,
     isEditMode,
     setIsEditMode,
-    isMessagesOpen,
-    setIsMessagesOpen,
     isPartsOpen,
     setIsPartsOpen,
     isHistoryOpen,
     setIsHistoryOpen,
-    newMessageText,
-    setNewMessageText,
-    messagesEndRef,
     isAddPartFormOpen,
     setIsAddPartFormOpen,
     newPartQuantity,
@@ -567,7 +508,6 @@ export function useTaskDetailPanel({
     fileInputRef,
     isPanelUploadLabelSaving,
 
-    sendMessageMutation,
     addPartMutation,
     updateStatusMutation,
     deleteTaskMutation,

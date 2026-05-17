@@ -1,10 +1,16 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, CheckCircle2, Clock, Award, TrendingUp } from "lucide-react";
+import { Users, CheckCircle2, Clock, Award, TrendingUp, GraduationCap, Wrench } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import KpiCard from "@/components/analytics/KpiCard";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import { useAnalyticsFilters, type RoleFilter } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
 import { TechnicianPerformanceChart } from "@/components/analytics/AnalyticsCharts";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { hasActiveAnalyticsFilters } from "../analyticsReportUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +34,7 @@ interface TechnicianTaskDetail {
 interface TechnicianData {
   technicianId: string;
   technicianName: string;
+  memberType?: "technician" | "student";
   tasksCompleted: number;
   tasksAssigned: number;
   totalHoursLogged: number;
@@ -37,38 +44,42 @@ interface TechnicianData {
 }
 
 export default function TechniciansReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-    spaceId: "",
-  });
+  const { filters, setFilters, buildQueryString, roleFilter, setRoleFilter, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
+  const technicianQueryString = () =>
+    buildQueryString(roleFilter !== "all" ? { roleType: roleFilter } : undefined);
 
-  const { data = [], isLoading } = useQuery<TechnicianData[]>({
-    queryKey: ["/api/analytics/technicians", filters],
+  const memberLabel =
+    roleFilter === "technician" ? "Technicians" : roleFilter === "student" ? "Students" : "Team Members";
+
+  const techQuery = technicianQueryString();
+  const { handleExport, isExporting } = useAnalyticsExport("technicians-detailed", technicianQueryString);
+
+  const { data: summary = [], isLoading: summaryLoading, isError, refetch } = useQuery<TechnicianData[]>({
+    queryKey: ["/api/analytics/technicians/summary", filters, roleFilter],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/technicians?${buildQueryString()}`);
+      const response = await fetch(`/api/analytics/technicians/summary?${techQuery}`);
       if (!response.ok) throw new Error("Failed to fetch analytics");
       return response.json();
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=technicians-detailed&format=${format}&${queryString}`, "_blank");
-  };
+  const { data: details = [], isError: detailsError, refetch: refetchDetails } = useQuery<TechnicianData[]>({
+    queryKey: ["/api/analytics/technicians", filters, roleFilter, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/technicians?${techQuery}`);
+      if (!response.ok) throw new Error("Failed to fetch team details");
+      return response.json();
+    },
+  });
+
+  const detailsById = new Map(details.map((t) => [t.technicianId, t]));
+  const data = summary.map((tech) => ({
+    ...tech,
+    taskDetails: detailsById.get(tech.technicianId)?.taskDetails ?? [],
+  }));
+  const isLoading = summaryLoading;
 
   const totalTasksCompleted = data.reduce((sum, t) => sum + t.tasksCompleted, 0);
   const totalHoursLogged = data.reduce((sum, t) => sum + t.totalHoursLogged, 0);
@@ -76,6 +87,19 @@ export default function TechniciansReport() {
     ? Math.round(data.reduce((sum, t) => sum + t.completionRate, 0) / data.length)
     : 0;
   const topPerformer = data.length > 0 ? data[0] : null;
+
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -91,16 +115,49 @@ export default function TechniciansReport() {
 
   return (
     <div className="space-y-3 md:space-y-4">
+      <ToggleGroup
+        type="single"
+        value={roleFilter}
+        onValueChange={(value) => value && setRoleFilter(value as RoleFilter)}
+        className="justify-start"
+        data-testid="toggle-role-filter"
+      >
+        <ToggleGroupItem value="all" data-testid="toggle-all">
+          <Users className="h-4 w-4 mr-1" />
+          <span className="text-xs sm:text-sm">All</span>
+        </ToggleGroupItem>
+        <ToggleGroupItem value="technician" data-testid="toggle-technicians">
+          <Wrench className="h-4 w-4 mr-1" />
+          <span className="text-xs sm:text-sm">Technicians</span>
+        </ToggleGroupItem>
+        <ToggleGroupItem value="student" data-testid="toggle-students">
+          <GraduationCap className="h-4 w-4 mr-1" />
+          <span className="text-xs sm:text-sm">Students</span>
+        </ToggleGroupItem>
+      </ToggleGroup>
+
       <AnalyticsFilters
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {data.length === 0 ? (
+        <AnalyticsEmptyState
+          title={`No ${memberLabel.toLowerCase()} match these filters`}
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
-          title="Technicians"
+          title={memberLabel}
           value={data.length}
           icon={Users}
         />
@@ -207,7 +264,7 @@ export default function TechniciansReport() {
                     <TableHead className="text-xs">Technician</TableHead>
                     <TableHead className="text-xs">Task</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs">Urgency</TableHead>
+                    <TableHead className="text-xs">Priority</TableHead>
                     <TableHead className="text-xs hidden sm:table-cell">Property</TableHead>
                     <TableHead className="text-xs hidden md:table-cell">Area</TableHead>
                     <TableHead className="text-xs text-right">Hours</TableHead>
@@ -264,6 +321,8 @@ export default function TechniciansReport() {
             </ScrollArea>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   );

@@ -1,10 +1,15 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Building2, DollarSign, AlertTriangle, CheckCircle2, MapPin, DoorOpen } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
 import { PropertyBarChart } from "@/components/analytics/AnalyticsCharts";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { hasActiveAnalyticsFilters } from "../analyticsReportUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -52,38 +57,36 @@ interface FacilityData {
 }
 
 export default function FacilitiesReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    spaceId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-  });
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
+  const queryString = buildQueryString();
+  const { handleExport, isExporting } = useAnalyticsExport("facilities-detailed", () => buildQueryString());
 
-  const { data = [], isLoading } = useQuery<FacilityData[]>({
-    queryKey: ["/api/analytics/facilities", filters],
+  const { data: summary = [], isLoading: summaryLoading, isError, refetch } = useQuery<FacilityData[]>({
+    queryKey: ["/api/analytics/facilities/summary", filters],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/facilities?${buildQueryString()}`);
+      const response = await fetch(`/api/analytics/facilities/summary?${queryString}`);
       if (!response.ok) throw new Error("Failed to fetch analytics");
       return response.json();
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=facilities-detailed&format=${format}&${queryString}`, "_blank");
-  };
+  const { data: details = [], isError: detailsError, refetch: refetchDetails } = useQuery<FacilityData[]>({
+    queryKey: ["/api/analytics/facilities", filters, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/facilities?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch facility details");
+      return response.json();
+    },
+  });
+
+  const detailsById = new Map(details.map((f) => [f.propertyId, f]));
+  const data = summary.map((facility) => ({
+    ...facility,
+    workOrderDetails: detailsById.get(facility.propertyId)?.workOrderDetails ?? [],
+  }));
+  const isLoading = summaryLoading;
 
   const totalFacilities = data.length;
   const totalWorkOrders = data.reduce((sum, f) => sum + f.totalWorkOrders, 0);
@@ -134,6 +137,19 @@ export default function FacilitiesReport() {
     );
   };
 
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-3 md:space-y-4">
@@ -161,9 +177,21 @@ export default function FacilitiesReport() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {totalFacilities === 0 ? (
+        <AnalyticsEmptyState
+          title="No facility data matches these filters"
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
           title="Total Facilities"
@@ -253,7 +281,7 @@ export default function FacilitiesReport() {
           <CardHeader className="p-3 sm:p-4 pb-2">
             <div className="flex items-center gap-2">
               <DoorOpen className="w-4 h-4 text-primary" />
-              <CardTitle className="text-xs sm:text-sm font-medium">Space Analytics (Building Properties)</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">Space analytics (properties with spaces)</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 pt-0">
@@ -261,7 +289,7 @@ export default function FacilitiesReport() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Building</TableHead>
+                    <TableHead className="text-xs">Property</TableHead>
                     <TableHead className="text-xs">Space</TableHead>
                     <TableHead className="text-xs hidden sm:table-cell">Floor</TableHead>
                     <TableHead className="text-xs text-right">Total WOs</TableHead>
@@ -317,7 +345,7 @@ export default function FacilitiesReport() {
                   <TableHead className="text-xs">Facility</TableHead>
                   <TableHead className="text-xs">Work Order</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-xs">Urgency</TableHead>
+                  <TableHead className="text-xs">Priority</TableHead>
                   <TableHead className="text-xs hidden sm:table-cell">Space</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Assigned To</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Type</TableHead>
@@ -356,6 +384,8 @@ export default function FacilitiesReport() {
           </ScrollArea>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -10,22 +10,6 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
-import { tasks } from "./workOrders";
-import { serviceRequests } from "./serviceRequests";
-
-export const messages = pgTable("messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  requestId: varchar("request_id").references(() => serviceRequests.id, { onDelete: "cascade" }),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
-  read: boolean("read").notNull().default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
 
 export const notificationTypeEnum = pgEnum("notification_type", [
   "document_expiration",

@@ -1,7 +1,6 @@
 import {
   ChevronRight,
   ChevronDown,
-  MessageSquare,
   Package,
   History,
   CheckCircle2,
@@ -17,9 +16,9 @@ interface MobileTaskContentExtraProps {
 export function MobileTaskContentExtra({ ctx }: MobileTaskContentExtraProps) {
   const {
     task, subtasks, timeEntries,
-    taskMessages, taskParts,
+    taskParts,
     expandedSubtasks, toggleSubtaskExpanded,
-    setIsMessagesSheetOpen, setIsPartsSheetOpen, setIsHistorySheetOpen,
+    setIsPartsSheetOpen, setIsHistorySheetOpen,
     updateSubtaskStatusMutation,
     taskStarted, isCompleted,
     completedSubtasks, totalSubtasks, allSubtasksDone, subtaskProgress,
@@ -139,21 +138,6 @@ export function MobileTaskContentExtra({ ctx }: MobileTaskContentExtraProps) {
       </div>
 
       <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#FFFFFF", border: "1px solid #EEEEEE" }}>
-        <button
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
-          style={{ borderBottom: "1px solid #EEEEEE" }}
-          onClick={() => setIsMessagesSheetOpen(true)}
-          data-testid="link-mobile-messages"
-        >
-          <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
-          <span className="text-sm font-medium flex-1" style={{ color: "#1A1A1A" }}>Messages</span>
-          {taskMessages.length > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
-              {taskMessages.length}
-            </span>
-          )}
-          <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-        </button>
         <button
           className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
           style={{ borderBottom: "1px solid #EEEEEE" }}

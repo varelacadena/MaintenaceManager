@@ -15,29 +15,26 @@ export function registerNotificationRoutes(app: Express) {
 
       let pendingServiceRequests = 0;
       let pendingVehicleReservations = 0;
-      let unreadMessages = 0;
+      const unreadMessages = 0;
       let approvedReservations = 0;
       let pendingSignups = 0;
 
-      if (currentUser.role === "admin" || currentUser.role === "technician") {
-        const serviceRequests = await storage.getServiceRequests({
-          status: "pending",
+      if (currentUser.role === "admin") {
+        pendingServiceRequests = await storage.countServiceRequests({
+          statuses: ["pending", "under_review"],
         });
-        pendingServiceRequests = serviceRequests.length;
-
-        const underReviewRequests = await storage.getServiceRequests({
-          status: "under_review",
-        });
-        pendingServiceRequests += underReviewRequests.length;
 
         const vehicleReservations = await storage.getVehicleReservations({
           status: "pending",
         });
         pendingVehicleReservations = vehicleReservations.length;
 
-        if (currentUser.role === "admin") {
-          pendingSignups = await storage.getPendingUserCount();
-        }
+        pendingSignups = await storage.getPendingUserCount();
+      } else if (currentUser.role === "technician") {
+        const vehicleReservations = await storage.getVehicleReservations({
+          status: "pending",
+        });
+        pendingVehicleReservations = vehicleReservations.length;
       } else {
         const myReservations = await storage.getVehicleReservations({
           userId: userId,
@@ -46,11 +43,6 @@ export function registerNotificationRoutes(app: Express) {
           r.lastViewedStatus === "pending" && r.status === "approved"
         ).length;
       }
-
-      const messages = await storage.getMessages();
-      unreadMessages = messages.filter(
-        (msg) => !msg.read && msg.senderId !== userId
-      ).length;
 
       res.json({
         pendingServiceRequests,

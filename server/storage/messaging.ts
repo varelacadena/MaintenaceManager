@@ -1,11 +1,8 @@
 import {
-  messages,
   notifications,
   emailTemplates,
   emailLogs,
   notificationSettings,
-  type Message,
-  type InsertMessage,
   type Notification,
   type InsertNotification,
   type EmailTemplate,
@@ -17,59 +14,6 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, or, ne, desc, isNull, sql } from "drizzle-orm";
-
-export async function createMessage(messageData: InsertMessage): Promise<Message> {
-  const [message] = await db.insert(messages).values(messageData).returning();
-  return message;
-}
-
-export async function getMessagesByRequest(requestId: string): Promise<Message[]> {
-  return await db
-    .select()
-    .from(messages)
-    .where(eq(messages.requestId, requestId))
-    .orderBy(messages.createdAt);
-}
-
-export async function getMessagesByTask(taskId: string): Promise<Message[]> {
-  return await db
-    .select()
-    .from(messages)
-    .where(eq(messages.taskId, taskId))
-    .orderBy(messages.createdAt);
-}
-
-export async function getMessages(): Promise<Message[]> {
-  return await db.select().from(messages).orderBy(desc(messages.createdAt));
-}
-
-export async function deleteMessage(id: string): Promise<void> {
-  await db.delete(messages).where(eq(messages.id, id));
-}
-
-export async function markMessagesAsRead(requestId: string, userId: string): Promise<void> {
-  await db
-    .update(messages)
-    .set({ read: true })
-    .where(
-      and(
-        eq(messages.requestId, requestId),
-        ne(messages.senderId, userId)
-      )
-    );
-}
-
-export async function markTaskMessagesAsRead(taskId: string, userId: string): Promise<void> {
-  await db
-    .update(messages)
-    .set({ read: true })
-    .where(
-      and(
-        eq(messages.taskId, taskId),
-        ne(messages.senderId, userId)
-      )
-    );
-}
 
 export async function getNotifications(userId?: string): Promise<Notification[]> {
   if (userId) {

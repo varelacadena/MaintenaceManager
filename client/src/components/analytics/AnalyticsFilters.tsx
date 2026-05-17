@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Download, Filter, X, Calendar, ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { serviceRequestStatusFilterOptions } from "@/lib/serviceRequestLabels";
 
 interface Property {
   id: string;
@@ -54,13 +55,52 @@ export interface FilterState {
   urgency: string;
 }
 
+export type StatusFilterVariant = "work-order" | "request" | "project";
+
+const STATUS_OPTIONS: Record<StatusFilterVariant, { value: string; label: string }[]> = {
+  "work-order": [
+    { value: "not_started", label: "Not Started" },
+    { value: "needs_estimate", label: "Needs Estimate" },
+    { value: "waiting_approval", label: "Waiting Approval" },
+    { value: "ready", label: "Ready" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "on_hold", label: "On Hold" },
+    { value: "completed", label: "Completed" },
+  ],
+  request: serviceRequestStatusFilterOptions,
+  project: [
+    { value: "planning", label: "Planning" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "on_hold", label: "On Hold" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+  ],
+};
+
+const PRIORITY_OPTIONS: Record<"task" | "project", { value: string; label: string }[]> = {
+  task: [
+    { value: "high", label: "High" },
+    { value: "medium", label: "Medium" },
+    { value: "low", label: "Low" },
+  ],
+  project: [
+    { value: "critical", label: "Critical" },
+    { value: "high", label: "High" },
+    { value: "medium", label: "Medium" },
+    { value: "low", label: "Low" },
+  ],
+};
+
 interface AnalyticsFiltersProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
-  onExport?: (format: string) => void;
+  onExport?: (format: string) => void | Promise<void>;
+  exportLoading?: boolean;
   showTechnicianFilter?: boolean;
   showStatusFilter?: boolean;
+  statusFilterVariant?: StatusFilterVariant;
   showUrgencyFilter?: boolean;
+  urgencyFilterVariant?: "task" | "project";
   exportOptions?: string[];
 }
 
@@ -105,9 +145,12 @@ export default function AnalyticsFilters({
   filters,
   onFilterChange,
   onExport,
+  exportLoading = false,
   showTechnicianFilter = false,
   showStatusFilter = false,
+  statusFilterVariant = "work-order",
   showUrgencyFilter = false,
+  urgencyFilterVariant = "task",
   exportOptions = [],
 }: AnalyticsFiltersProps) {
   const { data: properties = [] } = useQuery<Property[]>({
@@ -182,8 +225,64 @@ export default function AnalyticsFilters({
     return `Until ${new Date(filters.endDate).toLocaleDateString()}`;
   };
 
+  const labelForStatus = (value: string) =>
+    STATUS_OPTIONS[statusFilterVariant].find((o) => o.value === value)?.label ??
+    value.replace(/_/g, " ");
+
+  const labelForPriority = (value: string) =>
+    PRIORITY_OPTIONS[urgencyFilterVariant].find((o) => o.value === value)?.label ?? value;
+
+  type ChipItem = { key: keyof FilterState | "date"; label: string };
+  const activeChips: ChipItem[] = [];
+  if (hasDateFilter) {
+    activeChips.push({ key: "date", label: getDateLabel() });
+  }
+  if (filters.propertyId) {
+    activeChips.push({
+      key: "propertyId",
+      label: properties.find((p) => p.id === filters.propertyId)?.name ?? "Property",
+    });
+  }
+  if (filters.spaceId) {
+    activeChips.push({
+      key: "spaceId",
+      label: allSpaces.find((s) => s.id === filters.spaceId)?.name ?? "Space",
+    });
+  }
+  if (filters.areaId) {
+    activeChips.push({
+      key: "areaId",
+      label: areas.find((a) => a.id === filters.areaId)?.name ?? "Area",
+    });
+  }
+  if (filters.technicianId) {
+    const tech = technicians.find((t) => t.id === filters.technicianId);
+    activeChips.push({
+      key: "technicianId",
+      label:
+        tech?.firstName && tech?.lastName
+          ? `${tech.firstName} ${tech.lastName}`
+          : (tech?.username ?? "Technician"),
+    });
+  }
+  if (filters.status) {
+    activeChips.push({ key: "status", label: labelForStatus(filters.status) });
+  }
+  if (filters.urgency) {
+    activeChips.push({ key: "urgency", label: labelForPriority(filters.urgency) });
+  }
+
+  const removeChip = (key: ChipItem["key"]) => {
+    if (key === "date") {
+      onFilterChange({ ...filters, startDate: "", endDate: "" });
+    } else {
+      updateFilter(key, "");
+    }
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-4">
+    <div className="space-y-2 mb-4">
+    <div className="flex flex-wrap items-center gap-2">
       <Popover>
         <PopoverTrigger asChild>
           <Button 
@@ -276,7 +375,7 @@ export default function AnalyticsFilters({
             
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="property" className="text-xs">Property / Building</Label>
+                <Label htmlFor="property" className="text-xs">Property</Label>
                 <Select value={filters.propertyId || "all"} onValueChange={handlePropertyChange}>
                   <SelectTrigger id="property" data-testid="select-property" className="h-8 text-xs">
                     <SelectValue placeholder="All Properties" />
@@ -356,10 +455,11 @@ export default function AnalyticsFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="not_started">Not Started</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="on_hold">On Hold</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                      {STATUS_OPTIONS[statusFilterVariant].map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -374,9 +474,11 @@ export default function AnalyticsFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Priorities</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
+                      {PRIORITY_OPTIONS[urgencyFilterVariant].map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -404,26 +506,33 @@ export default function AnalyticsFilters({
       {exportOptions.length > 0 && onExport && (
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 gap-2" data-testid="button-export">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-2"
+              data-testid="button-export"
+              disabled={exportLoading}
+            >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download Report</span>
-              <span className="sm:hidden">Export</span>
+              <span className="hidden sm:inline">{exportLoading ? "Preparing…" : "Download Report"}</span>
+              <span className="sm:hidden">{exportLoading ? "…" : "Export"}</span>
               <ChevronDown className="w-3 h-3 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2" align="end">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground px-2 py-1">Download complete report</p>
+              <p className="text-xs text-muted-foreground px-2 py-1">Uses your active filters</p>
               {exportOptions.includes("xlsx") && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start gap-2"
-                  onClick={() => onExport("xlsx")}
+                  onClick={() => void onExport("xlsx")}
+                  disabled={exportLoading}
                   data-testid="button-export-xlsx"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  Excel Spreadsheet (.xlsx)
+                  Excel — full detail (.xlsx)
                 </Button>
               )}
               {exportOptions.includes("pdf") && (
@@ -431,17 +540,42 @@ export default function AnalyticsFilters({
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start gap-2"
-                  onClick={() => onExport("pdf")}
+                  onClick={() => void onExport("pdf")}
+                  disabled={exportLoading}
                   data-testid="button-export-pdf"
                 >
                   <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  PDF Document (.pdf)
+                  PDF — charts & narrative
                 </Button>
               )}
             </div>
           </PopoverContent>
         </Popover>
       )}
+    </div>
+
+    {activeChips.length > 0 && (
+      <div className="flex flex-wrap items-center gap-1.5" data-testid="active-filter-chips">
+        <span className="text-xs text-muted-foreground mr-1">Applied:</span>
+        {activeChips.map((chip) => (
+          <Badge
+            key={chip.key}
+            variant="secondary"
+            className="text-xs font-normal gap-1 pr-1"
+          >
+            {chip.label}
+            <button
+              type="button"
+              className="rounded-sm hover:bg-muted p-0.5"
+              onClick={() => removeChip(chip.key)}
+              aria-label={`Remove ${chip.label} filter`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+    )}
     </div>
   );
 }

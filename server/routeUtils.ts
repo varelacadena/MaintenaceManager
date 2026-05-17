@@ -67,11 +67,16 @@ export async function authenticateUser(req: any): Promise<any | null> {
 
 export async function canAccessServiceRequest(userId: string, requestId: string): Promise<boolean> {
   try {
-    const request = await storage.getServiceRequest(requestId);
-    if (!request) return false;
-    if (request.requesterId === userId) return true;
-    const tasks = await storage.getTasks();
-    return tasks.some(t => t.requestId === requestId && t.assignedToId === userId);
+    const [request, user] = await Promise.all([
+      storage.getServiceRequest(requestId),
+      storage.getUser(userId),
+    ]);
+    if (!request || !user) return false;
+    if (user.role === "admin") return true;
+    if (["staff", "technician", "student"].includes(user.role)) {
+      return request.requesterId === userId;
+    }
+    return false;
   } catch {
     return false;
   }

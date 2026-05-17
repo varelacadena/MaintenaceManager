@@ -15,13 +15,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  MessageSquare,
-  Send,
   User,
   Phone,
   CheckCircle,
   XCircle,
   ChevronDown,
+  ClipboardList,
+  ExternalLink,
 } from "lucide-react";
 import { FileAttachmentList } from "@/components/FileAttachment";
 import {
@@ -34,52 +34,48 @@ import type { RequestDetailHookReturn } from "./useRequestDetail";
 type RequestDetailMobileProps = Pick<
   RequestDetailHookReturn,
   | "id"
-  | "user"
   | "toast"
-  | "newMessage"
-  | "setNewMessage"
   | "rejectionReason"
   | "setRejectionReason"
   | "detailsOpen"
   | "setDetailsOpen"
   | "request"
-  | "messages"
   | "attachments"
-  | "users"
   | "rejectRequestMutation"
-  | "sendMessageMutation"
+  | "markUnderReviewMutation"
   | "requester"
   | "property"
   | "space"
-  | "canTakeAction"
+  | "linkedTask"
+  | "canReviewRequest"
+  | "canMarkUnderReview"
   | "getStatusVariant"
   | "getStatusLabel"
   | "getPriorityColor"
+  | "getUrgencyLabel"
 >;
 
 export function RequestDetailMobile({
   id,
-  user,
   toast,
-  newMessage,
-  setNewMessage,
   rejectionReason,
   setRejectionReason,
   detailsOpen,
   setDetailsOpen,
   request,
-  messages,
   attachments,
-  users,
   rejectRequestMutation,
-  sendMessageMutation,
+  markUnderReviewMutation,
   requester,
   property,
   space,
-  canTakeAction,
+  linkedTask,
+  canReviewRequest,
+  canMarkUnderReview,
   getStatusVariant,
   getStatusLabel,
   getPriorityColor,
+  getUrgencyLabel,
 }: RequestDetailMobileProps) {
   if (!request) return null;
 
@@ -101,21 +97,35 @@ export function RequestDetailMobile({
                   className={`text-xs px-1.5 py-0 h-4 capitalize ${getPriorityColor(request.urgency)}`}
                   data-testid="badge-urgency"
                 >
-                  {request.urgency}
+                  {getUrgencyLabel(request.urgency)}
                 </Badge>
               </div>
             </div>
             
-            {canTakeAction && (
-              <div className="flex items-center gap-1 shrink-0">
+            {(canReviewRequest || canMarkUnderReview) && (
+              <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                {canMarkUnderReview && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    disabled={markUnderReviewMutation.isPending}
+                    onClick={() => markUnderReviewMutation.mutate(id)}
+                    data-testid="button-mark-under-review-mobile"
+                  >
+                    Under review
+                  </Button>
+                )}
+                {canReviewRequest && (
+                <>
                 <Link href={`/tasks/new?requestId=${id}`}>
                   <Button 
                     size="sm"
                     className="h-7 px-2 text-xs"
                     data-testid="button-approve-create-task-mobile"
                   >
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Approve
+                    <ClipboardList className="h-3 w-3 mr-1" />
+                    Create task
                   </Button>
                 </Link>
                 <AlertDialog>
@@ -170,9 +180,28 @@ export function RequestDetailMobile({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                </>
+                )}
               </div>
             )}
           </div>
+          {request.status === "converted_to_task" && (
+            <div className="flex flex-col gap-2 rounded-lg border border-green-500/20 bg-green-500/5 p-3 text-sm text-green-700 dark:text-green-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                <span>Approved and converted to a work order.</span>
+              </div>
+              {linkedTask && (
+                <Link href={`/tasks/${linkedTask.id}`}>
+                  <Button variant="outline" size="sm" className="w-full gap-1.5" data-testid="button-view-linked-task-mobile">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View work order
+                  </Button>
+                </Link>
+              )}
+            </div>
+          )}
+
           <div className="bg-card rounded-lg border p-3">
             <p className="text-sm leading-relaxed" data-testid="text-description">
               {request.description || "No description provided."}
@@ -206,7 +235,7 @@ export function RequestDetailMobile({
                 
                 {property && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Location</span>
+                    <span className="text-muted-foreground">Property</span>
                     <span data-testid="text-property">
                       {property.name}
                       {space && <span className="text-muted-foreground" data-testid="text-space"> / {space.name}</span>}
@@ -267,95 +296,6 @@ export function RequestDetailMobile({
             </div>
           )}
 
-          <div className="bg-card rounded-lg border">
-            <div className="flex items-center justify-between p-3 border-b">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Messages</span>
-              </div>
-              {messages.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {messages.length}
-                </Badge>
-              )}
-            </div>
-            
-            <div className="p-3">
-              {messages.length > 0 ? (
-                <div className="space-y-3 max-h-60 overflow-y-auto mb-3">
-                  {messages.map((message) => {
-                    const isOwn = message.senderId === user?.id;
-                    const sender = users.find(u => u.id === message.senderId);
-                    let senderName = "Unknown User";
-                    if (isOwn) {
-                      senderName = "You";
-                    } else if (sender) {
-                      const fullName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
-                      senderName = fullName || sender.username;
-                    }
-
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
-                        data-testid={`message-${message.id}`}
-                      >
-                        <span className="text-xs font-medium text-muted-foreground mb-0.5" data-testid={`text-sender-${message.id}`}>
-                          {senderName}
-                        </span>
-                        <div
-                          className={`max-w-[85%] rounded-lg px-2.5 py-1.5 ${
-                            isOwn
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          <p className="text-sm leading-relaxed" data-testid={`text-content-${message.id}`}>
-                            {message.content}
-                          </p>
-                        </div>
-                        <span className="text-xs text-muted-foreground mt-0.5">
-                          {message.createdAt &&
-                            new Date(message.createdAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No messages yet
-                </p>
-              )}
-              
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 resize-none min-h-[44px] text-sm"
-                  rows={1}
-                  data-testid="textarea-message"
-                />
-                <Button
-                  onClick={() => {
-                    if (newMessage.trim()) {
-                      sendMessageMutation.mutate(newMessage);
-                    }
-                  }}
-                  disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                  size="icon"
-                  className="shrink-0 h-[44px] w-[44px]"
-                  data-testid="button-send-message"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

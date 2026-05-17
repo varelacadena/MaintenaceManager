@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { FileText, Clock, CheckCircle2, XCircle, TrendingUp, ArrowRightCircle, AlertTriangle, Users } from "lucide-react";
 import KpiCard from "@/components/analytics/KpiCard";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,20 +15,23 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Legend,
-} from "recharts";
+  StatusPieChart,
+  RequestFunnelChart,
+  UrgencyBarChart,
+  ServiceRequestTrendChart,
+  CountBarChart,
+} from "@/components/analytics/AnalyticsCharts";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { hasActiveAnalyticsFilters } from "../analyticsReportUtils";
+import { cn } from "@/lib/utils";
+import {
+  getServiceRequestStatusLabel,
+  getServiceRequestUrgencyLabel,
+  serviceRequestStatusBadgeColors,
+  serviceRequestUrgencyBadgeColors,
+} from "@/lib/serviceRequestLabels";
 
 interface DetailedServiceRequest {
   id: string;
@@ -59,64 +64,60 @@ interface ServiceRequestOverview {
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; submitted: number; converted: number }[];
   topRequesters: { requesterId: string; requesterName: string; count: number }[];
+  byCategory?: { category: string; count: number }[];
+  funnel?: { stage: string; label: string; count: number; avgHoursInStage: number | null }[];
   detailedRequests: DetailedServiceRequest[];
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "hsl(45, 93%, 47%)",
-  under_review: "hsl(221, 83%, 53%)",
-  converted_to_task: "hsl(142, 76%, 36%)",
-  rejected: "hsl(0, 84%, 60%)",
-};
-
-const URGENCY_COLORS: Record<string, string> = {
-  high: "hsl(0, 84%, 60%)",
-  medium: "hsl(45, 93%, 47%)",
-  low: "hsl(142, 76%, 36%)",
-};
-
 export default function ServiceRequestsReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-    spaceId: "",
-  });
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
   const [detailDialog, setDetailDialog] = useState<{ open: boolean; type: string; title: string }>({
     open: false,
     type: "",
     title: "",
   });
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
+  const queryString = buildQueryString();
+  const { handleExport, isExporting } = useAnalyticsExport("service-requests-detailed", () => buildQueryString());
 
-  const { data, isLoading } = useQuery<ServiceRequestOverview>({
-    queryKey: ["/api/analytics/service-requests", filters],
+  const { data: summary, isLoading: summaryLoading, isError, refetch } = useQuery<ServiceRequestOverview>({
+    queryKey: ["/api/analytics/service-requests/summary", filters],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/service-requests?${buildQueryString()}`);
+      const response = await fetch(`/api/analytics/service-requests/summary?${queryString}`);
       if (!response.ok) throw new Error("Failed to fetch service request analytics");
       return response.json();
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=service-requests-detailed&format=${format}&${queryString}`, "_blank");
-  };
+  const { data: details, isLoading: detailsLoading, isError: detailsError, refetch: refetchDetails } = useQuery<ServiceRequestOverview>({
+    queryKey: ["/api/analytics/service-requests", filters, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/service-requests?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch service request details");
+      return response.json();
+    },
+  });
+
+  const data = summary ? { ...summary, detailedRequests: details?.detailedRequests ?? [] } : undefined;
+  const isLoading = summaryLoading;
 
   const openDetailDialog = (type: string, title: string) => {
     setDetailDialog({ open: true, type, title });
   };
+
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -130,51 +131,23 @@ export default function ServiceRequestsReport() {
     );
   }
 
-  const statusData = data?.byStatus?.map(s => ({
-    name: s.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-    value: s.count,
-    color: STATUS_COLORS[s.status] || "#9ca3af",
-  })) || [];
+  const getStatusBadge = (status: string) => (
+    <Badge
+      variant="outline"
+      className={cn("text-xs border-0", serviceRequestStatusBadgeColors[status] ?? "")}
+    >
+      {getServiceRequestStatusLabel(status)}
+    </Badge>
+  );
 
-  const urgencyData = data?.byUrgency?.map(u => ({
-    name: u.urgency.charAt(0).toUpperCase() + u.urgency.slice(1),
-    value: u.count,
-    color: URGENCY_COLORS[u.urgency] || "#9ca3af",
-  })) || [];
-
-  const trendData = data?.monthlyTrend?.map(m => ({
-    month: m.month.split('-')[1],
-    Submitted: m.submitted,
-    Converted: m.converted,
-  })) || [];
-
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { className: string }> = {
-      pending: { className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-      under_review: { className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-      converted_to_task: { className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-      rejected: { className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-    };
-    const config = statusMap[status] || { className: "" };
-    return (
-      <Badge variant="secondary" className={`text-xs sm:text-xs ${config.className}`}>
-        {status.replace(/_/g, " ")}
-      </Badge>
-    );
-  };
-
-  const getUrgencyBadge = (urgency: string) => {
-    const urgencyMap: Record<string, string> = {
-      high: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-      medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    };
-    return (
-      <Badge variant="secondary" className={`text-xs sm:text-xs ${urgencyMap[urgency] || ""}`}>
-        {urgency}
-      </Badge>
-    );
-  };
+  const getUrgencyBadge = (urgency: string) => (
+    <Badge
+      variant="outline"
+      className={cn("text-xs border-0", serviceRequestUrgencyBadgeColors[urgency] ?? "")}
+    >
+      {getServiceRequestUrgencyLabel(urgency)}
+    </Badge>
+  );
 
   return (
     <div className="space-y-3 md:space-y-4">
@@ -182,11 +155,24 @@ export default function ServiceRequestsReport() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         showStatusFilter
+        statusFilterVariant="request"
         showUrgencyFilter
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {data && data.totalRequests === 0 ? (
+        <AnalyticsEmptyState
+          title="No service requests match these filters"
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("all", "All Requests")}>
           <KpiCard
@@ -196,27 +182,27 @@ export default function ServiceRequestsReport() {
             icon={FileText}
           />
         </div>
-        <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("pending", "Pending Requests")}>
+        <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("pending", `${getServiceRequestStatusLabel("pending")} Requests`)}>
           <KpiCard
-            title="Pending"
+            title={getServiceRequestStatusLabel("pending")}
             value={data?.pendingRequests || 0}
             subtitle="Click for details"
             icon={Clock}
             variant="warning"
           />
         </div>
-        <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("converted", "Converted Requests")}>
+        <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("converted", `${getServiceRequestStatusLabel("converted_to_task")} Requests`)}>
           <KpiCard
-            title="Converted"
+            title={getServiceRequestStatusLabel("converted_to_task")}
             value={data?.convertedRequests || 0}
             subtitle="Click for details"
             icon={ArrowRightCircle}
             variant="success"
           />
         </div>
-        <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("rejected", "Rejected Requests")}>
+        <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("rejected", `${getServiceRequestStatusLabel("rejected")} Requests`)}>
           <KpiCard
-            title="Rejected"
+            title={getServiceRequestStatusLabel("rejected")}
             value={data?.rejectedRequests || 0}
             subtitle="Click for details"
             icon={XCircle}
@@ -231,88 +217,47 @@ export default function ServiceRequestsReport() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">By Status</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [value, 'Count']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-2">
-                {statusData.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs">{item.name}</span>
-                    </div>
-                    <span className="font-medium">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {data?.funnel && data.funnel.length > 0 && (
+        <RequestFunnelChart
+          stages={data.funnel.map((s) => ({
+            label: getServiceRequestStatusLabel(s.stage),
+            count: s.count,
+            avgHoursInStage: s.avgHoursInStage,
+          }))}
+        />
+      )}
 
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">By Urgency</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={urgencyData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={50} />
-                <Tooltip />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {urgencyData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Trend</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <ResponsiveContainer width="100%" height={150}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: '10px' }} />
-                <Line type="monotone" dataKey="Submitted" stroke="hsl(221, 83%, 53%)" strokeWidth={2} dot={{ r: 2 }} />
-                <Line type="monotone" dataKey="Converted" stroke="hsl(142, 76%, 36%)" strokeWidth={2} dot={{ r: 2 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {data && (
+          <StatusPieChart
+            data={data.byStatus}
+            title="By status"
+            formatStatusLabel={getServiceRequestStatusLabel}
+          />
+        )}
+        {data && (
+          <UrgencyBarChart
+            data={data.byUrgency}
+            title="By urgency"
+            formatUrgencyLabel={getServiceRequestUrgencyLabel}
+          />
+        )}
       </div>
+
+      {data?.monthlyTrend && data.monthlyTrend.length > 0 && (
+        <ServiceRequestTrendChart data={data.monthlyTrend} />
+      )}
+
+      {data?.byCategory && data.byCategory.length > 0 && (
+        <CountBarChart
+          title="By category"
+          testId="chart-request-category"
+          data={data.byCategory.map((c) => ({
+            name: c.category,
+            value: c.count,
+          }))}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
@@ -443,9 +388,9 @@ export default function ServiceRequestsReport() {
             <DialogTitle>{detailDialog.title}</DialogTitle>
             <DialogDescription>
               {detailDialog.type === "all" && "Complete list of all service requests"}
-              {detailDialog.type === "pending" && "Service requests awaiting review"}
-              {detailDialog.type === "converted" && "Requests converted to work orders"}
-              {detailDialog.type === "rejected" && "Rejected service requests"}
+              {detailDialog.type === "pending" && `Service requests with status: ${getServiceRequestStatusLabel("pending")}`}
+              {detailDialog.type === "converted" && `Requests with status: ${getServiceRequestStatusLabel("converted_to_task")}`}
+              {detailDialog.type === "rejected" && `Requests with status: ${getServiceRequestStatusLabel("rejected")}`}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1">
@@ -484,6 +429,8 @@ export default function ServiceRequestsReport() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }

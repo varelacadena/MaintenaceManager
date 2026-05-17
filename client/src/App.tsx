@@ -30,7 +30,6 @@ const TaskDetail = lazy(() => import("@/pages/TaskDetail"));
 const MobileTaskDetail = lazy(() => import("@/components/MobileTaskDetail"));
 const NewTask = lazy(() => import("@/pages/NewTask"));
 const EditTask = lazy(() => import("@/pages/EditTask"));
-const Messages = lazy(() => import("@/pages/Messages"));
 const Calendar = lazy(() => import("@/pages/Calendar"));
 const Users = lazy(() => import("@/pages/Users"));
 const Credentials = lazy(() => import("@/pages/Credentials"));
@@ -236,11 +235,6 @@ function AuthenticatedApp() {
                   <DomainErrorBoundary domain="Service Requests">
                     <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><NewRequest /></RoleGuard>
                   </DomainErrorBoundary>
-                )} />
-
-                {/* Messaging */}
-                <Route path="/messages" component={() => (
-                  <DomainErrorBoundary domain="Messaging"><Messages /></DomainErrorBoundary>
                 )} />
 
                 {/* Settings */}

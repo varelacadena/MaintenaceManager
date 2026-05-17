@@ -1,18 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { serviceRequestStatusLabels } from "@/lib/constants";
+import {
+  getServiceRequestStatusLabel,
+  getServiceRequestUrgencyLabel,
+} from "@/lib/serviceRequestLabels";
 import type {
   ServiceRequest,
-  Message,
   User as UserType,
   Upload,
   Property,
   Space,
+  Task,
 } from "@shared/schema";
 
 export function useRequestDetail() {
@@ -20,21 +23,19 @@ export function useRequestDetail() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [newMessage, setNewMessage] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const isMobile = useIsMobile();
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [aiTriageLog, setAiTriageLog] = useState<any>(null);
-  const [aiTriageLoading, setAiTriageLoading] = useState(false);
 
-  const { data: request, isLoading } = useQuery<ServiceRequest>({
+  const {
+    data: request,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<ServiceRequest>({
     queryKey: ["/api/service-requests", id],
-  });
-
-  const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages/request", id],
     enabled: !!id,
-    refetchInterval: 5000,
   });
 
   const { data: attachments = [] } = useQuery<Upload[]>({
@@ -42,17 +43,15 @@ export function useRequestDetail() {
     enabled: !!id,
   });
 
-  const markAsReadMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      return await apiRequest("POST", `/api/messages/request/${requestId}/mark-read`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["/api/messages"],
+  const { data: linkedTask } = useQuery<Task | null>({
+    queryKey: ["/api/service-requests", id, "linked-task"],
+    enabled: !!id && request?.status === "converted_to_task",
+    queryFn: async () => {
+      const res = await fetch(`/api/service-requests/${id}/linked-task`, {
+        credentials: "include",
       });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/messages/request", id],
-      });
+      if (!res.ok) throw new Error("Failed to load linked work order");
+      return res.json();
     },
   });
 
@@ -62,16 +61,11 @@ export function useRequestDetail() {
         status: "rejected",
         rejectionReason: reason,
       });
-
-      await apiRequest("POST", "/api/messages", {
-        requestId,
-        content: `Your service request "${request?.title}" has been rejected.\n\nReason: ${reason}`,
-      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
-      toast({ title: "Request rejected and requester notified" });
+      toast({ title: "Request rejected" });
       navigate("/requests");
     },
     onError: () => {
@@ -79,22 +73,21 @@ export function useRequestDetail() {
     },
   });
 
-  const { data: linkedTask } = useQuery({
-    queryKey: ["/api/tasks"],
-    enabled: request?.status === "converted_to_task",
-    select: (tasks: any[]) => tasks.find((t: any) => t.requestId === id),
+  const markUnderReviewMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiRequest("PATCH", `/api/service-requests/${requestId}/status`, {
+        status: "under_review",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
+      toast({ title: "Marked as under review" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
   });
-
-  useEffect(() => {
-    if (id && messages.length > 0) {
-      const hasUnreadMessages = messages.some(
-        (msg) => !msg.read && msg.senderId !== user?.id
-      );
-      if (hasUnreadMessages) {
-        markAsReadMutation.mutate(id);
-      }
-    }
-  }, [id, messages, user?.id]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -104,7 +97,9 @@ export function useRequestDetail() {
     queryKey: ["/api/spaces", request?.propertyId],
     enabled: !!request?.propertyId,
     queryFn: async () => {
-      const response = await fetch(`/api/spaces?propertyId=${request?.propertyId}`, { credentials: "include" });
+      const response = await fetch(`/api/spaces?propertyId=${request?.propertyId}`, {
+        credentials: "include",
+      });
       return response.json();
     },
   });
@@ -113,51 +108,14 @@ export function useRequestDetail() {
     queryKey: ["/api/users"],
   });
 
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", "/api/messages", { requestId: id, content });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/request", id] });
-      setNewMessage("");
-      toast({ title: "Message sent" });
-    },
-  });
+  const requester = request ? users.find((u) => u.id === request.requesterId) : undefined;
+  const property = request ? properties.find((p) => p.id === request.propertyId) : undefined;
+  const space = request ? allSpaces.find((s) => s.id === request.spaceId) : undefined;
 
-  const handleRunAiTriage = async () => {
-    if (!id) return;
-    setAiTriageLoading(true);
-    try {
-      const res = await apiRequest("POST", `/api/ai/triage/${id}`, {});
-      const log = await res.json();
-      setAiTriageLog(log);
-      toast({ title: "AI triage complete", description: "Review the suggestion below." });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "AI analysis could not be completed. Please try again.";
-      toast({ title: "AI triage failed", description: message, variant: "destructive" });
-    } finally {
-      setAiTriageLoading(false);
-    }
-  };
-
-  const handleReviewAiLog = async (status: "approved" | "rejected") => {
-    if (!aiTriageLog) return;
-    try {
-      await apiRequest("PATCH", `/api/ai-logs/${aiTriageLog.id}`, { status });
-      setAiTriageLog({ ...aiTriageLog, status });
-      toast({ title: status === "approved" ? "Triage suggestion accepted" : "Triage suggestion rejected" });
-      queryClient.invalidateQueries({ queryKey: ["/api/ai-logs"] });
-    } catch {
-      toast({ title: "Failed to update suggestion", variant: "destructive" });
-    }
-  };
-
-  const requester = request ? users.find(u => u.id === request.requesterId) : undefined;
-  const property = request ? properties.find(p => p.id === request.propertyId) : undefined;
-  const space = request ? allSpaces.find(s => s.id === request.spaceId) : undefined;
-
-  const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
-  const canTakeAction = isTechnicianOrAdmin && request?.status === "pending";
+  const isAdmin = user?.role === "admin";
+  const canReviewRequest =
+    isAdmin && (request?.status === "pending" || request?.status === "under_review");
+  const canMarkUnderReview = isAdmin && request?.status === "pending";
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -174,9 +132,7 @@ export function useRequestDetail() {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    return serviceRequestStatusLabels[status] || status.replace("_", " ");
-  };
+  const getStatusLabel = (status: string) => getServiceRequestStatusLabel(status);
 
   const getPriorityColor = (urgency: string) => {
     switch (urgency) {
@@ -191,6 +147,8 @@ export function useRequestDetail() {
     }
   };
 
+  const getUrgencyLabel = (urgency: string) => getServiceRequestUrgencyLabel(urgency);
+
   return {
     id,
     user,
@@ -199,28 +157,28 @@ export function useRequestDetail() {
     isMobile,
     request,
     isLoading,
-    messages,
+    isError,
+    error,
+    refetch,
     attachments,
     linkedTask,
     properties,
     users,
-    newMessage, setNewMessage,
-    rejectionReason, setRejectionReason,
-    detailsOpen, setDetailsOpen,
-    aiTriageLog,
-    aiTriageLoading,
+    rejectionReason,
+    setRejectionReason,
+    detailsOpen,
+    setDetailsOpen,
     rejectRequestMutation,
-    sendMessageMutation,
-    handleRunAiTriage,
-    handleReviewAiLog,
+    markUnderReviewMutation,
     requester,
     property,
     space,
-    isTechnicianOrAdmin,
-    canTakeAction,
+    canReviewRequest,
+    canMarkUnderReview,
     getStatusVariant,
     getStatusLabel,
     getPriorityColor,
+    getUrgencyLabel,
   };
 }
 

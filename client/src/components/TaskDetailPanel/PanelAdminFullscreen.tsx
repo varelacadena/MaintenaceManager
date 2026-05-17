@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -13,11 +12,9 @@ import {
   FileText,
   Image as ImageIcon,
   Video,
-  MessageSquare,
   Package,
   StickyNote,
   CheckCircle2,
-  Send,
   Plus,
   MoreVertical,
   Building2,
@@ -45,11 +42,10 @@ interface PanelAdminFullscreenProps {
 
 export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAdminFullscreenProps) {
   const {
-    isMobile, task, subtasks, uploads, taskMessages, taskParts, taskNotes,
+    isMobile, task, subtasks, uploads, taskParts, taskNotes,
     timeEntries, totalMinutes, statusPill, statusDot, statusLabel,
     urg, isOverdue, property, assignee, assigneeInitials, assigneeName,
     completedSubtasks, totalSubtasks,
-    newMessageText, setNewMessageText, sendMessageMutation,
     editingNoteId, setEditingNoteId, editNoteContent, setEditNoteContent,
     updateNoteMutation, setDeleteNoteId, setIsAddNoteDialogOpen,
     setIsEditMode, setDeleteDialogOpen,
@@ -222,58 +218,6 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                 })}
               </div>
             )}
-          </div>
-
-          <div className={`${isMobile ? "px-5 py-4" : "px-8 py-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
-              Messages ({taskMessages.length})
-            </p>
-            {taskMessages.length === 0 ? (
-              <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No messages yet</p>
-            ) : (
-              <div className="space-y-4 mb-4">
-                {taskMessages.map((msg) => {
-                  const sender = allUsers?.find(u => u.id === msg.senderId);
-                  return (
-                    <div key={msg.id} data-testid={`panel-message-${msg.id}`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                          {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
-                        </span>
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                          {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-relaxed" style={{ color: "#374151" }}>{msg.content}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex gap-2" style={{ borderTop: "1px solid #EEEEEE", paddingTop: "12px" }}>
-              <Input
-                value={newMessageText}
-                onChange={(e) => setNewMessageText(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && newMessageText.trim()) {
-                    e.preventDefault();
-                    sendMessageMutation.mutate(newMessageText.trim());
-                  }
-                }}
-                data-testid="input-panel-message"
-              />
-              <Button
-                size="icon"
-                style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                onClick={() => newMessageText.trim() && sendMessageMutation.mutate(newMessageText.trim())}
-                disabled={!newMessageText.trim() || sendMessageMutation.isPending}
-                data-testid="button-panel-send-message"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
 
           <div className={`${isMobile ? "px-5 py-4" : "px-8 py-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>

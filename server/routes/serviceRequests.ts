@@ -7,20 +7,41 @@ import { notificationService, notifyNewServiceRequest } from "../notifications";
 import { insertServiceRequestSchema } from "@shared/schema";
 import { z } from "zod";
 
+const requestStatusSchema = z.enum([
+  "pending",
+  "under_review",
+  "converted_to_task",
+  "rejected",
+]);
+
+const requesterPatchSchema = insertServiceRequestSchema
+  .partial()
+  .pick({
+    title: true,
+    description: true,
+    urgency: true,
+    propertyId: true,
+    spaceId: true,
+    areaId: true,
+    subdivisionId: true,
+    category: true,
+    requestedDate: true,
+  });
+
 export function registerServiceRequestRoutes(app: Express) {
   app.get("/api/service-requests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
 
-      let filters: any = {};
+      let filters: { userId?: string; status?: string; limit?: number } = {};
 
       if (currentUser?.role === "staff" || currentUser?.role === "technician" || currentUser?.role === "student") {
         filters.userId = userId;
       }
 
       if (req.query.status) {
-        filters.status = req.query.status;
+        filters.status = String(req.query.status);
       }
 
       const requests = await storage.getServiceRequests(filters);
@@ -54,6 +75,31 @@ export function registerServiceRequestRoutes(app: Express) {
     }
   );
 
+  app.get(
+    "/api/service-requests/:id/linked-task",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.userId;
+        const currentUser = await storage.getUser(userId);
+        const request = await storage.getServiceRequest(req.params.id);
+
+        if (!request) {
+          return res.status(404).json({ message: "Request not found" });
+        }
+
+        if (["staff", "technician", "student"].includes(currentUser?.role ?? "") && request.requesterId !== userId) {
+          return res.status(403).json({ message: "Forbidden: Cannot view this request" });
+        }
+
+        const task = await storage.getTaskByRequestId(req.params.id);
+        res.json(task ?? null);
+      } catch (error) {
+        handleRouteError(res, error, "Failed to fetch linked task");
+      }
+    }
+  );
+
   app.post("/api/service-requests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
@@ -62,6 +108,14 @@ export function registerServiceRequestRoutes(app: Express) {
         requesterId: userId,
         requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : undefined,
       });
+
+      if (requestData.propertyId) {
+        const property = await storage.getProperty(requestData.propertyId);
+        if (!property) {
+          return res.status(400).json({ message: "Invalid property" });
+        }
+      }
+
       const request = await storage.createServiceRequest(requestData);
 
       const requester = await storage.getUser(userId);
@@ -92,7 +146,18 @@ export function registerServiceRequestRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden: Cannot edit this request" });
       }
 
-      const validated = insertServiceRequestSchema.partial().parse(req.body);
+      const validated =
+        currentUser?.role === "admin"
+          ? insertServiceRequestSchema.partial().parse(req.body)
+          : requesterPatchSchema.parse(req.body);
+
+      if (validated.propertyId) {
+        const property = await storage.getProperty(validated.propertyId);
+        if (!property) {
+          return res.status(400).json({ message: "Invalid property" });
+        }
+      }
+
       const updatedRequest = await storage.updateServiceRequest(req.params.id, validated);
       res.json(updatedRequest);
     } catch (error) {
@@ -132,7 +197,7 @@ export function registerServiceRequestRoutes(app: Express) {
     async (req, res) => {
       try {
         const reqStatusSchema = z.object({
-          status: z.string().min(1),
+          status: requestStatusSchema,
           rejectionReason: z.string().optional(),
         });
         const { status, rejectionReason } = reqStatusSchema.parse(req.body);

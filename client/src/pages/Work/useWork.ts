@@ -92,26 +92,17 @@ export function useWork() {
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({
-      taskId, newStatus, onHoldReason, requestId, taskName,
+      taskId, newStatus, onHoldReason,
     }: {
       taskId: string;
       newStatus: StatusType;
       onHoldReason?: string;
-      requestId?: string | null;
-      taskName?: string;
     }) => {
       const updateData: any = { status: newStatus };
       if (newStatus === "on_hold" && onHoldReason) {
         updateData.onHoldReason = onHoldReason;
       }
-      const response = await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
-      if (newStatus === "on_hold" && onHoldReason && requestId) {
-        await apiRequest("POST", "/api/messages", {
-          requestId,
-          content: `Your task "${taskName}" has been placed on hold.\n\nReason: ${onHoldReason}`,
-        });
-      }
-      return response;
+      return await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
     },
     onSuccess: () => {
       setIsHoldReasonDialogOpen(false);
@@ -122,7 +113,6 @@ export function useWork() {
     onSettled: () => {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       }, 300);
     },
     onError: async (error: any) => {
@@ -189,8 +179,6 @@ export function useWork() {
         taskId: pendingStatusChange.taskId,
         newStatus: pendingStatusChange.newStatus,
         onHoldReason: holdReason,
-        requestId: pendingStatusChange.task.requestId,
-        taskName: pendingStatusChange.task.name,
       });
     }
   };

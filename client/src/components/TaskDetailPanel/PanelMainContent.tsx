@@ -1,7 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Clock, ChevronRight, ChevronDown, MessageSquare, Flag, Calendar, User as UserIcon, CheckCircle2, Send } from "lucide-react";
+import { MapPin, Clock, ChevronRight, ChevronDown, Flag, Calendar, User as UserIcon, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import type { User } from "@shared/schema";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
@@ -21,19 +19,18 @@ interface PanelMainContentProps {
 
 export function PanelMainContent({ ctx, isFullscreen, allUsers, taskId }: PanelMainContentProps) {
   const {
-    isMobile, task, subtasks, uploads, taskMessages, taskParts, inventoryItems,
+    isMobile, task, subtasks, uploads, taskParts, inventoryItems,
     timeEntries, taskNotes, totalMinutes, docCount, imgCount, vidCount,
     expandedSubtasks, resourcesExpanded, setResourcesExpanded,
-    isMessagesOpen, setIsMessagesOpen, isPartsOpen, setIsPartsOpen,
-    isHistoryOpen, setIsHistoryOpen, newMessageText, setNewMessageText,
-    messagesEndRef, isAddPartFormOpen, setIsAddPartFormOpen,
+    isPartsOpen, setIsPartsOpen, isHistoryOpen, setIsHistoryOpen,
+    isAddPartFormOpen, setIsAddPartFormOpen,
     newPartQuantity, setNewPartQuantity, newPartNotes, setNewPartNotes,
     inventorySearchQuery, setInventorySearchQuery, selectedInventoryItemId,
     setSelectedInventoryItemId, isNotesOpen, setIsNotesOpen,
     setIsAddNoteDialogOpen, editingNoteId, setEditingNoteId,
     editNoteContent, setEditNoteContent, setDeleteNoteId,
     setEditingTimeEntryId, setEditTimeDuration, setDeleteTimeEntryId,
-    sendMessageMutation, addPartMutation, updateNoteMutation,
+    addPartMutation, updateNoteMutation,
     property, assignee, assigneeInitials, assigneeName,
     completedSubtasks, totalSubtasks, allSubtasksComplete,
     isStarted, isCompleted, isNotStarted, urg, isOverdue,
@@ -156,94 +153,6 @@ export function PanelMainContent({ ctx, isFullscreen, allUsers, taskId }: PanelM
           Task completed · All subtasks done · evidence captured
         </div>
       )}
-
-      <div style={{ borderBottom: "1px solid #EEEEEE" }}>
-        <button
-          className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium transition-colors"
-          style={{ color: "#1A1A1A" }}
-          onClick={() => setIsMessagesOpen(!isMessagesOpen)}
-          data-testid="link-panel-messages"
-        >
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" style={{ color: "#6B7280" }} />
-            Messages
-            {taskMessages.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#EEF2FF", color: "#4338CA" }}>
-                {taskMessages.length}
-              </span>
-            )}
-          </div>
-          {isMessagesOpen ? (
-            <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-          ) : (
-            <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-          )}
-        </button>
-        {isMessagesOpen && (
-          <div className="px-5 pb-4">
-            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #EEEEEE" }}>
-              <div className="overflow-y-auto space-y-3 p-3" style={{ maxHeight: "250px" }}>
-                {taskMessages.length === 0 ? (
-                  <p className="text-xs text-center py-4" style={{ color: "#9CA3AF" }}>No messages yet</p>
-                ) : (
-                  taskMessages.map((msg) => {
-                    const sender = allUsers?.find(u => u.id === msg.senderId);
-                    const isOwnMessage = msg.senderId === user?.id;
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}
-                        data-testid={`panel-message-${msg.id}`}
-                      >
-                        <p className="text-xs font-medium mb-0.5" style={{ color: "#6B7280" }}>
-                          {sender ? `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.username : "Unknown"}
-                        </p>
-                        <div
-                          className="rounded-xl px-3 py-2 max-w-[80%]"
-                          style={{
-                            backgroundColor: isOwnMessage ? "#4338CA" : "#F3F4F6",
-                            color: isOwnMessage ? "#FFFFFF" : "#1A1A1A",
-                          }}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        </div>
-                        <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
-                          {msg.createdAt ? format(new Date(msg.createdAt), "MMM d, h:mm a") : ""}
-                        </p>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-              <div className="flex gap-2 p-2" style={{ borderTop: "1px solid #EEEEEE" }}>
-                <Input
-                  value={newMessageText}
-                  onChange={(e) => setNewMessageText(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey && newMessageText.trim()) {
-                      e.preventDefault();
-                      sendMessageMutation.mutate(newMessageText.trim());
-                    }
-                  }}
-                  data-testid="input-panel-message"
-                />
-                <Button
-                  size="icon"
-                  style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                  onClick={() => newMessageText.trim() && sendMessageMutation.mutate(newMessageText.trim())}
-                  disabled={!newMessageText.trim() || sendMessageMutation.isPending}
-                  data-testid="button-panel-send-message"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       <PanelPartsSection
         isPartsOpen={isPartsOpen}

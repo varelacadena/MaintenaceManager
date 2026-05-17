@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Car, Search } from "lucide-react";
+import { Plus, Car, Search, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VehicleReservationsContent } from "@/pages/VehicleReservations";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import CodeHub from "@/components/CodeHub";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { toDisplayUrl } from "@/lib/imageUtils";
 
 const statusColors = {
   available: "default",
@@ -50,6 +52,8 @@ function FleetContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
+  const vehicleImageObjectPathRef = useRef("");
   const { toast } = useToast();
 
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
@@ -70,6 +74,7 @@ function FleetContent() {
       currentMileage: 0,
       fuelType: "gasoline",
       passengerCapacity: 5,
+      imageUrl: "",
     },
   });
 
@@ -342,6 +347,95 @@ function FleetContent() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="imageUrl"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Vehicle Photo (optional)</FormLabel>
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2">
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10 * 1024 * 1024}
+                                accept="image/*"
+                                isLoading={isUploadingVehicleImage}
+                                buttonVariant="outline"
+                                buttonTestId="button-upload-vehicle-photo"
+                                onGetUploadParameters={async () => {
+                                  setIsUploadingVehicleImage(true);
+                                  const response = await fetch("/api/objects/upload", {
+                                    method: "POST",
+                                    credentials: "include",
+                                  });
+                                  if (!response.ok) {
+                                    throw new Error("Failed to get upload URL");
+                                  }
+                                  const data = await response.json();
+                                  vehicleImageObjectPathRef.current = data.objectPath || "";
+                                  return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+                                }}
+                                onComplete={(result) => {
+                                  setIsUploadingVehicleImage(false);
+                                  const uploadedFile = result?.successful?.[0];
+                                  if (!uploadedFile) {
+                                    if (result?.failed?.length) {
+                                      toast({
+                                        title: "Upload failed",
+                                        description: result.failed[0].error || "Could not upload image",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                    return;
+                                  }
+                                  const objectPath = vehicleImageObjectPathRef.current || uploadedFile.objectPath || uploadedFile.objectUrl;
+                                  const displayUrl = objectPath
+                                    ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
+                                    : uploadedFile.objectUrl;
+                                  form.setValue("imageUrl", displayUrl, { shouldValidate: true, shouldDirty: true });
+                                  toast({ title: "Image uploaded", description: "Vehicle photo is ready to save" });
+                                }}
+                                onError={(error) => {
+                                  setIsUploadingVehicleImage(false);
+                                  toast({
+                                    title: "Upload failed",
+                                    description: error.message || "Could not upload image",
+                                    variant: "destructive",
+                                  });
+                                }}
+                              >
+                                <ImagePlus className="mr-2 h-4 w-4" />
+                                {isUploadingVehicleImage ? "Uploading..." : "Upload Photo"}
+                              </ObjectUploader>
+                              {field.value ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => form.setValue("imageUrl", "", { shouldValidate: true, shouldDirty: true })}
+                                  data-testid="button-clear-vehicle-photo"
+                                >
+                                  <X className="mr-1 h-4 w-4" />
+                                  Remove
+                                </Button>
+                              ) : null}
+                            </div>
+                            {field.value ? (
+                              <div className="h-40 w-full overflow-hidden rounded-md border bg-muted/20">
+                                <img
+                                  src={toDisplayUrl(field.value)}
+                                  alt="Vehicle preview"
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No image selected.</p>
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   <DialogFooter>
                     <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-vehicle">
@@ -398,33 +492,50 @@ function FleetContent() {
           ))}
         </div>
       ) : filteredVehicles && filteredVehicles.length > 0 ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filteredVehicles.map((vehicle) => (
             <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`}>
-              <Card className="hover-elevate cursor-pointer" data-testid={`card-vehicle-${vehicle.id}`}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-semibold">
+              <Card className="hover-elevate cursor-pointer overflow-hidden" data-testid={`card-vehicle-${vehicle.id}`}>
+                <div className="h-24 w-full bg-muted/20">
+                  {vehicle.imageUrl ? (
+                    <img
+                      src={toDisplayUrl(vehicle.imageUrl)}
+                      alt={`${vehicle.make} ${vehicle.model}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-1">
+                        <Car className="h-5 w-5" />
+                        <span className="text-xs">No Photo</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5">
+                  <CardTitle className="text-sm font-semibold leading-tight">
                     {vehicle.make} {vehicle.model}
                   </CardTitle>
-                  <Car className="h-5 w-5 text-muted-foreground" />
+                  <Car className="h-3.5 w-3.5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
+                <CardContent className="pb-2.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">ID:</span>
-                      <span className="text-sm font-medium" data-testid={`text-vehicle-id-${vehicle.id}`}>{vehicle.vehicleId}</span>
+                      <span className="text-xs text-muted-foreground">ID:</span>
+                      <span className="text-[11px] font-medium" data-testid={`text-vehicle-id-${vehicle.id}`}>{vehicle.vehicleId}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Year:</span>
-                      <span className="text-sm">{vehicle.year}</span>
+                      <span className="text-[11px] text-muted-foreground">Year:</span>
+                      <span className="text-[11px]">{vehicle.year}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Mileage:</span>
-                      <span className="text-sm">{vehicle.currentMileage?.toLocaleString()} mi</span>
+                      <span className="text-[11px] text-muted-foreground">Mileage:</span>
+                      <span className="text-[11px]">{vehicle.currentMileage?.toLocaleString()} mi</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Status:</span>
-                      <Badge variant={statusColors[vehicle.status]} data-testid={`badge-status-${vehicle.id}`}>
+                      <span className="text-[11px] text-muted-foreground">Status:</span>
+                      <Badge className="h-5 px-1.5 text-[10px]" variant={statusColors[vehicle.status]} data-testid={`badge-status-${vehicle.id}`}>
                         {vehicle.status.replace(/_/g, " ")}
                       </Badge>
                     </div>

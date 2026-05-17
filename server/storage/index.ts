@@ -17,8 +17,6 @@ import type {
   InsertTimeEntry,
   PartUsed,
   InsertPartUsed,
-  Message,
-  InsertMessage,
   Upload,
   InsertUpload,
   TaskNote,
@@ -161,7 +159,8 @@ export interface IStorage {
   createSubdivision(subdivision: InsertSubdivision): Promise<Subdivision>;
   deleteSubdivision(id: string): Promise<void>;
 
-  getServiceRequests(filters?: { userId?: string; status?: string }): Promise<ServiceRequest[]>;
+  getServiceRequests(filters?: { userId?: string; status?: string; limit?: number }): Promise<ServiceRequest[]>;
+  countServiceRequests(filters?: { userId?: string; statuses?: string[] }): Promise<number>;
   getServiceRequest(id: string): Promise<ServiceRequest | undefined>;
   createServiceRequest(request: InsertServiceRequest): Promise<ServiceRequest>;
   updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined>;
@@ -177,6 +176,7 @@ export interface IStorage {
     assignedToIdOrPool?: { userId: string; pool: string };
   }): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
+  getTaskByRequestId(requestId: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<void>;
@@ -196,14 +196,6 @@ export interface IStorage {
   createPartUsed(part: InsertPartUsed): Promise<PartUsed>;
   deletePartUsed(id: string): Promise<void>;
   getPartsByTask(taskId: string): Promise<PartUsed[]>;
-
-  createMessage(message: InsertMessage): Promise<Message>;
-  getMessagesByRequest(requestId: string): Promise<Message[]>;
-  getMessagesByTask(taskId: string): Promise<Message[]>;
-  getMessages(): Promise<Message[]>;
-  deleteMessage(id: string): Promise<void>;
-  markMessagesAsRead(requestId: string, userId: string): Promise<void>;
-  markTaskMessagesAsRead(taskId: string, userId: string): Promise<void>;
 
   createTaskNote(note: InsertTaskNote): Promise<TaskNote>;
   getTaskNote(id: string): Promise<TaskNote | undefined>;
@@ -540,6 +532,7 @@ export class DatabaseStorage implements IStorage {
   assignRandomCode = facilityStorage.assignRandomCode;
 
   getServiceRequests = serviceRequestStorage.getServiceRequests;
+  countServiceRequests = serviceRequestStorage.countServiceRequests;
   getServiceRequest = serviceRequestStorage.getServiceRequest;
   createServiceRequest = serviceRequestStorage.createServiceRequest;
   updateServiceRequest = serviceRequestStorage.updateServiceRequest;
@@ -548,6 +541,7 @@ export class DatabaseStorage implements IStorage {
 
   getTasks = workOrderStorage.getTasks;
   getTask = workOrderStorage.getTask;
+  getTaskByRequestId = workOrderStorage.getTaskByRequestId;
   createTask = workOrderStorage.createTask;
   updateTask = workOrderStorage.updateTask;
   deleteTask = workOrderStorage.deleteTask;
@@ -636,13 +630,6 @@ export class DatabaseStorage implements IStorage {
   getExpiringDocuments = vehicleStorage.getExpiringDocuments;
   markDocumentReminderSent = vehicleStorage.markDocumentReminderSent;
 
-  createMessage = messagingStorage.createMessage;
-  getMessagesByRequest = messagingStorage.getMessagesByRequest;
-  getMessagesByTask = messagingStorage.getMessagesByTask;
-  getMessages = messagingStorage.getMessages;
-  deleteMessage = messagingStorage.deleteMessage;
-  markMessagesAsRead = messagingStorage.markMessagesAsRead;
-  markTaskMessagesAsRead = messagingStorage.markTaskMessagesAsRead;
   getNotifications = messagingStorage.getNotifications;
   getUnreadNotificationCount = messagingStorage.getUnreadNotificationCount;
   hasNotificationForRelatedItem = messagingStorage.hasNotificationForRelatedItem;

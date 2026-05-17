@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getServiceRequestStatusLabel } from "@/lib/serviceRequestLabels";
 import TaskCard from "@/components/dashboard/TaskCard";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import EmptyState from "@/components/dashboard/EmptyState";
@@ -325,7 +326,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <Badge variant="outline" className="text-xs capitalize">
-                        {request.status?.replace("_", " ")}
+                        {getServiceRequestStatusLabel(request.status ?? "")}
                       </Badge>
                     </div>
                   </Link>

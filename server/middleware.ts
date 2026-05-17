@@ -66,12 +66,11 @@ export async function canAccessRequest(userId: string, requestId: string, requir
   const request = await storage.getServiceRequest(requestId);
   if (!request) return false;
 
-  // Staff can only access their own requests
-  if (user.role === "staff") {
+  // Submitters can only access their own requests
+  if (["staff", "technician", "student"].includes(user.role)) {
     return request.requesterId === userId;
   }
 
-  // Technicians and students cannot access service requests
   return false;
 }
 

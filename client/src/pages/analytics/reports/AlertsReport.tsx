@@ -1,8 +1,11 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AlertTriangle, Clock, Settings, Building2, Bell, Shield, TrendingUp } from "lucide-react";
-import AnalyticsFilters, { FilterState } from "@/components/analytics/AnalyticsFilters";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
 import { WeeklyTrendChart } from "@/components/analytics/AnalyticsCharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,26 +33,17 @@ interface TrendData {
 }
 
 export default function AlertsReport() {
-  const [filters, setFilters] = useState<FilterState>({
-    startDate: "",
-    endDate: "",
-    propertyId: "",
-    areaId: "",
-    technicianId: "",
-    status: "",
-    urgency: "",
-    spaceId: "",
-  });
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = Boolean(
+    filters.startDate ||
+      filters.endDate ||
+      filters.propertyId ||
+      filters.spaceId ||
+      filters.areaId,
+  );
+  const { handleExport, isExporting } = useAnalyticsExport("alerts", () => buildQueryString());
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
-    return params.toString();
-  };
-
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
+  const { data: alerts = [], isLoading: alertsLoading, isError: alertsError, refetch: refetchAlerts } = useQuery<Alert[]>({
     queryKey: ["/api/analytics/alerts", filters],
     queryFn: async () => {
       const response = await fetch(`/api/analytics/alerts?${buildQueryString()}`);
@@ -58,7 +52,7 @@ export default function AlertsReport() {
     },
   });
 
-  const { data: trends = [], isLoading: trendsLoading } = useQuery<TrendData[]>({
+  const { data: trends = [], isLoading: trendsLoading, isError: trendsError, refetch: refetchTrends } = useQuery<TrendData[]>({
     queryKey: ["/api/analytics/trends", filters],
     queryFn: async () => {
       const response = await fetch(`/api/analytics/trends?${buildQueryString()}`);
@@ -67,14 +61,10 @@ export default function AlertsReport() {
     },
   });
 
-  const handleExport = (format: string) => {
-    const queryString = buildQueryString();
-    window.open(`/api/analytics/export?type=alerts&format=${format}&${queryString}`, "_blank");
-  };
-
   const highSeverityAlerts = alerts.filter(a => a.severity === "high");
   const overdueAlerts = alerts.filter(a => a.type === "overdue");
   const slaBreaches = alerts.filter(a => a.type === "sla_breach");
+  const recurringIssues = alerts.filter(a => a.type === "recurring_issue");
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
@@ -131,6 +121,20 @@ export default function AlertsReport() {
   };
 
   const isLoading = alertsLoading || trendsLoading;
+  const isError = alertsError;
+
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetchAlerts()}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -150,9 +154,27 @@ export default function AlertsReport() {
         filters={filters}
         onFilterChange={setFilters}
         onExport={handleExport}
+        exportLoading={isExporting}
         exportOptions={["pdf", "xlsx"]}
       />
 
+      {trendsError && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          <p>Weekly trend chart could not be loaded.</p>
+          <button type="button" className="text-primary underline mt-1 text-xs" onClick={() => void refetchTrends()}>
+            Retry trends
+          </button>
+        </div>
+      )}
+
+      {alerts.length === 0 ? (
+        <AnalyticsEmptyState
+          title="No alerts for these filters"
+          description="No overdue work, SLA risks, high-failure assets, or recurring hotspots in the current scope."
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card data-testid="card-total-alerts">
           <CardContent className="p-4">
@@ -162,7 +184,10 @@ export default function AlertsReport() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{alerts.length}</p>
-                <p className="text-xs text-muted-foreground">Total Alerts</p>
+                <p className="text-xs text-muted-foreground">
+                  Total Alerts
+                  {recurringIssues.length > 0 && ` · ${recurringIssues.length} recurring`}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -319,6 +344,8 @@ export default function AlertsReport() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }

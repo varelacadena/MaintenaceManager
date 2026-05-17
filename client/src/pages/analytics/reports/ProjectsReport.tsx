@@ -19,9 +19,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import {
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   BarChart,
@@ -29,9 +26,41 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Legend,
 } from "recharts";
-import type { Project } from "@shared/schema";
+import AnalyticsFilters from "@/components/analytics/AnalyticsFilters";
+import AnalyticsEmptyState from "@/components/analytics/AnalyticsEmptyState";
+import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import AnalyticsDetailFetchBanner from "@/components/analytics/AnalyticsDetailFetchBanner";
+import { StatusPieChart, CountBarChart } from "@/components/analytics/AnalyticsCharts";
+import { useAnalyticsFilters } from "../useAnalyticsFilters";
+import { useAnalyticsExport } from "../useAnalyticsExport";
+import { hasActiveAnalyticsFilters } from "../analyticsReportUtils";
+
+interface ProjectsOverview {
+  totalProjects: number;
+  completedProjects: number;
+  inProgressProjects: number;
+  onHoldProjects: number;
+  planningProjects: number;
+  cancelledProjects: number;
+  completionRate: number;
+  totalBudget: number;
+  criticalOpen: number;
+  highOpen: number;
+  byStatus: { status: string; count: number }[];
+  byPriority: { priority: string; count: number }[];
+  budgetByStatus: { status: string; budget: number }[];
+  projects: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    propertyName: string;
+    targetEndDate: string | null;
+    budgetAmount: number;
+  }[];
+}
 
 const STATUS_COLORS: Record<string, string> = {
   completed: "#22c55e",
@@ -63,11 +92,47 @@ function formatDate(date: string | Date | null | undefined): string {
 }
 
 export default function ProjectsReport() {
-  const { data: projects, isLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
+  const { filters, setFilters, buildQueryString, clearFilters } = useAnalyticsFilters();
+  const hasActiveFilters = hasActiveAnalyticsFilters(filters);
+  const { handleExport, isExporting } = useAnalyticsExport("projects", () => buildQueryString());
+
+  const queryString = buildQueryString();
+
+  const { data: summary, isLoading: summaryLoading, isError, refetch } = useQuery<ProjectsOverview>({
+    queryKey: ["/api/analytics/projects/summary", filters],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/projects/summary?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch project analytics");
+      return response.json();
+    },
   });
 
-  if (isLoading) {
+  const { data: details, isError: detailsError, refetch: refetchDetails } = useQuery<ProjectsOverview>({
+    queryKey: ["/api/analytics/projects", filters, "details"],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/projects?${queryString}`);
+      if (!response.ok) throw new Error("Failed to fetch project details");
+      return response.json();
+    },
+  });
+
+  const data = summary ? { ...summary, projects: details?.projects ?? [] } : undefined;
+  const isLoading = summaryLoading;
+
+  if (isError) {
+    return (
+      <AnalyticsReportError
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        exportOptions={["pdf", "xlsx"]}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
+  if (isLoading || !data) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -83,51 +148,61 @@ export default function ProjectsReport() {
     );
   }
 
-  const projectList = projects || [];
-
   const stats = {
-    total: projectList.length,
-    completed: projectList.filter(p => p.status === "completed").length,
-    inProgress: projectList.filter(p => p.status === "in_progress").length,
-    onHold: projectList.filter(p => p.status === "on_hold").length,
-    planning: projectList.filter(p => p.status === "planning").length,
-    cancelled: projectList.filter(p => p.status === "cancelled").length,
-    totalBudget: projectList.reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0),
-    critical: projectList.filter(p => p.priority === "critical" && p.status !== "completed").length,
-    high: projectList.filter(p => p.priority === "high" && p.status !== "completed").length,
+    total: data.totalProjects,
+    completed: data.completedProjects,
+    inProgress: data.inProgressProjects,
+    onHold: data.onHoldProjects,
+    planning: data.planningProjects,
+    cancelled: data.cancelledProjects,
+    totalBudget: data.totalBudget,
+    critical: data.criticalOpen,
+    high: data.highOpen,
   };
 
-  const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+  const completionRate = data.completionRate;
 
-  const statusData = [
-    { name: "Completed", value: stats.completed, color: STATUS_COLORS.completed },
-    { name: "In Progress", value: stats.inProgress, color: STATUS_COLORS.in_progress },
-    { name: "On Hold", value: stats.onHold, color: STATUS_COLORS.on_hold },
-    { name: "Planning", value: stats.planning, color: STATUS_COLORS.planning },
-    { name: "Cancelled", value: stats.cancelled, color: STATUS_COLORS.cancelled },
-  ].filter(d => d.value > 0);
+  const statusLabel = (status: string) =>
+    status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
-  const priorityData = [
-    { name: "Critical", value: projectList.filter(p => p.priority === "critical").length, color: PRIORITY_COLORS.critical },
-    { name: "High", value: projectList.filter(p => p.priority === "high").length, color: PRIORITY_COLORS.high },
-    { name: "Medium", value: projectList.filter(p => p.priority === "medium").length, color: PRIORITY_COLORS.medium },
-    { name: "Low", value: projectList.filter(p => p.priority === "low").length, color: PRIORITY_COLORS.low },
-  ].filter(d => d.value > 0);
+  const budgetByStatus = data.budgetByStatus.map((b) => ({
+    status: statusLabel(b.status),
+    budget: b.budget,
+  }));
 
-  const budgetByStatus = [
-    { status: "Planning", budget: projectList.filter(p => p.status === "planning").reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0) },
-    { status: "In Progress", budget: projectList.filter(p => p.status === "in_progress").reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0) },
-    { status: "On Hold", budget: projectList.filter(p => p.status === "on_hold").reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0) },
-    { status: "Completed", budget: projectList.filter(p => p.status === "completed").reduce((sum, p) => sum + (Number(p.budgetAmount) || 0), 0) },
-  ];
-
-  const activeProjects = projectList.filter(p => p.status === "in_progress" || p.status === "planning");
+  const activeProjects = data.projects.filter(
+    (p) => p.status === "in_progress" || p.status === "planning",
+  );
 
   return (
     <div className="space-y-3 md:space-y-4">
+      <AnalyticsFilters
+        filters={filters}
+        onFilterChange={setFilters}
+        onExport={handleExport}
+        exportLoading={isExporting}
+        showStatusFilter
+        statusFilterVariant="project"
+        showUrgencyFilter
+        urgencyFilterVariant="project"
+        exportOptions={["pdf", "xlsx"]}
+      />
+
+      {detailsError && (
+        <AnalyticsDetailFetchBanner onRetry={() => void refetchDetails()} />
+      )}
+
+      {data.totalProjects === 0 ? (
+        <AnalyticsEmptyState
+          title="No projects match these filters"
+          description="Adjust the date range or clear filters to see project analytics."
+          onClearFilters={hasActiveFilters ? clearFilters : undefined}
+        />
+      ) : (
+        <>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold" data-testid="text-projects-report-title">Projects Overview</h2>
-        <Link href="/work">
+        <Link href="/projects">
           <Button variant="outline" size="sm" data-testid="button-view-all-projects">
             View All Projects
             <ArrowUpRight className="w-4 h-4 ml-1" />
@@ -168,7 +243,7 @@ export default function ProjectsReport() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats.totalBudget)}</div>
             <p className="text-xs text-muted-foreground">
-              Across all projects
+              Filtered portfolio
             </p>
           </CardContent>
         </Card>
@@ -188,39 +263,7 @@ export default function ProjectsReport() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card data-testid="card-status-distribution">
-          <CardHeader>
-            <CardTitle className="text-base">Status Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={false}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                No project data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <StatusPieChart data={data.byStatus} title="By status" />
 
         <Card data-testid="card-budget-by-status">
           <CardHeader>
@@ -329,38 +372,14 @@ export default function ProjectsReport() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card data-testid="card-priority-distribution">
-          <CardHeader>
-            <CardTitle className="text-base">Priority Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {priorityData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={priorityData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={false}
-                  >
-                    {priorityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                No project data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <CountBarChart
+          title="By priority"
+          testId="chart-project-priority"
+          data={data.byPriority.map((p) => ({
+            name: p.priority.charAt(0).toUpperCase() + p.priority.slice(1),
+            value: p.count,
+          }))}
+        />
 
         <Card data-testid="card-project-summary">
           <CardHeader>
@@ -407,6 +426,8 @@ export default function ProjectsReport() {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   );
 }

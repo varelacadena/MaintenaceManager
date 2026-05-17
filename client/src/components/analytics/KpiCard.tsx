@@ -7,7 +7,7 @@ interface KpiCardProps {
   subtitle?: string;
   icon?: LucideIcon;
   trend?: {
-    value: number;
+    changePercent: number | null;
     isPositive: boolean;
   };
   variant?: "default" | "success" | "warning" | "danger";
@@ -48,9 +48,9 @@ export default function KpiCard({
         {subtitle && (
           <p className="text-xs sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">{subtitle}</p>
         )}
-        {trend && (
+        {trend && trend.changePercent !== null && (
           <p className={`text-xs sm:text-xs mt-0.5 sm:mt-1 ${trend.isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-            {trend.isPositive ? "+" : ""}{trend.value}% from last period
+            {trend.changePercent > 0 ? "+" : ""}{trend.changePercent}% vs prior period
           </p>
         )}
       </CardContent>

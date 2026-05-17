@@ -1,24 +1,74 @@
-import type { Express } from "express";
-import { storage } from "../storage";
+import type { Express, Request } from "express";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin } from "../middleware";
-import { handleRouteError, getAuthUser } from "../routeUtils";
+import { handleRouteError } from "../routeUtils";
+import type { AnalyticsFilters } from "../analyticsService";
+
+function parseTaskAnalyticsFilters(query: Request["query"]): AnalyticsFilters {
+  return {
+    startDate: query.startDate as string | undefined,
+    endDate: query.endDate as string | undefined,
+    propertyId: query.propertyId as string | undefined,
+    spaceId: query.spaceId as string | undefined,
+    areaId: query.areaId as string | undefined,
+    technicianId: query.technicianId as string | undefined,
+    equipmentId: query.equipmentId as string | undefined,
+    status: query.status as string | undefined,
+    urgency: query.urgency as string | undefined,
+    roleType: query.roleType as AnalyticsFilters["roleType"],
+  };
+}
+
+function parseDatePropertyFilters(query: Request["query"]): AnalyticsFilters {
+  return {
+    startDate: query.startDate as string | undefined,
+    endDate: query.endDate as string | undefined,
+    propertyId: query.propertyId as string | undefined,
+    spaceId: query.spaceId as string | undefined,
+    areaId: query.areaId as string | undefined,
+    status: query.status as string | undefined,
+    urgency: query.urgency as string | undefined,
+  };
+}
+
+function parseFleetDateFilters(query: Request["query"]): AnalyticsFilters {
+  return {
+    startDate: query.startDate as string | undefined,
+    endDate: query.endDate as string | undefined,
+  };
+}
+
+function parseExportFilters(dataType: string, query: Request["query"]): AnalyticsFilters {
+  if (dataType === "service-requests-detailed") {
+    return parseDatePropertyFilters(query);
+  }
+  if (dataType === "fleet-detailed") {
+    return parseFleetDateFilters(query);
+  }
+  if (dataType === "projects") {
+    return parseDatePropertyFilters(query);
+  }
+  return parseTaskAnalyticsFilters(query);
+}
 
 export function registerAnalyticsRoutes(app: Express) {
   const analyticsImport = import("../analyticsService");
 
+  app.get("/api/analytics/overview", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseTaskAnalyticsFilters(req.query);
+      const data = await analyticsService.getExecutiveOverview(filters);
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch analytics overview");
+    }
+  });
+
   app.get("/api/analytics/work-orders", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-        areaId: req.query.areaId as string | undefined,
-        technicianId: req.query.technicianId as string | undefined,
-        status: req.query.status as string | undefined,
-        urgency: req.query.urgency as string | undefined,
-      };
+      const filters = parseTaskAnalyticsFilters(req.query);
       const data = await analyticsService.getWorkOrderOverview(filters);
       res.json(data);
     } catch (error) {
@@ -26,16 +76,21 @@ export function registerAnalyticsRoutes(app: Express) {
     }
   });
 
+  app.get("/api/analytics/work-orders/summary", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseTaskAnalyticsFilters(req.query);
+      const data = await analyticsService.getWorkOrderOverview(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch work order summary");
+    }
+  });
+
   app.get("/api/analytics/technicians", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-        areaId: req.query.areaId as string | undefined,
-        roleType: req.query.roleType as "all" | "technician" | "student" | undefined,
-      };
+      const filters = parseTaskAnalyticsFilters(req.query);
       const data = await analyticsService.getTechnicianPerformance(filters);
       res.json(data);
     } catch (error) {
@@ -43,15 +98,21 @@ export function registerAnalyticsRoutes(app: Express) {
     }
   });
 
+  app.get("/api/analytics/technicians/summary", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseTaskAnalyticsFilters(req.query);
+      const data = await analyticsService.getTechnicianPerformance(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch team summary");
+    }
+  });
+
   app.get("/api/analytics/assets", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-        equipmentId: req.query.equipmentId as string | undefined,
-      };
+      const filters = parseTaskAnalyticsFilters(req.query);
       const data = await analyticsService.getAssetHealth(filters);
       res.json(data);
     } catch (error) {
@@ -59,14 +120,21 @@ export function registerAnalyticsRoutes(app: Express) {
     }
   });
 
+  app.get("/api/analytics/assets/summary", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseTaskAnalyticsFilters(req.query);
+      const data = await analyticsService.getAssetHealth(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch asset summary");
+    }
+  });
+
   app.get("/api/analytics/facilities", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-      };
+      const filters = parseTaskAnalyticsFilters(req.query);
       const data = await analyticsService.getFacilityInsights(filters);
       res.json(data);
     } catch (error) {
@@ -74,14 +142,21 @@ export function registerAnalyticsRoutes(app: Express) {
     }
   });
 
+  app.get("/api/analytics/facilities/summary", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseTaskAnalyticsFilters(req.query);
+      const data = await analyticsService.getFacilityInsights(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch facility summary");
+    }
+  });
+
   app.get("/api/analytics/alerts", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-      };
+      const filters = parseTaskAnalyticsFilters(req.query);
       const data = await analyticsService.getAlerts(filters);
       res.json(data);
     } catch (error) {
@@ -92,11 +167,7 @@ export function registerAnalyticsRoutes(app: Express) {
   app.get("/api/analytics/trends", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const filters = {
-        startDate: req.query.startDate as string | undefined,
-        endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-      };
+      const filters = parseTaskAnalyticsFilters(req.query);
       const data = await analyticsService.getWorkOrderTrends(filters);
       res.json(data);
     } catch (error) {
@@ -118,16 +189,24 @@ export function registerAnalyticsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/analytics/service-requests", isAuthenticated, requireAdmin, async (req, res) => {
+  app.get("/api/analytics/fleet/summary", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
       const filters = {
         startDate: req.query.startDate as string | undefined,
         endDate: req.query.endDate as string | undefined,
-        propertyId: req.query.propertyId as string | undefined,
-        areaId: req.query.areaId as string | undefined,
-        urgency: req.query.urgency as string | undefined,
       };
+      const data = await analyticsService.getFleetOverview(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch fleet summary");
+    }
+  });
+
+  app.get("/api/analytics/service-requests", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseDatePropertyFilters(req.query);
       const data = await analyticsService.getServiceRequestOverview(filters);
       res.json(data);
     } catch (error) {
@@ -135,50 +214,72 @@ export function registerAnalyticsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/analytics/export", isAuthenticated, requireAdmin, async (req: any, res) => {
+  app.get("/api/analytics/service-requests/summary", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { analyticsService } = await analyticsImport;
-      const { type, format, ...filters } = req.query;
+      const filters = parseDatePropertyFilters(req.query);
+      const data = await analyticsService.getServiceRequestOverview(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch service request summary");
+    }
+  });
+
+  app.get("/api/analytics/projects/summary", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseDatePropertyFilters(req.query);
+      const data = await analyticsService.getProjectsOverview(filters, { includeDetails: false });
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch project summary");
+    }
+  });
+
+  app.get("/api/analytics/projects", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = parseDatePropertyFilters(req.query);
+      const data = await analyticsService.getProjectsOverview(filters);
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch project analytics");
+    }
+  });
+
+  app.get("/api/analytics/export", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const { type, format } = req.query;
       const dataType = type as string;
+      const exportFormat = format as string;
 
       if (!dataType) {
         return res.status(400).json({ message: "Data type is required" });
       }
+      if (exportFormat !== "xlsx" && exportFormat !== "pdf") {
+        return res.status(400).json({ message: "Format must be xlsx or pdf" });
+      }
 
-      const data = await analyticsService.getExportData(dataType, filters);
+      const filters = parseExportFilters(dataType, req.query);
+      const { buildExcelBuffer, buildPdfBuffer, buildExportFilename } = await import(
+        "../analyticsExportBuilder"
+      );
+      const filename = buildExportFilename(dataType, exportFormat, filters);
 
-      if (format === "xlsx") {
-        const XLSX = await import("xlsx");
-        const worksheet = XLSX.utils.aoa_to_sheet([data.headers, ...data.data]);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
-        const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-        
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+
+      if (exportFormat === "xlsx") {
+        const buffer = await buildExcelBuffer(dataType, filters);
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        res.setHeader("Content-Disposition", `attachment; filename=report-${dataType}-${Date.now()}.xlsx`);
-        return res.send(buffer);
-      } else if (format === "pdf") {
-        const { jsPDF } = await import("jspdf");
-        const { default: autoTable } = await import("jspdf-autotable");
-        
-        const doc = new jsPDF();
-        doc.text(`Analytics Report: ${dataType}`, 14, 15);
-        autoTable(doc, {
-          head: [data.headers],
-          body: data.data,
-          startY: 20,
-        });
-        
-        const buffer = Buffer.from(doc.output("arraybuffer"));
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename=report-${dataType}-${Date.now()}.pdf`);
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
         return res.send(buffer);
       }
 
-      const csv = await analyticsService.exportData(dataType, filters);
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", `attachment; filename=report-${dataType}-${Date.now()}.csv`);
-      res.send(csv);
+      const buffer = await buildPdfBuffer(dataType, filters);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return res.send(buffer);
     } catch (error) {
       handleRouteError(res, error, "Export failed");
     }

@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, User, Property, Upload, Message, PartUsed, InventoryItem } from "@shared/schema";
+import type { Task, User, Property, Upload, PartUsed, InventoryItem } from "@shared/schema";
 
 export function useMobileTaskDetail() {
   const [currentPath, navigate] = useLocation();
@@ -21,11 +21,8 @@ export function useMobileTaskDetail() {
   const [noteText, setNoteText] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
-  const [isMessagesSheetOpen, setIsMessagesSheetOpen] = useState(false);
-  const [newMessageText, setNewMessageText] = useState("");
   const [isPartsSheetOpen, setIsPartsSheetOpen] = useState(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [isAddPartFormOpen, setIsAddPartFormOpen] = useState(false);
   const [newPartQuantity, setNewPartQuantity] = useState("1");
@@ -82,17 +79,6 @@ export function useMobileTaskDetail() {
     enabled: !!id,
   });
 
-  const { data: taskMessages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages/task", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/messages/task/${id}`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!id,
-    refetchInterval: isMessagesSheetOpen ? 5000 : false,
-  });
-
   const { data: taskParts = [] } = useQuery<PartUsed[]>({
     queryKey: ["/api/parts/task", id],
     queryFn: async () => {
@@ -105,30 +91,6 @@ export function useMobileTaskDetail() {
 
   const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
     queryKey: ["/api/inventory"],
-  });
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return apiRequest("POST", "/api/messages", { taskId: id, content });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      setNewMessageText("");
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
-    },
-  });
-
-  const markMessagesReadMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/messages/task/${id}/mark-read`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/task", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-    },
   });
 
   const addPartMutation = useMutation({
@@ -195,21 +157,6 @@ export function useMobileTaskDetail() {
     },
     onError: () => toast({ title: "Error", description: "Failed to stop timer", variant: "destructive" }),
   });
-
-  useEffect(() => {
-    if (isMessagesSheetOpen && taskMessages.length > 0) {
-      const hasUnread = taskMessages.some((m: Message) => !m.read && m.senderId !== user?.id);
-      if (hasUnread) {
-        markMessagesReadMutation.mutate();
-      }
-    }
-  }, [isMessagesSheetOpen, taskMessages.length]);
-
-  useEffect(() => {
-    if (isMessagesSheetOpen) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    }
-  }, [isMessagesSheetOpen, taskMessages.length]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -378,7 +325,6 @@ export function useMobileTaskDetail() {
     property,
     allUsers,
     timeEntries,
-    taskMessages,
     taskParts,
     inventoryItems,
     expandedSubtasks, setExpandedSubtasks,
@@ -389,17 +335,13 @@ export function useMobileTaskDetail() {
     noteText, setNoteText,
     isScannerOpen, setIsScannerOpen,
     previewUpload, setPreviewUpload,
-    isMessagesSheetOpen, setIsMessagesSheetOpen,
-    newMessageText, setNewMessageText,
     isPartsSheetOpen, setIsPartsSheetOpen,
     isHistorySheetOpen, setIsHistorySheetOpen,
-    messagesEndRef,
     isAddPartFormOpen, setIsAddPartFormOpen,
     newPartQuantity, setNewPartQuantity,
     newPartNotes, setNewPartNotes,
     inventorySearchQuery, setInventorySearchQuery,
     selectedInventoryItemId, setSelectedInventoryItemId,
-    sendMessageMutation,
     addPartMutation,
     activeTimerEntry,
     startTimerMutation,

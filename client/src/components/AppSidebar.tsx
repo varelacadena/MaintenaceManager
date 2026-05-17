@@ -15,7 +15,6 @@ import {
   LayoutDashboard,
   ClipboardList,
   Calendar,
-  MessageSquare,
   Settings,
   Users,
   MapPin,
@@ -52,7 +51,6 @@ const roleMenus = {
     { title: "Resource Library", url: "/resources", icon: BookOpen },
     { title: "Vehicles", url: "/vehicles", icon: Car },
     { title: "Properties", url: "/properties", icon: Map },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Users", url: "/users", icon: Users },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
@@ -65,7 +63,6 @@ const roleMenus = {
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   staff: [
@@ -73,7 +70,6 @@ const roleMenus = {
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   student: [
@@ -82,7 +78,6 @@ const roleMenus = {
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
-    { title: "Messages", url: "/messages", icon: MessageSquare },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
 };
@@ -131,9 +126,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
               {menuItems.map((item) => {
                 let badgeCount = 0;
 
-                if (item.title === "Messages" && notificationCounts.unreadMessages > 0) {
-                  badgeCount = notificationCounts.unreadMessages;
-                } else if (item.title === "Service Requests" && notificationCounts.pendingServiceRequests > 0) {
+                if (item.title === "Service Requests" && notificationCounts.pendingServiceRequests > 0) {
                   badgeCount = notificationCounts.pendingServiceRequests;
                 } else if (item.title === "Vehicles" && notificationCounts.pendingVehicleReservations > 0) {
                   badgeCount = notificationCounts.pendingVehicleReservations;

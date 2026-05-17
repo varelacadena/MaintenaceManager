@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -10,8 +9,6 @@ import {
   User,
   Calendar,
   Trash2,
-  MessageSquare,
-  Send,
   ChevronDown,
   ChevronRight,
   CheckCircle2,
@@ -28,16 +25,12 @@ export function AdminCollapsibleSections({ ctx }: { ctx: TaskDetailContext }) {
   const {
     task, user, navigate,
     timeEntries, notes, users,
-    messages, previousWork,
-    newMessage, setNewMessage,
+    previousWork,
     activeTimer,
     previousWorkExpanded, setPreviousWorkExpanded,
     notesExpanded, setNotesExpanded,
-    messagesExpanded, setMessagesExpanded,
     checklistExpanded, setChecklistExpanded,
     checklistGroups,
-    messagesEndRef, messagesSectionRef,
-    sendMessageMutation, deleteMessageMutation,
     deleteNoteMutation,
     toggleChecklistItemMutation,
     isTechnicianOrAdmin,
@@ -233,76 +226,6 @@ export function AdminCollapsibleSections({ ctx }: { ctx: TaskDetailContext }) {
           </div>
         );
       })()}
-
-      {isTechnicianOrAdmin && (
-        <Collapsible open={messagesExpanded} onOpenChange={setMessagesExpanded}>
-          <CollapsibleTrigger asChild>
-            <div ref={messagesSectionRef} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-messages">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="w-5 h-5 text-primary" />
-                <span className="font-medium">Messages</span>
-                {messages.length > 0 && <Badge variant="secondary">{messages.length}</Badge>}
-              </div>
-              {messagesExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 space-y-2">
-            {messages.length === 0 ? (
-              <p className="text-center text-muted-foreground text-sm py-4">No messages yet</p>
-            ) : (
-              messages.map((message) => {
-                const sender = users.find(u => u.id === message.senderId);
-                const isOwnMessage = message.senderId === user?.id;
-                return (
-                  <div
-                    key={message.id}
-                    className={`p-3 rounded-lg ${isOwnMessage ? "bg-primary/10 ml-8" : "bg-muted/30 mr-8"}`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium">{sender?.firstName} {sender?.lastName}</span>
-                      {user?.role === "admin" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => deleteMessageMutation.mutate(message.id)}
-                        >
-                          <Trash2 className="w-3 h-3 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {message.createdAt && formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                    </p>
-                  </div>
-                );
-              })
-            )}
-            <div className="flex gap-2 mt-2">
-              <Input
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newMessage.trim()) {
-                    sendMessageMutation.mutate(newMessage.trim());
-                  }
-                }}
-                data-testid="input-message"
-              />
-              <Button
-                size="icon"
-                onClick={() => newMessage.trim() && sendMessageMutation.mutate(newMessage.trim())}
-                disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                data-testid="button-send-message"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
 
       <AdminCollapsibleSectionsExtra ctx={ctx} />
     </>

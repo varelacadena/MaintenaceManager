@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,6 @@ import type {
   User as UserType,
   Upload,
   ServiceRequest,
-  Message,
   Property,
   Equipment,
   Space,
@@ -38,7 +37,6 @@ export function useTaskDetail() {
   const { downloadFile } = useFileDownload();
 
   const [newNote, setNewNote] = useState("");
-  const [newMessage, setNewMessage] = useState("");
   const [activeTimer, setActiveTimer] = useState<string | null>(null);
   const [aiScheduleLog, setAiScheduleLog] = useState<any>(null);
   const [aiScheduleLoading, setAiScheduleLoading] = useState(false);
@@ -75,7 +73,6 @@ export function useTaskDetail() {
   const [allowNavigation, setAllowNavigation] = useState(false);
   
   const [notesExpanded, setNotesExpanded] = useState(false);
-  const [messagesExpanded, setMessagesExpanded] = useState(false);
   const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [partsExpanded, setPartsExpanded] = useState(false);
@@ -106,8 +103,6 @@ export function useTaskDetail() {
     previewUrl?: string;
   } | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesSectionRef = useRef<HTMLDivElement>(null);
   const partsSectionRef = useRef<HTMLDivElement>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -196,12 +191,6 @@ export function useTaskDetail() {
   const { data: contactStaff } = useQuery<UserType>({
     queryKey: ["/api/users", task?.contactStaffId],
     enabled: !!task?.contactStaffId,
-  });
-
-  const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages/task", id],
-    enabled: !!id && (user?.role === "admin" || user?.role === "technician"),
-    refetchInterval: 5000,
   });
 
   const { data: quotes = [] } = useQuery<Quote[]>({
@@ -506,7 +495,6 @@ export function useTaskDetail() {
     partQuantity,
     partNotes,
     setActiveTimer,
-    setNewMessage,
     setIsEquipmentInfoOpen,
     setIsVehicleInfoOpen,
     setIsAddSubTaskDialogOpen,
@@ -540,21 +528,11 @@ export function useTaskDetail() {
   });
 
   const {
-    markAsReadMutation,
     startTimerMutation,
     stopTimerMutation,
     addUploadMutation,
     updateStatusMutation,
   } = mutations;
-
-  useEffect(() => {
-    if (id && messages.length > 0) {
-      const hasUnreadMessages = messages.some((msg) => !msg.read && msg.senderId !== user?.id);
-      if (hasUnreadMessages) {
-        markAsReadMutation.mutate(id);
-      }
-    }
-  }, [id, messages, user?.id]);
 
   const getUploadParameters = async () => {
     const response = await fetch("/api/objects/upload", {
@@ -753,7 +731,6 @@ export function useTaskDetail() {
     space,
     checklistGroups,
     contactStaff,
-    messages,
     quotes,
     allTasks,
     subTasks,
@@ -769,8 +746,6 @@ export function useTaskDetail() {
     previousWork,
     newNote,
     setNewNote,
-    newMessage,
-    setNewMessage,
     activeTimer,
     setActiveTimer,
     aiScheduleLog,
@@ -841,8 +816,6 @@ export function useTaskDetail() {
     setAllowNavigation,
     notesExpanded,
     setNotesExpanded,
-    messagesExpanded,
-    setMessagesExpanded,
     attachmentsExpanded,
     setAttachmentsExpanded,
     checklistExpanded,
@@ -892,8 +865,6 @@ export function useTaskDetail() {
     pendingUploadForLabel,
     setPendingUploadForLabel,
     isUploadLabelSaving,
-    messagesEndRef,
-    messagesSectionRef,
     partsSectionRef,
     pendingUploadQueueRef,
     safeNavigate,

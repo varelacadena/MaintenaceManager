@@ -40,6 +40,7 @@ import {
 import { format, parseISO, isPast, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getServiceRequestStatusLabel } from "@/lib/serviceRequestLabels";
 import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import { useToast } from "@/hooks/use-toast";
@@ -752,7 +753,7 @@ export default function AdminDashboard({
                               {req.createdAt ? format(new Date(req.createdAt), "MMM d") : "N/A"}
                             </span>
                             <span className="text-xs text-muted-foreground capitalize">
-                              {req.status?.replace("_", " ")}
+                              {getServiceRequestStatusLabel(req.status ?? "")}
                             </span>
                           </div>
                         </div>
