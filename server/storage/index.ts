@@ -428,6 +428,7 @@ export interface IStorage {
   addTaskHelper(taskId: string, userId: string): Promise<TaskHelper>;
   removeTaskHelper(taskId: string, userId: string): Promise<void>;
   getTaskHelpers(taskId: string): Promise<TaskHelper[]>;
+  getHelperCountsByTaskIds(taskIds: string[]): Promise<Record<string, number>>;
   getHelperTaskIds(userId: string): Promise<string[]>;
   isTaskHelper(taskId: string, userId: string): Promise<boolean>;
 
@@ -584,6 +585,7 @@ export class DatabaseStorage implements IStorage {
   addTaskHelper = workOrderStorage.addTaskHelper;
   removeTaskHelper = workOrderStorage.removeTaskHelper;
   getTaskHelpers = workOrderStorage.getTaskHelpers;
+  getHelperCountsByTaskIds = workOrderStorage.getHelperCountsByTaskIds;
   getHelperTaskIds = workOrderStorage.getHelperTaskIds;
   isTaskHelper = workOrderStorage.isTaskHelper;
 

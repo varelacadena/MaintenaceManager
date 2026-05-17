@@ -29,7 +29,7 @@ import {
   type TaskHelper,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, or, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, or, desc, isNull, sql, inArray } from "drizzle-orm";
 
 function normalizeTaskPool(data: any): any {
   const normalized = { ...data };
@@ -570,6 +570,31 @@ export async function removeTaskHelper(taskId: string, userId: string): Promise<
 export async function getTaskHelpers(taskId: string): Promise<TaskHelper[]> {
   return await db.select().from(taskHelpers)
     .where(eq(taskHelpers.taskId, taskId));
+}
+
+/** Helper counts for many tasks in one query (Work list, dashboards). */
+export async function getHelperCountsByTaskIds(
+  taskIds: string[]
+): Promise<Record<string, number>> {
+  if (taskIds.length === 0) return {};
+
+  const rows = await db
+    .select({
+      taskId: taskHelpers.taskId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(taskHelpers)
+    .where(inArray(taskHelpers.taskId, taskIds))
+    .groupBy(taskHelpers.taskId);
+
+  const counts: Record<string, number> = {};
+  for (const id of taskIds) {
+    counts[id] = 0;
+  }
+  for (const row of rows) {
+    counts[row.taskId] = row.count;
+  }
+  return counts;
 }
 
 export async function getHelperTaskIds(userId: string): Promise<string[]> {

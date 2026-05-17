@@ -69,7 +69,7 @@ export function useTaskDetailPanel({
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: task, isLoading } = useQuery<Task>({
+  const { data: task, isLoading, isError: isTaskLoadError } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
     queryFn: async () => {
       const res = await fetch(`/api/tasks/${taskId}`);
@@ -445,6 +445,7 @@ export function useTaskDetailPanel({
 
     task,
     isLoading,
+    isTaskLoadError,
     subtasks,
     uploads,
     taskParts,

@@ -11,13 +11,15 @@ import {
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { ReactNode } from "react";
 import {
   User as UserIcon,
   Calendar,
   AlertTriangle,
   Flag,
-  ClipboardCheck,
   MapPin,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
@@ -30,6 +32,7 @@ import {
 } from "@/utils/taskUtils";
 import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./constants";
+import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
 
 export function TaskTableRow({
   task,
@@ -40,15 +43,16 @@ export function TaskTableRow({
   handleUrgencyChange,
   handleAssigneeChange,
   handlePropertyChange,
-  handleTaskTypeChange,
   handleInlineEdit,
   isChildTask,
   rowIndex,
   onReviewEstimates,
   isAdmin,
-  onViewSummary,
   onSelectTask,
   selectedTaskId,
+  expandControl,
+  nameExtra,
+  rowClassName,
 }: {
   task: Task;
   userGroups: { label: string; items: User[] }[];
@@ -58,15 +62,16 @@ export function TaskTableRow({
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
-  handleTaskTypeChange: (taskId: string, taskType: string) => void;
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isChildTask?: boolean;
   rowIndex?: number;
   onReviewEstimates?: (taskId: string) => void;
   isAdmin?: boolean;
-  onViewSummary?: (taskId: string) => void;
   onSelectTask?: (taskId: string) => void;
   selectedTaskId?: string | null;
+  expandControl?: { isExpanded: boolean; onToggle: () => void };
+  nameExtra?: ReactNode;
+  rowClassName?: string;
 }) {
   const isOverdue = task.estimatedCompletionDate
     && task.status !== "completed"
@@ -81,18 +86,45 @@ export function TaskTableRow({
 
   const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
+  const openTask = () => onSelectTask?.(task.id);
+
   return (
     <TableRow
       key={task.id}
       data-testid={`row-task-${task.id}`}
-      className={`cursor-pointer ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""}`}
-      onClick={() => onSelectTask?.(task.id)}
+      aria-selected={onSelectTask ? selectedTaskId === task.id : undefined}
+      aria-label={onSelectTask ? buildTaskRowAriaLabel(task) : undefined}
+      className={`cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""} ${rowClassName ?? ""}`}
+      onClick={openTask}
       tabIndex={onSelectTask ? 0 : undefined}
-      onKeyDown={onSelectTask ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectTask(task.id); } } : undefined}
-      role={onSelectTask ? "button" : undefined}
+      onKeyDown={onSelectTask ? (e) => handleKeyboardActivate(e, () => openTask()) : undefined}
     >
       <TableCell className="py-2.5">
         <div className={`flex items-center gap-2 ${isChildTask ? "pl-8" : ""}`}>
+          {expandControl && (
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-expanded={expandControl.isExpanded}
+              aria-label={
+                expandControl.isExpanded
+                  ? `Collapse subtasks for ${task.name}`
+                  : `Expand subtasks for ${task.name}`
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                expandControl.onToggle();
+              }}
+              data-testid={`button-expand-subtasks-${task.id}`}
+              className="shrink-0"
+            >
+              {expandControl.isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </Button>
+          )}
           <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColors[task.status] || "bg-gray-400"}`} />
           <EditableTextCell
             value={task.name}
@@ -101,6 +133,7 @@ export function TaskTableRow({
             onSave={handleInlineEdit}
             linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
           />
+          {nameExtra}
           {(() => {
             const ext = task as Task & { isHelper?: boolean; helperCount?: number };
             return (
@@ -234,19 +267,6 @@ export function TaskTableRow({
               data-testid={`button-review-estimates-${task.id}`}
             >
               Review & Approve
-            </Button>
-          )}
-          {task.status === "completed" && onViewSummary && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewSummary(task.id);
-              }}
-              data-testid={`button-view-summary-${task.id}`}
-            >
-              <ClipboardCheck className="w-4 h-4" />
             </Button>
           )}
         </div>

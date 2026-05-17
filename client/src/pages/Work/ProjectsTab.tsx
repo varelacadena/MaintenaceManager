@@ -11,14 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Search, FolderKanban, AlertTriangle, Flag } from "lucide-react";
 import { format } from "date-fns";
-import type { WorkContext } from "./useWork";
+import type { WorkContext } from "./useWorkAdmin";
 import { projectPriorityConfig } from "./constants";
 
 export function ProjectsTab({ ctx }: { ctx: WorkContext }) {
   const {
     projectSearchQuery, setProjectSearchQuery,
     projectStatusFilter, setProjectStatusFilter,
-    projectsTabFiltered, projectTasksMap,
+    projectsTabFiltered, allProjectTasksMap,
     getPropertyName, navigate,
   } = ctx;
 
@@ -101,7 +101,7 @@ export function ProjectsTab({ ctx }: { ctx: WorkContext }) {
             </TableHeader>
             <TableBody>
               {projectsTabFiltered.map((project) => {
-                const childTasks = projectTasksMap[project.id] || [];
+                const childTasks = allProjectTasksMap[project.id] || [];
                 const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
                 const totalChildTasks = childTasks.length;
                 const progressPercent = totalChildTasks > 0 ? Math.round((completedChildTasks / totalChildTasks) * 100) : 0;

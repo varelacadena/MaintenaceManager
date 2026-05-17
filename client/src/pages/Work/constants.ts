@@ -24,6 +24,14 @@ export const projectPriorityConfig: Record<string, { color: string; label: strin
 
 export type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
 
+const unifiedStatusKeys = new Set(unifiedStatusConfig.map((s) => s.key));
+
+/** Map a task status to a Work board column (keeps Ready in its own column). */
+export function taskToUnifiedGroupKey(status: string): string {
+  if (unifiedStatusKeys.has(status)) return status;
+  return "not_started";
+}
+
 export type WorkItem =
   | { type: "task"; data: Task }
   | { type: "project"; data: Project };

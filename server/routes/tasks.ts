@@ -29,7 +29,7 @@ export function registerTaskRoutes(app: Express) {
 
       if (!equipmentIdFilter) {
         if (currentUser.role === "student") {
-          filters.assignedToId = userId;
+          filters.assignedToIdOrPool = { userId, pool: "student_pool" };
         } else if (currentUser.role === "technician") {
           filters.assignedToId = userId;
         }
@@ -71,12 +71,11 @@ export function registerTaskRoutes(app: Express) {
       }
 
       if (currentUser.role === "admin" || currentUser.role === "technician") {
-        const tasksWithHelperCount = await Promise.all(
-          allTasks.map(async (t) => {
-            const helpers = await storage.getTaskHelpers(t.id);
-            return { ...t, helperCount: helpers.length };
-          })
-        );
+        const helperCounts = await storage.getHelperCountsByTaskIds(allTasks.map((t) => t.id));
+        const tasksWithHelperCount = allTasks.map((t) => ({
+          ...t,
+          helperCount: helperCounts[t.id] ?? 0,
+        }));
         return res.json(tasksWithHelperCount);
       }
 

@@ -1,5 +1,24 @@
 import type { Task } from "@shared/schema";
 
+export type TaskWithHelperFlag = Task & { isHelper?: boolean };
+
+/** Tasks shown on the student Work page (assigned, pool, or helper). */
+export function filterStudentWorkTasks(tasks: Task[], userId: string): Task[] {
+  return tasks.filter((t) => {
+    if (t.parentTaskId) return false;
+    const ext = t as TaskWithHelperFlag;
+    if (ext.isHelper) return true;
+    if (t.assignedToId === userId) return true;
+    if (t.assignedPool === "student_pool" && !t.assignedToId) return true;
+    return false;
+  });
+}
+
+/** Tasks shown on the technician Work page (directly assigned only; pool jobs use Grab a Job). */
+export function filterTechnicianWorkTasks(tasks: Task[], userId: string): Task[] {
+  return tasks.filter((t) => !t.parentTaskId && t.assignedToId === userId);
+}
+
 export const getTaskDate = (task: Task): Date | null => {
   if (task.status === "completed" && task.actualCompletionDate) {
     return new Date(task.actualCompletionDate);
@@ -39,10 +58,12 @@ export const filterTasksByDate = (allTasks: Task[], dateFilter: "today" | "week"
     }
     const taskDate = getTaskDate(t);
     if (dateFilter === "today") {
-      return !taskDate || isToday(taskDate);
+      if (!taskDate) return false;
+      return isToday(taskDate);
     }
     if (dateFilter === "week") {
-      return !taskDate || isThisWeek(taskDate);
+      if (!taskDate) return false;
+      return isThisWeek(taskDate);
     }
     return true;
   });
@@ -87,6 +108,8 @@ export function DateFilterBar({ dateFilter, setDateFilter }: { dateFilter: "toda
       {([["today", "Today"], ["week", "This Week"], ["all", "All"]] as const).map(([value, label]) => (
         <button
           key={value}
+          type="button"
+          aria-pressed={dateFilter === value}
           onClick={() => setDateFilter(value)}
           className={`flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors ${
             dateFilter === value
@@ -100,6 +123,21 @@ export function DateFilterBar({ dateFilter, setDateFilter }: { dateFilter: "toda
       ))}
     </div>
   );
+}
+
+/** Flatten day groups with a single running index (for numbered field cards). */
+export function flattenDayGroups<T extends { tasks: Task[] }>(
+  groups: T[]
+): { group: T; task: Task; globalIndex: number }[] {
+  const result: { group: T; task: Task; globalIndex: number }[] = [];
+  let globalIndex = 0;
+  for (const group of groups) {
+    for (const task of group.tasks) {
+      result.push({ group, task, globalIndex });
+      globalIndex += 1;
+    }
+  }
+  return result;
 }
 
 export function DaySeparator({ label }: { label: string }) {

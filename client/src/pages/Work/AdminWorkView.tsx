@@ -17,28 +17,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Plus,
-  ChevronDown,
-  ChevronRight,
-  FolderKanban,
-  Search,
-} from "lucide-react";
+import { Plus, FolderKanban, Search } from "lucide-react";
 import { Link } from "wouter";
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { TaskDetailPanel } from "@/components/TaskDetailPanel";
 import type { Task, Project } from "@shared/schema";
-import {
-  statusDotColors,
-} from "@/utils/taskUtils";
 import { TaskTableRow } from "./TaskTableRow";
 import { ParentTaskRowGroup } from "./ParentTaskRowGroup";
 import { ProjectRowGroup } from "./ProjectRowGroup";
 import { unifiedStatusConfig } from "./constants";
 import { ProjectsTab } from "./ProjectsTab";
 import { CreateProjectDialog } from "./CreateProjectDialog";
-import type { WorkContext } from "./useWork";
+import { WorkLoadError } from "./WorkLoadError";
+import { WorkTasksEmptyState } from "./WorkTasksEmptyState";
+import { WorkStatusGroupHeader, workStatusGroupPanelId } from "./WorkStatusGroupHeader";
+import type { WorkContext } from "./useWorkAdmin";
 
 export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
   const {
@@ -51,21 +45,22 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
     projectDialogOpen, setProjectDialogOpen,
     reviewEstimatesTaskId, setReviewEstimatesTaskId,
     summaryTaskId, setSummaryTaskId,
-    selectedTaskId, setSelectedTaskId,
+    selectedTaskId, closeTaskPanel,
     isPanelFullscreen, setIsPanelFullscreen,
     panelMounted, panelVisible,
     isHoldReasonDialogOpen, setIsHoldReasonDialogOpen,
-    holdReason, setHoldReason,
+    holdReason, setHoldReason, closeHoldReasonDialog,
     updateTaskStatusMutation,
     handleStatusChange, handleHoldReasonSubmit, handleInlineEdit,
     handleSelectTask, handleUrgencyChange, handleAssigneeChange,
-    handlePropertyChange, handleTaskTypeChange,
+    handlePropertyChange,
     handleProjectStatusChange,
     getPropertyName,
     allUsers, properties,
-    subTasksMap, projectTasksMap,
-    unifiedGroups, userGroups,
+    subTasksMap, projectTasksMap, allProjectTasksMap,
+    unifiedGroups, boardItemCount, userGroups,
     isAdmin,
+    tasksError, tasksErrorMessage, refetchTasks,
   } = ctx;
 
   return (
@@ -119,10 +114,13 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
 
             {user?.role === "admin" && (
               <div className="space-y-3">
-                <div className="flex gap-1 bg-muted rounded-md p-1" data-testid="work-tabs">
+                <div className="flex gap-1 bg-muted rounded-md p-1" data-testid="work-tabs" role="tablist" aria-label="Work views">
                   {([["tasks", "Tasks"], ["projects", "Projects"]] as const).map(([value, label]) => (
                     <button
                       key={value}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === value}
                       onClick={() => setActiveTab(value)}
                       className={`flex-1 px-4 py-1.5 text-sm font-medium rounded transition-colors ${
                         activeTab === value
@@ -138,12 +136,21 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
               </div>
             )}
 
+            {tasksError && (
+              <WorkLoadError
+                title="Couldn&apos;t load tasks"
+                message={tasksErrorMessage}
+                onRetry={() => refetchTasks()}
+              />
+            )}
+
             {user?.role === "admin" && activeTab === "tasks" && (
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search tasks..."
+                    aria-label="Search tasks and projects"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -157,34 +164,39 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
               <ProjectsTab ctx={ctx} />
             )}
 
-            {(user?.role !== "admin" || activeTab === "tasks") && (
+            {(user?.role !== "admin" || activeTab === "tasks") && !tasksError && boardItemCount === 0 && (
+              <WorkTasksEmptyState
+                hasSearchQuery={searchQuery.trim().length > 0}
+                onClearSearch={() => setSearchQuery("")}
+                onOpenProjectsTab={() => setActiveTab("projects")}
+              />
+            )}
+
+            {(user?.role !== "admin" || activeTab === "tasks") && !tasksError && boardItemCount > 0 && (
             <div className="space-y-2">
               {unifiedStatusConfig.map((status) => {
                 const itemsInGroup = unifiedGroups[status.key] || [];
                 const isEmpty = itemsInGroup.length === 0;
-                const isCollapsed = collapsedGroups[status.key] ?? true;
+                const isCollapsed = collapsedGroups[status.key] ?? (itemsInGroup.length === 0);
 
                 return (
                   <Card key={status.key} data-testid={`group-${status.key}`}>
-                    <div
-                      className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer select-none ${isEmpty ? "opacity-40" : ""}`}
-                      onClick={() => toggleGroup(status.key)}
-                      data-testid={`toggle-group-${status.key}`}
-                    >
-                      {isCollapsed ? (
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      )}
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColors[status.key]}`} />
-                      <span className="text-sm font-medium">{status.label}</span>
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {itemsInGroup.length}
-                      </span>
-                    </div>
+                    <WorkStatusGroupHeader
+                      statusKey={status.key}
+                      label={status.label}
+                      count={itemsInGroup.length}
+                      isCollapsed={isCollapsed}
+                      isEmpty={isEmpty}
+                      onToggle={() => toggleGroup(status.key)}
+                    />
 
                     {!isCollapsed && !isEmpty && (
-                      <div className="border-t">
+                      <div
+                        id={workStatusGroupPanelId(status.key)}
+                        role="region"
+                        aria-labelledby={`work-group-header-${status.key}`}
+                        className="border-t"
+                      >
                         <Table>
                           <TableHeader>
                             <TableRow className="hover:bg-transparent">
@@ -217,11 +229,9 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                       handleUrgencyChange={handleUrgencyChange}
                                       handleAssigneeChange={handleAssigneeChange}
                                       handlePropertyChange={handlePropertyChange}
-                                      handleTaskTypeChange={handleTaskTypeChange}
                                       handleInlineEdit={handleInlineEdit}
                                       isAdmin={isAdmin}
                                       onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
-                                      onViewSummary={(taskId) => setSummaryTaskId(taskId)}
                                       onSelectTask={handleSelectTask}
                                       selectedTaskId={selectedTaskId}
                                     />
@@ -238,12 +248,10 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                     handleUrgencyChange={handleUrgencyChange}
                                     handleAssigneeChange={handleAssigneeChange}
                                     handlePropertyChange={handlePropertyChange}
-                                    handleTaskTypeChange={handleTaskTypeChange}
                                     handleInlineEdit={handleInlineEdit}
                                     rowIndex={idx}
                                     isAdmin={isAdmin}
                                     onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
-                                    onViewSummary={(taskId) => setSummaryTaskId(taskId)}
                                     onSelectTask={handleSelectTask}
                                     selectedTaskId={selectedTaskId}
                                   />
@@ -251,18 +259,23 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                               }
 
                               const project = item.data as Project;
-                              const childTasks = projectTasksMap[project.id] || [];
-                              const completedChildTasks = childTasks.filter((t) => t.status === "completed").length;
+                              const allChildTasks = allProjectTasksMap[project.id] || [];
+                              const rootChildTasks = projectTasksMap[project.id] || [];
+                              const completedChildTasks = allChildTasks.filter((t) => t.status === "completed").length;
                               const isExpanded = expandedProjects.has(project.id);
 
                               return (
                                 <ProjectRowGroup
                                   key={project.id}
                                   project={project}
-                                  childTasks={childTasks}
+                                  childTasks={rootChildTasks}
                                   completedChildTasks={completedChildTasks}
+                                  totalChildTaskCount={allChildTasks.length}
                                   isExpanded={isExpanded}
                                   onToggleExpand={() => toggleProjectExpanded(project.id)}
+                                  subTasksMap={subTasksMap}
+                                  expandedParentTasks={expandedParentTasks}
+                                  onToggleParentTaskExpanded={toggleParentTaskExpanded}
                                   userGroups={userGroups}
                                   allUsers={allUsers}
                                   properties={properties}
@@ -270,13 +283,11 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                   handleUrgencyChange={handleUrgencyChange}
                                   handleAssigneeChange={handleAssigneeChange}
                                   handlePropertyChange={handlePropertyChange}
-                                  handleTaskTypeChange={handleTaskTypeChange}
                                   handleInlineEdit={handleInlineEdit}
                                   getPropertyName={getPropertyName}
                                   handleProjectStatusChange={handleProjectStatusChange}
                                   isAdmin={isAdmin}
                                   onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
-                                  onViewSummary={(taskId) => setSummaryTaskId(taskId)}
                                   onSelectTask={handleSelectTask}
                                   selectedTaskId={selectedTaskId}
                                 />
@@ -298,21 +309,19 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
           <div
             className="shrink-0 overflow-hidden border-l"
             style={{
-              width: isPanelFullscreen ? "100%" : panelVisible ? "380px" : "0px",
+              width: isPanelFullscreen ? "100%" : panelVisible ? "400px" : "0px",
               borderColor: "#EEEEEE",
               transition: "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
             }}
             data-testid="task-detail-slide-panel"
           >
-            <div style={{ width: isPanelFullscreen ? "100%" : "380px", height: "100%" }}>
+            <div style={{ width: isPanelFullscreen ? "100%" : "400px", height: "100%" }}>
               <TaskDetailPanel
                 taskId={selectedTaskId!}
                 isFullscreen={isPanelFullscreen}
-                onClose={() => {
-                  setSelectedTaskId(null);
-                  setIsPanelFullscreen(false);
-                }}
+                onClose={closeTaskPanel}
                 onToggleFullscreen={() => setIsPanelFullscreen((prev) => !prev)}
+                onViewCompletionReport={() => setSummaryTaskId(selectedTaskId!)}
                 allUsers={allUsers}
                 properties={properties}
               />
@@ -321,7 +330,13 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
         )}
       </div>
 
-      <Dialog open={isHoldReasonDialogOpen} onOpenChange={setIsHoldReasonDialogOpen}>
+      <Dialog
+        open={isHoldReasonDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeHoldReasonDialog();
+          else setIsHoldReasonDialogOpen(true);
+        }}
+      >
         <DialogContent data-testid="dialog-hold-reason">
           <DialogHeader>
             <DialogTitle>Hold Task</DialogTitle>
@@ -341,10 +356,7 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setIsHoldReasonDialogOpen(false);
-                setHoldReason("");
-              }}
+              onClick={closeHoldReasonDialog}
               data-testid="button-cancel-hold"
             >
               Cancel

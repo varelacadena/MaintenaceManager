@@ -25,13 +25,18 @@ import type { Task, User, Property, Project } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { projectStatusMapping, projectPriorityConfig } from "./constants";
 import { TaskTableRow } from "./TaskTableRow";
+import { ParentTaskRowGroup } from "./ParentTaskRowGroup";
 
 export function ProjectRowGroup({
   project,
   childTasks,
   completedChildTasks,
+  totalChildTaskCount,
   isExpanded,
   onToggleExpand,
+  subTasksMap,
+  expandedParentTasks,
+  onToggleParentTaskExpanded,
   userGroups,
   allUsers,
   properties,
@@ -39,21 +44,23 @@ export function ProjectRowGroup({
   handleUrgencyChange,
   handleAssigneeChange,
   handlePropertyChange,
-  handleTaskTypeChange,
   handleInlineEdit,
   getPropertyName,
   handleProjectStatusChange,
   isAdmin,
   onReviewEstimates,
-  onViewSummary,
   onSelectTask,
   selectedTaskId,
 }: {
   project: Project;
   childTasks: Task[];
   completedChildTasks: number;
+  totalChildTaskCount: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  subTasksMap: Record<string, Task[]>;
+  expandedParentTasks: Set<string>;
+  onToggleParentTaskExpanded: (taskId: string) => void;
   userGroups: { label: string; items: User[] }[];
   allUsers: User[] | undefined;
   properties: Property[] | undefined;
@@ -61,13 +68,11 @@ export function ProjectRowGroup({
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
-  handleTaskTypeChange: (taskId: string, taskType: string) => void;
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   getPropertyName: (propertyId: string | null) => string | null;
   handleProjectStatusChange: (projectId: string, status: string) => void;
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
-  onViewSummary?: (taskId: string) => void;
   onSelectTask?: (taskId: string) => void;
   selectedTaskId?: string | null;
 }) {
@@ -86,6 +91,12 @@ export function ProjectRowGroup({
             <Button
               size="icon"
               variant="ghost"
+              aria-expanded={isExpanded}
+              aria-label={
+                isExpanded
+                  ? `Collapse tasks for project ${project.name}`
+                  : `Expand tasks for project ${project.name}`
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleExpand();
@@ -109,7 +120,7 @@ export function ProjectRowGroup({
               </span>
             </Link>
             <span className="text-xs text-muted-foreground" data-testid={`text-project-progress-${project.id}`}>
-              {completedChildTasks}/{childTasks.length} tasks
+              {completedChildTasks}/{totalChildTaskCount} tasks
             </span>
           </div>
         </TableCell>
@@ -170,28 +181,52 @@ export function ProjectRowGroup({
       </TableRow>
 
       {isExpanded &&
-        childTasks.map((task, idx) => (
-          <TaskTableRow
-            key={task.id}
-            task={task}
-            userGroups={userGroups}
-            allUsers={allUsers}
-            properties={properties}
-            handleStatusChange={handleStatusChange}
-            handleUrgencyChange={handleUrgencyChange}
-            handleAssigneeChange={handleAssigneeChange}
-            handlePropertyChange={handlePropertyChange}
-            handleTaskTypeChange={handleTaskTypeChange}
-            handleInlineEdit={handleInlineEdit}
-            isChildTask
-            rowIndex={idx}
-            isAdmin={isAdmin}
-            onReviewEstimates={onReviewEstimates}
-            onViewSummary={onViewSummary}
-            onSelectTask={onSelectTask}
-            selectedTaskId={selectedTaskId}
-          />
-        ))}
+        childTasks.map((task, idx) => {
+          const childSubTasks = subTasksMap[task.id] || [];
+          if (childSubTasks.length > 0) {
+            return (
+              <ParentTaskRowGroup
+                key={task.id}
+                task={task}
+                childSubTasks={childSubTasks}
+                isExpanded={expandedParentTasks.has(task.id)}
+                onToggleExpand={() => onToggleParentTaskExpanded(task.id)}
+                userGroups={userGroups}
+                allUsers={allUsers}
+                properties={properties}
+                handleStatusChange={handleStatusChange}
+                handleUrgencyChange={handleUrgencyChange}
+                handleAssigneeChange={handleAssigneeChange}
+                handlePropertyChange={handlePropertyChange}
+                handleInlineEdit={handleInlineEdit}
+                isAdmin={isAdmin}
+                onReviewEstimates={onReviewEstimates}
+                onSelectTask={onSelectTask}
+                selectedTaskId={selectedTaskId}
+              />
+            );
+          }
+          return (
+            <TaskTableRow
+              key={task.id}
+              task={task}
+              userGroups={userGroups}
+              allUsers={allUsers}
+              properties={properties}
+              handleStatusChange={handleStatusChange}
+              handleUrgencyChange={handleUrgencyChange}
+              handleAssigneeChange={handleAssigneeChange}
+              handlePropertyChange={handlePropertyChange}
+              handleInlineEdit={handleInlineEdit}
+              isChildTask
+              rowIndex={idx}
+              isAdmin={isAdmin}
+              onReviewEstimates={onReviewEstimates}
+              onSelectTask={onSelectTask}
+              selectedTaskId={selectedTaskId}
+            />
+          );
+        })}
     </>
   );
 }

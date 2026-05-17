@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, MapPin, ClipboardCheck } from "lucide-react";
-import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import { CheckCircle2, MapPin } from "lucide-react";
 import type { Task, Property, User } from "@shared/schema";
-import { filterTasksByDate, groupTasksByDay, DateFilterBar, DaySeparator } from "./helpers";
+import {
+  filterTechnicianWorkTasks,
+  filterTasksByDate,
+  groupTasksByDay,
+  DateFilterBar,
+  DaySeparator,
+} from "./helpers";
+import { FieldWorkActiveList } from "./FieldWorkActiveList";
+import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
 
 interface TechnicianWorkViewProps {
   user: User;
@@ -15,19 +21,12 @@ interface TechnicianWorkViewProps {
 
 export function TechnicianWorkView({ user, tasks, properties, navigate }: TechnicianWorkViewProps) {
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
-  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
-
   const getPropertyById = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find((p) => p.id === propertyId) || null;
   };
 
-  const techTasks = tasks.filter((t) => {
-    if (t.parentTaskId) return false;
-    const isAssignedToMe = t.assignedToId === user.id;
-    const isTechPoolTask = t.assignedToId === "technician_pool" || t.assignedPool === "technician_pool";
-    return isAssignedToMe || isTechPoolTask;
-  });
+  const techTasks = filterTechnicianWorkTasks(tasks, user.id);
 
   const filteredTasks = filterTasksByDate(techTasks, dateFilter);
   const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
@@ -40,8 +39,13 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
     const isInProgress = task.status === "in_progress";
     const isHighUrgency = task.urgency === "high";
     return (
-      <div
+      <FieldWorkTaskCard
         key={task.id}
+        taskId={task.id}
+        taskName={task.name}
+        ariaLabel={`Open task ${task.name}`}
+        testIdPrefix="tech"
+        onOpen={() => navigate(`/tasks/${task.id}`)}
         className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
           isInProgress
             ? "border-primary bg-primary/5"
@@ -49,8 +53,6 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             ? "border-red-400 dark:border-red-600"
             : "border-border"
         }`}
-        data-testid={`tech-task-card-${task.id}`}
-        onClick={() => navigate(`/tasks/${task.id}`)}
       >
         <div className="flex items-center gap-4">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
@@ -82,18 +84,21 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             </Badge>
           )}
         </div>
-      </div>
+      </FieldWorkTaskCard>
     );
   };
 
   const renderCompletedCard = (task: Task) => {
     const property = getPropertyById(task.propertyId);
     return (
-      <div
+      <FieldWorkTaskCard
         key={task.id}
+        taskId={task.id}
+        taskName={task.name}
+        ariaLabel={`Open completed task ${task.name}`}
+        testIdPrefix="tech"
+        onOpen={() => navigate(`/tasks/${task.id}`)}
         className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 cursor-pointer active-elevate-2 transition-colors"
-        data-testid={`tech-task-card-${task.id}`}
-        onClick={() => navigate(`/tasks/${task.id}`)}
       >
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
@@ -110,22 +115,11 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
               </p>
             )}
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSummaryTaskId(task.id);
-            }}
-            data-testid={`button-view-summary-${task.id}`}
-          >
-            <ClipboardCheck className="w-4 h-4" />
-          </Button>
           <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400" data-testid={`badge-completed-${task.id}`}>
             Done
           </Badge>
         </div>
-      </div>
+      </FieldWorkTaskCard>
     );
   };
 
@@ -154,12 +148,17 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         </div>
       ) : (
         <div className="space-y-3">
-          {activeGroups.map((group) => (
-            <div key={group.dateKey} className="space-y-3">
-              <DaySeparator label={group.label} />
-              {group.tasks.map((task, index) => renderActiveCard(task, index))}
-            </div>
-          ))}
+          {activeTasks.length > 0 ? (
+            <FieldWorkActiveList groups={activeGroups} renderCard={renderActiveCard} />
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4" data-testid="no-active-tasks-hint">
+              {dateFilter === "today"
+                ? "No active tasks scheduled for today."
+                : dateFilter === "week"
+                ? "No active tasks scheduled this week."
+                : "No active tasks right now."}
+            </p>
+          )}
 
           {completedTasks.length > 0 && (
             <>
@@ -177,11 +176,6 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         </div>
       )}
 
-      <CompletedTaskSummary
-        taskId={summaryTaskId!}
-        open={!!summaryTaskId}
-        onOpenChange={(open) => !open && setSummaryTaskId(null)}
-      />
     </div>
   );
 }

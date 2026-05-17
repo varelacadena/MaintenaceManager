@@ -9,15 +9,23 @@ import { PanelNotesSection } from "./PanelNotesSection";
 import { PanelHistorySection } from "./PanelHistorySection";
 import { PanelResourcesSection } from "./PanelResourcesSection";
 import { PanelSubtasksSection } from "./PanelSubtasksSection";
+import { PanelCompactMain } from "./PanelCompactMain";
 
 interface PanelMainContentProps {
   ctx: TaskDetailPanelContext;
   isFullscreen: boolean;
   allUsers?: User[];
   taskId: string;
+  onViewCompletionReport?: () => void;
 }
 
-export function PanelMainContent({ ctx, isFullscreen, allUsers, taskId }: PanelMainContentProps) {
+export function PanelMainContent({
+  ctx,
+  isFullscreen,
+  allUsers,
+  taskId,
+  onViewCompletionReport,
+}: PanelMainContentProps) {
   const {
     isMobile, task, subtasks, uploads, taskParts, inventoryItems,
     timeEntries, taskNotes, totalMinutes, docCount, imgCount, vidCount,
@@ -38,6 +46,16 @@ export function PanelMainContent({ ctx, isFullscreen, allUsers, taskId }: PanelM
   } = ctx;
 
   if (!task) return null;
+
+  if (!isFullscreen && !isMobile) {
+    return (
+      <PanelCompactMain
+        ctx={ctx}
+        taskId={taskId}
+        onViewCompletionReport={onViewCompletionReport}
+      />
+    );
+  }
 
   return (
     <div className={isMobile && isFullscreen ? "flex-1" : "flex-1 overflow-y-auto"} data-testid="panel-main-content">

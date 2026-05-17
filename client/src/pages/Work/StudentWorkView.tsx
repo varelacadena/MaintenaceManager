@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, Eye, EyeOff, MapPin, ClipboardCheck } from "lucide-react";
-import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import type { TaskWithHelperFlag } from "./helpers";
+import { CheckCircle2, Eye, EyeOff, MapPin } from "lucide-react";
 import type { Task, Property, User } from "@shared/schema";
-import { filterTasksByDate, groupTasksByDay, DateFilterBar, DaySeparator } from "./helpers";
+import {
+  filterStudentWorkTasks,
+  filterTasksByDate,
+  groupTasksByDay,
+  DateFilterBar,
+  DaySeparator,
+} from "./helpers";
+import { FieldWorkActiveList } from "./FieldWorkActiveList";
+import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
 
 interface StudentWorkViewProps {
   user: User;
@@ -16,19 +23,12 @@ interface StudentWorkViewProps {
 export function StudentWorkView({ user, tasks, properties, navigate }: StudentWorkViewProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
-  const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
-
   const getPropertyById = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find((p) => p.id === propertyId) || null;
   };
 
-  const studentTasks = tasks.filter((t) => {
-    if (t.parentTaskId) return false;
-    const isAssignedToMe = t.assignedToId === user.id;
-    const isStudentPoolTask = t.assignedToId === "student_pool";
-    return isAssignedToMe || isStudentPoolTask;
-  });
+  const studentTasks = filterStudentWorkTasks(tasks, user.id);
 
   const filteredTasks = filterTasksByDate(studentTasks, dateFilter);
   const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
@@ -40,9 +40,15 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
     const property = getPropertyById(task.propertyId);
     const isInProgress = task.status === "in_progress";
     const isHighUrgency = task.urgency === "high";
+    const isHelper = (task as TaskWithHelperFlag).isHelper;
     return (
-      <div
+      <FieldWorkTaskCard
         key={task.id}
+        taskId={task.id}
+        taskName={task.name}
+        ariaLabel={`Open task ${task.name}`}
+        testIdPrefix="student"
+        onOpen={() => navigate(`/tasks/${task.id}`)}
         className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
           isInProgress
             ? "border-primary bg-primary/5"
@@ -50,8 +56,6 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
             ? "border-red-400 dark:border-red-600"
             : "border-border"
         }`}
-        data-testid={`student-task-card-${task.id}`}
-        onClick={() => navigate(`/tasks/${task.id}`)}
       >
         <div className="flex items-center gap-4">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
@@ -72,6 +76,11 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
               </p>
             )}
           </div>
+          {isHelper && (
+            <Badge variant="outline" className="shrink-0" data-testid={`badge-helper-${task.id}`}>
+              Helper
+            </Badge>
+          )}
           {isInProgress && (
             <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
               In Progress
@@ -83,18 +92,21 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
             </Badge>
           )}
         </div>
-      </div>
+      </FieldWorkTaskCard>
     );
   };
 
   const renderCompletedCard = (task: Task) => {
     const property = getPropertyById(task.propertyId);
     return (
-      <div
+      <FieldWorkTaskCard
         key={task.id}
+        taskId={task.id}
+        taskName={task.name}
+        ariaLabel={`Open completed task ${task.name}`}
+        testIdPrefix="student"
+        onOpen={() => navigate(`/tasks/${task.id}`)}
         className="rounded-lg border border-border/50 p-3 cursor-pointer opacity-60"
-        data-testid={`student-task-card-${task.id}`}
-        onClick={() => navigate(`/tasks/${task.id}`)}
       >
         <div className="flex items-center gap-3">
           <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
@@ -106,19 +118,8 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
               <p className="text-xs text-muted-foreground truncate">{property.name}</p>
             )}
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSummaryTaskId(task.id);
-            }}
-            data-testid={`button-view-summary-${task.id}`}
-          >
-            <ClipboardCheck className="w-4 h-4" />
-          </Button>
         </div>
-      </div>
+      </FieldWorkTaskCard>
     );
   };
 
@@ -145,20 +146,23 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
             {dateFilter === "today" ? "No tasks for today." : dateFilter === "week" ? "No tasks this week." : "No tasks assigned to you right now."}
           </p>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {activeGroups.map((group) => (
-            <div key={group.dateKey} className="space-y-3">
-              <DaySeparator label={group.label} />
-              {group.tasks.map((task, index) => renderActiveCard(task, index))}
-            </div>
-          ))}
-        </div>
-      )}
+      ) : activeTasks.length > 0 ? (
+        <FieldWorkActiveList groups={activeGroups} renderCard={renderActiveCard} />
+      ) : completedTasks.length > 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4" data-testid="no-active-tasks-hint">
+          {dateFilter === "today"
+            ? "No active tasks scheduled for today."
+            : dateFilter === "week"
+            ? "No active tasks scheduled this week."
+            : "No active tasks right now."}
+        </p>
+      ) : null}
 
       {completedTasks.length > 0 && (
         <div>
           <button
+            type="button"
+            aria-expanded={showCompleted}
             onClick={() => setShowCompleted(!showCompleted)}
             className="text-sm text-muted-foreground flex items-center gap-1 mb-2"
             data-testid="toggle-completed-tasks"
@@ -179,11 +183,6 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
         </div>
       )}
 
-      <CompletedTaskSummary
-        taskId={summaryTaskId!}
-        open={!!summaryTaskId}
-        onOpenChange={(open) => !open && setSummaryTaskId(null)}
-      />
     </div>
   );
 }
