@@ -29,8 +29,8 @@ describe("fleetUtils", () => {
       expect(vehiclesListUrl("in_use", 2)).toBe("/api/vehicles?limit=24&offset=48&status=in_use");
     });
 
-    it("omits pagination when disabled", () => {
-      expect(vehiclesListUrl("all", 0, 24, false)).toBe("/api/vehicles");
+    it("includes server-side search", () => {
+      expect(vehiclesListUrl("all", 0, 24, "ford")).toContain("search=ford");
     });
   });
 

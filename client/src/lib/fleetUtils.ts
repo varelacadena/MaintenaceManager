@@ -5,6 +5,7 @@ export function isFleetPrivilegedRole(role: string | undefined): boolean {
 
 export const FLEET_PAGE_SIZE = 24;
 export const RESERVATIONS_PAGE_SIZE = 20;
+export const MY_RESERVATIONS_PAGE_SIZE = 15;
 
 export type PaginatedResponse<T> = {
   items: T[];
@@ -23,26 +24,27 @@ export function isPaginatedResponse<T>(data: unknown): data is PaginatedResponse
   );
 }
 
-function appendPagination(params: URLSearchParams, page: number, pageSize: number, paginate: boolean) {
-  if (paginate) {
-    params.set("limit", String(pageSize));
-    params.set("offset", String(page * pageSize));
-  }
+function appendPagination(params: URLSearchParams, page: number, pageSize: number) {
+  params.set("limit", String(pageSize));
+  params.set("offset", String(page * pageSize));
 }
 
 export function vehiclesListUrl(
   statusFilter: string,
   page = 0,
   pageSize = FLEET_PAGE_SIZE,
-  paginate = true,
+  search = "",
 ): string {
   const params = new URLSearchParams();
-  appendPagination(params, page, pageSize, paginate);
+  appendPagination(params, page, pageSize);
   if (statusFilter !== "all") {
     params.set("status", statusFilter);
   }
-  const qs = params.toString();
-  return qs ? `/api/vehicles?${qs}` : "/api/vehicles";
+  const trimmed = search.trim();
+  if (trimmed) {
+    params.set("search", trimmed);
+  }
+  return `/api/vehicles?${params.toString()}`;
 }
 
 /** Build reservations API URL with server-side status filtering when possible. */
@@ -50,10 +52,10 @@ export function reservationsListUrl(
   statusFilter: string,
   page = 0,
   pageSize = RESERVATIONS_PAGE_SIZE,
-  paginate = true,
+  search = "",
 ): string {
   const params = new URLSearchParams();
-  appendPagination(params, page, pageSize, paginate);
+  appendPagination(params, page, pageSize);
 
   switch (statusFilter) {
     case "pending_and_review":
@@ -68,7 +70,52 @@ export function reservationsListUrl(
       params.set("status", statusFilter);
   }
 
+  const trimmed = search.trim();
+  if (trimmed) {
+    params.set("q", trimmed);
+  }
+
   return `/api/vehicle-reservations?${params.toString()}`;
+}
+
+export function myReservationsListUrl(page = 0, pageSize = MY_RESERVATIONS_PAGE_SIZE): string {
+  const params = new URLSearchParams();
+  appendPagination(params, page, pageSize);
+  return `/api/vehicle-reservations/my?${params.toString()}`;
+}
+
+export function parseFleetUrlState(search: string): {
+  tab: string;
+  fleetStatus: string;
+  fleetPage: number;
+  fleetSearch: string;
+  resStatus: string;
+  resPage: number;
+  resSearch: string;
+} {
+  const params = new URLSearchParams(search);
+  return {
+    tab: params.get("tab") || "fleet",
+    fleetStatus: params.get("fleetStatus") || "all",
+    fleetPage: Math.max(0, parseInt(params.get("fleetPage") || "0", 10) || 0),
+    fleetSearch: params.get("fleetSearch") || "",
+    resStatus: params.get("resStatus") || "pending_and_review",
+    resPage: Math.max(0, parseInt(params.get("resPage") || "0", 10) || 0),
+    resSearch: params.get("resSearch") || "",
+  };
+}
+
+export function buildFleetLocationSearch(state: ReturnType<typeof parseFleetUrlState>): string {
+  const params = new URLSearchParams();
+  if (state.tab && state.tab !== "fleet") params.set("tab", state.tab);
+  if (state.fleetStatus !== "all") params.set("fleetStatus", state.fleetStatus);
+  if (state.fleetPage > 0) params.set("fleetPage", String(state.fleetPage));
+  if (state.fleetSearch) params.set("fleetSearch", state.fleetSearch);
+  if (state.resStatus !== "pending_and_review") params.set("resStatus", state.resStatus);
+  if (state.resPage > 0) params.set("resPage", String(state.resPage));
+  if (state.resSearch) params.set("resSearch", state.resSearch);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
 }
 
 export function parseOptionalInt(value: string, fallback: number): number {

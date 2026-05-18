@@ -70,6 +70,30 @@ export function isFleetPrivilegedRole(role: string | undefined): boolean {
   return role === "admin" || role === "technician";
 }
 
+/** Non-privileged users may only read vehicles tied to their own non-cancelled reservations. */
+export async function canAccessFleetVehicle(
+  userId: string,
+  role: string | undefined,
+  vehicleId: string,
+): Promise<boolean> {
+  if (isFleetPrivilegedRole(role)) return true;
+  const reservations = await storage.getVehicleReservations({ userId });
+  return reservations.some(
+    (r) => r.vehicleId === vehicleId && r.status !== "cancelled",
+  );
+}
+
+export async function canAccessVehicleDocument(
+  userId: string,
+  role: string | undefined,
+  documentId: string,
+): Promise<boolean> {
+  if (!isFleetPrivilegedRole(role)) return false;
+  const document = await storage.getVehicleDocument(documentId);
+  if (!document) return false;
+  return canAccessFleetVehicle(userId, role, document.vehicleId);
+}
+
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 200;
 
@@ -111,14 +135,12 @@ export async function syncVehicleStatus(vehicleId: string): Promise<void> {
     if (!vehicle) return;
 
     const checkOutLogs = await storage.getVehicleCheckOutLogs({ vehicleId });
-    const checkInLogs = await storage.getVehicleCheckInLogs({ vehicleId });
-
-    const hasActiveCheckOut = checkOutLogs.some((checkOut) => {
-      const hasMatchingCheckIn = checkInLogs.some(
-        (checkIn) => checkIn.checkOutLogId === checkOut.id,
-      );
-      return !hasMatchingCheckIn;
-    });
+    const openCheckOutIds = new Set<string>();
+    for (const checkOut of checkOutLogs) {
+      const checkIn = await storage.getCheckInLogByCheckOut(checkOut.id);
+      if (!checkIn) openCheckOutIds.add(checkOut.id);
+    }
+    const hasActiveCheckOut = openCheckOutIds.size > 0;
 
     const reservations = await storage.getVehicleReservations({ vehicleId });
     const nextStatus = computeSyncedVehicleStatus(

@@ -67,6 +67,7 @@ export async function applyMigrations() {
     { file: "053_drop_requested_property.sql", name: "053_drop_requested_property" },
     { file: "054_add_vehicle_image_url.sql", name: "054_add_vehicle_image_url" },
     { file: "055_create_vehicle_maintenance_logs.sql", name: "055_create_vehicle_maintenance_logs" },
+    { file: "056_fleet_performance_indexes.sql", name: "056_fleet_performance_indexes" },
   ];
 
   try {

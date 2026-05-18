@@ -47,6 +47,7 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
 // Specific role middleware wrappers
 export const requireAdmin = requireRole("admin");
 export const requireTechnicianOrAdmin = requireRole("technician", "admin");
+export const requireFleetPrivileged = requireRole("admin", "technician");
 export const requireStaffOrHigher = requireRole("staff", "technician", "admin");
 // Role middleware for student/technician model
 export const requireStudentOrAdmin = requireRole("student", "admin");

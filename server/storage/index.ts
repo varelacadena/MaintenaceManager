@@ -289,6 +289,7 @@ export interface IStorage {
   checkVehicleAvailability(vehicleId: string, startDate: Date, endDate: Date, excludeReservationId?: string): Promise<boolean>;
 
   getVehicleCheckOutLogs(filters?: { vehicleId?: string; userId?: string }): Promise<VehicleCheckOutLog[]>;
+  getOpenVehicleCheckOutLogs(userId: string): Promise<VehicleCheckOutLog[]>;
   getVehicleCheckOutLog(id: string): Promise<VehicleCheckOutLog | undefined>;
   getCheckOutLogByReservation(reservationId: string): Promise<VehicleCheckOutLog | undefined>;
   createVehicleCheckOutLog(log: InsertVehicleCheckOutLog): Promise<VehicleCheckOutLog>;
@@ -615,6 +616,7 @@ export class DatabaseStorage implements IStorage {
   deleteVehicleReservation = vehicleStorage.deleteVehicleReservation;
   checkVehicleAvailability = vehicleStorage.checkVehicleAvailability;
   getVehicleCheckOutLogs = vehicleStorage.getVehicleCheckOutLogs;
+  getOpenVehicleCheckOutLogs = vehicleStorage.getOpenVehicleCheckOutLogs;
   getVehicleCheckOutLog = vehicleStorage.getVehicleCheckOutLog;
   getCheckOutLogByReservation = vehicleStorage.getCheckOutLogByReservation;
   createVehicleCheckOutLog = vehicleStorage.createVehicleCheckOutLog;

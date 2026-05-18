@@ -21,6 +21,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useState } from "react";
 import type { VehicleCheckOutLog } from "@shared/schema";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
+import {
+  MY_RESERVATIONS_PAGE_SIZE,
+  isPaginatedResponse,
+  myReservationsListUrl,
+  type PaginatedResponse,
+} from "@/lib/fleetUtils";
+import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 
 interface VehicleReservation {
   id: string;
@@ -47,12 +55,24 @@ export default function MyReservations() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
 
-  const { data: reservations = [], isLoading } = useQuery<VehicleReservation[]>({
-    queryKey: ["/api/vehicle-reservations/my"],
+  const [myPage, setMyPage] = useState(0);
+  const myQueryUrl = myReservationsListUrl(myPage);
+
+  const { data: reservationsData, isLoading, isError, error, refetch } = useQuery<
+    VehicleReservation[] | PaginatedResponse<VehicleReservation>
+  >({
+    queryKey: [myQueryUrl],
   });
 
+  const reservations = isPaginatedResponse(reservationsData)
+    ? reservationsData.items
+    : reservationsData ?? [];
+  const myTotal = isPaginatedResponse(reservationsData)
+    ? reservationsData.total
+    : reservations.length;
+
   const { data: checkOutLogs = [] } = useQuery<VehicleCheckOutLog[]>({
-    queryKey: ["/api/vehicle-checkout-logs"],
+    queryKey: ["/api/vehicle-checkout-logs?openOnly=true"],
   });
 
   const createMutation = useMutation({
@@ -79,7 +99,9 @@ export default function MyReservations() {
 
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
-      await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
+      await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
+        status: "cancelled",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
@@ -109,7 +131,6 @@ export default function MyReservations() {
       passengerCount: parseInt(passengerCount),
       purpose,
       notes,
-      status: "pending",
     });
   };
 
@@ -135,6 +156,18 @@ export default function MyReservations() {
 
   const showViewDetails = (status: string) =>
     ["approved", "active", "completed"].includes(status.toLowerCase());
+
+  if (isError) {
+    return (
+      <div className="p-4">
+        <WorkLoadError
+          title="Could not load your reservations"
+          message={error instanceof Error ? error.message : "Something went wrong"}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -407,6 +440,17 @@ export default function MyReservations() {
             );
           })}
         </div>
+      )}
+
+      {!isLoading && (
+        <FleetListPagination
+          page={myPage}
+          pageSize={MY_RESERVATIONS_PAGE_SIZE}
+          total={myTotal}
+          onPageChange={setMyPage}
+          itemLabel="reservations"
+          testIdPrefix="my-reservations"
+        />
       )}
     </div>
   );

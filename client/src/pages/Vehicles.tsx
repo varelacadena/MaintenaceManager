@@ -43,6 +43,8 @@ import {
   isPaginatedResponse,
   type PaginatedResponse,
   parseOptionalInt,
+  parseFleetUrlState,
+  buildFleetLocationSearch,
   vehiclesListUrl,
 } from "@/lib/fleetUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
@@ -58,38 +60,37 @@ const statusColors = {
 
 function FleetContent() {
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [fleetPage, setFleetPage] = useState(0);
+  const searchString = useSearch();
+  const [, setLocation] = useLocation();
+  const urlState = parseFleetUrlState(searchString);
+  const searchTerm = urlState.fleetSearch;
+  const statusFilter = urlState.fleetStatus;
+  const fleetPage = urlState.fleetPage;
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
   const vehicleImageObjectPathRef = useRef("");
   const { toast } = useToast();
 
-  const useFleetPagination = !searchTerm.trim();
+  const patchFleetUrl = (patch: Partial<typeof urlState>) => {
+    const next = { ...urlState, tab: "fleet", ...patch };
+    setLocation(`/vehicles${buildFleetLocationSearch(next)}`);
+  };
+
   const vehiclesQueryUrl = vehiclesListUrl(
     statusFilter,
     fleetPage,
     FLEET_PAGE_SIZE,
-    useFleetPagination,
+    searchTerm,
   );
 
-  useEffect(() => {
-    setFleetPage(0);
-  }, [statusFilter, searchTerm]);
-
   const { data: vehiclesData, isLoading, isError, error, refetch } = useQuery<
-    Vehicle[] | PaginatedResponse<Vehicle>
+    PaginatedResponse<Vehicle>
   >({
     queryKey: [vehiclesQueryUrl],
   });
 
-  const vehicles = isPaginatedResponse(vehiclesData)
-    ? vehiclesData.items
-    : vehiclesData ?? [];
-  const fleetTotal = isPaginatedResponse(vehiclesData)
-    ? vehiclesData.total
-    : vehicles.length;
+  const vehicles = vehiclesData?.items ?? [];
+  const fleetTotal = vehiclesData?.total ?? 0;
 
   const form = useForm<InsertVehicle>({
     resolver: zodResolver(insertVehicleSchema),
@@ -139,18 +140,6 @@ function FleetContent() {
       });
     },
   });
-
-  const filteredVehicles = useFleetPagination
-    ? vehicles
-    : vehicles.filter((vehicle) => {
-        const term = searchTerm.toLowerCase();
-        return (
-          vehicle.make.toLowerCase().includes(term) ||
-          vehicle.model.toLowerCase().includes(term) ||
-          vehicle.vehicleId.toLowerCase().includes(term) ||
-          vehicle.licensePlate?.toLowerCase().includes(term)
-        );
-      });
 
   const syncStatusesMutation = useMutation({
     mutationFn: async () => {
@@ -487,17 +476,15 @@ function FleetContent() {
           <Input
             placeholder="Search vehicles..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => patchFleetUrl({ fleetSearch: e.target.value, fleetPage: 0 })}
             className="pl-8"
+            aria-label="Search vehicles"
             data-testid="input-search-vehicles"
           />
         </div>
         <Select
           value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value);
-            setFleetPage(0);
-          }}
+          onValueChange={(value) => patchFleetUrl({ fleetStatus: value, fleetPage: 0 })}
         >
           <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
@@ -534,9 +521,9 @@ function FleetContent() {
             </Card>
           ))}
         </div>
-      ) : filteredVehicles && filteredVehicles.length > 0 ? (
+      ) : vehicles && vehicles.length > 0 ? (
         <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {filteredVehicles.map((vehicle) => (
+          {vehicles.map((vehicle) => (
             <Link
               key={vehicle.id}
               href={`/vehicles/${vehicle.id}`}
@@ -601,18 +588,20 @@ function FleetContent() {
             <p className="text-sm text-muted-foreground">
               {searchTerm || statusFilter !== "all"
                 ? "Try adjusting your filters"
-                : "Add your first vehicle to get started"}
+                : user?.role === "admin"
+                  ? "Add your first vehicle to get started"
+                  : "No vehicles match your filters"}
             </p>
           </CardContent>
         </Card>
       )}
 
-      {useFleetPagination && !isLoading && !isError ? (
+      {!isLoading && !isError ? (
         <FleetListPagination
           page={fleetPage}
           pageSize={FLEET_PAGE_SIZE}
           total={fleetTotal}
-          onPageChange={setFleetPage}
+          onPageChange={(page) => patchFleetUrl({ fleetPage: page })}
           itemLabel="vehicles"
           testIdPrefix="fleet"
         />
@@ -640,14 +629,10 @@ export default function Vehicles() {
   const pendingCount =
     isAdmin || isTechnician ? notificationCounts.pendingVehicleReservations : 0;
 
+  const urlState = parseFleetUrlState(searchString);
   const setActiveTab = (tab: string) => {
     const nextTab = !isAdmin && (tab === "fleet" || tab === "codehub") ? "reservations" : tab;
-    const params = new URLSearchParams();
-    if (nextTab !== "fleet") {
-      params.set("tab", nextTab);
-    }
-    const qs = params.toString();
-    setLocation(qs ? `/vehicles?${qs}` : "/vehicles");
+    setLocation(`/vehicles${buildFleetLocationSearch({ ...urlState, tab: nextTab })}`);
   };
 
   return (

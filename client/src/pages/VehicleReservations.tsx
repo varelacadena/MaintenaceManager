@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Car, User, Search, Edit, ClipboardCheck } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
 import type { VehicleCheckInLog, Lockbox } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,8 @@ import {
   RESERVATIONS_PAGE_SIZE,
   type PaginatedResponse,
   reservationsListUrl,
+  parseFleetUrlState,
+  buildFleetLocationSearch,
 } from "@/lib/fleetUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
@@ -63,9 +65,14 @@ const formatStatus = (status: string) =>
   status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
 export function VehicleReservationsContent() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [reservationsPage, setReservationsPage] = useState(0);
+  const searchString = useSearch();
+  const [, setLocation] = useLocation();
+  const urlState = parseFleetUrlState(searchString);
+  const searchTerm = urlState.resSearch;
+  const statusFilter = urlState.resStatus;
+  const reservationsPage = urlState.resPage;
+  const [assignVehicleId, setAssignVehicleId] = useState("");
+  const [assignReservationId, setAssignReservationId] = useState<string | null>(null);
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
   const [selectedReservationForHandoff, setSelectedReservationForHandoff] = useState<string | null>(null);
   const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
@@ -92,23 +99,16 @@ export function VehicleReservationsContent() {
 
   const isFleetStaff = isFleetPrivilegedRole(currentUser?.role);
 
-  useEffect(() => {
-    if (currentUser) {
-      setStatusFilter(isFleetPrivilegedRole(currentUser.role) ? "pending_and_review" : "approved_active");
-    }
-  }, [currentUser?.role]);
+  const patchResUrl = (patch: Partial<typeof urlState>) => {
+    setLocation(`/vehicles${buildFleetLocationSearch({ ...urlState, tab: "reservations", ...patch })}`);
+  };
 
-  const useReservationsPagination = !searchTerm.trim();
   const reservationsQueryUrl = reservationsListUrl(
     statusFilter,
     reservationsPage,
     RESERVATIONS_PAGE_SIZE,
-    useReservationsPagination,
+    searchTerm,
   );
-
-  useEffect(() => {
-    setReservationsPage(0);
-  }, [statusFilter, searchTerm]);
 
   const {
     data: reservationsData,
@@ -252,6 +252,12 @@ export function VehicleReservationsContent() {
       // Combine date and time for start and end
       const startDateTime = new Date(`${editStartDate}T${editStartTime}`);
       const endDateTime = new Date(`${editEndDate}T${editEndTime}`);
+      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+        throw new Error("Invalid start or end date/time");
+      }
+      if (endDateTime <= startDateTime) {
+        throw new Error("End must be after start");
+      }
 
       return await apiRequest("PATCH", `/api/vehicle-reservations/${selectedReservationForEdit.id}`, {
         purpose: editPurpose,
@@ -345,18 +351,7 @@ export function VehicleReservationsContent() {
     return user ? `${user.firstName} ${user.lastName}` : "Unknown User";
   };
 
-  const filteredReservations = reservations?.filter(reservation => {
-    const vehicleName = reservation.vehicleId ? getVehicleName(reservation.vehicleId).toLowerCase() : "not assigned";
-    const userName = getUserName(reservation.userId).toLowerCase();
-    const purpose = reservation.purpose.toLowerCase();
-
-    const matchesSearch =
-      vehicleName.includes(searchTerm.toLowerCase()) ||
-      userName.includes(searchTerm.toLowerCase()) ||
-      purpose.includes(searchTerm.toLowerCase());
-
-    return matchesSearch;
-  })?.sort((a, b) => {
+  const displayReservations = [...reservations].sort((a, b) => {
     if (a.status === "pending" && b.status !== "pending") return -1;
     if (a.status !== "pending" && b.status === "pending") return 1;
     return 0;
@@ -370,16 +365,16 @@ export function VehicleReservationsContent() {
           <Input
             placeholder="Search reservations..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => patchResUrl({ resSearch: e.target.value, resPage: 0 })}
             className="pl-8"
+            aria-label="Search reservations"
             data-testid="input-search-reservations"
           />
         </div>
         <Select
           value={statusFilter}
           onValueChange={(value) => {
-            setStatusFilter(value);
-            setReservationsPage(0);
+            patchResUrl({ resStatus: value, resPage: 0 });
           }}
         >
           <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
@@ -419,9 +414,9 @@ export function VehicleReservationsContent() {
             </Card>
           ))}
         </div>
-      ) : filteredReservations && filteredReservations.length > 0 ? (
+      ) : displayReservations && displayReservations.length > 0 ? (
         <div className="space-y-3">
-          {filteredReservations.map((reservation) => (
+          {displayReservations.map((reservation) => (
             <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`} className={reservation.status === "pending" ? "ring-1 ring-primary/30 bg-primary/[0.03]" : ""}>
               <CardContent className="pt-4 pb-3 px-4 space-y-2">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -481,7 +476,14 @@ export function VehicleReservationsContent() {
                             <Label htmlFor="vehicle" className="text-right">
                               Vehicle
                             </Label>
-                            <Select onValueChange={(value) => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: value })} disabled={assignVehicleMutation.isPending}>
+                            <Select
+                              value={assignReservationId === reservation.id ? assignVehicleId : ""}
+                              onValueChange={(value) => {
+                                setAssignReservationId(reservation.id);
+                                setAssignVehicleId(value);
+                              }}
+                              disabled={assignVehicleMutation.isPending}
+                            >
                               <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select a vehicle" />
                               </SelectTrigger>
@@ -501,9 +503,25 @@ export function VehicleReservationsContent() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <p className="text-sm text-muted-foreground w-full text-left">
-                            Choose a vehicle above to assign and open handoff details.
-                          </p>
+                          <Button
+                            type="button"
+                            disabled={
+                              assignVehicleMutation.isPending ||
+                              assignReservationId !== reservation.id ||
+                              !assignVehicleId
+                            }
+                            onClick={() => {
+                              if (!assignVehicleId) return;
+                              assignVehicleMutation.mutate({
+                                reservationId: reservation.id,
+                                vehicleId: assignVehicleId,
+                              });
+                              setAssignVehicleId("");
+                              setAssignReservationId(null);
+                            }}
+                          >
+                            Confirm assignment
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -589,35 +607,37 @@ export function VehicleReservationsContent() {
                   }
                   return null;
                 })()}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      disabled={deleteMutation.isPending}
-                      data-testid={`button-delete-${reservation.id}`}
-                    >
-                      {deleteMutation.isPending ? "Deleting..." : "Delete"}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this reservation? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Go Back</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => deleteMutation.mutate(reservation.id)}
-                        className="bg-destructive text-destructive-foreground"
+                {currentUser?.role === "admin" && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-${reservation.id}`}
                       >
-                        Delete Reservation
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Permanently remove this record? Use Cancel for a normal cancellation.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Go Back</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(reservation.id)}
+                          className="bg-destructive text-destructive-foreground"
+                        >
+                          Delete Reservation
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </CardFooter>
             </Card>
           ))}
@@ -636,12 +656,12 @@ export function VehicleReservationsContent() {
         </Card>
       )}
 
-      {useReservationsPagination && !reservationsLoading && !reservationsError ? (
+      {!reservationsLoading && !reservationsError ? (
         <FleetListPagination
           page={reservationsPage}
           pageSize={RESERVATIONS_PAGE_SIZE}
           total={reservationsTotal}
-          onPageChange={setReservationsPage}
+          onPageChange={(page) => patchResUrl({ resPage: page })}
           itemLabel="reservations"
           testIdPrefix="reservations"
         />
@@ -890,24 +910,6 @@ export function VehicleReservationsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-export default function VehicleReservations() {
-  return (
-    <div className="flex-1 space-y-4 p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">
-            All Vehicle Reservations
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            View and manage all vehicle reservations
-          </p>
-        </div>
-      </div>
-      <VehicleReservationsContent />
     </div>
   );
 }

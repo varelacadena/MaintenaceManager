@@ -18,6 +18,7 @@ import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,12 +56,12 @@ export default function VehicleDetail() {
       toast({ title: "Vehicle deleted successfully" });
       navigate("/vehicles");
     },
-    onError: () => {
-      toast({ title: "Failed to delete vehicle", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Failed to delete vehicle", description: error.message, variant: "destructive" });
     },
   });
 
-  const { data: vehicle, isLoading } = useQuery<Vehicle>({
+  const { data: vehicle, isLoading, isError, error, refetch } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${id}`],
   });
 
@@ -101,8 +102,8 @@ export default function VehicleDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${id}`] });
       toast({ title: "Vehicle status updated" });
     },
-    onError: () => {
-      toast({ title: "Failed to update status", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Failed to update status", description: error.message, variant: "destructive" });
     },
   });
 
@@ -158,6 +159,18 @@ export default function VehicleDetail() {
       toast({ title: "Failed to delete document", variant: "destructive" });
     },
   });
+
+  if (isError) {
+    return (
+      <div className="p-4">
+        <WorkLoadError
+          title="Could not load vehicle"
+          message={error instanceof Error ? error.message : "Failed to load vehicle"}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { parseOptionalInt } from "@/lib/fleetUtils";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 
 export default function VehicleEdit() {
   const { id } = useParams();
@@ -24,7 +25,7 @@ export default function VehicleEdit() {
   const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
   const vehicleImageObjectPathRef = useRef("");
 
-  const { data: vehicle, isLoading } = useQuery<Vehicle>({
+  const { data: vehicle, isLoading, isError, error, refetch } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${id}`],
   });
 
@@ -73,6 +74,18 @@ export default function VehicleEdit() {
       });
     },
   });
+
+  if (isError) {
+    return (
+      <div className="p-4">
+        <WorkLoadError
+          title="Could not load vehicle"
+          message={error instanceof Error ? error.message : "Failed to load vehicle"}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

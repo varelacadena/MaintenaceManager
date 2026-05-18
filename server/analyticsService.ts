@@ -1588,8 +1588,24 @@ export class AnalyticsService {
     const completedReservations = filteredReservations.filter(r => r.status === "completed").length;
     const cancelledReservations = filteredReservations.filter(r => r.status === "cancelled").length;
 
-    // Calculate maintenance cost from logs
-    const totalMaintenanceCost = allMaintenanceLogs.reduce((sum, log) => sum + (Number(log.cost) || 0), 0);
+    let filteredMaintenanceLogs = allMaintenanceLogs;
+    if (filters.startDate) {
+      const startDate = new Date(filters.startDate);
+      filteredMaintenanceLogs = filteredMaintenanceLogs.filter(
+        (log) => log.maintenanceDate && new Date(log.maintenanceDate) >= startDate,
+      );
+    }
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      filteredMaintenanceLogs = filteredMaintenanceLogs.filter(
+        (log) => log.maintenanceDate && new Date(log.maintenanceDate) <= endDate,
+      );
+    }
+
+    const totalMaintenanceCost = filteredMaintenanceLogs.reduce(
+      (sum, log) => sum + (Number(log.cost) || 0),
+      0,
+    );
 
     const periodEnd = filters.endDate ? new Date(filters.endDate) : now;
     periodEnd.setHours(23, 59, 59, 999);

@@ -22,19 +22,31 @@ import {
   type InsertVehicleDocument,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, ne, desc, lte, gte, sql, inArray, count } from "drizzle-orm";
+import { eq, and, ne, desc, lte, gte, sql, inArray, count, or, ilike } from "drizzle-orm";
 
 export type VehicleReservationFilters = {
   vehicleId?: string;
   userId?: string;
   status?: string;
   statuses?: string[];
+  search?: string;
 };
 
-function buildVehicleConditions(filters?: { status?: string }) {
+function buildVehicleConditions(filters?: { status?: string; search?: string }) {
   const conditions = [];
   if (filters?.status) {
     conditions.push(eq(vehicles.status, filters.status as any));
+  }
+  if (filters?.search?.trim()) {
+    const term = `%${filters.search.trim()}%`;
+    conditions.push(
+      or(
+        ilike(vehicles.make, term),
+        ilike(vehicles.model, term),
+        ilike(vehicles.vehicleId, term),
+        ilike(vehicles.licensePlate, term),
+      )!,
+    );
   }
   return conditions;
 }
@@ -52,10 +64,14 @@ function buildReservationConditions(filters?: VehicleReservationFilters) {
   } else if (filters?.status) {
     conditions.push(eq(vehicleReservations.status, filters.status as any));
   }
+  if (filters?.search?.trim()) {
+    const term = `%${filters.search.trim()}%`;
+    conditions.push(ilike(vehicleReservations.purpose, term));
+  }
   return conditions;
 }
 
-export async function getVehicles(filters?: { status?: string }): Promise<Vehicle[]> {
+export async function getVehicles(filters?: { status?: string; search?: string }): Promise<Vehicle[]> {
   const conditions = buildVehicleConditions(filters);
   const query = db.select().from(vehicles);
   if (conditions.length > 0) {
@@ -65,7 +81,7 @@ export async function getVehicles(filters?: { status?: string }): Promise<Vehicl
 }
 
 export async function getVehiclesPage(
-  filters: { status?: string } | undefined,
+  filters: { status?: string; search?: string } | undefined,
   pagination: { limit: number; offset: number },
 ): Promise<{ items: Vehicle[]; total: number }> {
   const conditions = buildVehicleConditions(filters);
@@ -231,7 +247,11 @@ export async function checkVehicleAvailability(
   return conflictingReservations.length === 0;
 }
 
-export async function getVehicleCheckOutLogs(filters?: { vehicleId?: string; userId?: string }): Promise<VehicleCheckOutLog[]> {
+export async function getVehicleCheckOutLogs(filters?: {
+  vehicleId?: string;
+  userId?: string;
+  reservationId?: string;
+}): Promise<VehicleCheckOutLog[]> {
   const conditions = [];
   if (filters?.vehicleId) {
     conditions.push(eq(vehicleCheckOutLogs.vehicleId, filters.vehicleId));
@@ -239,12 +259,26 @@ export async function getVehicleCheckOutLogs(filters?: { vehicleId?: string; use
   if (filters?.userId) {
     conditions.push(eq(vehicleCheckOutLogs.userId, filters.userId));
   }
+  if (filters?.reservationId) {
+    conditions.push(eq(vehicleCheckOutLogs.reservationId, filters.reservationId));
+  }
 
   const query = db.select().from(vehicleCheckOutLogs);
   if (conditions.length > 0) {
     return await query.where(and(...conditions)).orderBy(desc(vehicleCheckOutLogs.checkOutTime));
   }
   return await query.orderBy(desc(vehicleCheckOutLogs.checkOutTime));
+}
+
+/** Checkout rows for a user that do not yet have a matching check-in log. */
+export async function getOpenVehicleCheckOutLogs(userId: string): Promise<VehicleCheckOutLog[]> {
+  const logs = await getVehicleCheckOutLogs({ userId });
+  const open: VehicleCheckOutLog[] = [];
+  for (const log of logs) {
+    const checkIn = await getCheckInLogByCheckOut(log.id);
+    if (!checkIn) open.push(log);
+  }
+  return open;
 }
 
 export async function getVehicleCheckOutLog(id: string): Promise<VehicleCheckOutLog | undefined> {

@@ -1,8 +1,15 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
-import { requireAdmin, getCurrentUser, requireStaffOrHigher } from "../middleware";
-import { handleRouteError, syncVehicleStatus, isFleetPrivilegedRole, parsePaginationQuery } from "../routeUtils";
+import { requireAdmin, getCurrentUser, requireStaffOrHigher, requireFleetPrivileged } from "../middleware";
+import {
+  handleRouteError,
+  syncVehicleStatus,
+  isFleetPrivilegedRole,
+  parsePaginationQuery,
+  canAccessFleetVehicle,
+  canAccessVehicleDocument,
+} from "../routeUtils";
 import {
   insertVehicleSchema,
   insertVehicleReservationSchema,
@@ -50,34 +57,55 @@ function parseReservationStatuses(raw: string | undefined): string[] | undefined
 
 export function registerVehicleRoutes(app: Express) {
   // Vehicle routes
-  app.get("/api/vehicles", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicles", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const status = req.query.status as string | undefined;
+      const search = req.query.search as string | undefined;
+      if (status && !vehicleStatusSchema.safeParse(status).success) {
+        return res.status(400).json({ message: "Invalid vehicle status" });
+      }
+      const filters = {
+        ...(status ? { status } : {}),
+        ...(search?.trim() ? { search: search.trim() } : {}),
+      };
+      const hasFilters = Object.keys(filters).length > 0;
       const pagination = parsePaginationQuery({
         limit: req.query.limit as string | undefined,
         offset: req.query.offset as string | undefined,
       });
 
-      if (pagination) {
+      if (pagination || search?.trim()) {
         const page = await storage.getVehiclesPage(
-          status ? { status } : undefined,
-          pagination,
+          hasFilters ? filters : undefined,
+          pagination ?? { limit: 50, offset: 0 },
         );
-        return res.json({ ...page, ...pagination });
+        return res.json({ ...page, ...(pagination ?? { limit: 50, offset: 0 }) });
       }
 
-      const vehicles = await storage.getVehicles(status ? { status } : undefined);
+      const vehicles = await storage.getVehicles(hasFilters ? filters : undefined);
       res.json(vehicles);
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch vehicles");
     }
   });
 
-  app.get("/api/vehicles/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicles/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const currentUser = await getCurrentUser(req);
+      if (!currentUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const vehicle = await storage.getVehicle(req.params.id);
       if (!vehicle) {
         return res.status(404).json({ message: "Vehicle not found" });
+      }
+      const allowed = await canAccessFleetVehicle(
+        req.userId,
+        currentUser.role,
+        vehicle.id,
+      );
+      if (!allowed) {
+        return res.status(403).json({ message: "Forbidden" });
       }
       res.json(vehicle);
     } catch (error) {
@@ -134,7 +162,14 @@ export function registerVehicleRoutes(app: Express) {
   app.get("/api/vehicle-reservations/my", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const reservations = await storage.getVehicleReservations({ userId });
+      const pagination = parsePaginationQuery({
+        limit: req.query.limit as string | undefined,
+        offset: req.query.offset as string | undefined,
+      });
+
+      const reservations = pagination
+        ? (await storage.getVehicleReservationsPage({ userId }, pagination)).items
+        : await storage.getVehicleReservations({ userId });
 
       const enriched = await Promise.all(reservations.map(async (r) => {
         if (!r.vehicleId) return { ...r, vehicleName: null, vehicleDisplayId: null };
@@ -145,6 +180,11 @@ export function registerVehicleRoutes(app: Express) {
           vehicleDisplayId: vehicle ? vehicle.vehicleId : null,
         };
       }));
+
+      if (pagination) {
+        const { total } = await storage.getVehicleReservationsPage({ userId }, pagination);
+        return res.json({ items: enriched, total, ...pagination });
+      }
 
       res.json(enriched);
     } catch (error) {
@@ -175,11 +215,13 @@ export function registerVehicleRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid reservation status" });
       }
 
+      const search = (req.query.q as string | undefined)?.trim();
       const filters = {
         vehicleId,
         userId,
         status: statuses ? undefined : statusParam,
         statuses,
+        ...(search ? { search } : {}),
       };
 
       const pagination = parsePaginationQuery({
@@ -232,7 +274,11 @@ export function registerVehicleRoutes(app: Express) {
         endDate: new Date(req.body.endDate),
       };
 
+      const currentUser = await storage.getUser(userId);
       const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
+      if (!isFleetPrivilegedRole(currentUser?.role)) {
+        reservationData.status = "pending";
+      }
 
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -357,15 +403,34 @@ export function registerVehicleRoutes(app: Express) {
         delete updates.lockboxId;
         delete updates.keyPickupMethod;
         delete updates.adminNotes;
+        delete updates.userId;
+        if (updates.status !== undefined && updates.status !== "cancelled") {
+          delete updates.status;
+        }
+        if (updates.status === "cancelled" && reservation.userId !== userId) {
+          delete updates.status;
+        }
       }
 
+      const effectiveStart = updates.startDate ?? reservation.startDate;
+      const effectiveEnd = updates.endDate ?? reservation.endDate;
+      if (updates.startDate || updates.endDate) {
+        if (new Date(effectiveEnd) <= new Date(effectiveStart)) {
+          return res.status(400).json({ message: "End date/time must be after start date/time" });
+        }
+      }
+
+      const effectiveVehicleId = updates.vehicleId ?? reservation.vehicleId;
       const oldVehicleId = reservation.vehicleId;
-      if (updates.vehicleId && updates.vehicleId !== reservation.vehicleId) {
+      if (
+        effectiveVehicleId &&
+        (updates.vehicleId || updates.startDate || updates.endDate)
+      ) {
         const isAvailable = await storage.checkVehicleAvailability(
-          updates.vehicleId,
-          reservation.startDate,
-          reservation.endDate,
-          id
+          effectiveVehicleId,
+          new Date(effectiveStart),
+          new Date(effectiveEnd),
+          id,
         );
 
         if (!isAvailable) {
@@ -441,30 +506,9 @@ export function registerVehicleRoutes(app: Express) {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      if (user.role !== "admin" && reservation.userId !== userId) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      if (user.role === "staff" && reservation.userId === user.id) {
-        let vehicleInfo = "Unknown Vehicle";
-        if (reservation.vehicleId) {
-          const vehicle = await storage.getVehicle(reservation.vehicleId);
-          if (vehicle) {
-            vehicleInfo = `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`;
-          }
-        }
-
-        await storage.createServiceRequest({
-          title: `Vehicle Reservation Cancelled - ${vehicleInfo}`,
-          description: `${user.firstName} ${user.lastName} has cancelled their vehicle reservation.\n\n` +
-            `Vehicle: ${vehicleInfo}\n` +
-            `Purpose: ${reservation.purpose}\n` +
-            `Start Date: ${new Date(reservation.startDate).toLocaleString()}\n` +
-            `End Date: ${new Date(reservation.endDate).toLocaleString()}\n` +
-            `Passenger Count: ${reservation.passengerCount}\n\n` +
-            `This is an informational notification only.`,
-          urgency: "low",
-          requesterId: user.id,
+      if (user.role !== "admin") {
+        return res.status(403).json({
+          message: "Only administrators can permanently delete reservations. Use cancel instead.",
         });
       }
 
@@ -482,14 +526,39 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicle-reservations/:id/check-availability", isAuthenticated, async (req, res) => {
+  app.post("/api/vehicle-reservations/:id/check-availability", isAuthenticated, async (req: any, res) => {
     try {
-      const { startDate, endDate, vehicleId } = req.body;
+      const currentUser = await getCurrentUser(req);
+      if (!currentUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const reservation = await storage.getVehicleReservation(req.params.id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      if (
+        reservation.userId !== req.userId &&
+        !isFleetPrivilegedRole(currentUser.role)
+      ) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const bodySchema = z.object({
+        startDate: z.string().min(1),
+        endDate: z.string().min(1),
+        vehicleId: z.string().min(1),
+      });
+      const { startDate, endDate, vehicleId } = bodySchema.parse(req.body);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (end <= start) {
+        return res.status(400).json({ message: "End date/time must be after start date/time" });
+      }
       const isAvailable = await storage.checkVehicleAvailability(
         vehicleId,
-        new Date(startDate),
-        new Date(endDate),
-        req.params.id
+        start,
+        end,
+        req.params.id,
       );
       res.json({ available: isAvailable });
     } catch (error) {
@@ -558,12 +627,18 @@ export function registerVehicleRoutes(app: Express) {
       }
 
       const vehicleId = req.query.vehicleId as string | undefined;
+      const openOnly = req.query.openOnly === "true";
       let userId = req.query.userId as string | undefined;
       if (!isFleetPrivilegedRole(currentUser.role)) {
         if (userId && userId !== req.userId) {
           return res.status(403).json({ message: "Forbidden" });
         }
         userId = req.userId;
+      }
+
+      if (openOnly && userId) {
+        const openLogs = await storage.getOpenVehicleCheckOutLogs(userId);
+        return res.json(openLogs);
       }
 
       const logs = await storage.getVehicleCheckOutLogs({ vehicleId, userId });
@@ -594,13 +669,17 @@ export function registerVehicleRoutes(app: Express) {
 
   app.post("/api/vehicle-checkout-logs", isAuthenticated, async (req: any, res) => {
     try {
+      const checkoutUser = await storage.getUser(req.userId);
+      const isCheckoutPrivileged = isFleetPrivilegedRole(checkoutUser?.role);
       const cleanedBody = {
         ...req.body,
+        userId: req.userId,
         startMileage: Number(req.body.startMileage) || 0,
         fuelLevel: req.body.fuelLevel || "full",
         cleanlinessConfirmed: Boolean(req.body.cleanlinessConfirmed),
         damageNotes: req.body.damageNotes || null,
-        adminOverride: req.body.adminOverride === true ? true : undefined,
+        adminOverride:
+          isCheckoutPrivileged && req.body.adminOverride === true ? true : undefined,
         assignedCodeId: req.body.assignedCodeId || null,
       };
 
@@ -610,13 +689,16 @@ export function registerVehicleRoutes(app: Express) {
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
-      const checkoutUser = await storage.getUser(req.userId);
-      const isCheckoutPrivileged = isFleetPrivilegedRole(checkoutUser?.role);
       if (reservation.userId !== req.userId && !isCheckoutPrivileged) {
         return res.status(403).json({ message: "Unauthorized: This reservation belongs to another user" });
       }
       if (reservation.vehicleId !== logData.vehicleId) {
         return res.status(400).json({ message: "Vehicle mismatch: This reservation is for a different vehicle" });
+      }
+      if (!["approved", "active"].includes(reservation.status)) {
+        return res.status(400).json({
+          message: "Reservation must be approved before checkout",
+        });
       }
 
       const existingLog = await storage.getCheckOutLogByReservation(logData.reservationId);
@@ -710,6 +792,17 @@ export function registerVehicleRoutes(app: Express) {
       }
       if (checkOutLog.vehicleId !== logData.vehicleId) {
         return res.status(400).json({ message: "Vehicle mismatch: This check-out was for a different vehicle" });
+      }
+
+      const existingCheckIn = await storage.getCheckInLogByCheckOut(logData.checkOutLogId);
+      if (existingCheckIn) {
+        return res.status(400).json({ message: "This trip has already been checked in" });
+      }
+
+      if (logData.endMileage < checkOutLog.startMileage) {
+        return res.status(400).json({
+          message: "End mileage cannot be less than start mileage",
+        });
       }
 
       const logWithDefaults = {
@@ -820,7 +913,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Vehicle maintenance schedules
-  app.get("/api/vehicle-maintenance-schedules", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicle-maintenance-schedules", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const vehicleId = req.query.vehicleId as string | undefined;
       const schedules = await storage.getVehicleMaintenanceSchedules(vehicleId);
@@ -831,7 +924,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Vehicle maintenance logs
-  app.get("/api/vehicles/:id/maintenance-logs", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicles/:id/maintenance-logs", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const logs = await storage.getVehicleMaintenanceLogs(req.params.id);
       res.json(logs);
@@ -867,7 +960,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.get("/api/vehicle-maintenance-schedules/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const schedule = await storage.getVehicleMaintenanceSchedule(req.params.id);
       if (!schedule) {
@@ -912,7 +1005,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Vehicle Documents (Insurance, Registration, Inspection, etc.)
-  app.get("/api/vehicles/:id/documents", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicles/:id/documents", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const documents = await storage.getVehicleDocuments(req.params.id);
       res.json(documents);
@@ -921,11 +1014,23 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.get("/api/vehicle-documents/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicle-documents/:id", isAuthenticated, requireFleetPrivileged, async (req: any, res) => {
     try {
+      const currentUser = await getCurrentUser(req);
+      if (!currentUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const document = await storage.getVehicleDocument(req.params.id);
       if (!document) {
         return res.status(404).json({ message: "Vehicle document not found" });
+      }
+      const allowed = await canAccessVehicleDocument(
+        req.userId,
+        currentUser.role,
+        document.id,
+      );
+      if (!allowed) {
+        return res.status(403).json({ message: "Forbidden" });
       }
       res.json(document);
     } catch (error) {
@@ -974,9 +1079,10 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Get documents expiring within specified days (for reminders)
-  app.get("/api/vehicle-documents/expiring/:days", isAuthenticated, async (req, res) => {
+  app.get("/api/vehicle-documents/expiring/:days", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const days = parseInt(req.params.days) || 30;
+      const parsed = parseInt(req.params.days, 10);
+      const days = Number.isFinite(parsed) && parsed > 0 ? parsed : 30;
       const expiringDocuments = await storage.getExpiringDocuments(days);
       res.json(expiringDocuments);
     } catch (error) {

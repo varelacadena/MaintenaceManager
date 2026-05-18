@@ -48,7 +48,6 @@ const MyReservations = lazy(() => import("./pages/MyReservations"));
 const VehicleCheckOut = lazy(() => import("./pages/VehicleCheckOut"));
 const VehicleCheckIn = lazy(() => import("./pages/VehicleCheckIn"));
 const VehicleCheckInVerification = lazy(() => import("./pages/VehicleCheckInVerification"));
-const VehicleReservations = lazy(() => import("./pages/VehicleReservations"));
 const VehicleReservationDetails = lazy(() => import("./pages/VehicleReservationDetails"));
 const AnalyticsDashboard = lazy(() => import("./pages/analytics/AnalyticsDashboard"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
