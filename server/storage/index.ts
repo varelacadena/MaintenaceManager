@@ -269,6 +269,7 @@ export interface IStorage {
     pagination: { limit: number; offset: number },
   ): Promise<{ items: Vehicle[]; total: number }>;
   getVehicle(id: string): Promise<Vehicle | undefined>;
+  getVehiclesByIds(ids: string[]): Promise<Vehicle[]>;
   getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: string, data: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
@@ -601,6 +602,7 @@ export class DatabaseStorage implements IStorage {
   getVehicles = vehicleStorage.getVehicles;
   getVehiclesPage = vehicleStorage.getVehiclesPage;
   getVehicle = vehicleStorage.getVehicle;
+  getVehiclesByIds = vehicleStorage.getVehiclesByIds;
   getVehicleByVehicleId = vehicleStorage.getVehicleByVehicleId;
   createVehicle = vehicleStorage.createVehicle;
   updateVehicle = vehicleStorage.updateVehicle;

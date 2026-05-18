@@ -17,6 +17,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { parseOptionalInt } from "@/lib/fleetUtils";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
+import { invalidateVehicleQueries } from "@/lib/fleetQueryInvalidation";
 
 export default function VehicleEdit() {
   const { id } = useParams();
@@ -54,12 +55,7 @@ export default function VehicleEdit() {
       return await apiRequest("PATCH", `/api/vehicles/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicles');
-        }
-      });
+      invalidateVehicleQueries(queryClient);
       toast({
         title: "Success",
         description: "Vehicle updated successfully",

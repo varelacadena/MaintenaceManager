@@ -11,6 +11,11 @@ import {
   canAccessVehicleDocument,
 } from "../routeUtils";
 import {
+  validateReservationStatusTransition,
+  normalizePrivilegedCreateStatus,
+  checkInManualVehicleStatus,
+} from "@shared/fleetReservationPolicy";
+import {
   insertVehicleSchema,
   insertVehicleReservationSchema,
   insertVehicleCheckOutLogSchema,
@@ -167,23 +172,36 @@ export function registerVehicleRoutes(app: Express) {
         offset: req.query.offset as string | undefined,
       });
 
-      const reservations = pagination
-        ? (await storage.getVehicleReservationsPage({ userId }, pagination)).items
-        : await storage.getVehicleReservations({ userId });
+      let resolvedPage: Awaited<ReturnType<typeof storage.getVehicleReservationsPage>>;
+      if (pagination) {
+        resolvedPage = await storage.getVehicleReservationsPage({ userId }, pagination);
+      } else {
+        const items = await storage.getVehicleReservations({ userId });
+        resolvedPage = { items, total: items.length };
+      }
 
-      const enriched = await Promise.all(reservations.map(async (r) => {
+      const vehicleIds = Array.from(
+        new Set(
+          resolvedPage.items
+            .map((r) => r.vehicleId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const vehiclesForRows = await storage.getVehiclesByIds(vehicleIds);
+      const vehicleById = new Map(vehiclesForRows.map((v) => [v.id, v]));
+
+      const enriched = resolvedPage.items.map((r) => {
         if (!r.vehicleId) return { ...r, vehicleName: null, vehicleDisplayId: null };
-        const vehicle = await storage.getVehicle(r.vehicleId);
+        const vehicle = vehicleById.get(r.vehicleId);
         return {
           ...r,
           vehicleName: vehicle ? `${vehicle.make} ${vehicle.model}` : null,
           vehicleDisplayId: vehicle ? vehicle.vehicleId : null,
         };
-      }));
+      });
 
       if (pagination) {
-        const { total } = await storage.getVehicleReservationsPage({ userId }, pagination);
-        return res.json({ items: enriched, total, ...pagination });
+        return res.json({ items: enriched, total: resolvedPage.total, ...pagination });
       }
 
       res.json(enriched);
@@ -276,8 +294,16 @@ export function registerVehicleRoutes(app: Express) {
 
       const currentUser = await storage.getUser(userId);
       const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
-      if (!isFleetPrivilegedRole(currentUser?.role)) {
+      const isPrivileged = isFleetPrivilegedRole(currentUser?.role);
+      if (!isPrivileged) {
         reservationData.status = "pending";
+      } else {
+        reservationData.status = normalizePrivilegedCreateStatus(reservationData.status);
+        if (reservationData.status === "approved" && !reservationData.vehicleId) {
+          return res.status(400).json({
+            message: "A vehicle must be assigned before approving a reservation",
+          });
+        }
       }
 
       const now = new Date();
@@ -399,7 +425,9 @@ export function registerVehicleRoutes(app: Express) {
         updates.lockboxId = null;
       }
 
-      if (currentUser.role !== "admin" && currentUser.role !== "technician") {
+      const isPrivileged = isFleetPrivilegedRole(currentUser.role);
+
+      if (!isPrivileged) {
         delete updates.lockboxId;
         delete updates.keyPickupMethod;
         delete updates.adminNotes;
@@ -409,6 +437,22 @@ export function registerVehicleRoutes(app: Express) {
         }
         if (updates.status === "cancelled" && reservation.userId !== userId) {
           delete updates.status;
+        }
+      }
+
+      if (updates.status !== undefined) {
+        const statusError = validateReservationStatusTransition(
+          reservation.status,
+          updates.status,
+          { isPrivileged, isOwner: reservation.userId === userId },
+        );
+        if (statusError) {
+          return res.status(400).json({ message: statusError });
+        }
+        if (updates.status === "approved" && !(updates.vehicleId ?? reservation.vehicleId)) {
+          return res.status(400).json({
+            message: "A vehicle must be assigned before approving a reservation",
+          });
         }
       }
 
@@ -482,11 +526,7 @@ export function registerVehicleRoutes(app: Express) {
 
       res.json(updatedReservation);
     } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ message: "Invalid reservation data", errors: error.errors });
-      }
-      console.error("Error updating vehicle reservation:", error);
-      res.status(500).json({ message: error.message });
+      handleRouteError(res, error, "Failed to update vehicle reservation");
     }
   });
 
@@ -636,8 +676,12 @@ export function registerVehicleRoutes(app: Express) {
         userId = req.userId;
       }
 
-      if (openOnly && userId) {
-        const openLogs = await storage.getOpenVehicleCheckOutLogs(userId);
+      if (openOnly) {
+        const targetUserId = userId ?? req.userId;
+        if (targetUserId !== req.userId && !isFleetPrivilegedRole(currentUser.role)) {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+        const openLogs = await storage.getOpenVehicleCheckOutLogs(targetUserId);
         return res.json(openLogs);
       }
 
@@ -701,15 +745,21 @@ export function registerVehicleRoutes(app: Express) {
         });
       }
 
+      if (!reservation.advisoryAccepted && !isCheckoutPrivileged) {
+        return res.status(400).json({
+          message: "You must accept the vehicle advisory before checkout",
+        });
+      }
+
       const existingLog = await storage.getCheckOutLogByReservation(logData.reservationId);
       if (existingLog) {
         return res.status(400).json({ message: "A checkout log already exists for this reservation" });
       }
 
       const log = await storage.createVehicleCheckOutLog(logData);
-      await storage.updateVehicleStatus(logData.vehicleId, "in_use");
       await storage.updateVehicleMileage(logData.vehicleId, logData.startMileage);
       await storage.updateReservationStatus(logData.reservationId, "active");
+      await syncVehicleStatus(logData.vehicleId);
 
       res.json(log);
     } catch (error) {
@@ -815,16 +865,17 @@ export function registerVehicleRoutes(app: Express) {
 
       await storage.updateVehicleMileage(logData.vehicleId, logData.endMileage);
 
-      let newStatus = "available";
-      if (logData.issues && logData.issues.trim().length > 0) {
-        newStatus = "needs_maintenance";
-      } else if (logData.cleanlinessStatus === "needs_cleaning") {
-        newStatus = "needs_cleaning";
-      }
-
-      await storage.updateVehicleStatus(logData.vehicleId, newStatus);
-
       await storage.updateReservationStatus(checkOutLog.reservationId, "pending_review");
+
+      const manualStatus = checkInManualVehicleStatus({
+        hasIssues: Boolean(logData.issues?.trim()),
+        needsCleaning: logData.cleanlinessStatus === "needs_cleaning",
+      });
+      if (manualStatus) {
+        await storage.updateVehicleStatus(logData.vehicleId, manualStatus);
+      } else {
+        await syncVehicleStatus(logData.vehicleId);
+      }
 
       if (logData.issues && logData.issues.trim().length > 0) {
         const userId = req.userId;

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { format } from "date-fns";
 import { Calendar, Car, Users, Plus, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { VehicleCheckOutLog } from "@shared/schema";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import {
@@ -27,8 +27,13 @@ import {
   isPaginatedResponse,
   myReservationsListUrl,
   type PaginatedResponse,
+  parseMyReservationsUrlState,
+  buildMyReservationsLocationSearch,
+  clampPageIndex,
+  parseOptionalInt,
 } from "@/lib/fleetUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
+import { invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 
 interface VehicleReservation {
   id: string;
@@ -45,9 +50,16 @@ interface VehicleReservation {
 }
 
 export default function MyReservations() {
+  const searchString = useSearch();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const urlState = parseMyReservationsUrlState(searchString);
+  const myPage = urlState.page;
+
+  const setMyPage = (page: number) => {
+    setLocation(`/my-reservations${buildMyReservationsLocationSearch(page)}`);
+  };
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [startDateTime, setStartDateTime] = useState<Date | undefined>(undefined);
   const [endDateTime, setEndDateTime] = useState<Date | undefined>(undefined);
@@ -55,7 +67,6 @@ export default function MyReservations() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [myPage, setMyPage] = useState(0);
   const myQueryUrl = myReservationsListUrl(myPage);
 
   const { data: reservationsData, isLoading, isError, error, refetch } = useQuery<
@@ -70,6 +81,13 @@ export default function MyReservations() {
   const myTotal = isPaginatedResponse(reservationsData)
     ? reservationsData.total
     : reservations.length;
+
+  useEffect(() => {
+    const clamped = clampPageIndex(myPage, myTotal, MY_RESERVATIONS_PAGE_SIZE);
+    if (clamped !== myPage) {
+      setMyPage(clamped);
+    }
+  }, [myTotal, myPage]);
 
   const { data: checkOutLogs = [] } = useQuery<VehicleCheckOutLog[]>({
     queryKey: ["/api/vehicle-checkout-logs?openOnly=true"],
@@ -90,7 +108,7 @@ export default function MyReservations() {
       setNotes("");
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] }), 300);
+      setTimeout(() => invalidateVehicleReservationQueries(queryClient), 300);
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -104,7 +122,7 @@ export default function MyReservations() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
+      invalidateVehicleReservationQueries(queryClient);
       toast({ title: "Success", description: "Reservation cancelled successfully" });
     },
     onError: (error: Error) => {
@@ -125,10 +143,15 @@ export default function MyReservations() {
       toast({ title: "Error", description: "Return time must be after pickup time", variant: "destructive" });
       return;
     }
+    const passengers = parseOptionalInt(passengerCount, 0);
+    if (passengers < 1) {
+      toast({ title: "Error", description: "Enter a valid passenger count", variant: "destructive" });
+      return;
+    }
     createMutation.mutate({
       startDate: startDateTime.toISOString(),
       endDate: endDateTime.toISOString(),
-      passengerCount: parseInt(passengerCount),
+      passengerCount: passengers,
       purpose,
       notes,
     });
@@ -139,6 +162,8 @@ export default function MyReservations() {
       case "approved": return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
       case "pending": return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
       case "active": return "bg-primary/10 text-primary border-primary/20";
+      case "pending_review": return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20";
+      case "cancelled": return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
       case "rejected": return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
       case "completed": return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
       default: return "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20";

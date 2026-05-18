@@ -122,3 +122,26 @@ export function parseOptionalInt(value: string, fallback: number): number {
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
+
+/** Large page for vehicle pickers (assign vehicle, etc.). */
+export function vehiclesPickerListUrl(): string {
+  return vehiclesListUrl("all", 0, 200);
+}
+
+export function parseMyReservationsUrlState(search: string): { page: number } {
+  const params = new URLSearchParams(search);
+  return {
+    page: Math.max(0, parseInt(params.get("page") || "0", 10) || 0),
+  };
+}
+
+export function buildMyReservationsLocationSearch(page: number): string {
+  if (page <= 0) return "";
+  return `?page=${page}`;
+}
+
+export function clampPageIndex(page: number, total: number, pageSize: number): number {
+  if (total <= 0) return 0;
+  const maxPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+  return Math.min(Math.max(0, page), maxPage);
+}

@@ -4,6 +4,10 @@ import {
   parseOptionalInt,
   reservationsListUrl,
   vehiclesListUrl,
+  vehiclesPickerListUrl,
+  clampPageIndex,
+  buildMyReservationsLocationSearch,
+  parseMyReservationsUrlState,
 } from "../fleetUtils";
 
 describe("fleetUtils", () => {
@@ -53,6 +57,27 @@ describe("fleetUtils", () => {
     it("returns fallback for invalid input", () => {
       expect(parseOptionalInt("", 2024)).toBe(2024);
       expect(parseOptionalInt("abc", 5)).toBe(5);
+    });
+  });
+
+  describe("vehiclesPickerListUrl", () => {
+    it("requests a large first page for pickers", () => {
+      expect(vehiclesPickerListUrl()).toContain("limit=200");
+    });
+  });
+
+  describe("clampPageIndex", () => {
+    it("clamps page when total shrinks", () => {
+      expect(clampPageIndex(5, 30, 15)).toBe(1);
+      expect(clampPageIndex(0, 0, 15)).toBe(0);
+    });
+  });
+
+  describe("my reservations URL state", () => {
+    it("round-trips page in search string", () => {
+      expect(parseMyReservationsUrlState("?page=2").page).toBe(2);
+      expect(buildMyReservationsLocationSearch(2)).toBe("?page=2");
+      expect(buildMyReservationsLocationSearch(0)).toBe("");
     });
   });
 });

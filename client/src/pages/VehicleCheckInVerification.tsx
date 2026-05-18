@@ -21,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateVehicleQueries, invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 import { SecureImage } from "@/components/SecureImage";
 import { useFileDownload } from "@/hooks/use-download";
 import { useToast } from "@/hooks/use-toast";
@@ -95,11 +96,10 @@ export default function VehicleCheckInVerification() {
       return response.json();
     },
     onSuccess: async (_, status) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${checkInLog?.vehicleId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      invalidateVehicleQueries(queryClient);
       if (checkOutLog?.reservationId) {
         await apiRequest("PATCH", `/api/vehicle-reservations/${checkOutLog.reservationId}`, { status: "completed" });
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicle-reservations'] });
+        invalidateVehicleReservationQueries(queryClient);
       }
       toast({
         title: status === "available" ? "Vehicle Returned to Service" : "Vehicle Flagged for Maintenance",

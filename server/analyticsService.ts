@@ -1556,15 +1556,21 @@ export class AnalyticsService {
 
     const now = new Date();
 
-    // Apply date filters to reservations
+    const periodEnd = filters.endDate ? new Date(filters.endDate) : now;
+    periodEnd.setHours(23, 59, 59, 999);
+    const periodStart = filters.startDate
+      ? new Date(filters.startDate)
+      : new Date(periodEnd.getTime() - 30 * 24 * 60 * 60 * 1000);
+    periodStart.setHours(0, 0, 0, 0);
+
+    const reservationOverlapsPeriod = (start: Date, end: Date) =>
+      end.getTime() >= periodStart.getTime() && start.getTime() <= periodEnd.getTime();
+
     let filteredReservations = allReservations;
-    if (filters.startDate) {
-      const startDate = new Date(filters.startDate);
-      filteredReservations = filteredReservations.filter(r => new Date(r.startDate) >= startDate);
-    }
-    if (filters.endDate) {
-      const endDate = new Date(filters.endDate);
-      filteredReservations = filteredReservations.filter(r => new Date(r.endDate) <= endDate);
+    if (filters.startDate || filters.endDate) {
+      filteredReservations = filteredReservations.filter((r) =>
+        reservationOverlapsPeriod(new Date(r.startDate), new Date(r.endDate)),
+      );
     }
 
     const totalVehicles = allVehicles.length;
@@ -1606,13 +1612,6 @@ export class AnalyticsService {
       (sum, log) => sum + (Number(log.cost) || 0),
       0,
     );
-
-    const periodEnd = filters.endDate ? new Date(filters.endDate) : now;
-    periodEnd.setHours(23, 59, 59, 999);
-    const periodStart = filters.startDate
-      ? new Date(filters.startDate)
-      : new Date(periodEnd.getTime() - 30 * 24 * 60 * 60 * 1000);
-    periodStart.setHours(0, 0, 0, 0);
 
     const periodMs = Math.max(periodEnd.getTime() - periodStart.getTime(), 24 * 60 * 60 * 1000);
     const periodDays = Math.max(1, Math.ceil(periodMs / (24 * 60 * 60 * 1000)));
@@ -1670,7 +1669,7 @@ export class AnalyticsService {
 
     // Maintenance by vehicle
     const vehicleMaintenanceMap: Record<string, { cost: number; count: number }> = {};
-    allMaintenanceLogs.forEach(log => {
+    filteredMaintenanceLogs.forEach(log => {
       if (!vehicleMaintenanceMap[log.vehicleId]) {
         vehicleMaintenanceMap[log.vehicleId] = { cost: 0, count: 0 };
       }

@@ -46,8 +46,11 @@ import {
   parseFleetUrlState,
   buildFleetLocationSearch,
   vehiclesListUrl,
+  clampPageIndex,
 } from "@/lib/fleetUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { invalidateVehicleQueries } from "@/lib/fleetQueryInvalidation";
 
 const statusColors = {
   available: "default",
@@ -66,6 +69,8 @@ function FleetContent() {
   const searchTerm = urlState.fleetSearch;
   const statusFilter = urlState.fleetStatus;
   const fleetPage = urlState.fleetPage;
+  const [fleetSearchInput, setFleetSearchInput] = useState(urlState.fleetSearch);
+  const debouncedFleetSearch = useDebouncedValue(fleetSearchInput);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
   const vehicleImageObjectPathRef = useRef("");
@@ -75,6 +80,16 @@ function FleetContent() {
     const next = { ...urlState, tab: "fleet", ...patch };
     setLocation(`/vehicles${buildFleetLocationSearch(next)}`);
   };
+
+  useEffect(() => {
+    setFleetSearchInput(urlState.fleetSearch);
+  }, [urlState.fleetSearch]);
+
+  useEffect(() => {
+    if (debouncedFleetSearch !== urlState.fleetSearch) {
+      patchFleetUrl({ fleetSearch: debouncedFleetSearch, fleetPage: 0 });
+    }
+  }, [debouncedFleetSearch]);
 
   const vehiclesQueryUrl = vehiclesListUrl(
     statusFilter,
@@ -91,6 +106,13 @@ function FleetContent() {
 
   const vehicles = vehiclesData?.items ?? [];
   const fleetTotal = vehiclesData?.total ?? 0;
+
+  useEffect(() => {
+    const clamped = clampPageIndex(fleetPage, fleetTotal, FLEET_PAGE_SIZE);
+    if (clamped !== fleetPage) {
+      patchFleetUrl({ fleetPage: clamped });
+    }
+  }, [fleetTotal, fleetPage]);
 
   const form = useForm<InsertVehicle>({
     resolver: zodResolver(insertVehicleSchema),
@@ -123,14 +145,7 @@ function FleetContent() {
       });
     },
     onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ 
-          predicate: (query) => {
-            const key = query.queryKey[0];
-            return typeof key === 'string' && key.startsWith('/api/vehicles');
-          }
-        });
-      }, 300);
+      setTimeout(() => invalidateVehicleQueries(queryClient), 300);
     },
     onError: (error: Error) => {
       toast({
@@ -146,12 +161,7 @@ function FleetContent() {
       return await apiRequest("POST", "/api/vehicles/sync-statuses");
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/vehicles');
-        }
-      });
+      invalidateVehicleQueries(queryClient);
       toast({
         title: "Success",
         description: data.message || "Vehicle statuses synchronized",
@@ -475,8 +485,8 @@ function FleetContent() {
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search vehicles..."
-            value={searchTerm}
-            onChange={(e) => patchFleetUrl({ fleetSearch: e.target.value, fleetPage: 0 })}
+            value={fleetSearchInput}
+            onChange={(e) => setFleetSearchInput(e.target.value)}
             className="pl-8"
             aria-label="Search vehicles"
             data-testid="input-search-vehicles"
@@ -486,7 +496,11 @@ function FleetContent() {
           value={statusFilter}
           onValueChange={(value) => patchFleetUrl({ fleetStatus: value, fleetPage: 0 })}
         >
-          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
+          <SelectTrigger
+            className="w-full sm:w-[200px]"
+            data-testid="select-status-filter"
+            aria-label="Filter vehicles by status"
+          >
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>

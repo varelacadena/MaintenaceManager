@@ -105,6 +105,12 @@ export async function getVehicle(id: string): Promise<Vehicle | undefined> {
   return vehicle;
 }
 
+export async function getVehiclesByIds(ids: string[]): Promise<Vehicle[]> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return [];
+  return db.select().from(vehicles).where(inArray(vehicles.id, unique));
+}
+
 export async function getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined> {
   const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.vehicleId, vehicleId));
   return vehicle;
@@ -273,12 +279,18 @@ export async function getVehicleCheckOutLogs(filters?: {
 /** Checkout rows for a user that do not yet have a matching check-in log. */
 export async function getOpenVehicleCheckOutLogs(userId: string): Promise<VehicleCheckOutLog[]> {
   const logs = await getVehicleCheckOutLogs({ userId });
-  const open: VehicleCheckOutLog[] = [];
-  for (const log of logs) {
-    const checkIn = await getCheckInLogByCheckOut(log.id);
-    if (!checkIn) open.push(log);
-  }
-  return open;
+  if (logs.length === 0) return [];
+  const checkInLogs = await db
+    .select()
+    .from(vehicleCheckInLogs)
+    .where(
+      inArray(
+        vehicleCheckInLogs.checkOutLogId,
+        logs.map((l) => l.id),
+      ),
+    );
+  const checkedOut = new Set(checkInLogs.map((c) => c.checkOutLogId));
+  return logs.filter((log) => !checkedOut.has(log.id));
 }
 
 export async function getVehicleCheckOutLog(id: string): Promise<VehicleCheckOutLog | undefined> {

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { format } from "date-fns";
 import type { VehicleReservation, Vehicle, User as UserType, VehicleCheckOutLog } from "@shared/schema";
 import {
@@ -48,9 +49,12 @@ import {
   reservationsListUrl,
   parseFleetUrlState,
   buildFleetLocationSearch,
+  vehiclesPickerListUrl,
+  clampPageIndex,
 } from "@/lib/fleetUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
+import { invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 
 const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
@@ -71,6 +75,8 @@ export function VehicleReservationsContent() {
   const searchTerm = urlState.resSearch;
   const statusFilter = urlState.resStatus;
   const reservationsPage = urlState.resPage;
+  const [resSearchInput, setResSearchInput] = useState(urlState.resSearch);
+  const debouncedResSearch = useDebouncedValue(resSearchInput);
   const [assignVehicleId, setAssignVehicleId] = useState("");
   const [assignReservationId, setAssignReservationId] = useState<string | null>(null);
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
@@ -103,6 +109,16 @@ export function VehicleReservationsContent() {
     setLocation(`/vehicles${buildFleetLocationSearch({ ...urlState, tab: "reservations", ...patch })}`);
   };
 
+  useEffect(() => {
+    setResSearchInput(urlState.resSearch);
+  }, [urlState.resSearch]);
+
+  useEffect(() => {
+    if (debouncedResSearch !== urlState.resSearch) {
+      patchResUrl({ resSearch: debouncedResSearch, resPage: 0 });
+    }
+  }, [debouncedResSearch]);
+
   const reservationsQueryUrl = reservationsListUrl(
     statusFilter,
     reservationsPage,
@@ -128,6 +144,13 @@ export function VehicleReservationsContent() {
     ? reservationsData.total
     : reservations.length;
 
+  useEffect(() => {
+    const clamped = clampPageIndex(reservationsPage, reservationsTotal, RESERVATIONS_PAGE_SIZE);
+    if (clamped !== reservationsPage) {
+      patchResUrl({ resPage: clamped });
+    }
+  }, [reservationsTotal, reservationsPage]);
+
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
       return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
@@ -135,12 +158,7 @@ export function VehicleReservationsContent() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
-        },
-      });
+      invalidateVehicleReservationQueries(queryClient);
       toast({
         title: "Success",
         description: "Reservation cancelled successfully",
@@ -160,12 +178,7 @@ export function VehicleReservationsContent() {
       return await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
-        },
-      });
+      invalidateVehicleReservationQueries(queryClient);
       toast({
         title: "Success",
         description: "Reservation deleted successfully",
@@ -188,12 +201,7 @@ export function VehicleReservationsContent() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
-        },
-      });
+      invalidateVehicleReservationQueries(queryClient);
       setSelectedReservationForHandoff(variables.reservationId);
       setHandoffDialogOpen(true);
     },
@@ -227,14 +235,7 @@ export function VehicleReservationsContent() {
       setSelectedReservationForHandoff(null);
     },
     onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
-        },
-      });
-      }, 300);
+      setTimeout(() => invalidateVehicleReservationQueries(queryClient), 300);
     },
     onError: (error: Error) => {
       toast({
@@ -291,14 +292,7 @@ export function VehicleReservationsContent() {
       setEditAdminNotes("");
     },
     onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
-        },
-      });
-      }, 300);
+      setTimeout(() => invalidateVehicleReservationQueries(queryClient), 300);
     },
     onError: (error: Error) => {
       toast({
@@ -309,10 +303,14 @@ export function VehicleReservationsContent() {
     },
   });
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+  const vehiclesPickerUrl = vehiclesPickerListUrl();
+  const { data: vehiclesData } = useQuery<Vehicle[] | PaginatedResponse<Vehicle>>({
+    queryKey: [vehiclesPickerUrl],
     enabled: isFleetStaff,
   });
+  const vehicles = isPaginatedResponse(vehiclesData)
+    ? vehiclesData.items
+    : vehiclesData ?? [];
 
   const { data: lockboxes } = useQuery<Lockbox[]>({
     queryKey: ["/api/lockboxes"],
@@ -364,8 +362,8 @@ export function VehicleReservationsContent() {
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search reservations..."
-            value={searchTerm}
-            onChange={(e) => patchResUrl({ resSearch: e.target.value, resPage: 0 })}
+            value={resSearchInput}
+            onChange={(e) => setResSearchInput(e.target.value)}
             className="pl-8"
             aria-label="Search reservations"
             data-testid="input-search-reservations"
@@ -377,7 +375,11 @@ export function VehicleReservationsContent() {
             patchResUrl({ resStatus: value, resPage: 0 });
           }}
         >
-          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
+          <SelectTrigger
+            className="w-full sm:w-[200px]"
+            data-testid="select-status-filter"
+            aria-label="Filter reservations by status"
+          >
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -451,7 +453,7 @@ export function VehicleReservationsContent() {
                 )}
               </CardContent>
               <CardFooter className="flex gap-2 flex-wrap pt-0 pb-3 px-4">
-                {reservation.status === "pending" && (
+                {isFleetStaff && reservation.status === "pending" && (
                   <>
                     <Dialog>
                       <DialogTrigger asChild>
@@ -556,7 +558,7 @@ export function VehicleReservationsContent() {
                     </AlertDialog>
                   </>
                 )}
-                {(reservation.status === "pending" || reservation.status === "approved") && (
+                {isFleetStaff && (reservation.status === "pending" || reservation.status === "approved") && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -586,7 +588,7 @@ export function VehicleReservationsContent() {
                     Edit
                   </Button>
                 )}
-                {reservation.status === "pending_review" && (() => {
+                {isFleetStaff && reservation.status === "pending_review" && (() => {
                   const checkOutLog = checkOutLogs?.find(log => log.reservationId === reservation.id);
                   if (!checkOutLog) return null;
                   const checkInLog = checkInLogs?.find(log => log.checkOutLogId === checkOutLog.id);

@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { z } from "zod";
 import { computeSyncedVehicleStatus } from "@shared/fleetStatus";
+import { VEHICLE_ACCESS_RESERVATION_STATUSES } from "@shared/fleetReservationPolicy";
 import { storage } from "./storage";
 
 interface DatabaseError {
@@ -79,7 +80,9 @@ export async function canAccessFleetVehicle(
   if (isFleetPrivilegedRole(role)) return true;
   const reservations = await storage.getVehicleReservations({ userId });
   return reservations.some(
-    (r) => r.vehicleId === vehicleId && r.status !== "cancelled",
+    (r) =>
+      r.vehicleId === vehicleId &&
+      (VEHICLE_ACCESS_RESERVATION_STATUSES as readonly string[]).includes(r.status),
   );
 }
 
@@ -135,12 +138,9 @@ export async function syncVehicleStatus(vehicleId: string): Promise<void> {
     if (!vehicle) return;
 
     const checkOutLogs = await storage.getVehicleCheckOutLogs({ vehicleId });
-    const openCheckOutIds = new Set<string>();
-    for (const checkOut of checkOutLogs) {
-      const checkIn = await storage.getCheckInLogByCheckOut(checkOut.id);
-      if (!checkIn) openCheckOutIds.add(checkOut.id);
-    }
-    const hasActiveCheckOut = openCheckOutIds.size > 0;
+    const checkInLogs = await storage.getVehicleCheckInLogs({ vehicleId });
+    const checkedOutIds = new Set(checkInLogs.map((c) => c.checkOutLogId));
+    const hasActiveCheckOut = checkOutLogs.some((co) => !checkedOutIds.has(co.id));
 
     const reservations = await storage.getVehicleReservations({ vehicleId });
     const nextStatus = computeSyncedVehicleStatus(

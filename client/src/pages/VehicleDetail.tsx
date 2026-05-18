@@ -19,6 +19,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
+import { invalidateVehicleQueries, invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +53,8 @@ export default function VehicleDetail() {
       return await apiRequest("DELETE", `/api/vehicles/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateVehicleQueries(queryClient);
+      invalidateVehicleReservationQueries(queryClient);
       toast({ title: "Vehicle deleted successfully" });
       navigate("/vehicles");
     },
@@ -65,23 +67,48 @@ export default function VehicleDetail() {
     queryKey: [`/api/vehicles/${id}`],
   });
 
-  const { data: reservations } = useQuery<VehicleReservation[]>({
+  const {
+    data: reservations,
+    isError: reservationsError,
+    error: reservationsQueryError,
+    refetch: refetchReservations,
+  } = useQuery<VehicleReservation[]>({
     queryKey: [`/api/vehicle-reservations?vehicleId=${id}`],
   });
 
-  const { data: checkOutLogs } = useQuery<VehicleCheckOutLog[]>({
+  const {
+    data: checkOutLogs,
+    isError: checkOutLogsError,
+    error: checkOutLogsQueryError,
+    refetch: refetchCheckOutLogs,
+  } = useQuery<VehicleCheckOutLog[]>({
     queryKey: [`/api/vehicle-checkout-logs?vehicleId=${id}`],
   });
 
-  const { data: checkInLogs } = useQuery<VehicleCheckInLog[]>({
+  const {
+    data: checkInLogs,
+    isError: checkInLogsError,
+    error: checkInLogsQueryError,
+    refetch: refetchCheckInLogs,
+  } = useQuery<VehicleCheckInLog[]>({
     queryKey: [`/api/vehicle-checkin-logs?vehicleId=${id}`],
   });
 
-  const { data: maintenanceLogs } = useQuery<VehicleMaintenanceLog[]>({
+  const {
+    data: maintenanceLogs,
+    isError: maintenanceLogsError,
+    error: maintenanceLogsQueryError,
+    refetch: refetchMaintenanceLogs,
+  } = useQuery<VehicleMaintenanceLog[]>({
     queryKey: [`/api/vehicles/${id}/maintenance-logs`],
   });
 
-  const { data: vehicleDocuments } = useQuery<VehicleDocument[]>({
+  const {
+    data: vehicleDocuments,
+    isError: documentsError,
+    error: documentsQueryError,
+    refetch: refetchDocuments,
+  } = useQuery<VehicleDocument[]>({
     queryKey: [`/api/vehicles/${id}/documents`],
   });
 
@@ -358,6 +385,13 @@ export default function VehicleDetail() {
         </TabsContent>
 
         <TabsContent value="documents" className="space-y-4">
+          {documentsError ? (
+            <WorkLoadError
+              title="Could not load documents"
+              message={documentsQueryError instanceof Error ? documentsQueryError.message : "Failed to load documents"}
+              onRetry={() => refetchDocuments()}
+            />
+          ) : null}
           {canManageVehicles && (
             <Card>
               <CardHeader>
@@ -576,7 +610,13 @@ export default function VehicleDetail() {
         </TabsContent>
 
         <TabsContent value="reservations" className="space-y-4">
-          {reservations && reservations.length > 0 ? (
+          {reservationsError ? (
+            <WorkLoadError
+              title="Could not load reservations"
+              message={reservationsQueryError instanceof Error ? reservationsQueryError.message : "Failed to load reservations"}
+              onRetry={() => refetchReservations()}
+            />
+          ) : reservations && reservations.length > 0 ? (
             <div className="space-y-4">
               {reservations.map((reservation) => {
                 const resCheckOut = checkOutLogs?.find(co => co.reservationId === reservation.id);
@@ -648,6 +688,20 @@ export default function VehicleDetail() {
         </TabsContent>
 
         <TabsContent value="logbook" className="space-y-3">
+          {checkOutLogsError || checkInLogsError ? (
+            <WorkLoadError
+              title="Could not load trip log"
+              message={
+                (checkOutLogsQueryError ?? checkInLogsQueryError) instanceof Error
+                  ? (checkOutLogsQueryError ?? checkInLogsQueryError)!.message
+                  : "Failed to load trip history"
+              }
+              onRetry={() => {
+                if (checkOutLogsError) refetchCheckOutLogs();
+                if (checkInLogsError) refetchCheckInLogs();
+              }}
+            />
+          ) : null}
           {(() => {
             const trips = (checkOutLogs || []).map(co => {
               const reservation = reservations?.find(r => r.id === co.reservationId);
@@ -830,6 +884,13 @@ export default function VehicleDetail() {
         </TabsContent>
 
         <TabsContent value="maintenance" className="space-y-4">
+          {maintenanceLogsError ? (
+            <WorkLoadError
+              title="Could not load maintenance history"
+              message={maintenanceLogsQueryError instanceof Error ? maintenanceLogsQueryError.message : "Failed to load maintenance logs"}
+              onRetry={() => refetchMaintenanceLogs()}
+            />
+          ) : null}
           {canManageVehicles && (
             <Card>
               <CardHeader>

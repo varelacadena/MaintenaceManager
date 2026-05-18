@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });
+      invalidateVehicleReservationQueries(queryClient);
       toast({
         title: "Success",
         description: "Reservation request submitted successfully",
