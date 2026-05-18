@@ -36,7 +36,7 @@ import {
   serviceRequestStatusBadgeColors,
   serviceRequestUrgencyBadgeColors,
 } from "@/lib/serviceRequestLabels";
-import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import EmptyState from "@/components/dashboard/EmptyState";
 
 export default function Requests() {
@@ -149,7 +149,7 @@ export default function Requests() {
   if (isError) {
     return (
       <div className="p-3 md:p-4 max-w-lg">
-        <AnalyticsReportError
+        <WorkLoadError
           title="Could not load requests"
           message={error instanceof Error ? error.message : "Something went wrong."}
           onRetry={() => refetch()}

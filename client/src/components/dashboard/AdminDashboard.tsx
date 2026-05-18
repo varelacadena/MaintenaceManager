@@ -46,6 +46,22 @@ import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
+function projectProgressPercent(status: Project["status"] | undefined): number {
+  switch (status) {
+    case "completed":
+      return 100;
+    case "in_progress":
+      return 60;
+    case "on_hold":
+      return 35;
+    case "cancelled":
+      return 0;
+    case "planning":
+    default:
+      return 15;
+  }
+}
+
 type AiStats = {
   pending: number;
   approved: number;
@@ -359,7 +375,7 @@ export default function AdminDashboard({
       id: p.id,
       name: p.name,
       status: p.status,
-      progress: typeof p.progress === "number" ? p.progress : 0,
+      progress: projectProgressPercent(p.status),
       budget: Number(p.budgetAmount) || 0,
     }));
   }, [projects]);
@@ -545,7 +561,7 @@ export default function AdminDashboard({
               )}
               {projects.length > 3 && (
                 <Link href="/work">
-                  <Button variant="link" size="sm" className="w-full mt-3 text-xs" data-testid="button-view-all-projects">
+                  <Button variant="ghost" size="sm" className="w-full mt-3 text-xs text-primary underline-offset-4 hover:underline" data-testid="button-view-all-projects">
                     View All Projects
                     <ArrowUpRight className="w-3 h-3 ml-1" />
                   </Button>
@@ -866,7 +882,7 @@ export default function AdminDashboard({
                 <p className="text-sm" data-testid="text-ai-reasoning">{selectedAiLog.reasoning}</p>
               </div>
             )}
-            {selectedAiLog?.proposedValue && (
+            {selectedAiLog?.proposedValue != null && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Proposed Change</p>
                 <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40" data-testid="text-ai-proposed">

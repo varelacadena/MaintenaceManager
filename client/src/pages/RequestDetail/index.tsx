@@ -2,7 +2,7 @@ import { useRequestDetail } from "./useRequestDetail";
 import { RequestDetailMobile } from "./RequestDetailMobile";
 import { RequestDetailDesktop } from "./RequestDetailDesktop";
 import { Button } from "@/components/ui/button";
-import AnalyticsReportError from "@/components/analytics/AnalyticsReportError";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 
 export default function RequestDetail() {
   const hook = useRequestDetail();
@@ -19,7 +19,7 @@ export default function RequestDetail() {
   if (isError) {
     return (
       <div className="p-4 max-w-lg mx-auto">
-        <AnalyticsReportError
+        <WorkLoadError
           title="Could not load request"
           message={error instanceof Error ? error.message : "Something went wrong."}
           onRetry={() => refetch()}

@@ -180,7 +180,7 @@ export function registerSignupRoutes(app: Express) {
         firstName: pendingUser.firstName,
         lastName: pendingUser.lastName,
         role: pendingUser.requestedRole,
-        phoneNumber: pendingUser.phoneNumber,
+        phoneNumber: pendingUser.phoneNumber ?? undefined,
       });
 
       await storage.updatePendingUser(req.params.id, {

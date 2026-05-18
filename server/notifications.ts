@@ -363,7 +363,9 @@ export async function notifySignupPending(pendingUser: { firstName: string; last
   );
 
   try {
-    const admins = (await storage.getAllUsers()).filter(u => u.role === "admin" && u.email);
+    const admins = (await storage.getAllUsers()).filter(
+      (u): u is User & { email: string } => u.role === "admin" && !!u.email,
+    );
     for (const admin of admins) {
       const adminFallbackSubject = `New Access Request: ${pendingUser.firstName} ${pendingUser.lastName}`;
       const adminFallbackBody = `A new access request has been submitted.\n\nName: ${pendingUser.firstName} ${pendingUser.lastName}\nUsername: ${pendingUser.username}\nEmail: ${pendingUser.email}\nRequested Role: ${pendingUser.requestedRole}\n\nPlease log in to review and approve or deny this request.`;

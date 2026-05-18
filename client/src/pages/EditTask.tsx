@@ -183,7 +183,7 @@ export default function EditTask() {
       }
       const taskExt = task as Task & { scheduledStartTime?: string; helpers?: Array<{ userId: string }> };
       if (taskExt.scheduledStartTime) {
-        form.setValue("scheduledStartTime" as keyof typeof form.getValues, taskExt.scheduledStartTime);
+        form.setValue("scheduledStartTime", taskExt.scheduledStartTime);
       }
       if (task.isCampusWide) {
         setLocationScope("campus");
