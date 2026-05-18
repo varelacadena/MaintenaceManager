@@ -32,7 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Printer, Trash2, Upload, X, QrCode } from "lucide-react";
+import { Loader2, Plus, Printer, Trash2, Upload, X, QrCode } from "lucide-react";
 import { EQUIPMENT_CATEGORIES, type PropertyDetailContext } from "./usePropertyDetail";
 import type { Upload as UploadType } from "@shared/schema";
 
@@ -58,6 +58,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
     onPropertySubmit, onSubmit, onSpaceSubmit,
     updatePropertyMutation, createEquipmentMutation, updateEquipmentMutation,
     createSpaceMutation, updateSpaceMutation,
+    isBuilding, spaces,
   } = ctx;
   const equipmentIdForUploads = editingEquipment?.id ?? "";
   const { data: equipmentUploads = [], isLoading: isLoadingEquipmentUploads } = useQuery<UploadType[]>({
@@ -205,6 +206,58 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                   </FormItem>
                 )}
               />
+              {isBuilding && (
+                <FormField
+                  control={form.control}
+                  name="spaceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Space (Optional)</FormLabel>
+                      {spaces.length > 0 ? (
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value === "__none__" ? undefined : value);
+                          }}
+                          value={field.value || "__none__"}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-equipment-space">
+                              <SelectValue placeholder="Property-wide (no specific space)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__none__">Property-wide (no specific space)</SelectItem>
+                            {spaces.map((space) => (
+                              <SelectItem key={space.id} value={space.id}>
+                                {space.name}{space.floor ? ` (${space.floor})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30">
+                          <span className="text-sm text-muted-foreground">No spaces defined yet.</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setIsCreateDialogOpen(false);
+                              setEditingEquipment(null);
+                              setIsSpaceDialogOpen(true);
+                            }}
+                            data-testid="button-add-space-from-equipment"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Space
+                          </Button>
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="description"
@@ -483,7 +536,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     form.reset({
                       propertyId: id || "", name: "", category: "general",
                       description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
-                      manufacturerImageUrl: "",
+                      manufacturerImageUrl: "", spaceId: undefined,
                     });
                   }}
                   data-testid="button-cancel-equipment"

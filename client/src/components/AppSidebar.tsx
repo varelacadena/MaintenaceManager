@@ -62,6 +62,7 @@ const roleMenus = {
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
+    { title: "Vehicles", url: "/vehicles?tab=reservations", icon: Car },
     { title: "My Reservations", url: "/my-reservations", icon: Car },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
@@ -138,7 +139,14 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
 
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={location === item.url} tooltip={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={
+                        location === item.url ||
+                        (item.url.startsWith("/vehicles") && location.startsWith("/vehicles"))
+                      }
+                      tooltip={item.title}
+                    >
                       <Link 
                         href={item.url} 
                         data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}

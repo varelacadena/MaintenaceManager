@@ -109,18 +109,70 @@ CREATE TABLE IF NOT EXISTS quote_items (
 
 -- Add project_id column to tasks if it doesn't exist
 DO $$ BEGIN
-  ALTER TABLE tasks ADD COLUMN project_id VARCHAR REFERENCES projects(id) ON DELETE SET NULL;
-EXCEPTION
-  WHEN duplicate_column THEN null;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'project_id'
+  ) THEN
+    ALTER TABLE tasks ADD COLUMN project_id VARCHAR REFERENCES projects(id) ON DELETE SET NULL;
+  END IF;
 END $$;
 
--- Create indexes for better query performance
+-- Create indexes for better query performance (skip when column missing from partial runs)
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_projects_created_by ON projects(created_by_id);
-CREATE INDEX IF NOT EXISTS idx_project_team_members_project ON project_team_members(project_id);
-CREATE INDEX IF NOT EXISTS idx_project_vendors_project ON project_vendors(project_id);
-CREATE INDEX IF NOT EXISTS idx_quotes_project ON quotes(project_id);
-CREATE INDEX IF NOT EXISTS idx_quotes_vendor ON quotes(vendor_id);
-CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status);
-CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items(quote_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'project_team_members' AND column_name = 'project_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_project_team_members_project ON project_team_members(project_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'project_vendors' AND column_name = 'project_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_project_vendors_project ON project_vendors(project_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'quotes' AND column_name = 'project_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_quotes_project ON quotes(project_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'quotes' AND column_name = 'vendor_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_quotes_vendor ON quotes(vendor_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'quotes' AND column_name = 'status'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'quote_items' AND column_name = 'quote_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items(quote_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'project_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+  END IF;
+END $$;

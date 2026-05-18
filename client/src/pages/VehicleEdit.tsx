@@ -1,6 +1,7 @@
-
+import { useRef, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
@@ -12,11 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { toDisplayUrl } from "@/lib/imageUtils";
+import { parseOptionalInt } from "@/lib/fleetUtils";
 
 export default function VehicleEdit() {
   const { id } = useParams();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
+  const vehicleImageObjectPathRef = useRef("");
 
   const { data: vehicle, isLoading } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${id}`],
@@ -38,6 +44,7 @@ export default function VehicleEdit() {
       passengerCapacity: vehicle.passengerCapacity || 5,
       color: vehicle.color || "",
       notes: vehicle.notes || "",
+      imageUrl: vehicle.imageUrl || "",
     } : undefined,
   });
 
@@ -169,7 +176,7 @@ export default function VehicleEdit() {
                         <Input 
                           type="number" 
                           {...field} 
-                          onChange={e => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(parseOptionalInt(e.target.value, field.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -272,7 +279,7 @@ export default function VehicleEdit() {
                           type="number" 
                           {...field}
                           value={field.value ?? ""}
-                          onChange={e => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(parseOptionalInt(e.target.value, field.value ?? 0))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -290,7 +297,7 @@ export default function VehicleEdit() {
                           type="number" 
                           {...field}
                           value={field.value ?? ""}
-                          onChange={e => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(parseOptionalInt(e.target.value, field.value ?? 5))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -319,6 +326,84 @@ export default function VehicleEdit() {
                       <FormControl>
                         <Textarea {...field} value={field.value ?? ""} rows={4} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Vehicle Photo (optional)</FormLabel>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={10 * 1024 * 1024}
+                            accept="image/*"
+                            isLoading={isUploadingVehicleImage}
+                            buttonVariant="outline"
+                            onGetUploadParameters={async () => {
+                              setIsUploadingVehicleImage(true);
+                              const response = await fetch("/api/objects/upload", {
+                                method: "POST",
+                                credentials: "include",
+                              });
+                              if (!response.ok) {
+                                throw new Error("Failed to get upload URL");
+                              }
+                              const data = await response.json();
+                              vehicleImageObjectPathRef.current = data.objectPath || "";
+                              return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+                            }}
+                            onComplete={(result) => {
+                              setIsUploadingVehicleImage(false);
+                              const uploadedFile = result?.successful?.[0];
+                              if (!uploadedFile) return;
+                              const objectPath =
+                                vehicleImageObjectPathRef.current ||
+                                uploadedFile.objectPath ||
+                                uploadedFile.objectUrl;
+                              const displayUrl = objectPath
+                                ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
+                                : uploadedFile.objectUrl;
+                              form.setValue("imageUrl", displayUrl, { shouldValidate: true, shouldDirty: true });
+                            }}
+                            onError={(error) => {
+                              setIsUploadingVehicleImage(false);
+                              toast({
+                                title: "Upload failed",
+                                description: error.message || "Could not upload image",
+                                variant: "destructive",
+                              });
+                            }}
+                          >
+                            <ImagePlus className="mr-2 h-4 w-4" />
+                            {isUploadingVehicleImage ? "Uploading..." : "Upload Photo"}
+                          </ObjectUploader>
+                          {field.value ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => form.setValue("imageUrl", "", { shouldValidate: true, shouldDirty: true })}
+                            >
+                              <X className="mr-1 h-4 w-4" />
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                        {field.value ? (
+                          <div className="h-40 w-full overflow-hidden rounded-md border bg-muted/20">
+                            <img
+                              src={toDisplayUrl(field.value)}
+                              alt="Vehicle preview"
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

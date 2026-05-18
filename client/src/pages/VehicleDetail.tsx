@@ -16,6 +16,7 @@ import QRCode from "react-qr-code";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { toDisplayUrl } from "@/lib/imageUtils";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import {
   AlertDialog,
@@ -87,7 +88,7 @@ export default function VehicleDetail() {
     queryKey: ['/api/users'],
   });
 
-  const canManageVehicles = user?.role === "admin" || user?.role === "technician";
+  const canManageVehicles = user?.role === "admin";
 
   const [addDocumentDate, setAddDocumentDate] = useState<Date | undefined>(undefined);
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
@@ -233,6 +234,16 @@ export default function VehicleDetail() {
           </div>
         )}
       </div>
+
+      {vehicle.imageUrl ? (
+        <div className="h-48 sm:h-56 w-full overflow-hidden rounded-lg border bg-muted/20">
+          <img
+            src={toDisplayUrl(vehicle.imageUrl)}
+            alt={`${vehicle.make} ${vehicle.model}`}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : null}
 
       <Tabs defaultValue="overview" className="space-y-4">
         <div className="overflow-x-auto -mx-1 px-1">

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -55,6 +55,14 @@ const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const EmailManagement = lazy(() => import("./pages/EmailManagement"));
 const ResourceLibrary = lazy(() => import("./pages/ResourceLibrary"));
 const GrabAJob = lazy(() => import("./pages/GrabAJob"));
+
+function VehicleReservationsTabRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/vehicles?tab=reservations");
+  }, [setLocation]);
+  return null;
+}
 
 function SuspenseFallback() {
   return (
@@ -294,12 +302,16 @@ function AuthenticatedApp() {
                 {/* Vehicle Fleet */}
                 <Route path="/vehicles" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin"]}><Vehicles /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><Vehicles /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicles/:id" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    {user?.role === "admin" ? <VehicleDetail /> : <VehicleQRRedirect />}
+                    {user?.role === "admin" || user?.role === "technician" ? (
+                      <VehicleDetail />
+                    ) : (
+                      <VehicleQRRedirect />
+                    )}
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicles/:id/edit" component={() => (
@@ -313,10 +325,11 @@ function AuthenticatedApp() {
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-reservations" component={() => (
-                  <DomainErrorBoundary domain="Vehicle Fleet">{(() => {
-                    window.location.replace("/vehicles?tab=reservations");
-                    return null;
-                  })()}</DomainErrorBoundary>
+                  <DomainErrorBoundary domain="Vehicle Fleet">
+                    <RoleGuard allowedRoles={["admin", "technician"]}>
+                      <VehicleReservationsTabRedirect />
+                    </RoleGuard>
+                  </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">

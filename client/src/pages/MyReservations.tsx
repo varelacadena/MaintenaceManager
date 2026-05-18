@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { Calendar, Car, Users, Plus, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -55,17 +56,8 @@ export default function MyReservations() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await fetch("/api/vehicle-reservations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to create reservation");
-      }
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await apiRequest("POST", "/api/vehicle-reservations", data);
       return res.json();
     },
     onSuccess: () => {
@@ -87,15 +79,7 @@ export default function MyReservations() {
 
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
-      const res = await fetch(`/api/vehicle-reservations/${reservationId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to cancel reservation");
-      }
-      return res.json();
+      await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations/my"] });

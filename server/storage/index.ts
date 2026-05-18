@@ -264,6 +264,10 @@ export interface IStorage {
   assignRandomCode(lockboxId: string): Promise<LockboxCode | null>;
 
   getVehicles(filters?: { status?: string }): Promise<Vehicle[]>;
+  getVehiclesPage(
+    filters: { status?: string } | undefined,
+    pagination: { limit: number; offset: number },
+  ): Promise<{ items: Vehicle[]; total: number }>;
   getVehicle(id: string): Promise<Vehicle | undefined>;
   getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
@@ -272,7 +276,11 @@ export interface IStorage {
   updateVehicleMileage(id: string, mileage: number): Promise<Vehicle | undefined>;
   deleteVehicle(id: string): Promise<void>;
 
-  getVehicleReservations(filters?: { vehicleId?: string; userId?: string; status?: string }): Promise<VehicleReservation[]>;
+  getVehicleReservations(filters?: { vehicleId?: string; userId?: string; status?: string; statuses?: string[] }): Promise<VehicleReservation[]>;
+  getVehicleReservationsPage(
+    filters: { vehicleId?: string; userId?: string; status?: string; statuses?: string[] } | undefined,
+    pagination: { limit: number; offset: number },
+  ): Promise<{ items: VehicleReservation[]; total: number }>;
   getVehicleReservation(id: string): Promise<VehicleReservation | undefined>;
   createVehicleReservation(reservation: InsertVehicleReservation): Promise<VehicleReservation>;
   updateVehicleReservation(id: string, data: Partial<InsertVehicleReservation>): Promise<VehicleReservation | undefined>;
@@ -590,6 +598,7 @@ export class DatabaseStorage implements IStorage {
   isTaskHelper = workOrderStorage.isTaskHelper;
 
   getVehicles = vehicleStorage.getVehicles;
+  getVehiclesPage = vehicleStorage.getVehiclesPage;
   getVehicle = vehicleStorage.getVehicle;
   getVehicleByVehicleId = vehicleStorage.getVehicleByVehicleId;
   createVehicle = vehicleStorage.createVehicle;
@@ -598,6 +607,7 @@ export class DatabaseStorage implements IStorage {
   updateVehicleMileage = vehicleStorage.updateVehicleMileage;
   deleteVehicle = vehicleStorage.deleteVehicle;
   getVehicleReservations = vehicleStorage.getVehicleReservations;
+  getVehicleReservationsPage = vehicleStorage.getVehicleReservationsPage;
   getVehicleReservation = vehicleStorage.getVehicleReservation;
   createVehicleReservation = vehicleStorage.createVehicleReservation;
   updateVehicleReservation = vehicleStorage.updateVehicleReservation;

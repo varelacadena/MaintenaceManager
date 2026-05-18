@@ -22,19 +22,66 @@ import {
   type InsertVehicleDocument,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, ne, desc, lte, gte, sql } from "drizzle-orm";
+import { eq, and, ne, desc, lte, gte, sql, inArray, count } from "drizzle-orm";
 
-export async function getVehicles(filters?: { status?: string }): Promise<Vehicle[]> {
+export type VehicleReservationFilters = {
+  vehicleId?: string;
+  userId?: string;
+  status?: string;
+  statuses?: string[];
+};
+
+function buildVehicleConditions(filters?: { status?: string }) {
   const conditions = [];
   if (filters?.status) {
     conditions.push(eq(vehicles.status, filters.status as any));
   }
+  return conditions;
+}
 
+function buildReservationConditions(filters?: VehicleReservationFilters) {
+  const conditions = [];
+  if (filters?.vehicleId) {
+    conditions.push(eq(vehicleReservations.vehicleId, filters.vehicleId));
+  }
+  if (filters?.userId) {
+    conditions.push(eq(vehicleReservations.userId, filters.userId));
+  }
+  if (filters?.statuses && filters.statuses.length > 0) {
+    conditions.push(inArray(vehicleReservations.status, filters.statuses as any));
+  } else if (filters?.status) {
+    conditions.push(eq(vehicleReservations.status, filters.status as any));
+  }
+  return conditions;
+}
+
+export async function getVehicles(filters?: { status?: string }): Promise<Vehicle[]> {
+  const conditions = buildVehicleConditions(filters);
   const query = db.select().from(vehicles);
   if (conditions.length > 0) {
     return await query.where(and(...conditions)).orderBy(vehicles.vehicleId);
   }
   return await query.orderBy(vehicles.vehicleId);
+}
+
+export async function getVehiclesPage(
+  filters: { status?: string } | undefined,
+  pagination: { limit: number; offset: number },
+): Promise<{ items: Vehicle[]; total: number }> {
+  const conditions = buildVehicleConditions(filters);
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const itemsQuery = db.select().from(vehicles).orderBy(vehicles.vehicleId);
+  const countQuery = db.select({ value: count() }).from(vehicles);
+
+  const [items, countRows] = await Promise.all([
+    whereClause
+      ? itemsQuery.where(whereClause).limit(pagination.limit).offset(pagination.offset)
+      : itemsQuery.limit(pagination.limit).offset(pagination.offset),
+    whereClause ? countQuery.where(whereClause) : countQuery,
+  ]);
+
+  return { items, total: Number(countRows[0]?.value ?? 0) };
 }
 
 export async function getVehicle(id: string): Promise<Vehicle | undefined> {
@@ -83,27 +130,35 @@ export async function deleteVehicle(id: string): Promise<void> {
   await db.delete(vehicles).where(eq(vehicles.id, id));
 }
 
-export async function getVehicleReservations(filters?: {
-  vehicleId?: string;
-  userId?: string;
-  status?: string;
-}): Promise<VehicleReservation[]> {
-  const conditions = [];
-  if (filters?.vehicleId) {
-    conditions.push(eq(vehicleReservations.vehicleId, filters.vehicleId));
-  }
-  if (filters?.userId) {
-    conditions.push(eq(vehicleReservations.userId, filters.userId));
-  }
-  if (filters?.status) {
-    conditions.push(eq(vehicleReservations.status, filters.status as any));
-  }
-
+export async function getVehicleReservations(
+  filters?: VehicleReservationFilters,
+): Promise<VehicleReservation[]> {
+  const conditions = buildReservationConditions(filters);
   const query = db.select().from(vehicleReservations);
   if (conditions.length > 0) {
     return await query.where(and(...conditions)).orderBy(desc(vehicleReservations.startDate));
   }
   return await query.orderBy(desc(vehicleReservations.startDate));
+}
+
+export async function getVehicleReservationsPage(
+  filters: VehicleReservationFilters | undefined,
+  pagination: { limit: number; offset: number },
+): Promise<{ items: VehicleReservation[]; total: number }> {
+  const conditions = buildReservationConditions(filters);
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const itemsQuery = db.select().from(vehicleReservations).orderBy(desc(vehicleReservations.startDate));
+  const countQuery = db.select({ value: count() }).from(vehicleReservations);
+
+  const [items, countRows] = await Promise.all([
+    whereClause
+      ? itemsQuery.where(whereClause).limit(pagination.limit).offset(pagination.offset)
+      : itemsQuery.limit(pagination.limit).offset(pagination.offset),
+    whereClause ? countQuery.where(whereClause) : countQuery,
+  ]);
+
+  return { items, total: Number(countRows[0]?.value ?? 0) };
 }
 
 export async function getVehicleReservation(id: string): Promise<VehicleReservation | undefined> {
@@ -229,8 +284,6 @@ export async function createVehicleCheckOutLog(logData: InsertVehicleCheckOutLog
       cleanData.assignedCodeId = String(logData.assignedCodeId);
     }
     
-    console.log("Inserting clean data:", JSON.stringify(cleanData, null, 2));
-    
     const [log] = await db.insert(vehicleCheckOutLogs).values(cleanData).returning();
     if (!log) {
       throw new Error("Failed to create checkout log: No record returned from database");
@@ -238,10 +291,6 @@ export async function createVehicleCheckOutLog(logData: InsertVehicleCheckOutLog
     return log;
   } catch (error: any) {
     console.error("Database error in createVehicleCheckOutLog:", error);
-    console.error("Error code:", error?.code);
-    console.error("Error detail:", error?.detail);
-    console.error("Error hint:", error?.hint);
-    console.error("Log data attempted:", JSON.stringify(logData, null, 2));
     throw error;
   }
 }

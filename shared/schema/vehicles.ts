@@ -83,6 +83,7 @@ export const vehicles = pgTable("vehicles", {
   fuelType: varchar("fuel_type", { length: 50 }).notNull(),
   passengerCapacity: integer("passenger_capacity"),
   color: varchar("color", { length: 50 }),
+  imageUrl: varchar("image_url", { length: 500 }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

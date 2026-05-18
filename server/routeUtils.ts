@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import { z } from "zod";
+import { computeSyncedVehicleStatus } from "@shared/fleetStatus";
 import { storage } from "./storage";
 
 interface DatabaseError {
@@ -65,6 +66,28 @@ export async function authenticateUser(req: any): Promise<any | null> {
   return null;
 }
 
+export function isFleetPrivilegedRole(role: string | undefined): boolean {
+  return role === "admin" || role === "technician";
+}
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 200;
+
+export function parsePaginationQuery(query: {
+  limit?: string;
+  offset?: string;
+}): { limit: number; offset: number } | null {
+  if (query.limit === undefined && query.offset === undefined) {
+    return null;
+  }
+  const limit = Math.min(
+    Math.max(parseInt(query.limit ?? String(DEFAULT_PAGE_LIMIT), 10) || DEFAULT_PAGE_LIMIT, 1),
+    MAX_PAGE_LIMIT,
+  );
+  const offset = Math.max(parseInt(query.offset ?? "0", 10) || 0, 0);
+  return { limit, offset };
+}
+
 export async function canAccessServiceRequest(userId: string, requestId: string): Promise<boolean> {
   try {
     const [request, user] = await Promise.all([
@@ -87,38 +110,25 @@ export async function syncVehicleStatus(vehicleId: string): Promise<void> {
     const vehicle = await storage.getVehicle(vehicleId);
     if (!vehicle) return;
 
-    if (vehicle.status === "needs_maintenance" || vehicle.status === "needs_cleaning" || vehicle.status === "out_of_service") {
-      return;
-    }
-
     const checkOutLogs = await storage.getVehicleCheckOutLogs({ vehicleId });
     const checkInLogs = await storage.getVehicleCheckInLogs({ vehicleId });
 
-    const activeCheckOut = checkOutLogs.find(checkOut => {
-      const hasMatchingCheckIn = checkInLogs.some(checkIn => checkIn.checkOutLogId === checkOut.id);
+    const hasActiveCheckOut = checkOutLogs.some((checkOut) => {
+      const hasMatchingCheckIn = checkInLogs.some(
+        (checkIn) => checkIn.checkOutLogId === checkOut.id,
+      );
       return !hasMatchingCheckIn;
     });
 
-    if (activeCheckOut) {
-      if (vehicle.status !== "in_use") {
-        await storage.updateVehicleStatus(vehicleId, "in_use");
-      }
-      return;
-    }
-
     const reservations = await storage.getVehicleReservations({ vehicleId });
-    const hasActiveReservations = reservations.some(
-      r => r.status === "pending" || r.status === "approved"
+    const nextStatus = computeSyncedVehicleStatus(
+      vehicle.status,
+      hasActiveCheckOut,
+      reservations.map((r) => r.status),
     );
 
-    if (hasActiveReservations) {
-      if (vehicle.status !== "reserved") {
-        await storage.updateVehicleStatus(vehicleId, "reserved");
-      }
-    } else {
-      if (vehicle.status !== "available") {
-        await storage.updateVehicleStatus(vehicleId, "available");
-      }
+    if (nextStatus) {
+      await storage.updateVehicleStatus(vehicleId, nextStatus);
     }
   } catch (error) {
     console.error(`Error syncing vehicle status for ${vehicleId}:`, error);

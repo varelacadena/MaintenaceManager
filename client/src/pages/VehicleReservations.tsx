@@ -40,6 +40,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  isFleetPrivilegedRole,
+  isPaginatedResponse,
+  RESERVATIONS_PAGE_SIZE,
+  type PaginatedResponse,
+  reservationsListUrl,
+} from "@/lib/fleetUtils";
+import { FleetListPagination } from "@/components/fleet/FleetListPagination";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 
 const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
@@ -56,6 +65,7 @@ const formatStatus = (status: string) =>
 export function VehicleReservationsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [reservationsPage, setReservationsPage] = useState(0);
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
   const [selectedReservationForHandoff, setSelectedReservationForHandoff] = useState<string | null>(null);
   const [keyPickupMethod, setKeyPickupMethod] = useState<string>("");
@@ -80,37 +90,43 @@ export function VehicleReservationsContent() {
     queryKey: ["/api/auth/user"],
   });
 
+  const isFleetStaff = isFleetPrivilegedRole(currentUser?.role);
+
   useEffect(() => {
     if (currentUser) {
-      setStatusFilter(currentUser.role === "admin" ? "pending_and_review" : "approved_active");
+      setStatusFilter(isFleetPrivilegedRole(currentUser.role) ? "pending_and_review" : "approved_active");
     }
   }, [currentUser?.role]);
 
-  const { data: reservations, isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
-    queryKey: ["/api/vehicle-reservations"],
+  const useReservationsPagination = !searchTerm.trim();
+  const reservationsQueryUrl = reservationsListUrl(
+    statusFilter,
+    reservationsPage,
+    RESERVATIONS_PAGE_SIZE,
+    useReservationsPagination,
+  );
+
+  useEffect(() => {
+    setReservationsPage(0);
+  }, [statusFilter, searchTerm]);
+
+  const {
+    data: reservationsData,
+    isLoading: reservationsLoading,
+    isError: reservationsError,
+    error: reservationsQueryError,
+    refetch: refetchReservations,
+  } = useQuery<VehicleReservation[] | PaginatedResponse<VehicleReservation>>({
+    queryKey: [reservationsQueryUrl],
+    enabled: !!currentUser,
   });
 
-  const approveMutation = useMutation({
-    mutationFn: async (reservationId: string) => {
-      return await apiRequest("PATCH", `/api/vehicle-reservations/${reservationId}`, {
-        status: "active",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
-      toast({
-        title: "Success",
-        description: "Reservation approved successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const reservations = isPaginatedResponse(reservationsData)
+    ? reservationsData.items
+    : reservationsData ?? [];
+  const reservationsTotal = isPaginatedResponse(reservationsData)
+    ? reservationsData.total
+    : reservations.length;
 
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
@@ -119,7 +135,12 @@ export function VehicleReservationsContent() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
+        },
+      });
       toast({
         title: "Success",
         description: "Reservation cancelled successfully",
@@ -139,7 +160,12 @@ export function VehicleReservationsContent() {
       return await apiRequest("DELETE", `/api/vehicle-reservations/${reservationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
+        },
+      });
       toast({
         title: "Success",
         description: "Reservation deleted successfully",
@@ -162,7 +188,12 @@ export function VehicleReservationsContent() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
+        },
+      });
       setSelectedReservationForHandoff(variables.reservationId);
       setHandoffDialogOpen(true);
     },
@@ -197,7 +228,12 @@ export function VehicleReservationsContent() {
     },
     onSettled: () => {
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+        queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
+        },
+      });
       }, 300);
     },
     onError: (error: Error) => {
@@ -250,7 +286,12 @@ export function VehicleReservationsContent() {
     },
     onSettled: () => {
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/vehicle-reservations"] });
+        queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === "string" && key.startsWith("/api/vehicle-reservations");
+        },
+      });
       }, 300);
     },
     onError: (error: Error) => {
@@ -264,22 +305,33 @@ export function VehicleReservationsContent() {
 
   const { data: vehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+    enabled: isFleetStaff,
   });
 
   const { data: lockboxes } = useQuery<Lockbox[]>({
     queryKey: ["/api/lockboxes"],
+    enabled: isFleetStaff,
   });
+
+  const needsTripLogs =
+    isFleetStaff &&
+    (statusFilter === "all" ||
+      statusFilter === "pending_review" ||
+      statusFilter === "pending_and_review");
 
   const { data: checkInLogs } = useQuery<VehicleCheckInLog[]>({
     queryKey: ["/api/vehicle-checkin-logs"],
+    enabled: needsTripLogs,
   });
 
   const { data: checkOutLogs } = useQuery<VehicleCheckOutLog[]>({
     queryKey: ["/api/vehicle-checkout-logs"],
+    enabled: needsTripLogs,
   });
 
   const { data: users } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
+    enabled: isFleetStaff,
   });
 
   const getVehicleName = (vehicleId: string | null) => {
@@ -303,16 +355,7 @@ export function VehicleReservationsContent() {
       userName.includes(searchTerm.toLowerCase()) ||
       purpose.includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all"
-        ? true
-        : statusFilter === "pending_and_review"
-        ? ["pending", "pending_review"].includes(reservation.status)
-        : statusFilter === "approved_active"
-        ? ["approved", "active"].includes(reservation.status)
-        : reservation.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   })?.sort((a, b) => {
     if (a.status === "pending" && b.status !== "pending") return -1;
     if (a.status !== "pending" && b.status === "pending") return 1;
@@ -332,7 +375,13 @@ export function VehicleReservationsContent() {
             data-testid="input-search-reservations"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => {
+            setStatusFilter(value);
+            setReservationsPage(0);
+          }}
+        >
           <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -350,7 +399,13 @@ export function VehicleReservationsContent() {
         </Select>
       </div>
 
-      {reservationsLoading ? (
+      {reservationsError ? (
+        <WorkLoadError
+          title="Could not load reservations"
+          message={reservationsQueryError instanceof Error ? reservationsQueryError.message : "Failed to load reservations"}
+          onRetry={() => refetchReservations()}
+        />
+      ) : reservationsLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
@@ -446,9 +501,9 @@ export function VehicleReservationsContent() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button type="submit" onClick={() => assignVehicleMutation.mutate({ reservationId: reservation.id, vehicleId: "" })} disabled={assignVehicleMutation.isPending}>
-                            Save changes
-                          </Button>
+                          <p className="text-sm text-muted-foreground w-full text-left">
+                            Choose a vehicle above to assign and open handoff details.
+                          </p>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -580,6 +635,17 @@ export function VehicleReservationsContent() {
           </CardContent>
         </Card>
       )}
+
+      {useReservationsPagination && !reservationsLoading && !reservationsError ? (
+        <FleetListPagination
+          page={reservationsPage}
+          pageSize={RESERVATIONS_PAGE_SIZE}
+          total={reservationsTotal}
+          onPageChange={setReservationsPage}
+          itemLabel="reservations"
+          testIdPrefix="reservations"
+        />
+      ) : null}
 
       <Dialog open={handoffDialogOpen} onOpenChange={setHandoffDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">

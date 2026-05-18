@@ -56,20 +56,16 @@ interface PropertyEquipmentTabProps {
 
 export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
   const {
-    id,
     equipmentSearch, setEquipmentSearch,
     selectedCategory, setSelectedCategory,
     selectedSpaceId, setSelectedSpaceId,
-    setEditingEquipment, setEquipmentImageUrl, setManufacturerImageUrl, setPendingEquipmentUploads,
-    setIsCreateDialogOpen,
     setQrEquipment, setIsQrDialogOpen,
     setFileViewerEquipment, setIsEquipmentFilesDialogOpen,
-    form,
     isBuilding, canEdit,
     equipment, spaces,
     navigate, spaceFilteredEquipment,
     categories, filteredEquipment, groupedEquipment,
-    handleEditEquipment, handleDeleteEquipment,
+    openCreateEquipmentDialog, handleEditEquipment, handleDeleteEquipment,
   } = ctx;
 
   return (
@@ -103,18 +99,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
             {canEdit && (
               <Button
                 size="sm"
-                onClick={() => {
-                  setEditingEquipment(null);
-                  setEquipmentImageUrl("");
-                  setManufacturerImageUrl("");
-                  setPendingEquipmentUploads([]);
-                  form.reset({
-                    propertyId: id || "", name: "", category: "general",
-                    description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
-                    manufacturerImageUrl: "",
-                  });
-                  setIsCreateDialogOpen(true);
-                }}
+                onClick={() => openCreateEquipmentDialog()}
                 data-testid="button-add-equipment"
               >
                 <Plus className="w-4 h-4 mr-1" />
@@ -162,19 +147,11 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setEditingEquipment(null);
-                  setEquipmentImageUrl("");
-                  setManufacturerImageUrl("");
-                  setPendingEquipmentUploads([]);
-                  form.reset({
-                    propertyId: id || "", name: "",
+                onClick={() =>
+                  openCreateEquipmentDialog({
                     category: (selectedCategory as FormData["category"]) || "general",
-                    description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
-                    manufacturerImageUrl: "",
-                  });
-                  setIsCreateDialogOpen(true);
-                }}
+                  })
+                }
                 data-testid="button-add-first-equipment"
               >
                 Add your first equipment
@@ -186,6 +163,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
             {filteredEquipment.map((item) => {
               const Icon = categoryIcons[item.category] || categoryIcons[item.category.toLowerCase()] || HelpCircle;
               const thumbnailUrl = toDisplayUrl((item as any).imageUrl || (item as any).manufacturerImageUrl);
+              const space = item.spaceId ? spaces.find((s) => s.id === item.spaceId) : undefined;
               return (
                 <div
                   key={item.id}
@@ -208,6 +186,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                         <Badge variant="secondary">{EQUIPMENT_CATEGORIES.find(c => c.slug === item.category.toLowerCase())?.label ?? item.category}</Badge>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {space && <span>{space.name}{space.floor ? ` · ${space.floor}` : ""}</span>}
                         {item.serialNumber && <span>SN: {item.serialNumber}</span>}
                         {item.condition && <span>Condition: {item.condition}</span>}
                         {item.description && <span className="truncate">{item.description}</span>}

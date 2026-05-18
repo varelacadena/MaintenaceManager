@@ -146,6 +146,7 @@ export function usePropertyDetail() {
       condition: "",
       notes: "",
       imageUrl: "",
+      spaceId: undefined,
     },
   });
 
@@ -333,6 +334,7 @@ export function usePropertyDetail() {
   const onSubmit = (data: FormData) => {
     const submitData = {
       ...data,
+      spaceId: data.spaceId || undefined,
       imageUrl: equipmentImageUrl || undefined,
       manufacturerImageUrl: manufacturerImageUrl || undefined,
     };
@@ -383,6 +385,28 @@ export function usePropertyDetail() {
     }
   };
 
+  const openCreateEquipmentDialog = (overrides?: Partial<FormData>) => {
+    setEditingEquipment(null);
+    setEquipmentImageUrl("");
+    setManufacturerImageUrl("");
+    setPendingEquipmentUploads([]);
+    uploadObjectPathRef.current = "";
+    form.reset({
+      propertyId: id || "",
+      name: "",
+      category: "general",
+      description: "",
+      serialNumber: "",
+      condition: "",
+      notes: "",
+      imageUrl: "",
+      manufacturerImageUrl: "",
+      spaceId: selectedSpaceId || undefined,
+      ...overrides,
+    });
+    setIsCreateDialogOpen(true);
+  };
+
   const handleEditEquipment = (item: Equipment) => {
     setEditingEquipment(item);
     setEquipmentImageUrl(toDisplayUrl(item.imageUrl));
@@ -399,6 +423,7 @@ export function usePropertyDetail() {
       notes: item.notes || "",
       imageUrl: item.imageUrl || "",
       manufacturerImageUrl: (item as any).manufacturerImageUrl || "",
+      spaceId: item.spaceId || undefined,
     });
     setIsCreateDialogOpen(true);
   };
@@ -482,7 +507,7 @@ export function usePropertyDetail() {
     updatePropertyMutation,
     onSubmit, onPropertySubmit, onSpaceSubmit,
     handleEditSpace, handleDeleteSpace, handleEditProperty,
-    handleEditEquipment, handleDeleteEquipment,
+    openCreateEquipmentDialog, handleEditEquipment, handleDeleteEquipment,
     categories, spaceFilteredEquipment, categoryFilteredEquipment,
     filteredEquipment, groupedEquipment, filteredSpaces, filteredTasks,
     getAssigneeName,

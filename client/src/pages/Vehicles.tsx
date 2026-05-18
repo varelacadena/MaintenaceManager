@@ -1,11 +1,11 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Car, Search, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link, useSearch } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import type { Vehicle } from "@shared/schema";
 import {
@@ -37,6 +37,15 @@ import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import CodeHub from "@/components/CodeHub";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { WorkLoadError } from "@/pages/Work/WorkLoadError";
+import {
+  FLEET_PAGE_SIZE,
+  isPaginatedResponse,
+  type PaginatedResponse,
+  parseOptionalInt,
+  vehiclesListUrl,
+} from "@/lib/fleetUtils";
+import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 
 const statusColors = {
   available: "default",
@@ -51,14 +60,36 @@ function FleetContent() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [fleetPage, setFleetPage] = useState(0);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
   const vehicleImageObjectPathRef = useRef("");
   const { toast } = useToast();
 
-  const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+  const useFleetPagination = !searchTerm.trim();
+  const vehiclesQueryUrl = vehiclesListUrl(
+    statusFilter,
+    fleetPage,
+    FLEET_PAGE_SIZE,
+    useFleetPagination,
+  );
+
+  useEffect(() => {
+    setFleetPage(0);
+  }, [statusFilter, searchTerm]);
+
+  const { data: vehiclesData, isLoading, isError, error, refetch } = useQuery<
+    Vehicle[] | PaginatedResponse<Vehicle>
+  >({
+    queryKey: [vehiclesQueryUrl],
   });
+
+  const vehicles = isPaginatedResponse(vehiclesData)
+    ? vehiclesData.items
+    : vehiclesData ?? [];
+  const fleetTotal = isPaginatedResponse(vehiclesData)
+    ? vehiclesData.total
+    : vehicles.length;
 
   const form = useForm<InsertVehicle>({
     resolver: zodResolver(insertVehicleSchema),
@@ -109,17 +140,17 @@ function FleetContent() {
     },
   });
 
-  const filteredVehicles = vehicles?.filter(vehicle => {
-    const matchesSearch = 
-      vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.vehicleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.licensePlate?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || vehicle.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredVehicles = useFleetPagination
+    ? vehicles
+    : vehicles.filter((vehicle) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          vehicle.make.toLowerCase().includes(term) ||
+          vehicle.model.toLowerCase().includes(term) ||
+          vehicle.vehicleId.toLowerCase().includes(term) ||
+          vehicle.licensePlate?.toLowerCase().includes(term)
+        );
+      });
 
   const syncStatusesMutation = useMutation({
     mutationFn: async () => {
@@ -146,7 +177,7 @@ function FleetContent() {
     },
   });
 
-  const canManageVehicles = user?.role === "admin" || user?.role === "technician";
+  const canManageVehicles = user?.role === "admin";
 
   return (
     <div className="space-y-4">
@@ -241,7 +272,7 @@ function FleetContent() {
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(parseInt(e.target.value))}
+                              onChange={(e) => field.onChange(parseOptionalInt(e.target.value, new Date().getFullYear()))}
                               data-testid="input-year" 
                             />
                           </FormControl>
@@ -320,7 +351,7 @@ function FleetContent() {
                               type="number" 
                               {...field}
                               value={field.value ?? ""} 
-                              onChange={e => field.onChange(parseInt(e.target.value))}
+                              onChange={(e) => field.onChange(parseOptionalInt(e.target.value, 0))}
                               data-testid="input-mileage" 
                             />
                           </FormControl>
@@ -339,7 +370,7 @@ function FleetContent() {
                               type="number" 
                               {...field}
                               value={field.value ?? ""} 
-                              onChange={e => field.onChange(parseInt(e.target.value))}
+                              onChange={(e) => field.onChange(parseOptionalInt(e.target.value, 5))}
                               data-testid="input-passenger-capacity" 
                             />
                           </FormControl>
@@ -461,7 +492,13 @@ function FleetContent() {
             data-testid="input-search-vehicles"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => {
+            setStatusFilter(value);
+            setFleetPage(0);
+          }}
+        >
           <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -477,7 +514,13 @@ function FleetContent() {
         </Select>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <WorkLoadError
+          title="Could not load fleet"
+          message={error instanceof Error ? error.message : "Failed to load vehicles"}
+          onRetry={() => refetch()}
+        />
+      ) : isLoading ? (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
@@ -494,8 +537,13 @@ function FleetContent() {
       ) : filteredVehicles && filteredVehicles.length > 0 ? (
         <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filteredVehicles.map((vehicle) => (
-            <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`}>
-              <Card className="hover-elevate cursor-pointer overflow-hidden" data-testid={`card-vehicle-${vehicle.id}`}>
+            <Link
+              key={vehicle.id}
+              href={`/vehicles/${vehicle.id}`}
+              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${vehicle.make} ${vehicle.model}, ${vehicle.vehicleId}`}
+            >
+              <Card className="hover-elevate cursor-pointer overflow-hidden h-full" data-testid={`card-vehicle-${vehicle.id}`}>
                 <div className="h-24 w-full bg-muted/20">
                   {vehicle.imageUrl ? (
                     <img
@@ -558,20 +606,49 @@ function FleetContent() {
           </CardContent>
         </Card>
       )}
+
+      {useFleetPagination && !isLoading && !isError ? (
+        <FleetListPagination
+          page={fleetPage}
+          pageSize={FLEET_PAGE_SIZE}
+          total={fleetTotal}
+          onPageChange={setFleetPage}
+          itemLabel="vehicles"
+          testIdPrefix="fleet"
+        />
+      ) : null}
     </div>
   );
 }
 
 export default function Vehicles() {
   const searchString = useSearch();
-  const urlParams = new URLSearchParams(searchString);
-  const tabParam = urlParams.get("tab");
-  const defaultTab = tabParam === "reservations" ? "reservations" : tabParam === "codehub" ? "codehub" : "fleet";
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const notificationCounts = useNotificationCounts();
+  const isAdmin = user?.role === "admin";
+  const isTechnician = user?.role === "technician";
 
-  const isAdminOrTechnician = user?.role === "admin" || user?.role === "technician";
-  const pendingCount = isAdminOrTechnician ? notificationCounts.pendingVehicleReservations : 0;
+  const urlParams = new URLSearchParams(searchString);
+  const tabParam = urlParams.get("tab");
+  const requestedTab =
+    tabParam === "reservations" ? "reservations" : tabParam === "codehub" ? "codehub" : "fleet";
+  const activeTab =
+    !isAdmin && (requestedTab === "fleet" || requestedTab === "codehub")
+      ? "reservations"
+      : requestedTab;
+  const pendingCount =
+    isAdmin || isTechnician ? notificationCounts.pendingVehicleReservations : 0;
+
+  const setActiveTab = (tab: string) => {
+    const nextTab = !isAdmin && (tab === "fleet" || tab === "codehub") ? "reservations" : tab;
+    const params = new URLSearchParams();
+    if (nextTab !== "fleet") {
+      params.set("tab", nextTab);
+    }
+    const qs = params.toString();
+    setLocation(qs ? `/vehicles?${qs}` : "/vehicles");
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4">
@@ -582,9 +659,11 @@ export default function Vehicles() {
         </p>
       </div>
 
-      <Tabs defaultValue={defaultTab} data-testid="tabs-vehicles">
+      <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-vehicles">
         <TabsList>
-          <TabsTrigger value="fleet" data-testid="tab-fleet">Fleet</TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="fleet" data-testid="tab-fleet">Fleet</TabsTrigger>
+          )}
           <TabsTrigger value="reservations" data-testid="tab-reservations" className="flex items-center gap-2">
             Reservations
             {pendingCount > 0 && (
@@ -593,19 +672,21 @@ export default function Vehicles() {
               </Badge>
             )}
           </TabsTrigger>
-          {user?.role === "admin" && (
+          {isAdmin && (
             <TabsTrigger value="codehub" data-testid="tab-codehub">
               Code Hub
             </TabsTrigger>
           )}
         </TabsList>
-        <TabsContent value="fleet">
-          <FleetContent />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="fleet">
+            <FleetContent />
+          </TabsContent>
+        )}
         <TabsContent value="reservations">
           <VehicleReservationsContent />
         </TabsContent>
-        {user?.role === "admin" && (
+        {isAdmin && (
           <TabsContent value="codehub">
             <CodeHub />
           </TabsContent>
@@ -614,3 +695,4 @@ export default function Vehicles() {
     </div>
   );
 }
+

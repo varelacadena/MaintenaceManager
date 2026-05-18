@@ -65,6 +65,8 @@ export async function applyMigrations() {
     { file: "051_add_task_helpers.sql", name: "051_add_task_helpers" },
     { file: "052_add_pending_users.sql", name: "052_add_pending_users" },
     { file: "053_drop_requested_property.sql", name: "053_drop_requested_property" },
+    { file: "054_add_vehicle_image_url.sql", name: "054_add_vehicle_image_url" },
+    { file: "055_create_vehicle_maintenance_logs.sql", name: "055_create_vehicle_maintenance_logs" },
   ];
 
   try {

@@ -1570,10 +1570,21 @@ export class AnalyticsService {
     const totalVehicles = allVehicles.length;
     const availableVehicles = allVehicles.filter(v => v.status === "available").length;
     const inUseVehicles = allVehicles.filter(v => v.status === "in_use").length;
-    const outOfServiceVehicles = allVehicles.filter(v => v.status === "needs_maintenance" || v.status === "needs_cleaning").length;
+    const outOfServiceVehicles = allVehicles.filter(
+      (v) =>
+        v.status === "needs_maintenance" ||
+        v.status === "needs_cleaning" ||
+        v.status === "out_of_service",
+    ).length;
 
     const totalReservations = filteredReservations.length;
-    const activeReservations = filteredReservations.filter(r => r.status === "active" || r.status === "pending").length;
+    const activeReservations = filteredReservations.filter(
+      (r) =>
+        r.status === "active" ||
+        r.status === "pending" ||
+        r.status === "approved" ||
+        r.status === "pending_review",
+    ).length;
     const completedReservations = filteredReservations.filter(r => r.status === "completed").length;
     const cancelledReservations = filteredReservations.filter(r => r.status === "cancelled").length;
 
@@ -1598,7 +1609,12 @@ export class AnalyticsService {
     };
 
     const reservedVehicleDays = filteredReservations
-      .filter((r) => r.status === "completed" || r.status === "active")
+      .filter((r) =>
+        r.status === "completed" ||
+        r.status === "active" ||
+        r.status === "approved" ||
+        r.status === "pending_review",
+      )
       .reduce((sum, r) => {
         return sum + overlapReservationDays(new Date(r.startDate), new Date(r.endDate));
       }, 0);
