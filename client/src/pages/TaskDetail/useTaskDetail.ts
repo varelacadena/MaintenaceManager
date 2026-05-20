@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { canReadInventory } from "@/lib/inventoryAccess";
+import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type {
   Task,
   TimeEntry,
@@ -52,8 +54,6 @@ export function useTaskDetail() {
   const [isEquipmentInfoOpen, setIsEquipmentInfoOpen] = useState(false);
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
   const [equipmentInfoTab, setEquipmentInfoTab] = useState<"info" | "history" | "resources">("info");
-  const [aiSuggestedParts, setAiSuggestedParts] = useState<Array<{ id: string; name: string; suggestedQuantity: number; unit: string; reason: string }>>([]);
-  const [isAiSuggestLoading, setIsAiSuggestLoading] = useState(false);
   const [isQuickAddInventoryOpen, setIsQuickAddInventoryOpen] = useState(false);
   const [quickInventoryName, setQuickInventoryName] = useState("");
   const [quickInventoryQuantity, setQuickInventoryQuantity] = useState(0);
@@ -124,8 +124,9 @@ export function useTaskDetail() {
     enabled: !!id,
   });
 
-  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
-    queryKey: ["/api/inventory"],
+  const { inventoryItems, isInventoryLoading } = useInventorySearch(inventorySearchQuery, {
+    enabled: canReadInventory(user?.role),
+    selectedItemId: selectedInventoryItemId || undefined,
   });
 
   const { data: users = [] } = useQuery<UserType[]>({
@@ -461,24 +462,6 @@ export function useTaskDetail() {
     }
   };
 
-  const handleAiSuggestParts = async () => {
-    if (!task) return;
-    setIsAiSuggestLoading(true);
-    try {
-      const res = await apiRequest("POST", "/api/inventory/ai-insights", {
-        type: "task_parts",
-        taskDescription: task.description || task.name,
-        taskCategory: (task as any).category || "general",
-      });
-      const data = await res.json();
-      setAiSuggestedParts(data.items || []);
-    } catch {
-      toast({ title: "Error", description: "Failed to get AI suggestions", variant: "destructive" });
-    } finally {
-      setIsAiSuggestLoading(false);
-    }
-  };
-
   const mutations = useTaskDetailMutations({
     id,
     user,
@@ -719,6 +702,7 @@ export function useTaskDetail() {
     parts,
     notes,
     inventoryItems,
+    isInventoryLoading,
     users,
     vendors,
     uploads,
@@ -776,10 +760,6 @@ export function useTaskDetail() {
     setIsEquipmentLoading,
     equipmentInfoTab,
     setEquipmentInfoTab,
-    aiSuggestedParts,
-    setAiSuggestedParts,
-    isAiSuggestLoading,
-    setIsAiSuggestLoading,
     isQuickAddInventoryOpen,
     setIsQuickAddInventoryOpen,
     quickInventoryName,
@@ -872,7 +852,6 @@ export function useTaskDetail() {
     cancelLeave,
     handleScanPart,
     handleEquipmentScan,
-    handleAiSuggestParts,
     handleStartOrPause,
     handleComplete,
     handleRunAiSchedule,

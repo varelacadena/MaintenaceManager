@@ -91,7 +91,6 @@ export default function TaskDetail() {
           handleAutoSaveUpload={ctx.handleAutoSaveUpload}
           handleEquipmentScan={ctx.handleEquipmentScan}
           handleScanPart={ctx.handleScanPart}
-          handleAiSuggestParts={ctx.handleAiSuggestParts}
           isScanEquipmentOpen={ctx.isScanEquipmentOpen}
           setIsScanEquipmentOpen={ctx.setIsScanEquipmentOpen}
           isScanPartOpen={ctx.isScanPartOpen}
@@ -123,8 +122,6 @@ export default function TaskDetail() {
           setNewQuoteNotes={ctx.setNewQuoteNotes}
           pendingQuoteFiles={ctx.pendingQuoteFiles}
           setPendingQuoteFiles={ctx.setPendingQuoteFiles}
-          aiSuggestedParts={ctx.aiSuggestedParts}
-          isAiSuggestLoading={ctx.isAiSuggestLoading}
           scannedEquipment={ctx.scannedEquipment}
           scannedEquipmentTasks={ctx.scannedEquipmentTasks}
           scannedEquipmentResources={ctx.scannedEquipmentResources}

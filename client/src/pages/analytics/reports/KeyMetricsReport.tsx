@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, FileText, AlertTriangle, Car, CheckCircle2, Activity, type LucideIcon } from "lucide-react";
+import { useLocation } from "wouter";
+import { ClipboardList, FileText, AlertTriangle, Car, Package, CheckCircle2, Activity, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -23,12 +24,14 @@ interface ExecutiveOverview {
   pendingRequests: MetricComparison;
   overdueWorkOrders: MetricComparison;
   fleetAvailable: MetricComparison;
+  inventoryLowStock: MetricComparison;
   completionRate: MetricComparison;
   completedInPeriod: MetricComparison;
   convertedInPeriod: MetricComparison;
 }
 
 export default function KeyMetricsReport() {
+  const [, setLocation] = useLocation();
   const { filters, setFilters, buildQueryString, navigateToReport } = useAnalyticsFilters();
   const { handleExport, isExporting } = useAnalyticsExport("overview", () => buildQueryString());
 
@@ -90,7 +93,7 @@ export default function KeyMetricsReport() {
         <span className="text-muted-foreground">Click a metric to drill down</span>
       </p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         <MetricCard
           testId="metric-open-tasks"
           icon={ClipboardList}
@@ -138,6 +141,24 @@ export default function KeyMetricsReport() {
           label="Fleet Available"
           metric={overview.fleetAvailable}
           onClick={() => navigateToReport("fleet")}
+        />
+        <MetricCard
+          testId="metric-inventory-low-stock"
+          icon={Package}
+          iconClass={
+            overview.inventoryLowStock.current > 0
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-muted-foreground"
+          }
+          iconBg={
+            overview.inventoryLowStock.current > 0
+              ? "bg-amber-100 dark:bg-amber-900/30"
+              : "bg-muted"
+          }
+          value={overview.inventoryLowStock.current}
+          label="Low Stock Items"
+          metric={overview.inventoryLowStock}
+          onClick={() => setLocation("/inventory?lowStock=1")}
         />
       </div>
 

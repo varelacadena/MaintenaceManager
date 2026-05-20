@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Phone, Mail, Plus, Trash2, CheckCircle2, XCircle, UserCog, Edit2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -25,7 +26,7 @@ export default function EmergencyContacts() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [notes, setNotes] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [isActive, setIsActive] = useState(false);
 
   const { data: contacts = [], isLoading } = useQuery<EmergencyContact[]>({
     queryKey: ["/api/emergency-contacts"],
@@ -183,7 +184,7 @@ export default function EmergencyContacts() {
     setEmail("");
     setRole("");
     setNotes("");
-    setIsActive(true);
+    setIsActive(false);
   };
 
   const handleOpenDialog = (contact?: EmergencyContact) => {
@@ -480,6 +481,8 @@ export default function EmergencyContacts() {
               <Label htmlFor="phone">Phone Number *</Label>
               <Input
                 id="phone"
+                type="tel"
+                autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g., (555) 123-4567"
@@ -491,6 +494,7 @@ export default function EmergencyContacts() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g., john@example.com"
@@ -516,6 +520,20 @@ export default function EmergencyContacts() {
                 placeholder="e.g., Call first, text if no answer within 5 minutes"
                 rows={3}
                 data-testid="input-notes"
+              />
+            </div>
+            <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+              <div className="space-y-1">
+                <Label htmlFor="contact-active">Make active contact</Label>
+                <p className="text-xs text-muted-foreground">
+                  Active contacts are shown to staff for after-hours emergencies. Turning this on will replace the current active contact.
+                </p>
+              </div>
+              <Switch
+                id="contact-active"
+                checked={isActive}
+                onCheckedChange={setIsActive}
+                data-testid="switch-contact-active"
               />
             </div>
           </div>

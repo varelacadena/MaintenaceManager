@@ -1,62 +1,48 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
-import type { InventoryItem, InsertInventoryItem } from "@shared/schema";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertInventoryItemSchema } from "@shared/schema";
-import { z } from "zod";
+import { useAuth } from "@/hooks/useAuth";
+import { canOperateInventory, isInventoryAdmin } from "@/lib/inventoryAccess";
+import { isLowStock, type InventorySortKey } from "@/lib/inventoryUtils";
+import type { InventoryItem, InsertInventoryItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { INVENTORY_PAGE_SIZE } from "@/lib/inventoryCsv";
+import { clampPageIndex } from "@/lib/fleetUtils";
+import { inventoryFormSchema, type InventoryFormValues } from "./inventoryFormSchema";
+import { useInventoryQueries, downloadInventoryExportCsv } from "./useInventoryQueries";
+import { useInventoryMutations } from "./useInventoryMutations";
+import { useInventoryScanHelpers } from "./useInventoryScan";
+import { CATEGORY_TRACKING_DEFAULTS } from "./inventoryConstants";
 
-export const CATEGORIES = [
-  { value: "all", label: "All", icon: "LayoutGrid" },
-  { value: "auto", label: "Auto", icon: "Truck" },
-  { value: "cleaning", label: "Cleaning", icon: "Droplets" },
-  { value: "landscaping", label: "Landscaping", icon: "Leaf" },
-  { value: "plumbing", label: "Plumbing", icon: "Wrench" },
-  { value: "electrical", label: "Electrical", icon: "Zap" },
-  { value: "repairs", label: "Repairs", icon: "HardHat" },
-  { value: "general", label: "General", icon: "Package" },
-];
+export {
+  CATEGORIES,
+  TRACKING_MODES,
+  CATEGORY_TRACKING_DEFAULTS,
+  STATUS_CYCLE,
+  STATUS_CONFIG,
+  formatQty,
+} from "./inventoryConstants";
 
-export const TRACKING_MODES = [
-  { value: "counted", label: "Counted", description: "Track exact quantities (auto parts, fluids, hardware)" },
-  { value: "container", label: "Container / Unit", description: "Track whole containers or packages (spray bottles, bags)" },
-  { value: "status", label: "Status Only", description: "Stocked / Low / Out — no counting (small fasteners, consumables)" },
-];
-
-export const CATEGORY_TRACKING_DEFAULTS: Record<string, string> = {
-  auto: "counted", cleaning: "container", landscaping: "container",
-  plumbing: "counted", electrical: "counted", repairs: "counted", general: "counted",
-};
-
-export const STATUS_CYCLE: Record<string, string> = { stocked: "low", low: "out", out: "stocked" };
-
-export const STATUS_CONFIG: Record<string, { label: string; variant: "secondary" | "destructive" | "outline"; dot: string }> = {
-  stocked: { label: "Stocked", variant: "secondary", dot: "bg-green-500" },
-  low:     { label: "Low",     variant: "outline",   dot: "bg-yellow-500" },
-  out:     { label: "Out",     variant: "destructive", dot: "bg-red-500" },
-};
-
-export function formatQty(qty: string | number | null | undefined): string {
-  const n = parseFloat(String(qty ?? 0));
-  if (isNaN(n)) return "0";
-  return n % 1 === 0 ? String(n) : n.toFixed(2);
-}
-
-export const inventoryFormSchema = insertInventoryItemSchema.extend({
-  quantity: z.coerce.number().min(0),
-  minQuantity: z.coerce.number().min(0).optional(),
-});
+export { inventoryFormSchema };
 
 export function useInventory() {
+  const urlSearch = useSearch();
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = isInventoryAdmin(user?.role);
+  const canOperate = canOperateInventory(user?.role);
 
   const [activeCategory, setActiveCategory] = useState("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low">("all");
+  const [sortKey, setSortKey] = useState<InventorySortKey>("name-asc");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const [page, setPage] = useState(0);
+  const [statusAnnouncement, setStatusAnnouncement] = useState("");
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -66,141 +52,88 @@ export function useInventory() {
   const [isScanReceiveOpen, setIsScanReceiveOpen] = useState(false);
   const [isScanCreateBarcodeOpen, setIsScanCreateBarcodeOpen] = useState(false);
   const [isScanEditBarcodeOpen, setIsScanEditBarcodeOpen] = useState(false);
-  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [isScanCreatePromptOpen, setIsScanCreatePromptOpen] = useState(false);
+  const [pendingScanBarcode, setPendingScanBarcode] = useState("");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [quantityChange, setQuantityChange] = useState<string>("");
+  const [quantityChange, setQuantityChange] = useState("");
   const [receiveItem, setReceiveItem] = useState<InventoryItem | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const [aiReorderData, setAiReorderData] = useState<any[] | null>(null);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+  const [detailItem, setDetailItem] = useState<InventoryItem | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const { data: inventoryItems = [], isLoading } = useQuery<InventoryItem[]>({
-    queryKey: ["/api/inventory"],
-  });
+  const urlInitialized = useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(urlSearch);
+    const low = params.get("lowStock");
+    if (low === "1" || low === "true") {
+      setStockFilter("low");
+    }
+    if (!urlInitialized.current) {
+      const cat = params.get("category");
+      if (cat) setActiveCategory(cat);
+      const q = params.get("q");
+      if (q) setSearch(q);
+      urlInitialized.current = true;
+    }
+  }, [urlSearch]);
 
-  const filteredItems = inventoryItems.filter((item) => {
-    const catMatch = activeCategory === "all" || item.category === activeCategory;
-    const searchMatch = !search || item.name.toLowerCase().includes(search.toLowerCase());
-    return catMatch && searchMatch;
-  });
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (stockFilter === "low") params.set("lowStock", "1");
+    if (activeCategory !== "all") params.set("category", activeCategory);
+    if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+    const next = params.toString();
+    const current = urlSearch.replace(/^\?/, "");
+    if (next !== current) {
+      setLocation(`/inventory${next ? `?${next}` : ""}`, { replace: true });
+    }
+  }, [stockFilter, activeCategory, debouncedSearch, urlSearch, setLocation]);
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertInventoryItem) => {
-      const res = await fetch("/api/inventory", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data), credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      setIsCreateDialogOpen(false);
-      createForm.reset();
-      toast({ title: "Item added" });
-    },
-    onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  useEffect(() => {
+    setPage(0);
+  }, [activeCategory, stockFilter, debouncedSearch, sortKey]);
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertInventoryItem> }) => {
-      const res = await fetch(`/api/inventory/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data), credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      setIsEditDialogOpen(false);
-      setSelectedItem(null);
-      toast({ title: "Item updated" });
-    },
-    onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  const queryFilters = {
+    activeCategory,
+    stockFilter,
+    sortKey,
+    search: debouncedSearch,
+    page,
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/inventory/${id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      setIsDeleteDialogOpen(false);
-      setSelectedItem(null);
-      toast({ title: "Item deleted" });
-    },
-    onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  const { listQuery, summaryQuery } = useInventoryQueries(queryFilters, debouncedSearch);
 
-  const quantityMutation = useMutation({
-    mutationFn: async ({ id, change }: { id: string; change: number }) => {
-      const res = await fetch(`/api/inventory/${id}/quantity`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ change }), credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      setIsQuantityDialogOpen(false);
-      setSelectedItem(null);
-      setQuantityChange("");
-      toast({ title: "Quantity updated" });
-    },
-    onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  const listData = listQuery.data;
+  const paginatedItems = listData?.items ?? [];
+  const filteredTotal = listData?.total ?? 0;
+  const pageIndex = clampPageIndex(page, filteredTotal, INVENTORY_PAGE_SIZE);
 
-  const containerMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/inventory/${id}/use-container`, { method: "POST", credentials: "include" });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      toast({ title: "Container used", description: "Stock updated" });
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  const categoryCounts = summaryQuery.data?.categoryCounts ?? { all: 0 };
+  const lowStockCount = summaryQuery.data?.lowStockCount ?? 0;
+  const inventoryTotal = summaryQuery.data?.total ?? 0;
 
-  const statusMutation = useMutation({
-    mutationFn: async ({ id, stockStatus }: { id: string; stockStatus: string }) => {
-      const res = await fetch(`/api/inventory/${id}/status`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stockStatus }), credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }),
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
-  const createForm = useForm<z.infer<typeof inventoryFormSchema>>({
+  const createForm = useForm<InventoryFormValues>({
     resolver: zodResolver(inventoryFormSchema),
     defaultValues: {
-      name: "", description: "", quantity: 0, unit: "", location: "",
-      minQuantity: 0, cost: "", trackingMode: "counted", category: "general",
-      packageInfo: "", barcode: "", stockStatus: "stocked",
+      name: "",
+      description: "",
+      quantity: 0,
+      unit: "",
+      location: "",
+      minQuantity: 0,
+      cost: "",
+      trackingMode: "counted",
+      category: "general",
+      packageInfo: "",
+      barcode: "",
+      stockStatus: "stocked",
     },
   });
 
-  const editForm = useForm<z.infer<typeof inventoryFormSchema>>({
+  const editForm = useForm<InventoryFormValues>({
     resolver: zodResolver(inventoryFormSchema),
   });
 
@@ -208,42 +141,84 @@ export function useInventory() {
   const watchCreateTracking = createForm.watch("trackingMode");
   const watchEditTracking = editForm.watch("trackingMode");
 
-  const handleCreateSubmit = (data: z.infer<typeof inventoryFormSchema>) => {
-    createMutation.mutate({
+  const mutations = useInventoryMutations({
+    toast,
+    createForm,
+    setIsCreateDialogOpen,
+    setIsEditDialogOpen,
+    setIsDeleteDialogOpen,
+    setIsQuantityDialogOpen,
+    setSelectedItem,
+    setQuantityChange,
+    setReceiveItem,
+  });
+
+  const scan = useInventoryScanHelpers({
+    toast,
+    canOperate,
+    pendingScanBarcode,
+    createForm,
+    setActiveCategory,
+    setStockFilter,
+    setSearch,
+    setPage,
+    setHighlightedId,
+    rowRefs,
+    setPendingScanBarcode,
+    setIsScanCreatePromptOpen,
+    setIsCreateDialogOpen,
+    setReceiveItem,
+    setSelectedItem,
+    setQuantityChange,
+    setIsQuantityDialogOpen,
+  });
+
+  const openDetail = useCallback((item: InventoryItem) => {
+    setDetailItem(item);
+    setIsDetailOpen(true);
+  }, []);
+
+  const handleCreateSubmit = (data: InventoryFormValues) => {
+    mutations.createMutation.mutate({
       ...data,
       quantity: String(data.quantity ?? 0),
       minQuantity: String(data.minQuantity ?? 0),
-      barcode: data.barcode || null,
-      packageInfo: data.packageInfo || null,
-    } as any);
+      cost: data.cost ? String(data.cost) : null,
+      barcode: data.barcode?.trim() || null,
+      packageInfo: data.packageInfo?.trim() || null,
+    } as InsertInventoryItem);
   };
 
-  const handleEditSubmit = (data: z.infer<typeof inventoryFormSchema>) => {
+  const handleEditSubmit = (data: InventoryFormValues) => {
     if (!selectedItem) return;
-    updateMutation.mutate({
+    mutations.updateMutation.mutate({
       id: selectedItem.id,
       data: {
         ...data,
         quantity: String(data.quantity ?? 0),
         minQuantity: String(data.minQuantity ?? 0),
-        barcode: data.barcode || null,
-        packageInfo: data.packageInfo || null,
-      } as any,
+        cost: data.cost ? String(data.cost) : null,
+        barcode: data.barcode?.trim() || null,
+        packageInfo: data.packageInfo?.trim() || null,
+      },
     });
   };
 
   const handleEdit = (item: InventoryItem) => {
     setSelectedItem(item);
     editForm.reset({
-      name: item.name, description: item.description || "",
-      quantity: parseFloat(item.quantity as any) || 0,
-      unit: item.unit || "", location: item.location || "",
-      minQuantity: parseFloat(item.minQuantity as any) || 0,
+      name: item.name,
+      description: item.description || "",
+      quantity: parseFloat(String(item.quantity)) || 0,
+      unit: item.unit || "",
+      location: item.location || "",
+      minQuantity: parseFloat(String(item.minQuantity)) || 0,
       cost: item.cost || "",
-      trackingMode: (item.trackingMode as any) || "counted",
-      category: (item.category as any) || "general",
-      packageInfo: item.packageInfo || "", barcode: item.barcode || "",
-      stockStatus: (item.stockStatus as any) || "stocked",
+      trackingMode: (item.trackingMode as "counted" | "container" | "status") || "counted",
+      category: (item.category ?? "general") as InventoryFormValues["category"],
+      packageInfo: item.packageInfo || "",
+      barcode: item.barcode || "",
+      stockStatus: (item.stockStatus as "stocked" | "low" | "out") || "stocked",
     });
     setIsEditDialogOpen(true);
   };
@@ -253,134 +228,137 @@ export function useInventory() {
     try {
       const QRCode = (await import("qrcode")).default;
       setQrCodeDataUrl(await QRCode.toDataURL(item.barcode || item.id, { width: 200, margin: 2 }));
-    } catch { setQrCodeDataUrl(""); }
+    } catch {
+      setQrCodeDataUrl("");
+    }
     setIsQrDialogOpen(true);
   };
 
   const handlePrintLabel = () => {
-    if (!selectedItem || !qrCodeDataUrl) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<html><head><title>Label - ${selectedItem.name}</title>
-      <style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-      .l{border:2px solid #333;padding:16px;border-radius:8px;text-align:center;max-width:280px}
-      h2{margin:0 0 4px;font-size:16px}p{margin:2px 0;font-size:12px;color:#555}img{margin:12px 0}</style>
-      </head><body><div class="l"><h2>${selectedItem.name}</h2>
-      <p>${selectedItem.category || "general"} &bull; ${selectedItem.unit || "unit"}</p>
-      ${selectedItem.packageInfo ? `<p>${selectedItem.packageInfo}</p>` : ""}
-      ${selectedItem.location ? `<p>Location: ${selectedItem.location}</p>` : ""}
-      <img src="${qrCodeDataUrl}" width="160" height="160" />
-      <p style="font-size:10px;color:#999;">${selectedItem.barcode || selectedItem.id}</p>
-      </div><script>window.onload=()=>{window.print();window.close();}</script></body></html>`);
-    w.document.close();
+    scan.handlePrintLabel(selectedItem, qrCodeDataUrl);
   };
 
-  const lookupScannedCode = async (code: string): Promise<InventoryItem | null> => {
-    const byBarcode = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(code)}`, { credentials: "include" });
-    if (byBarcode.ok) return byBarcode.json();
-    const byId = await fetch(`/api/inventory/${encodeURIComponent(code)}`, { credentials: "include" });
-    if (byId.ok) return byId.json();
-    return null;
+  const announceStatusChange = (label: string) => {
+    setStatusAnnouncement(`${label} status updated`);
   };
 
-  const handleScanFind = async (barcode: string) => {
-    const item = await lookupScannedCode(barcode);
-    if (item) {
-      setActiveCategory("all");
-      setSearch("");
-      setHighlightedId(item.id);
-      setTimeout(() => { rowRefs.current[item.id]?.scrollIntoView({ behavior: "smooth", block: "center" }); }, 100);
-      setTimeout(() => setHighlightedId(null), 3000);
-      toast({ title: "Item found", description: item.name });
-    } else {
-      if (confirm(`No item found for "${barcode}". Create a new item with this barcode?`)) {
-        createForm.reset({ ...createForm.getValues(), barcode, name: "" });
-        setIsCreateDialogOpen(true);
-      }
-    }
-  };
-
-  const handleScanReceive = async (barcode: string) => {
-    const item = await lookupScannedCode(barcode);
-    if (item) {
-      setReceiveItem(item);
-      setSelectedItem(item);
-      setQuantityChange("");
-      setIsQuantityDialogOpen(true);
-    } else {
-      toast({ title: "Item not found", description: "No item has this barcode.", variant: "destructive" });
-    }
-  };
-
-  const handleLoadAiInsights = async () => {
-    setIsAiLoading(true);
-    setAiReorderData(null);
-    setAiSummary(null);
-    try {
-      const [reorderRes, summaryRes] = await Promise.all([
-        apiRequest("POST", "/api/inventory/ai-insights", { type: "reorder" }),
-        apiRequest("POST", "/api/inventory/ai-insights", { type: "summary" }),
-      ]);
-      const reorderData = await reorderRes.json();
-      const summaryData = await summaryRes.json();
-      setAiReorderData(reorderData.items || []);
-      setAiSummary(summaryData.summary || "");
-    } catch {
-      toast({ title: "Error", description: "Failed to load AI insights", variant: "destructive" });
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
-  const isLowStock = (item: InventoryItem) => {
-    if (item.trackingMode === "status") return item.stockStatus === "low" || item.stockStatus === "out";
-    const qty = parseFloat(item.quantity as any) || 0;
-    const min = parseFloat(item.minQuantity as any) || 0;
-    return min > 0 && qty <= min;
-  };
+  const exportFilteredCsv = useCallback(async () => {
+    await downloadInventoryExportCsv({
+      activeCategory,
+      stockFilter,
+      sortKey,
+      search: debouncedSearch,
+    });
+  }, [activeCategory, stockFilter, sortKey, debouncedSearch]);
 
   const openCreate = (cat?: string) => {
     const category = cat && cat !== "all" ? cat : "general";
     createForm.reset({
-      name: "", description: "", quantity: 0, unit: "", location: "",
-      minQuantity: 0, cost: "", trackingMode: CATEGORY_TRACKING_DEFAULTS[category] || "counted",
-      category, packageInfo: "", barcode: "", stockStatus: "stocked",
+      name: "",
+      description: "",
+      quantity: 0,
+      unit: "",
+      location: "",
+      minQuantity: 0,
+      cost: "",
+      trackingMode: (CATEGORY_TRACKING_DEFAULTS[category] || "counted") as
+        | "counted"
+        | "container"
+        | "status",
+      category: category as InventoryFormValues["category"],
+      packageInfo: "",
+      barcode: "",
+      stockStatus: "stocked",
     });
     setIsCreateDialogOpen(true);
   };
 
   return {
-    user, toast, isAdmin,
-    activeCategory, setActiveCategory,
-    search, setSearch,
-    isCreateDialogOpen, setIsCreateDialogOpen,
-    isEditDialogOpen, setIsEditDialogOpen,
-    isDeleteDialogOpen, setIsDeleteDialogOpen,
-    isQuantityDialogOpen, setIsQuantityDialogOpen,
-    isQrDialogOpen, setIsQrDialogOpen,
-    isScanFindOpen, setIsScanFindOpen,
-    isScanReceiveOpen, setIsScanReceiveOpen,
-    isScanCreateBarcodeOpen, setIsScanCreateBarcodeOpen,
-    isScanEditBarcodeOpen, setIsScanEditBarcodeOpen,
-    isAiDialogOpen, setIsAiDialogOpen,
-    selectedItem, setSelectedItem,
-    quantityChange, setQuantityChange,
-    receiveItem, setReceiveItem,
-    highlightedId, setHighlightedId,
-    aiReorderData, setAiReorderData,
-    aiSummary, setAiSummary,
-    isAiLoading, setIsAiLoading,
-    qrCodeDataUrl, setQrCodeDataUrl,
+    user,
+    toast,
+    isAdmin,
+    canOperate,
+    activeCategory,
+    setActiveCategory,
+    stockFilter,
+    setStockFilter,
+    sortKey,
+    setSortKey,
+    search,
+    setSearch,
+    isCreateDialogOpen,
+    setIsCreateDialogOpen,
+    isEditDialogOpen,
+    setIsEditDialogOpen,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    isQuantityDialogOpen,
+    setIsQuantityDialogOpen,
+    isQrDialogOpen,
+    setIsQrDialogOpen,
+    isScanFindOpen,
+    setIsScanFindOpen,
+    isScanReceiveOpen,
+    setIsScanReceiveOpen,
+    isScanCreateBarcodeOpen,
+    setIsScanCreateBarcodeOpen,
+    isScanEditBarcodeOpen,
+    setIsScanEditBarcodeOpen,
+    isScanCreatePromptOpen,
+    setIsScanCreatePromptOpen,
+    pendingScanBarcode,
+    confirmScanCreate: scan.confirmScanCreate,
+    selectedItem,
+    setSelectedItem,
+    quantityChange,
+    setQuantityChange,
+    receiveItem,
+    setReceiveItem,
+    highlightedId,
+    setHighlightedId,
+    qrCodeDataUrl,
+    setQrCodeDataUrl,
     rowRefs,
-    inventoryItems, isLoading, filteredItems,
-    createMutation, updateMutation, deleteMutation,
-    quantityMutation, containerMutation, statusMutation,
-    createForm, editForm,
-    watchCreateCategory, watchCreateTracking, watchEditTracking,
-    handleCreateSubmit, handleEditSubmit, handleEdit,
-    handleShowQr, handlePrintLabel,
-    handleScanFind, handleScanReceive,
-    handleLoadAiInsights, isLowStock, openCreate,
+    statusAnnouncement,
+    announceStatusChange,
+    inventoryItems: paginatedItems,
+    inventoryTotal,
+    isLoading: listQuery.isLoading || summaryQuery.isLoading,
+    isError: listQuery.isError,
+    error: listQuery.error,
+    refetch: listQuery.refetch,
+    filteredItems: paginatedItems,
+    filteredTotal,
+    paginatedItems,
+    page,
+    setPage,
+    pageIndex,
+    categoryCounts,
+    lowStockCount,
+    detailItem,
+    setDetailItem,
+    isDetailOpen,
+    setIsDetailOpen,
+    isImportOpen,
+    setIsImportOpen,
+    openDetail,
+    exportFilteredCsv,
+    ...mutations,
+    createForm,
+    editForm,
+    watchCreateCategory,
+    watchCreateTracking,
+    watchEditTracking,
+    handleCreateSubmit,
+    handleEditSubmit,
+    handleEdit,
+    handleShowQr,
+    handlePrintLabel,
+    handleScanFind: scan.handleScanFind,
+    handleScanReceive: scan.handleScanReceive,
+    isLowStock,
+    openCreate,
+    INVENTORY_PAGE_SIZE,
   };
 }
 

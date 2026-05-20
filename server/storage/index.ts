@@ -142,6 +142,14 @@ export interface IStorage {
   deleteVendor(id: string): Promise<void>;
 
   getInventoryItems(): Promise<InventoryItem[]>;
+  listInventoryItemsPaginated(
+    params: import("./inventoryList").InventoryListParams,
+  ): Promise<import("./inventoryList").InventoryListResult>;
+  listInventoryItemsForExport(
+    filter: import("./inventoryList").InventoryListFilter,
+    maxRows?: number,
+  ): Promise<InventoryItem[]>;
+  getInventorySummary(): Promise<import("./inventoryList").InventorySummary>;
   getInventoryItem(id: string): Promise<InventoryItem | undefined>;
   createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
   updateInventoryItem(id: string, item: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined>;
@@ -196,6 +204,7 @@ export interface IStorage {
   createPartUsed(part: InsertPartUsed): Promise<PartUsed>;
   deletePartUsed(id: string): Promise<void>;
   getPartsByTask(taskId: string): Promise<PartUsed[]>;
+  getPartsByInventoryItem(inventoryItemId: string): Promise<import("./inventory").InventoryPartUsage[]>;
 
   createTaskNote(note: InsertTaskNote): Promise<TaskNote>;
   getTaskNote(id: string): Promise<TaskNote | undefined>;
@@ -491,6 +500,9 @@ export class DatabaseStorage implements IStorage {
   deleteVendor = vendorStorage.deleteVendor;
 
   getInventoryItems = inventoryStorage.getInventoryItems;
+  listInventoryItemsPaginated = inventoryStorage.listInventoryItemsPaginated;
+  listInventoryItemsForExport = inventoryStorage.listInventoryItemsForExport;
+  getInventorySummary = inventoryStorage.getInventorySummary;
   getInventoryItem = inventoryStorage.getInventoryItem;
   createInventoryItem = inventoryStorage.createInventoryItem;
   updateInventoryItem = inventoryStorage.updateInventoryItem;
@@ -502,6 +514,7 @@ export class DatabaseStorage implements IStorage {
   createPartUsed = inventoryStorage.createPartUsed;
   deletePartUsed = inventoryStorage.deletePartUsed;
   getPartsByTask = inventoryStorage.getPartsByTask;
+  getPartsByInventoryItem = inventoryStorage.getPartsByInventoryItem;
 
   getAreas = facilityStorage.getAreas;
   createArea = facilityStorage.createArea;

@@ -73,7 +73,6 @@ export interface TechnicianTaskDetailProps {
   handleAutoSaveUpload: (result: any) => void;
   handleEquipmentScan: (value: string) => void;
   handleScanPart: (value: string) => void;
-  handleAiSuggestParts: () => void;
   isScanEquipmentOpen: boolean;
   setIsScanEquipmentOpen: (v: boolean) => void;
   isScanPartOpen: boolean;
@@ -105,8 +104,6 @@ export interface TechnicianTaskDetailProps {
   setNewQuoteNotes: (v: string) => void;
   pendingQuoteFiles: any[];
   setPendingQuoteFiles: (v: any[]) => void;
-  aiSuggestedParts: any[];
-  isAiSuggestLoading: boolean;
   scannedEquipment: Equipment | null;
   scannedEquipmentTasks: Task[];
   scannedEquipmentResources: any[];

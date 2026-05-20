@@ -48,6 +48,10 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
 export const requireAdmin = requireRole("admin");
 export const requireTechnicianOrAdmin = requireRole("technician", "admin");
 export const requireFleetPrivileged = requireRole("admin", "technician");
+/** Read inventory when picking parts on tasks (staff excluded). */
+export const requireInventoryReader = requireRole("admin", "technician", "student");
+/** Create items and adjust stock (search, add, use on inventory page). */
+export const requireInventoryOperator = requireRole("admin", "technician");
 export const requireStaffOrHigher = requireRole("staff", "technician", "admin");
 // Role middleware for student/technician model
 export const requireStudentOrAdmin = requireRole("student", "admin");

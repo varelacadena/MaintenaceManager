@@ -6,6 +6,14 @@ import { handleRouteError } from "../routeUtils";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import { changePasswordRequestSchema } from "../userValidation";
+
+async function emailBelongsToAnotherUser(email: string | undefined, targetUserId: string) {
+  if (!email) return false;
+  const normalizedEmail = email.trim().toLowerCase();
+  const users = await storage.getAllUsers();
+  return users.some((user) => user.id !== targetUserId && user.email?.trim().toLowerCase() === normalizedEmail);
+}
 
 export function registerUserRoutes(app: Express) {
   app.post("/api/users", isAuthenticated, requireAdmin, async (req, res) => {
@@ -128,6 +136,10 @@ export function registerUserRoutes(app: Express) {
         lastName: z.string().optional(),
       });
       const validated = userUpdateSchema.parse(req.body);
+
+      if (await emailBelongsToAnotherUser(validated.email, id)) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
 
       const user = await storage.updateUser(id, validated);
 
@@ -265,6 +277,11 @@ export function registerUserRoutes(app: Express) {
         phoneNumber: z.string().optional(),
       });
       const validated = profileUpdateSchema.parse(req.body);
+
+      if (await emailBelongsToAnotherUser(validated.email, targetId)) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
       const updatedUser = await storage.updateUser(targetId, validated);
 
       if (!updatedUser) {
@@ -292,11 +309,7 @@ export function registerUserRoutes(app: Express) {
   app.post("/api/users/change-password", isAuthenticated, passwordChangeLimiter, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const { currentPassword, newPassword } = req.body;
-
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current and new password are required" });
-      }
+      const { currentPassword, newPassword } = changePasswordRequestSchema.parse(req.body);
 
       const user = await storage.getUser(userId);
       if (!user) {
@@ -313,7 +326,10 @@ export function registerUserRoutes(app: Express) {
       await storage.updateUserPassword(userId, hashedPassword);
 
       res.json({ success: true, message: "Password changed successfully" });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid password data", errors: error.errors });
+      }
       handleRouteError(res, error, "Failed to change password");
     }
   });

@@ -9,6 +9,7 @@ import {
   Bell,
   BarChart3,
   FolderKanban,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +25,7 @@ const TechniciansReport = lazy(() => import("./reports/TechniciansReport"));
 const AssetsReport = lazy(() => import("./reports/AssetsReport"));
 const FacilitiesReport = lazy(() => import("./reports/FacilitiesReport"));
 const FleetReport = lazy(() => import("./reports/FleetReport"));
+const InventoryReport = lazy(() => import("./reports/InventoryReport"));
 const ServiceRequestsReport = lazy(() => import("./reports/ServiceRequestsReport"));
 const AlertsReport = lazy(() => import("./reports/AlertsReport"));
 const ProjectsReport = lazy(() => import("./reports/ProjectsReport"));
@@ -77,6 +79,13 @@ const reportTabs: {
     description: "Vehicle usage",
     icon: Car,
     color: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
+  },
+  {
+    id: "inventory",
+    title: "Inventory",
+    description: "Stock levels and usage",
+    icon: Package,
+    color: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
   },
   {
     id: "requests",
@@ -135,6 +144,8 @@ function AnalyticsDashboardContent() {
         return <FacilitiesReport />;
       case "fleet":
         return <FleetReport />;
+      case "inventory":
+        return <InventoryReport />;
       case "requests":
         return <ServiceRequestsReport />;
       case "alerts":

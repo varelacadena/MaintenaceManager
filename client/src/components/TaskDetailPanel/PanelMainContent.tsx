@@ -188,7 +188,7 @@ export function PanelMainContent({
         newPartNotes={newPartNotes}
         setNewPartNotes={setNewPartNotes}
         addPartMutation={addPartMutation}
-        isAdmin={isAdmin}
+        userRole={user?.role}
         taskId={taskId}
       />
 

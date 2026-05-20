@@ -3,23 +3,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@radix-ui/react-label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ScanLine, Sparkles } from "lucide-react";
+import { ScanLine } from "lucide-react";
+import { canOperateInventory } from "@/lib/inventoryAccess";
 import type { TaskDetailContext } from "./useTaskDetail";
 
 export function AdminDialogsA({ ctx }: { ctx: TaskDetailContext }) {
   const {
-    task, inventoryItems,
+    task, user, inventoryItems, isInventoryLoading,
     isAddPartDialogOpen, setIsAddPartDialogOpen,
     inventorySearchQuery, setInventorySearchQuery,
     selectedInventoryItemId, setSelectedInventoryItemId,
     partQuantity, setPartQuantity, partNotes, setPartNotes,
-    handleAiSuggestParts, aiSuggestedParts, setAiSuggestedParts,
-    isAiSuggestLoading,
     isScanPartOpen, setIsScanPartOpen,
     addPartMutation,
     setIsQuickAddInventoryOpen,
     setQuickInventoryName,
   } = ctx;
+
+  const canCreateInventory = canOperateInventory(user?.role);
 
   if (!task) return null;
 
@@ -32,40 +33,10 @@ export function AdminDialogsA({ ctx }: { ctx: TaskDetailContext }) {
             <DialogDescription>Select an inventory item to add to this task.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setIsScanPartOpen(true)} data-testid="button-scan-part">
-                <ScanLine className="h-4 w-4 mr-2" />
-                Scan Part
-              </Button>
-              <Button type="button" variant="outline" size="sm" className="flex-1" onClick={handleAiSuggestParts} disabled={isAiSuggestLoading} data-testid="button-ai-suggest-parts">
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isAiSuggestLoading ? "Thinking..." : "AI Suggest"}
-              </Button>
-            </div>
-
-            {aiSuggestedParts.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Suggestions</p>
-                {aiSuggestedParts.map((suggestion, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-md border text-sm" data-testid={`ai-suggestion-${i}`}>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{suggestion.name}</p>
-                      <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
-                    </div>
-                    <Button
-                      type="button" size="sm" variant="outline"
-                      onClick={() => {
-                        const item = inventoryItems.find((inv) => inv.id === suggestion.id);
-                        if (item) { setSelectedInventoryItemId(item.id); setInventorySearchQuery(item.name); setPartQuantity(String(suggestion.suggestedQuantity)); }
-                      }}
-                      data-testid={`button-add-suggestion-${i}`}
-                    >
-                      Use
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setIsScanPartOpen(true)} data-testid="button-scan-part">
+              <ScanLine className="h-4 w-4 mr-2" />
+              Scan Part
+            </Button>
 
             <div className="space-y-2">
               <Label>Search Inventory</Label>
@@ -77,19 +48,24 @@ export function AdminDialogsA({ ctx }: { ctx: TaskDetailContext }) {
                   data-testid="input-search-inventory"
                 />
                 {inventorySearchQuery && !selectedInventoryItemId && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <div
-                      className="px-3 py-2 cursor-pointer hover-elevate font-semibold text-primary border-b"
-                      onClick={() => { setIsQuickAddInventoryOpen(true); setQuickInventoryName(inventorySearchQuery); setInventorySearchQuery(""); }}
-                    >
-                      + Create New Item
-                    </div>
-                    {inventoryItems
-                      ?.filter((item) => item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()))
-                      .map((item) => (
-                        <div
+                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto" role="listbox" aria-label="Inventory search results">
+                    {isInventoryLoading && (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">Searching…</p>
+                    )}
+                    {canCreateInventory && (
+                      <div
+                        className="px-3 py-2 cursor-pointer hover-elevate font-semibold text-primary border-b"
+                        onClick={() => { setIsQuickAddInventoryOpen(true); setQuickInventoryName(inventorySearchQuery); setInventorySearchQuery(""); }}
+                      >
+                        + Create New Item
+                      </div>
+                    )}
+                    {!isInventoryLoading && inventoryItems?.map((item) => (
+                        <button
+                          type="button"
                           key={item.id}
-                          className="px-3 py-2 cursor-pointer hover-elevate"
+                          role="option"
+                          className="w-full text-left px-3 py-2 hover-elevate"
                           onClick={() => { setSelectedInventoryItemId(item.id); setInventorySearchQuery(item.name); }}
                         >
                           <div className="flex justify-between items-center">
@@ -105,7 +81,7 @@ export function AdminDialogsA({ ctx }: { ctx: TaskDetailContext }) {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </button>
                       ))}
                   </div>
                 )}
@@ -133,7 +109,7 @@ export function AdminDialogsA({ ctx }: { ctx: TaskDetailContext }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); setAiSuggestedParts([]); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setIsAddPartDialogOpen(false); setSelectedInventoryItemId(""); setInventorySearchQuery(""); setPartQuantity(""); setPartNotes(""); }}>Cancel</Button>
             <Button
               onClick={() => addPartMutation.mutate()}
               disabled={!selectedInventoryItemId || !partQuantity || isNaN(parseFloat(partQuantity)) || addPartMutation.isPending}

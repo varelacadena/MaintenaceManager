@@ -67,6 +67,11 @@ export const TAB_FILTER_RULES: Record<ReportTab, TabFilterRules> = {
     allowedUrgencies: null,
     allowTechnician: false,
   },
+  inventory: {
+    allowedStatuses: null,
+    allowedUrgencies: null,
+    allowTechnician: false,
+  },
   requests: {
     allowedStatuses: REQUEST_STATUS_VALUES,
     allowedUrgencies: TASK_URGENCY_VALUES,

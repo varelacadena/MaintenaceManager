@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { canReadInventory, canSeeInventoryCost } from "@/lib/inventoryAccess";
 import type { MobileTaskDetailProps } from "./types";
 
 interface MobileTaskDialogsExtraProps {
@@ -30,6 +31,9 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
   } = ctx;
 
   if (!task) return null;
+
+  const canAddParts = canReadInventory(user?.role);
+  const showCost = canSeeInventoryCost(user?.role);
 
   return (
     <>
@@ -81,7 +85,7 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
                         <span className="text-xs font-medium" style={{ color: "#6B7280" }}>
                           x{part.quantity}
                         </span>
-                        {part.cost !== null && part.cost !== undefined && Number(part.cost) > 0 && (
+                        {showCost && part.cost !== null && part.cost !== undefined && Number(part.cost) > 0 && (
                           <span className="text-xs font-medium" style={{ color: "#15803D" }}>
                             ${Number(part.cost).toFixed(2)}
                           </span>
@@ -106,18 +110,14 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
                       data-testid="input-mobile-search-part"
                     />
                   </div>
-                  {inventorySearchQuery && !selectedInventoryItemId && (() => {
-                    const filtered = inventoryItems.filter((item) =>
-                      item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
-                    );
-                    return (
+                  {inventorySearchQuery && !selectedInventoryItemId && (
                       <div className="border border-border rounded-md max-h-40 overflow-y-auto">
-                        {filtered.length === 0 ? (
+                        {inventoryItems.length === 0 ? (
                           <div className="px-3 py-2 text-sm text-muted-foreground" data-testid="text-mobile-no-inventory-match">
                             No matching inventory items
                           </div>
                         ) : (
-                          filtered.map((item) => {
+                          inventoryItems.map((item) => {
                             const qty = Number(item.quantity) || 0;
                             const isOut = item.stockStatus === "out" || (item.trackingMode === "counted" && qty <= 0);
                             const isLow = item.stockStatus === "low" || (item.trackingMode === "counted" && item.minQuantity && qty <= Number(item.minQuantity) && qty > 0);
@@ -154,8 +154,7 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
                           })
                         )}
                       </div>
-                    );
-                  })()}
+                  )}
                   {selectedInventoryItemId && (() => {
                     const selectedItem = inventoryItems.find((i) => i.id === selectedInventoryItemId);
                     const qty = Number(selectedItem?.quantity) || 0;
@@ -184,32 +183,34 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
                       </div>
                     );
                   })()}
-                  <div className="flex gap-2">
+                  <div className={showCost ? "flex gap-2" : ""}>
                     <Input
                       value={newPartQuantity}
                       onChange={(e) => setNewPartQuantity(e.target.value)}
                       placeholder="Qty"
                       type="number"
                       min="1"
-                      className="w-20"
+                      className={showCost ? "w-20" : "w-full"}
                       data-testid="input-mobile-part-quantity"
                     />
-                    <Input
-                      value={
-                        selectedInventoryItemId
-                          ? (
-                              (parseFloat(
-                                inventoryItems.find((i) => i.id === selectedInventoryItemId)?.cost || "0"
-                              ) || 0) * (parseFloat(newPartQuantity) || 1)
-                            ).toFixed(2)
-                          : ""
-                      }
-                      readOnly
-                      placeholder="Cost ($)"
-                      type="number"
-                      className="w-24"
-                      data-testid="input-mobile-part-cost"
-                    />
+                    {showCost && (
+                      <Input
+                        value={
+                          selectedInventoryItemId
+                            ? (
+                                (parseFloat(
+                                  inventoryItems.find((i) => i.id === selectedInventoryItemId)?.cost || "0"
+                                ) || 0) * (parseFloat(newPartQuantity) || 1)
+                              ).toFixed(2)
+                            : ""
+                        }
+                        readOnly
+                        placeholder="Cost ($)"
+                        type="number"
+                        className="w-24"
+                        data-testid="input-mobile-part-cost"
+                      />
+                    )}
                   </div>
                   <Input
                     value={newPartNotes}
@@ -239,12 +240,11 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
                       onClick={() => {
                         const selectedItem = inventoryItems.find((i) => i.id === selectedInventoryItemId);
                         if (!selectedItem) return;
-                        const cost = (parseFloat(selectedItem.cost || "0") || 0) * (parseFloat(newPartQuantity) || 1);
                         addPartMutation.mutate({
                           taskId: id!,
                           partName: selectedItem.name,
                           quantity: newPartQuantity || "1",
-                          cost,
+                          cost: 0,
                           notes: newPartNotes.trim() || undefined,
                           inventoryItemId: selectedInventoryItemId,
                         });
@@ -256,7 +256,7 @@ export function MobileTaskDialogsExtra({ ctx }: MobileTaskDialogsExtraProps) {
                   </div>
                 </div>
               ) : (
-                isAdmin && (
+                canAddParts && (
                   <button
                     className="w-full flex items-center justify-center gap-1.5 py-2 mt-2 rounded-lg text-xs font-medium transition-colors"
                     style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}

@@ -42,7 +42,7 @@ function parseExportFilters(dataType: string, query: Request["query"]): Analytic
   if (dataType === "service-requests-detailed") {
     return parseDatePropertyFilters(query);
   }
-  if (dataType === "fleet-detailed") {
+  if (dataType === "fleet-detailed" || dataType === "inventory-detailed") {
     return parseFleetDateFilters(query);
   }
   if (dataType === "projects") {
@@ -233,6 +233,20 @@ export function registerAnalyticsRoutes(app: Express) {
       res.json(data);
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch project summary");
+    }
+  });
+
+  app.get("/api/analytics/inventory", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { analyticsService } = await analyticsImport;
+      const filters = {
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+      };
+      const data = await analyticsService.getInventoryOverview(filters);
+      res.json(data);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch inventory analytics");
     }
   });
 

@@ -7,7 +7,19 @@ import {
   type InsertPartUsed,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
+import { tasks } from "@shared/schema";
+
+export {
+  listInventoryItemsPaginated,
+  listInventoryItemsForExport,
+  getInventorySummary,
+  type InventoryListParams,
+  type InventoryListFilter,
+  type InventoryListResult,
+  type InventorySummary,
+  type InventoryListSort,
+} from "./inventoryList";
 
 export async function getInventoryItems(): Promise<InventoryItem[]> {
   return await db.select().from(inventoryItems);
@@ -95,4 +107,28 @@ export async function getPartsByTask(taskId: string): Promise<PartUsed[]> {
     .select()
     .from(partsUsed)
     .where(eq(partsUsed.taskId, taskId));
+}
+
+export type InventoryPartUsage = PartUsed & {
+  taskName: string;
+};
+
+export async function getPartsByInventoryItem(inventoryItemId: string): Promise<InventoryPartUsage[]> {
+  const rows = await db
+    .select({
+      id: partsUsed.id,
+      taskId: partsUsed.taskId,
+      inventoryItemId: partsUsed.inventoryItemId,
+      partName: partsUsed.partName,
+      quantity: partsUsed.quantity,
+      cost: partsUsed.cost,
+      notes: partsUsed.notes,
+      createdAt: partsUsed.createdAt,
+      taskName: tasks.name,
+    })
+    .from(partsUsed)
+    .innerJoin(tasks, eq(partsUsed.taskId, tasks.id))
+    .where(eq(partsUsed.inventoryItemId, inventoryItemId))
+    .orderBy(desc(partsUsed.createdAt));
+  return rows as InventoryPartUsage[];
 }

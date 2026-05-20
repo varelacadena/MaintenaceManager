@@ -4,6 +4,8 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { canReadInventory } from "@/lib/inventoryAccess";
+import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type { Task, User, Property, Upload, PartUsed, InventoryItem } from "@shared/schema";
 
 export function useMobileTaskDetail() {
@@ -89,8 +91,9 @@ export function useMobileTaskDetail() {
     enabled: !!id,
   });
 
-  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
-    queryKey: ["/api/inventory"],
+  const { inventoryItems } = useInventorySearch(inventorySearchQuery, {
+    enabled: canReadInventory(user?.role),
+    selectedItemId: selectedInventoryItemId || undefined,
   });
 
   const addPartMutation = useMutation({

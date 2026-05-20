@@ -7,6 +7,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { Task, PartUsed, Quote } from "@shared/schema";
+import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 
 interface TechnicianMoreTabProps {
   task: Task;
@@ -23,6 +24,7 @@ interface TechnicianMoreTabProps {
   setIsPartModalOpen: (v: boolean) => void;
   setIsPreviousWorkOpen: (v: boolean) => void;
   setIsResourcesOpen: (v: boolean) => void;
+  userRole?: string;
 }
 
 export function TechnicianMoreTab({
@@ -40,7 +42,9 @@ export function TechnicianMoreTab({
   setIsPartModalOpen,
   setIsPreviousWorkOpen,
   setIsResourcesOpen,
+  userRole,
 }: TechnicianMoreTabProps) {
+  const showCost = canSeeInventoryCost(userRole);
   return (
     <>
       {(contactName || contactPhone) && (
@@ -221,9 +225,11 @@ export function TechnicianMoreTab({
                   <p className="text-sm text-foreground">
                     Qty: {part.quantity}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    ${Number(part.cost).toFixed(2)}
-                  </p>
+                  {showCost && Number(part.cost) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      ${Number(part.cost).toFixed(2)}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

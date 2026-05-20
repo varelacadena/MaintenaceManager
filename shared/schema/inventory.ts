@@ -29,7 +29,32 @@ export const inventoryItems = pgTable("inventory_items", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const INVENTORY_CATEGORIES = [
+  "auto",
+  "cleaning",
+  "landscaping",
+  "plumbing",
+  "electrical",
+  "repairs",
+  "general",
+] as const;
+
+export const INVENTORY_TRACKING_MODES = ["counted", "container", "status"] as const;
+
+export const INVENTORY_STOCK_STATUSES = ["stocked", "low", "out"] as const;
+
+const inventoryItemBaseSchema = createInsertSchema(inventoryItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInventoryItemSchema = inventoryItemBaseSchema.extend({
+  category: z.enum(INVENTORY_CATEGORIES).default("general"),
+  trackingMode: z.enum(INVENTORY_TRACKING_MODES).default("counted"),
+  stockStatus: z.enum(INVENTORY_STOCK_STATUSES).optional(),
+});
+
 export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 

@@ -44,6 +44,8 @@ import type {
   Vehicle,
 } from "@shared/schema";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 import {
   urgencyBadgeStyles as urgencyColors,
   statusBadgeStyles as statusColors,
@@ -127,14 +129,6 @@ export function CompletedTaskSummary({ taskId, open, onOpenChange }: CompletedTa
     ? (assignee.firstName && assignee.lastName ? `${assignee.firstName} ${assignee.lastName}` : assignee.username)
     : "Unassigned";
 
-  const totalMinutes = timeEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
-
-  const partsCost = parts.reduce((sum, p) => sum + (p.cost * parseFloat(String(p.quantity))), 0);
-
-  const approvedQuote = quotes.find(q => q.status === "approved");
-  const quoteCost = approvedQuote?.estimatedCost || 0;
-  const totalCost = partsCost + quoteCost;
-
   const imageUploads = uploads.filter(u => isImageFile(u.fileType));
   const documentUploads = uploads.filter(u => !isImageFile(u.fileType));
 
@@ -213,6 +207,8 @@ function SummaryContent({
   onPrint: () => void;
   onDownload: (uploadId: string, objectUrl: string) => Promise<boolean>;
 }) {
+  const { user } = useAuth();
+  const showCost = canSeeInventoryCost(user?.role);
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
     enabled: !!taskId,
@@ -466,11 +462,21 @@ function SummaryContent({
               Parts & Materials
             </h3>
             <div className="space-y-1">
-              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 text-xs text-muted-foreground font-medium pb-1 border-b">
+              <div
+                className={
+                  showCost
+                    ? "grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 text-xs text-muted-foreground font-medium pb-1 border-b"
+                    : "grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-xs text-muted-foreground font-medium pb-1 border-b"
+                }
+              >
                 <span>Part</span>
                 <span className="text-right">Qty</span>
-                <span className="text-right">Unit Cost</span>
-                <span className="text-right">Total</span>
+                {showCost && (
+                  <>
+                    <span className="text-right">Unit Cost</span>
+                    <span className="text-right">Total</span>
+                  </>
+                )}
               </div>
               {parts.map((part) => {
                 const qty = parseFloat(String(part.quantity));
@@ -478,22 +484,34 @@ function SummaryContent({
                 return (
                   <div
                     key={part.id}
-                    className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 text-sm py-1"
+                    className={
+                      showCost
+                        ? "grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 text-sm py-1"
+                        : "grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm py-1"
+                    }
                     data-testid={`row-part-${part.id}`}
                   >
                     <span>{part.partName}</span>
                     <span className="text-right">{qty}</span>
-                    <span className="text-right">${part.cost.toFixed(2)}</span>
-                    <span className="text-right font-medium">${lineTotal.toFixed(2)}</span>
+                    {showCost && (
+                      <>
+                        <span className="text-right">${part.cost.toFixed(2)}</span>
+                        <span className="text-right font-medium">${lineTotal.toFixed(2)}</span>
+                      </>
+                    )}
                   </div>
                 );
               })}
             </div>
-            <Separator />
-            <div className="flex items-center justify-between text-sm font-semibold" data-testid="text-parts-total">
-              <span>Parts Total</span>
-              <span>${partsCost.toFixed(2)}</span>
-            </div>
+            {showCost && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between text-sm font-semibold" data-testid="text-parts-total">
+                  <span>Parts Total</span>
+                  <span>${partsCost.toFixed(2)}</span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
@@ -518,7 +536,7 @@ function SummaryContent({
         </Card>
       )}
 
-      {(parts.length > 0 || approvedQuote) && (
+      {showCost && (parts.length > 0 || approvedQuote) && (
         <div className="flex items-center justify-between px-1 text-base font-semibold" data-testid="text-grand-total">
           <span>Grand Total</span>
           <span>${totalCost.toFixed(2)}</span>

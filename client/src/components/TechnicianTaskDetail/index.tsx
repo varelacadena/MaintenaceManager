@@ -107,6 +107,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               setIsPartModalOpen={hook.setIsPartModalOpen}
               setIsPreviousWorkOpen={hook.setIsPreviousWorkOpen}
               setIsResourcesOpen={hook.setIsResourcesOpen}
+              userRole={props.user?.role}
             />
           )}
         </div>
@@ -157,6 +158,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         isResourcesOpen={hook.isResourcesOpen}
         setIsResourcesOpen={hook.setIsResourcesOpen}
         allTaskResources={allTaskResources}
+        userRole={props.user?.role}
       />
       <TechnicianDialogsExtra
         isAddQuoteDialogOpen={props.isAddQuoteDialogOpen}

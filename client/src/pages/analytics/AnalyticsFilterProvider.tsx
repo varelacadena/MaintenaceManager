@@ -17,6 +17,7 @@ export type ReportTab =
   | "assets"
   | "facilities"
   | "fleet"
+  | "inventory"
   | "requests"
   | "alerts"
   | "projects";
@@ -30,6 +31,7 @@ const VALID_TABS: ReportTab[] = [
   "assets",
   "facilities",
   "fleet",
+  "inventory",
   "requests",
   "alerts",
   "projects",

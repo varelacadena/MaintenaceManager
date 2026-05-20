@@ -294,7 +294,7 @@ function AuthenticatedApp() {
                 {/* Inventory */}
                 <Route path="/inventory" component={() => (
                   <DomainErrorBoundary domain="Inventory">
-                    <RoleGuard allowedRoles={["admin"]}><Inventory /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><Inventory /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
 

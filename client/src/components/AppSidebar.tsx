@@ -16,8 +16,6 @@ import {
   ClipboardList,
   Calendar,
   Settings,
-  Users,
-  MapPin,
   Wrench,
   Building2,
   Package,
@@ -25,7 +23,6 @@ import {
   Car,
   BarChart3,
   FolderKanban,
-  Mail,
   LogOut,
   BookOpen,
   Hand,
@@ -51,14 +48,13 @@ const roleMenus = {
     { title: "Resource Library", url: "/resources", icon: BookOpen },
     { title: "Vehicles", url: "/vehicles", icon: Car },
     { title: "Properties", url: "/properties", icon: Map },
-    { title: "Users", url: "/users", icon: Users },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
-    { title: "Email", url: "/email-management", icon: Mail },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
+    { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
@@ -131,7 +127,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                   badgeCount = notificationCounts.pendingServiceRequests;
                 } else if (item.title === "Vehicles" && notificationCounts.pendingVehicleReservations > 0) {
                   badgeCount = notificationCounts.pendingVehicleReservations;
-                } else if (item.title === "Users" && notificationCounts.pendingSignups > 0) {
+                } else if (item.title === "Settings" && notificationCounts.pendingSignups > 0) {
                   badgeCount = notificationCounts.pendingSignups;
                 } else if (item.title === "Grab a Job" && availableJobCount && availableJobCount.count > 0) {
                   badgeCount = availableJobCount.count;

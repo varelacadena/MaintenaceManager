@@ -34,6 +34,7 @@ import {
 import { statusColors, quoteStatusColors } from "./constants";
 import { QuoteAttachmentsList } from "./helpers";
 import type { TaskDetailContext } from "./useTaskDetail";
+import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 
 export function AdminCollapsibleSectionsExtra({ ctx }: { ctx: TaskDetailContext }) {
   const {
@@ -52,6 +53,8 @@ export function AdminCollapsibleSectionsExtra({ ctx }: { ctx: TaskDetailContext 
   } = ctx;
 
   if (!task) return null;
+
+  const showPartCost = canSeeInventoryCost(user?.role);
 
   return (
     <>
@@ -309,7 +312,9 @@ export function AdminCollapsibleSectionsExtra({ ctx }: { ctx: TaskDetailContext 
                   </div>
                   <div className="text-right">
                     <p className="text-sm">Qty: {part.quantity}</p>
-                    <p className="text-xs text-muted-foreground">${part.cost.toFixed(2)}</p>
+                    {showPartCost && Number(part.cost) > 0 && (
+                      <p className="text-xs text-muted-foreground">${Number(part.cost).toFixed(2)}</p>
+                    )}
                   </div>
                 </div>
               ))

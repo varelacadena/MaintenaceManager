@@ -7,6 +7,7 @@ import {
   areas,
   timeEntries,
   partsUsed,
+  inventoryItems,
   serviceRequests,
   vehicles,
   vehicleReservations,
@@ -348,6 +349,7 @@ export interface ExecutiveOverview {
   pendingRequests: MetricComparison;
   overdueWorkOrders: MetricComparison;
   fleetAvailable: MetricComparison;
+  inventoryLowStock: MetricComparison;
   completionRate: MetricComparison;
   completedInPeriod: MetricComparison;
   convertedInPeriod: MetricComparison;
@@ -457,6 +459,7 @@ export class AnalyticsService {
       srPrevious,
       fleetCurrent,
       fleetPrevious,
+      inventorySnapshot,
     ] = await Promise.all([
       this.getWorkOrderOverview(current, { includeDetails: false }),
       this.getWorkOrderOverview(previous, { includeDetails: false }),
@@ -464,6 +467,7 @@ export class AnalyticsService {
       this.getServiceRequestOverview(previous, { includeDetails: false }),
       this.getFleetOverview(fleetDateFilters, { includeDetails: false }),
       this.getFleetOverview(fleetPreviousFilters, { includeDetails: false }),
+      this.getInventoryOverview({}),
     ]);
 
     const openCurrent = woCurrent.totalWorkOrders - woCurrent.completedWorkOrders;
@@ -487,6 +491,12 @@ export class AnalyticsService {
         fleetCurrent.availableVehicles,
         fleetPrevious.availableVehicles,
       ),
+      inventoryLowStock: {
+        current: inventorySnapshot.lowStockCount,
+        previous: inventorySnapshot.lowStockCount,
+        changePercent: null,
+        isPositive: inventorySnapshot.lowStockCount === 0,
+      },
       completionRate: buildMetricComparison(
         woCurrent.completionRate,
         woPrevious.completionRate,
@@ -2086,6 +2096,91 @@ export class AnalyticsService {
       byPriority,
       budgetByStatus,
       projects: projectRows,
+    };
+  }
+
+  async getInventoryOverview(filters?: { startDate?: string; endDate?: string }) {
+    const items = await db.select().from(inventoryItems);
+
+    const isItemLowStock = (item: typeof items[number]) => {
+      if (item.trackingMode === "status") {
+        return item.stockStatus === "low" || item.stockStatus === "out";
+      }
+      const qty = parseFloat(String(item.quantity ?? 0)) || 0;
+      const min = parseFloat(String(item.minQuantity ?? 0)) || 0;
+      return min > 0 && qty <= min;
+    };
+
+    const lowStockItems = items.filter(isItemLowStock);
+    let estimatedValue = 0;
+    const byCategoryMap = new Map<string, number>();
+    for (const item of items) {
+      const cat = item.category || "general";
+      byCategoryMap.set(cat, (byCategoryMap.get(cat) || 0) + 1);
+      const qty = parseFloat(String(item.quantity ?? 0)) || 0;
+      const cost = parseFloat(String(item.cost ?? 0)) || 0;
+      estimatedValue += qty * cost;
+    }
+
+    const usageConditions = [sql`${partsUsed.inventoryItemId} IS NOT NULL`];
+    if (filters?.startDate) {
+      usageConditions.push(gte(partsUsed.createdAt, new Date(filters.startDate)));
+    }
+    if (filters?.endDate) {
+      usageConditions.push(lte(partsUsed.createdAt, new Date(filters.endDate + "T23:59:59")));
+    }
+
+    const usageRows = await db
+      .select({
+        inventoryItemId: partsUsed.inventoryItemId,
+        partName: partsUsed.partName,
+        quantity: partsUsed.quantity,
+      })
+      .from(partsUsed)
+      .where(and(...usageConditions));
+
+    const usageByItem = new Map<string, { name: string; totalQty: number }>();
+    for (const row of usageRows) {
+      if (!row.inventoryItemId) continue;
+      const qty = parseFloat(String(row.quantity ?? 0)) || 0;
+      const existing = usageByItem.get(row.inventoryItemId);
+      if (existing) {
+        existing.totalQty += qty;
+      } else {
+        usageByItem.set(row.inventoryItemId, {
+          name: row.partName,
+          totalQty: qty,
+        });
+      }
+    }
+
+    const topUsed = Array.from(usageByItem.entries())
+      .map(([inventoryItemId, data]) => ({
+        inventoryItemId,
+        name: items.find((i) => i.id === inventoryItemId)?.name || data.name,
+        totalQuantity: data.totalQty,
+      }))
+      .sort((a, b) => b.totalQuantity - a.totalQuantity)
+      .slice(0, 10);
+
+    return {
+      totalItems: items.length,
+      lowStockCount: lowStockItems.length,
+      estimatedValue: Math.round(estimatedValue * 100) / 100,
+      byCategory: Array.from(byCategoryMap.entries())
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count),
+      lowStockItems: lowStockItems.slice(0, 20).map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        quantity: String(item.quantity ?? 0),
+        unit: item.unit,
+        stockStatus: item.stockStatus,
+        trackingMode: item.trackingMode,
+      })),
+      topUsedInPeriod: topUsed,
+      partsUsageCount: usageRows.length,
     };
   }
 

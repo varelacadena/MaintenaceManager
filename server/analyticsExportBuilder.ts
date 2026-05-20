@@ -40,6 +40,7 @@ const REPORT_TITLES: Record<string, string> = {
   assets: "Asset Health",
   "facilities-detailed": "Facilities",
   "fleet-detailed": "Fleet",
+  "inventory-detailed": "Inventory",
   "service-requests-detailed": "Service Requests",
   alerts: "Alerts & Exceptions",
   projects: "Projects",
@@ -52,6 +53,7 @@ const FILE_SLUGS: Record<string, string> = {
   assets: "assets",
   "facilities-detailed": "facilities",
   "fleet-detailed": "fleet",
+  "inventory-detailed": "inventory",
   "service-requests-detailed": "service-requests",
   alerts: "alerts",
   projects: "projects",
@@ -184,6 +186,8 @@ export async function buildExportSheets(
       return { title, sheets: await buildFacilitiesSheets(filters, title) };
     case "fleet-detailed":
       return { title, sheets: await buildFleetSheets(filters, title) };
+    case "inventory-detailed":
+      return { title, sheets: await buildInventorySheets(filters, title) };
     case "service-requests-detailed":
       return { title, sheets: await buildServiceRequestsSheets(filters, title) };
     case "alerts":
@@ -822,6 +826,57 @@ async function buildFleetSheets(filters: AnalyticsFilters, title: string): Promi
   };
 
   return [info, summary, categorySheet, statusSheet, trendSheet, maintenanceSheet, vehiclesSheet, reservationsSheet];
+}
+
+async function buildInventorySheets(filters: AnalyticsFilters, title: string): Promise<ExportSheet[]> {
+  const inv = await analyticsService.getInventoryOverview({
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+  });
+  const info = await buildReportInfoSheet(title, filters, [
+    `${inv.totalItems} item(s) in catalog; parts usage counts respect the date filter when set.`,
+    "Estimated value uses quantity × unit cost for counted and container items.",
+  ]);
+
+  const summary: ExportSheet = {
+    name: "Summary",
+    rows: [
+      ["Metric", "Value"],
+      ["Total items", inv.totalItems],
+      ["Low stock items", inv.lowStockCount],
+      ["Estimated inventory value", formatCurrency(inv.estimatedValue)],
+      ["Parts used on tasks (period)", inv.partsUsageCount],
+    ],
+  };
+
+  const categorySheet: ExportSheet = {
+    name: "By Category",
+    rows: [["Category", "Item count"], ...inv.byCategory.map((c) => [c.category, c.count])],
+  };
+
+  const lowStockSheet: ExportSheet = {
+    name: "Low Stock",
+    rows: [
+      ["Name", "Category", "Quantity", "Unit", "Status"],
+      ...inv.lowStockItems.map((item) => [
+        item.name,
+        item.category || "general",
+        item.quantity,
+        item.unit || "",
+        item.trackingMode === "status" ? item.stockStatus || "" : "",
+      ]),
+    ],
+  };
+
+  const topUsedSheet: ExportSheet = {
+    name: "Top Used",
+    rows: [
+      ["Item", "Quantity used"],
+      ...inv.topUsedInPeriod.map((row) => [row.name, row.totalQuantity]),
+    ],
+  };
+
+  return [info, summary, categorySheet, lowStockSheet, topUsedSheet];
 }
 
 async function buildServiceRequestsSheets(filters: AnalyticsFilters, title: string): Promise<ExportSheet[]> {
@@ -1996,6 +2051,54 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
               `$${p.budgetAmount}`,
               fmtDate(p.targetEndDate),
             ]),
+          ],
+        },
+      ];
+    }
+    case "inventory-detailed": {
+      const inv = await analyticsService.getInventoryOverview({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      });
+      return [
+        {
+          kind: "text",
+          heading: "Inventory overview",
+          paragraphs: [
+            `${inv.totalItems} items tracked; ${inv.lowStockCount} below threshold. Estimated value ${formatCurrency(inv.estimatedValue)}.`,
+            inv.partsUsageCount > 0
+              ? `${inv.partsUsageCount} part usage record(s) in the selected period.`
+              : "No part usage recorded in the selected period.",
+          ],
+        },
+        {
+          kind: "bar",
+          heading: "Chart: items by category",
+          explanation: "Current catalog distribution by category.",
+          bars: inv.byCategory.map((c, i) => ({
+            label: truncate(c.category, 12),
+            value: c.count,
+            color: CHART_PALETTE[i % CHART_PALETTE.length],
+          })),
+        },
+        {
+          kind: "table",
+          heading: "Low stock items",
+          rows: [
+            ["Name", "Category", "Qty / status"],
+            ...inv.lowStockItems.map((item) => [
+              truncate(item.name, 28),
+              item.category || "general",
+              item.trackingMode === "status" ? item.stockStatus || "" : `${item.quantity} ${item.unit || ""}`,
+            ]),
+          ],
+        },
+        {
+          kind: "table",
+          heading: "Most used in period",
+          rows: [
+            ["Item", "Qty used"],
+            ...inv.topUsedInPeriod.map((row) => [truncate(row.name, 32), row.totalQuantity]),
           ],
         },
       ];

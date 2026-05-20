@@ -5,6 +5,8 @@ import { requireAdmin, requireTechnicianOrAdmin, requireTaskExecutorOrAdmin, req
 import { handleRouteError, syncProjectStatusFromTasks, getAuthUser } from "../routeUtils";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "../notifications";
 import { insertTaskSchema, insertPartUsedSchema, insertTaskNoteSchema, partsUsed } from "@shared/schema";
+import { resolvePartLineCost } from "../inventoryPartCost";
+import { redactPartsUsedForRole } from "../inventoryDto";
 import { z } from "zod";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
@@ -879,14 +881,21 @@ export function registerTaskRoutes(app: Express) {
 
   app.post("/api/parts", isAuthenticated, requireTaskExecutorOrAdmin, requireTaskAccess(), async (req: any, res) => {
     try {
-      const partData = insertPartUsedSchema.parse(req.body);
+      const parsed = insertPartUsedSchema.parse(req.body);
       const userId = req.currentUser?.id || req.userId;
-      const isHelper = await storage.isTaskHelper(partData.taskId, userId);
+      const isHelper = await storage.isTaskHelper(parsed.taskId, userId);
       if (isHelper) {
         return res.status(403).json({ message: "Forbidden: Student helpers cannot add parts" });
       }
-      const part = await storage.createPartUsed(partData);
-      res.json(part);
+      const role = req.currentUser?.role as string | undefined;
+      const lineCost = await resolvePartLineCost(
+        parsed.inventoryItemId,
+        parsed.quantity ?? "1",
+        parsed.cost ?? 0,
+        role,
+      );
+      const part = await storage.createPartUsed({ ...parsed, cost: lineCost });
+      res.json(redactPartsUsedForRole([part], role)[0]);
     } catch (error) {
       handleRouteError(res, error, "Failed to create part");
     }
@@ -919,10 +928,11 @@ export function registerTaskRoutes(app: Express) {
     isAuthenticated,
     requireTaskExecutorOrAdmin,
     requireTaskAccess(),
-    async (req, res) => {
+    async (req: any, res) => {
       try {
         const parts = await storage.getPartsByTask(req.params.taskId);
-        res.json(parts);
+        const role = req.currentUser?.role as string | undefined;
+        res.json(redactPartsUsedForRole(parts, role));
       } catch (error) {
         handleRouteError(res, error, "Failed to fetch parts");
       }

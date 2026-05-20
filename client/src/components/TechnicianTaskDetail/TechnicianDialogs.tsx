@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Badge } from "@/components/ui/badge";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 import type { Task, Quote, InventoryItem } from "@shared/schema";
 
 export interface TechnicianDialogsProps {
@@ -42,6 +43,7 @@ export interface TechnicianDialogsProps {
   isResourcesOpen: boolean;
   setIsResourcesOpen: (v: boolean) => void;
   allTaskResources: any[];
+  userRole?: string;
 }
 
 export function TechnicianDialogs({
@@ -72,7 +74,10 @@ export function TechnicianDialogs({
   isResourcesOpen,
   setIsResourcesOpen,
   allTaskResources,
+  userRole,
 }: TechnicianDialogsProps) {
+  const showCost = canSeeInventoryCost(userRole);
+
   return (
     <>
       {isPauseDialogOpen && (
@@ -240,11 +245,7 @@ export function TechnicianDialogs({
 
               {inventorySearchQuery && !selectedInventoryItemId && (
                 <div className="border border-border rounded-md max-h-40 overflow-y-auto">
-                  {inventoryItems
-                    ?.filter((item) =>
-                      item.name.toLowerCase().includes(inventorySearchQuery.toLowerCase())
-                    )
-                    .map((item) => {
+                  {inventoryItems?.map((item) => {
                       const qty = Number(item.quantity) || 0;
                       const isOut = item.stockStatus === "out" || (item.trackingMode === "counted" && qty <= 0);
                       const isLow = item.stockStatus === "low" || (item.trackingMode === "counted" && item.minQuantity && qty <= Number(item.minQuantity) && qty > 0);
@@ -310,7 +311,7 @@ export function TechnicianDialogs({
                 );
               })()}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className={showCost ? "grid grid-cols-2 gap-3" : ""}>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground">
                     QTY
@@ -325,29 +326,31 @@ export function TechnicianDialogs({
                     data-testid="input-part-qty"
                   />
                 </div>
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    COST
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={
-                      selectedInventoryItemId
-                        ? (
-                            (parseFloat(
-                              inventoryItems.find((i) => i.id === selectedInventoryItemId)
-                                ?.cost || "0"
-                            ) || 0) * (parseFloat(partQuantity) || 1)
-                          ).toFixed(2)
-                        : ""
-                    }
-                    readOnly
-                    placeholder="0.00"
-                    data-testid="input-part-cost"
-                  />
-                </div>
+                {showCost && (
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      COST
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={
+                        selectedInventoryItemId
+                          ? (
+                              (parseFloat(
+                                inventoryItems.find((i) => i.id === selectedInventoryItemId)
+                                  ?.cost || "0"
+                              ) || 0) * (parseFloat(partQuantity) || 1)
+                            ).toFixed(2)
+                          : ""
+                      }
+                      readOnly
+                      placeholder="0.00"
+                      data-testid="input-part-cost"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2 pt-2">

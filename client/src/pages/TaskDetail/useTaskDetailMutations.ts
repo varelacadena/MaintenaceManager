@@ -220,12 +220,10 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       }
     },
     onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
-      }, 300);
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to stop timer", variant: "destructive" });
@@ -254,7 +252,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       toast({ title: "Item created" });
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/inventory"] }), 300);
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
     },
     onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to create item", variant: "destructive" }),
   });
@@ -271,7 +269,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
         inventoryItemId: selectedInventoryItemId,
         partName: selectedItem.name,
         quantity: String(qty),
-        cost: selectedItem.cost ? parseFloat(selectedItem.cost) * qty : 0,
+        cost: 0,
         notes: partNotes || undefined,
       };
 
@@ -287,10 +285,8 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       toast({ title: "Part added" });
     },
     onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
-        queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      }, 300);
+      queryClient.invalidateQueries({ queryKey: ["/api/parts/task", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
     },
     onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to add part", variant: "destructive" }),
   });
@@ -306,7 +302,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       toast({ title: "Note added" });
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] }), 300);
+      queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
     },
     onError: () => toast({ title: "Failed to add note", variant: "destructive" }),
   });
@@ -367,10 +363,8 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       toast({ title: "Quote added", description: "The estimate has been added for comparison." });
     },
     onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      }, 300);
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
     },
     onError: () => toast({ title: "Failed to create quote", variant: "destructive" }),
   });
@@ -435,7 +429,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       toast({ title: "Vendor created", description: `${newVendor.name} has been added.` });
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/vendors"] }), 300);
+      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
     },
     onError: () => toast({ title: "Failed to create vendor", variant: "destructive" }),
   });
