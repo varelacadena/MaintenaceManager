@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { insertTaskSchema } from "@shared/schema";
 import type { Property, Equipment, User, Vendor, Task, Space } from "@shared/schema";
 import { z } from "zod";
@@ -94,16 +95,9 @@ export default function EditTask() {
   });
 
   const { data: equipment = [] } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId],
+    queryKey: equipmentKeys.list({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
     enabled: !!selectedPropertyId,
-    queryFn: async () => {
-      let url = `/api/equipment?propertyId=${selectedPropertyId}`;
-      if (selectedSpaceId) {
-        url += `&spaceId=${selectedSpaceId}`;
-      }
-      const response = await apiRequest("GET", url);
-      return response.json();
-    },
+    queryFn: () => fetchEquipmentList({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
   });
 
   const { data: users = [] } = useQuery<User[]>({

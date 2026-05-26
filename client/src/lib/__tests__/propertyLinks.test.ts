@@ -1,12 +1,5 @@
 import { describe, it, expect } from "vitest";
-
-export function equipmentWorkHistoryPath(equipmentId: string) {
-  return `/equipment/${equipmentId}/work-history`;
-}
-
-export function equipmentQrUrl(origin: string, equipmentId: string) {
-  return `${origin}/equipment/${equipmentId}/work-history`;
-}
+import { equipmentQrUrl, equipmentWorkHistoryPath } from "../propertyLinks";
 
 describe("property equipment links", () => {
   it("work history path matches app route", () => {

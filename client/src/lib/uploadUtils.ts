@@ -18,12 +18,14 @@ export async function getSignedUploadParameters(): Promise<SignedUploadParams> {
 
 export function buildDisplayUrlFromUpload(
   objectPath: string | undefined,
-  fallbackUrl?: string
+  fallbackUrl?: string,
+  fileType?: string
 ): string {
-  if (objectPath) {
+  const isImage = !fileType || fileType.startsWith("image/");
+  if (objectPath && isImage) {
     return `/api/objects/image?path=${encodeURIComponent(objectPath)}`;
   }
-  return fallbackUrl || "";
+  return fallbackUrl || objectPath || "";
 }
 
 export type PendingUploadPayload = {
@@ -48,10 +50,13 @@ export function mapUploaderResultToPending(
 ): PendingUploadPayload {
   const objectPath = file.objectPath;
   const rawUrl = file.objectUrl || file.url || file.uploadURL || "";
+  const fallbackUrl = rawUrl.split("?")[0];
   return {
     fileName: file.fileName || file.name || "attachment",
     fileType: file.type || "application/octet-stream",
-    objectUrl: objectPath ? buildDisplayUrlFromUpload(objectPath) : rawUrl.split("?")[0],
+    objectUrl: objectPath
+      ? buildDisplayUrlFromUpload(objectPath, fallbackUrl, file.type)
+      : fallbackUrl,
     objectPath,
     label,
   };

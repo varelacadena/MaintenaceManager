@@ -32,7 +32,6 @@ const NewTask = lazy(() => import("@/pages/NewTask"));
 const EditTask = lazy(() => import("@/pages/EditTask"));
 const Calendar = lazy(() => import("@/pages/Calendar"));
 const Users = lazy(() => import("@/pages/Users"));
-const Credentials = lazy(() => import("@/pages/Credentials"));
 const Vendors = lazy(() => import("@/pages/Vendors"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const AdminTaskDetailPage = lazy(() => import("@/pages/AdminTaskDetailPage"));
@@ -60,6 +59,14 @@ function VehicleReservationsTabRedirect() {
   useEffect(() => {
     setLocation("/vehicles?tab=reservations");
   }, [setLocation]);
+  return null;
+}
+
+function RedirectTo({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(to);
+  }, [setLocation, to]);
   return null;
 }
 
@@ -192,8 +199,7 @@ function AuthenticatedApp() {
                   <DomainErrorBoundary domain="Work Orders & Tasks">
                     {(() => {
                       if (user?.role === "student" || user?.role === "technician") {
-                        window.location.replace("/work");
-                        return null;
+                        return <RedirectTo to="/work" />;
                       }
                       return <Dashboard />;
                     })()}
@@ -208,10 +214,7 @@ function AuthenticatedApp() {
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/tasks" component={() => (
-                  <DomainErrorBoundary domain="Work Orders & Tasks">{(() => {
-                    window.location.replace("/work");
-                    return null;
-                  })()}</DomainErrorBoundary>
+                  <DomainErrorBoundary domain="Work Orders & Tasks"><RedirectTo to="/work" /></DomainErrorBoundary>
                 )} />
                 <Route path="/tasks/new" component={() => (
                   <DomainErrorBoundary domain="Work Orders & Tasks">
@@ -280,10 +283,7 @@ function AuthenticatedApp() {
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/credentials" component={() => (
-                  <DomainErrorBoundary domain="Users & Vendors">{(() => {
-                    window.location.replace("/users");
-                    return null;
-                  })()}</DomainErrorBoundary>
+                  <DomainErrorBoundary domain="Users & Vendors"><RedirectTo to="/users" /></DomainErrorBoundary>
                 )} />
                 <Route path="/vendors" component={() => (
                   <DomainErrorBoundary domain="Users & Vendors">
@@ -359,17 +359,14 @@ function AuthenticatedApp() {
                 )} />
 
                 {/* Redirects */}
+                <Route path="/login" component={() => (
+                  <DomainErrorBoundary domain="General"><RedirectTo to="/" /></DomainErrorBoundary>
+                )} />
                 <Route path="/emergency-contacts" component={() => (
-                  <DomainErrorBoundary domain="Settings">{(() => {
-                    window.location.replace("/settings?tab=emergency");
-                    return null;
-                  })()}</DomainErrorBoundary>
+                  <DomainErrorBoundary domain="Settings"><RedirectTo to="/settings?tab=emergency" /></DomainErrorBoundary>
                 )} />
                 <Route path="/projects" component={() => (
-                  <DomainErrorBoundary domain="Projects">{(() => {
-                    window.location.replace("/work");
-                    return null;
-                  })()}</DomainErrorBoundary>
+                  <DomainErrorBoundary domain="Projects"><RedirectTo to="/work?tab=projects" /></DomainErrorBoundary>
                 )} />
 
                 {/* Projects */}

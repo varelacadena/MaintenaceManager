@@ -94,6 +94,9 @@ export async function validateServiceRequestLocation(data: {
   propertyId?: string | null;
   spaceId?: string | null;
 }) {
+  if (data.spaceId && !data.propertyId) {
+    throw new FacilityValidationError("spaceId requires propertyId");
+  }
   if (!data.propertyId) return;
   const property = await validatePropertyExists(data.propertyId);
   if (data.spaceId) {

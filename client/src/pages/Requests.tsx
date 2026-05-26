@@ -62,8 +62,10 @@ export default function Requests() {
     queryKey: ["/api/properties"],
   });
 
+  const canLoadAllUsers = user?.role === "admin" || user?.role === "technician";
   const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ["/api/users"],
+    enabled: canLoadAllUsers,
     retry: false,
   });
 

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 export async function touchPropertyLastWorkFromTask(task: {
   propertyId?: string | null;
   propertyIds?: string[] | null;
+  equipmentId?: string | null;
   actualCompletionDate?: Date | null;
   updatedAt?: Date | null;
 }) {
@@ -16,6 +17,12 @@ export async function touchPropertyLastWorkFromTask(task: {
   if (task.propertyIds?.length) {
     for (const id of task.propertyIds) {
       propertyIds.add(id);
+    }
+  }
+  if (task.equipmentId) {
+    const equipment = await storage.getEquipmentItem(task.equipmentId);
+    if (equipment?.propertyId) {
+      propertyIds.add(equipment.propertyId);
     }
   }
 

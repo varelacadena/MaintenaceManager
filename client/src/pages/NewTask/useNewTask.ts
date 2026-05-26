@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
 import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
 import type { User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle } from "@shared/schema";
 import { z } from "zod";
@@ -138,16 +139,9 @@ export function useNewTask() {
   });
 
   const { data: equipment = [] } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId],
+    queryKey: equipmentKeys.list({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
     enabled: !!selectedPropertyId,
-    queryFn: async () => {
-      let url = `/api/equipment?propertyId=${selectedPropertyId}`;
-      if (selectedSpaceId) {
-        url += `&spaceId=${selectedSpaceId}`;
-      }
-      const response = await apiRequest("GET", url);
-      return response.json();
-    },
+    queryFn: () => fetchEquipmentList({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
   });
 
   const [checklistGroups, setChecklistGroups] = useState<ChecklistGroup[]>([]);
@@ -324,11 +318,10 @@ export function useNewTask() {
         }
         setPendingEquipmentFiles([]);
         
-        queryClient.invalidateQueries({ queryKey: ["/api/equipment", newEquipment.id, "uploads"] });
+        queryClient.invalidateQueries({ queryKey: equipmentKeys.uploads(newEquipment.id) });
       }
       
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment", selectedPropertyId, selectedSpaceId] });
-      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${selectedPropertyId}`] });
+      invalidateEquipmentQueries();
       form.setValue("equipmentId", newEquipment.id);
       setIsEquipmentDialogOpen(false);
       equipmentForm.reset({

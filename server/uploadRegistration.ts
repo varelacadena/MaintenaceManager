@@ -3,6 +3,21 @@ import { storage } from "./storage";
 import { canAccessTask } from "./middleware";
 import { canAccessServiceRequest } from "./routeUtils";
 import { insertUploadSchema } from "@shared/schema";
+
+const parentFields = [
+  "taskId",
+  "requestId",
+  "equipmentId",
+  "projectId",
+  "projectCommentId",
+  "vehicleCheckOutLogId",
+  "vehicleCheckInLogId",
+] as const;
+
+function getProvidedParents(body: Record<string, unknown>) {
+  return parentFields.filter((field) => Boolean(body[field]));
+}
+
 export async function assertCanRegisterUpload(
   userId: string,
   body: Record<string, unknown>
@@ -10,6 +25,17 @@ export async function assertCanRegisterUpload(
   const currentUser = await storage.getUser(userId);
   if (!currentUser) {
     return { status: 401, message: "User not found" };
+  }
+
+  const providedParents = getProvidedParents(body);
+  if (providedParents.length === 0) {
+    return { status: 400, message: "Upload must be attached to a parent record" };
+  }
+  const conflictingParents = providedParents.filter(
+    (field) => !(field === "projectId" && body.projectCommentId)
+  );
+  if (conflictingParents.length > 1) {
+    return { status: 400, message: "Upload can only be attached to one parent record" };
   }
 
   if (body.taskId) {
@@ -63,12 +89,18 @@ export async function assertCanDownloadUpload(
     requestId?: string | null;
     taskId?: string | null;
     equipmentId?: string | null;
+    projectId?: string | null;
+    projectCommentId?: string | null;
     vehicleCheckOutLogId?: string | null;
     vehicleCheckInLogId?: string | null;
   }
 ): Promise<boolean> {
   const user = await storage.getUser(userId);
   if (!user) return false;
+
+  if (upload.projectId || upload.projectCommentId) {
+    return user.role === "admin";
+  }
 
   const isStaff = user.role === "admin" || user.role === "technician";
   if (isStaff) return true;

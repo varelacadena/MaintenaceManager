@@ -11,7 +11,7 @@ describe("uploadUtils", () => {
     expect(url).toContain(encodeURIComponent("uploads/abc/file.png"));
   });
 
-  it("mapUploaderResultToPending prefers objectPath display url", () => {
+  it("mapUploaderResultToPending keeps document uploads off the image proxy", () => {
     const pending = mapUploaderResultToPending(
       {
         fileName: "manual.pdf",
@@ -22,7 +22,7 @@ describe("uploadUtils", () => {
       "manual"
     );
     expect(pending.objectPath).toBe("uploads/manual.pdf");
-    expect(pending.objectUrl).toContain("/api/objects/image?path=");
+    expect(pending.objectUrl).toBe("https://signed.example/upload");
     expect(pending.label).toBe("manual");
   });
 });

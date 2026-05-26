@@ -45,7 +45,9 @@ export function useWorkAdmin() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedParentTasks, setExpandedParentTasks] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"tasks" | "projects">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "projects">(() =>
+    new URLSearchParams(window.location.search).get("tab") === "projects" ? "projects" : "tasks"
+  );
   const [projectStatusFilter, setProjectStatusFilter] = useState<string>("all");
   const [projectSearchQuery, setProjectSearchQuery] = useState("");
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
@@ -65,6 +67,12 @@ export function useWorkAdmin() {
 
   const tasksQuery = useWorkTasksQuery(isAdmin);
   const { tasks, tasksLoading } = tasksQuery;
+
+  useEffect(() => {
+    if (new URLSearchParams(search).get("tab") === "projects") {
+      setActiveTab("projects");
+    }
+  }, [search]);
 
   useEffect(() => {
     if (isMobile) return;

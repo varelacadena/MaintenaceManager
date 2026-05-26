@@ -8,6 +8,8 @@ import QRCode from "react-qr-code";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { FileAttachment } from "@/components/FileAttachment";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { equipmentKeys } from "@/lib/equipmentQueries";
+import { equipmentQrUrl } from "@/lib/propertyLinks";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   getSignedUploadParameters,
@@ -68,8 +70,12 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
   } = ctx;
   const equipmentIdForUploads = editingEquipment?.id ?? "";
   const { data: equipmentUploads = [], isLoading: isLoadingEquipmentUploads } = useQuery<UploadType[]>({
-    queryKey: ["/api/equipment", equipmentIdForUploads, "uploads"],
+    queryKey: equipmentKeys.uploads(equipmentIdForUploads),
     enabled: isCreateDialogOpen && !!equipmentIdForUploads,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/equipment/${equipmentIdForUploads}/uploads`);
+      return response.json();
+    },
   });
   const fileViewerEquipmentId = fileViewerEquipment?.id ?? "";
   const {
@@ -79,15 +85,19 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
     error: fileViewerUploadsError,
     refetch: refetchFileViewerUploads,
   } = useQuery<UploadType[]>({
-    queryKey: ["/api/equipment", fileViewerEquipmentId, "uploads"],
+    queryKey: equipmentKeys.uploads(fileViewerEquipmentId),
     enabled: isEquipmentFilesDialogOpen && !!fileViewerEquipmentId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/equipment/${fileViewerEquipmentId}/uploads`);
+      return response.json();
+    },
   });
 
   const handleDeleteEquipmentUpload = async (uploadId: string) => {
     try {
       setDeletingUploadId(uploadId);
       await apiRequest("DELETE", `/api/uploads/${uploadId}`);
-      await queryClient.invalidateQueries({ queryKey: ["/api/equipment", equipmentIdForUploads, "uploads"] });
+      await queryClient.invalidateQueries({ queryKey: equipmentKeys.uploads(equipmentIdForUploads) });
       toast({ title: "Attachment removed" });
     } catch (error: any) {
       toast({
@@ -574,7 +584,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
               <>
                 <div className="bg-white p-4 rounded-md border" id="qr-print-area">
                   <QRCode
-                    value={`${window.location.origin}/equipment/${qrEquipment.id}/work-history`}
+                    value={equipmentQrUrl(window.location.origin, qrEquipment.id)}
                     size={200}
                   />
                   <div className="mt-2 text-center">

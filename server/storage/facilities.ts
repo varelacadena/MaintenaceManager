@@ -24,7 +24,7 @@ import {
   type Task,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, or, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, or, desc, sql } from "drizzle-orm";
 
 export async function getAreas(): Promise<Area[]> {
   return await db.select().from(areas);
@@ -192,7 +192,7 @@ export async function getEquipmentByPropertyAndSpace(propertyId: string, spaceId
     .where(
       and(
         eq(equipment.propertyId, propertyId),
-        or(isNull(equipment.spaceId), eq(equipment.spaceId, spaceId))
+        eq(equipment.spaceId, spaceId)
       )
     )
     .orderBy(equipment.category, equipment.name);

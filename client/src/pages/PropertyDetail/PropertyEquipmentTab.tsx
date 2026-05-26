@@ -29,6 +29,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { equipmentWorkHistoryPath } from "@/lib/propertyLinks";
 import { EQUIPMENT_CATEGORIES, type FormData } from "./usePropertyDetail";
 import type { PropertyDetailContext } from "./usePropertyDetail";
 
@@ -228,7 +229,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => navigate(`/equipment/${item.id}/work-history`)}
+                      onClick={() => navigate(equipmentWorkHistoryPath(item.id))}
                       data-testid={`button-work-history-${item.id}`}
                     >
                       <Calendar className="w-3 h-3" />

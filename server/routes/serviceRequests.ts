@@ -151,14 +151,24 @@ export function registerServiceRequestRoutes(app: Express) {
           ? insertServiceRequestSchema.partial().parse(req.body)
           : requesterPatchSchema.parse(req.body);
 
-      const mergedPropertyId = validated.propertyId ?? request.propertyId;
-      const mergedSpaceId = validated.spaceId ?? request.spaceId;
+      const hasPropertyId = Object.prototype.hasOwnProperty.call(validated, "propertyId");
+      const hasSpaceId = Object.prototype.hasOwnProperty.call(validated, "spaceId");
+      const mergedPropertyId = hasPropertyId ? validated.propertyId : request.propertyId;
+      const mergedSpaceId = hasSpaceId
+        ? validated.spaceId
+        : mergedPropertyId
+          ? request.spaceId
+          : null;
       await validateServiceRequestLocation({
         propertyId: mergedPropertyId,
         spaceId: mergedSpaceId,
       });
 
-      const updatedRequest = await storage.updateServiceRequest(req.params.id, validated);
+      const updateData = { ...validated };
+      if (hasPropertyId && !validated.propertyId && !hasSpaceId) {
+        updateData.spaceId = null;
+      }
+      const updatedRequest = await storage.updateServiceRequest(req.params.id, updateData);
       res.json(updatedRequest);
     } catch (error) {
       handleFacilityRouteError(res, error, "Failed to update service request");

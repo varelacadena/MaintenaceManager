@@ -74,64 +74,6 @@ export function CompletedTaskSummary({ taskId, open, onOpenChange }: CompletedTa
   const { downloadFile } = useFileDownload();
   const [subSummaryTaskId, setSubSummaryTaskId] = useState<string | null>(null);
 
-  const { data: task, isLoading: taskLoading } = useQuery<Task>({
-    queryKey: ["/api/tasks", taskId],
-    enabled: open && !!taskId,
-  });
-
-  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
-    queryKey: ["/api/time-entries/task", taskId],
-    enabled: open && !!taskId,
-  });
-
-  const { data: parts = [] } = useQuery<PartUsed[]>({
-    queryKey: ["/api/parts/task", taskId],
-    enabled: open && !!taskId,
-  });
-
-  const { data: uploads = [] } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/task", taskId],
-    enabled: open && !!taskId,
-  });
-
-  const { data: quotes = [] } = useQuery<Quote[]>({
-    queryKey: ["/api/tasks", taskId, "quotes"],
-    enabled: open && !!taskId,
-  });
-
-  const { data: equipmentData } = useQuery<Equipment>({
-    queryKey: ["/api/equipment", task?.equipmentId],
-    enabled: open && !!task?.equipmentId,
-  });
-
-  const { data: vehicleData } = useQuery<Vehicle>({
-    queryKey: ["/api/vehicles", task?.vehicleId],
-    enabled: open && !!task?.vehicleId,
-  });
-
-  const { data: property } = useQuery<Property>({
-    queryKey: ["/api/properties", task?.propertyId],
-    enabled: open && !!task?.propertyId,
-  });
-
-  const { data: users = [] } = useQuery<UserType[]>({
-    queryKey: ["/api/users"],
-    enabled: open,
-  });
-
-  const { data: subTasks = [] } = useQuery<Task[]>({
-    queryKey: ["/api/tasks", taskId, "subtasks"],
-    enabled: open && !!taskId,
-  });
-
-  const assignee = task?.assignedToId ? users.find(u => u.id === task.assignedToId) : null;
-  const assigneeName = assignee
-    ? (assignee.firstName && assignee.lastName ? `${assignee.firstName} ${assignee.lastName}` : assignee.username)
-    : "Unassigned";
-
-  const imageUploads = uploads.filter(u => isImageFile(u.fileType));
-  const documentUploads = uploads.filter(u => !isImageFile(u.fileType));
-
   const handlePrint = () => {
     window.print();
   };

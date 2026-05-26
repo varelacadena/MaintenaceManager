@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { equipmentWorkHistoryPath } from "@/lib/propertyLinks";
 
 interface Alert {
   id: string;
@@ -99,7 +100,7 @@ export default function AlertsReport() {
       case "task":
         return `/tasks/${alert.relatedId}`;
       case "equipment":
-        return `/equipment/${alert.relatedId}/work-history`;
+        return equipmentWorkHistoryPath(alert.relatedId);
       case "property":
         return `/properties/${alert.relatedId}`;
       default:

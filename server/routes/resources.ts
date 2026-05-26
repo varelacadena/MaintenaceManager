@@ -150,9 +150,8 @@ export function registerResourceRoutes(app: Express) {
           throw new FacilityValidationError("Resource property links must include the equipment property");
         }
       }
-      const user = req.user as any;
       const resource = await storage.createResource(
-        { ...data, createdById: user?.id },
+        { ...data, createdById: (req as any).userId },
         Array.isArray(propertyIds) ? propertyIds : []
       );
       res.status(201).json(resource);

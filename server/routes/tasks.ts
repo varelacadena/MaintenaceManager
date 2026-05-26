@@ -602,14 +602,14 @@ export function registerTaskRoutes(app: Express) {
       const subTask = await storage.createTask(subTaskData);
       res.status(201).json(subTask);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create sub-task");
+      handleFacilityRouteError(res, error, "Failed to create sub-task");
     }
   });
 
   app.patch("/api/tasks/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const taskStatusSchema = z.object({
-        status: z.string().min(1),
+        status: z.enum(["not_started", "needs_estimate", "waiting_approval", "ready", "in_progress", "completed", "on_hold"]),
         onHoldReason: z.string().optional(),
       });
       const { status, onHoldReason } = taskStatusSchema.parse(req.body);

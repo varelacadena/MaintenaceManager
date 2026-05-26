@@ -5,6 +5,7 @@ import { toDisplayUrl } from "@/lib/imageUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
 import { getUserDisplayName } from "@/utils/taskUtils";
 import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace, User as UserType } from "@shared/schema";
 import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
@@ -117,8 +118,9 @@ export function usePropertyDetail() {
     isError: isEquipmentError,
     refetch: refetchEquipment,
   } = useQuery<Equipment[]>({
-    queryKey: [`/api/equipment?propertyId=${id}`],
+    queryKey: equipmentKeys.list({ propertyId: id }),
     enabled: !!id,
+    queryFn: () => fetchEquipmentList({ propertyId: id }),
   });
 
   const {
@@ -240,7 +242,7 @@ export function usePropertyDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/spaces", id] });
-      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
+      invalidateEquipmentQueries();
       if (selectedSpaceId) setSelectedSpaceId(null);
       toast({ title: "Success", description: "Space deleted successfully" });
     },
@@ -276,9 +278,9 @@ export function usePropertyDetail() {
             variant: "destructive",
           });
         }
-        queryClient.invalidateQueries({ queryKey: ["/api/equipment", newEquipment.id, "uploads"] });
+        queryClient.invalidateQueries({ queryKey: equipmentKeys.uploads(newEquipment.id) });
       }
-      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
+      invalidateEquipmentQueries();
       queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
       setIsCreateDialogOpen(false);
       setEditingEquipment(null);
@@ -322,9 +324,9 @@ export function usePropertyDetail() {
             variant: "destructive",
           });
         }
-        queryClient.invalidateQueries({ queryKey: ["/api/equipment", editingEquipment.id, "uploads"] });
+        queryClient.invalidateQueries({ queryKey: equipmentKeys.uploads(editingEquipment.id) });
       }
-      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
+      invalidateEquipmentQueries();
       toast({ title: "Success", description: "Equipment updated successfully" });
       setIsCreateDialogOpen(false);
       setEditingEquipment(null);
@@ -345,7 +347,7 @@ export function usePropertyDetail() {
       return await apiRequest("DELETE", `/api/equipment/${equipmentId}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
+      invalidateEquipmentQueries();
       toast({ title: "Success", description: "Equipment deleted successfully" });
     },
     onError: (error: any) => {

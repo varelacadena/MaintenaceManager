@@ -7,6 +7,7 @@ import { handleFacilityRouteError } from "../routeFacilityError";
 import {
   validateBuildingProperty,
   validateEquipmentLocation,
+  validateSpaceBelongsToProperty,
 } from "../facilityValidation";
 import {
   insertAreaSchema,
@@ -249,6 +250,7 @@ export function registerFacilityRoutes(app: Express) {
 
       let equipment;
       if (propertyId && spaceId) {
+        await validateSpaceBelongsToProperty(spaceId, propertyId);
         equipment = await storage.getEquipmentByPropertyAndSpace(propertyId, spaceId);
       } else if (spaceId) {
         equipment = await storage.getEquipmentBySpace(spaceId);

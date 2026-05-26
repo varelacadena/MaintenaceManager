@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   FacilityValidationError,
   validateEquipmentLocation,
+  validateServiceRequestLocation,
   validateSpaceBelongsToProperty,
   validateTaskLocation,
 } from "../facilityValidation";
@@ -59,5 +60,12 @@ describe("facilityValidation", () => {
     await expect(
       validateTaskLocation({ propertyId: "p1", equipmentId: "e1" })
     ).rejects.toThrow("Equipment does not belong to this property");
+  });
+
+  it("validateServiceRequestLocation rejects space without property", async () => {
+    await expect(
+      validateServiceRequestLocation({ propertyId: null, spaceId: "s1" })
+    ).rejects.toThrow("spaceId requires propertyId");
+    expect(storage.getProperty).not.toHaveBeenCalled();
   });
 });

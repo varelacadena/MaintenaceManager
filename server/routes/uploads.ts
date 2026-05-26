@@ -9,6 +9,38 @@ import {
   assertCanDownloadUpload,
 } from "../uploadRegistration";
 
+function referencesObjectPath(value: unknown, objectKey: string) {
+  if (typeof value !== "string" || !value) return false;
+  const encodedKey = encodeURIComponent(objectKey);
+  try {
+    return value === objectKey || value.includes(encodedKey) || decodeURIComponent(value).includes(objectKey);
+  } catch {
+    return value === objectKey || value.includes(encodedKey) || value.includes(objectKey);
+  }
+}
+
+async function isReferencedEntityImage(objectKey: string) {
+  const [properties, equipment, vehicles, resources] = await Promise.all([
+    storage.getProperties(),
+    storage.getEquipment(),
+    storage.getVehicles(),
+    storage.getResources(),
+  ]);
+
+  return (
+    properties.some((property) => referencesObjectPath(property.imageUrl, objectKey)) ||
+    equipment.some((item) =>
+      referencesObjectPath(item.imageUrl, objectKey) ||
+      referencesObjectPath(item.manufacturerImageUrl, objectKey)
+    ) ||
+    vehicles.some((vehicle) => referencesObjectPath(vehicle.imageUrl, objectKey)) ||
+    resources.some((resource) =>
+      referencesObjectPath(resource.objectPath, objectKey) ||
+      referencesObjectPath(resource.url, objectKey)
+    )
+  );
+}
+
 export function registerUploadRoutes(app: Express) {
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {
@@ -81,8 +113,8 @@ export function registerUploadRoutes(app: Express) {
           return res.status(403).json({ message: "Access denied" });
         }
       } else {
-        const user = await storage.getUser(userId);
-        if (!user || (user.role !== "admin" && user.role !== "technician")) {
+        const isReferencedImage = await isReferencedEntityImage(objectKey);
+        if (!isReferencedImage) {
           return res.status(403).json({ message: "Access denied" });
         }
       }

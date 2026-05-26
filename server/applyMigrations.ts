@@ -1,7 +1,45 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
+
+const SKIPPED_MIGRATIONS = new Map<string, string>([
+  ["020_remove_uploads_table.sql", "legacy destructive migration that drops uploads"],
+  ["030_force_fuel_level_fix.sql", "legacy destructive migration that drops fuel_level data"],
+]);
+
+function getMigrationsDir() {
+  return join(import.meta.dirname, "migrations");
+}
+
+function getMigrationVersion(file: string) {
+  return parseInt(file.split("_")[0], 10);
+}
+
+function sortMigrationFiles(a: string, b: string) {
+  // 019 adds columns to uploads, so the uploads table must exist first.
+  if (a === "021_create_uploads_table.sql" && b === "019_add_vehicle_upload_columns.sql") return -1;
+  if (a === "019_add_vehicle_upload_columns.sql" && b === "021_create_uploads_table.sql") return 1;
+  return getMigrationVersion(a) - getMigrationVersion(b) || a.localeCompare(b);
+}
+
+function getMigrations() {
+  return readdirSync(getMigrationsDir())
+    .filter((file) => file.endsWith(".sql"))
+    .filter((file) => {
+      const reason = SKIPPED_MIGRATIONS.get(file);
+      if (reason) {
+        console.warn(`Skipping migration ${file}: ${reason}`);
+        return false;
+      }
+      return true;
+    })
+    .sort(sortMigrationFiles)
+    .map((file) => ({
+      file,
+      name: file.replace(/\.sql$/, ""),
+    }));
+}
 
 export async function applyInventoryTriggers() {
   try {
@@ -9,9 +47,7 @@ export async function applyInventoryTriggers() {
 
     // In production, migrations are copied to dist/migrations
     // In development, they're in server/migrations
-    const migrationPath = process.env.NODE_ENV === 'production'
-      ? join(import.meta.dirname, "migrations", "001_inventory_triggers.sql")
-      : join(import.meta.dirname, "migrations", "001_inventory_triggers.sql");
+    const migrationPath = join(getMigrationsDir(), "001_inventory_triggers.sql");
 
     const migrationSQL = readFileSync(migrationPath, "utf-8");
 
@@ -24,59 +60,7 @@ export async function applyInventoryTriggers() {
 }
 
 export async function applyMigrations() {
-  const migrations = [
-    { file: "001_inventory_triggers.sql", name: "001_inventory_triggers" },
-    { file: "002_nullable_request_id.sql", name: "002_nullable_request_id" },
-    { file: "003_note_type.sql", name: "003_note_type" },
-    { file: "004_fix_phone_number_column.sql", name: "004_fix_phone_number_column" },
-    { file: "005_add_note_type_column.sql", name: "005_add_note_type_column" },
-    { file: "006_add_read_to_messages.sql", name: "006_add_read_to_messages" },
-    { file: "007_add_properties_and_equipment.sql", name: "007_add_properties_and_equipment" },
-    { file: "008_fix_property_image_url.sql", name: "008_fix_property_image_url" },
-    { file: "009_ensure_snake_case_columns.sql", name: "009_ensure_snake_case_columns" },
-    { file: "010_add_missing_property_columns.sql", name: "010_add_missing_property_columns" },
-    { file: "011_add_property_to_service_requests.sql", name: "011_add_property_to_service_requests" },
-    { file: "012_add_equipment_id_to_tasks.sql", name: "012_add_equipment_id_to_tasks" },
-    { file: "013_add_recurring_parameters.sql", name: "013_add_recurring_parameters" },
-    { file: "014_add_contact_information_to_tasks.sql", name: "014_add_contact_information_to_tasks" },
-    { file: "015_add_key_location_to_reservations.sql", name: "015_add_key_location_to_reservations" },
-    { file: "016_add_passenger_count_to_reservations.sql", name: "016_add_passenger_count_to_reservations" },
-    { file: "017_add_reservation_handoff_details.sql", name: "017_add_reservation_handoff_details" },
-    { file: "018_add_last_viewed_status_to_reservations.sql", name: "018_add_last_viewed_status_to_reservations" },
-    { file: "021_create_uploads_table.sql", name: "021_create_uploads_table" },
-    { file: "019_add_vehicle_upload_columns.sql", name: "019_add_vehicle_upload_columns" },
-    { file: "023_add_vehicle_log_uploads.sql", name: "023_add_vehicle_log_uploads" },
-    { file: "031_fix_checkout_columns.sql", name: "031_fix_checkout_columns" },
-    { file: "032_fix_uploads_constraint.sql", name: "032_fix_uploads_constraint" },
-    { file: "033_add_checklist_groups.sql", name: "033_add_checklist_groups" },
-    { file: "034_add_emergency_contacts.sql", name: "034_add_emergency_contacts" },
-    { file: "035_add_notifications_table.sql", name: "035_add_notifications_table" },
-    { file: "058_property_domain_reconciliation.sql", name: "058_property_domain_reconciliation" },
-    { file: "036_add_equipment_id_to_uploads.sql", name: "036_add_equipment_id_to_uploads" },
-    { file: "037_add_project_management.sql", name: "037_add_project_management" },
-    { file: "038_add_space_to_projects.sql", name: "038_add_space_to_projects" },
-    { file: "039_add_scheduled_start_time.sql", name: "039_add_scheduled_start_time" },
-    { file: "040_add_password_reset_tokens.sql", name: "040_add_password_reset_tokens" },
-    { file: "041_add_resource_library.sql", name: "041_add_resource_library" },
-    { file: "042_add_subtasks_and_task_log_link.sql", name: "042_add_subtasks_and_task_log_link" },
-    { file: "043_add_lockboxes_and_codes.sql", name: "043_add_lockboxes_and_codes" },
-    { file: "044_add_resource_folders.sql", name: "044_add_resource_folders" },
-    { file: "045_nullable_message_request_id.sql", name: "045_nullable_message_request_id" },
-    { file: "046_move_lockbox_to_reservations.sql", name: "046_move_lockbox_to_reservations" },
-    { file: "047_add_task_location_scope.sql", name: "047_add_task_location_scope" },
-    { file: "048_add_upload_label.sql", name: "048_add_upload_label" },
-    { file: "049_add_project_comments_and_upload_columns.sql", name: "049_add_project_comments_and_upload_columns" },
-    { file: "050_fix_uploads_parent_check_for_projects.sql", name: "050_fix_uploads_parent_check_for_projects" },
-    { file: "051_add_task_helpers.sql", name: "051_add_task_helpers" },
-    { file: "052_add_pending_users.sql", name: "052_add_pending_users" },
-    { file: "053_drop_requested_property.sql", name: "053_drop_requested_property" },
-    { file: "054_add_vehicle_image_url.sql", name: "054_add_vehicle_image_url" },
-    { file: "055_create_vehicle_maintenance_logs.sql", name: "055_create_vehicle_maintenance_logs" },
-    { file: "056_fleet_performance_indexes.sql", name: "056_fleet_performance_indexes" },
-    { file: "057_inventory_barcode_unique.sql", name: "057_inventory_barcode_unique" },
-    { file: "059_fix_uploads_parent_check_equipment.sql", name: "059_fix_uploads_parent_check_equipment" },
-    { file: "060_add_space_id_to_tasks_and_requests.sql", name: "060_add_space_id_to_tasks_and_requests" },
-  ];
+  const migrations = getMigrations();
 
   try {
     // Create migrations tracking table if it doesn't exist (PostgreSQL)
@@ -101,7 +85,7 @@ export async function applyMigrations() {
         console.log(`Applying migration: ${migration.name}...`);
         try {
           const migrationSQL = readFileSync(
-            join(import.meta.dirname, "migrations", migration.file),
+            join(getMigrationsDir(), migration.file),
             "utf-8"
           );
           await db.execute(sql.raw(migrationSQL));
