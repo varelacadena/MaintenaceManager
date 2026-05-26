@@ -3,6 +3,11 @@ import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin, requireTechnicianOrAdmin } from "../middleware";
 import { handleRouteError, getAuthUser } from "../routeUtils";
+import { handleFacilityRouteError } from "../routeFacilityError";
+import {
+  validateBuildingProperty,
+  validateEquipmentLocation,
+} from "../facilityValidation";
 import {
   insertAreaSchema,
   insertSubdivisionSchema,
@@ -98,6 +103,17 @@ export function registerFacilityRoutes(app: Express) {
   app.patch("/api/properties/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const validated = insertPropertySchema.partial().parse(req.body);
+      if (validated.type && validated.type !== "building") {
+        const existing = await storage.getProperty(req.params.id);
+        if (existing?.type === "building") {
+          const buildingSpaces = await storage.getSpacesByProperty(req.params.id);
+          if (buildingSpaces.length > 0) {
+            return res.status(400).json({
+              message: "Remove or reassign spaces before changing a building to another property type",
+            });
+          }
+        }
+      }
       const property = await storage.updateProperty(req.params.id, validated);
       if (!property) {
         return res.status(404).json({ message: "Property not found" });
@@ -121,9 +137,10 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.get("/api/properties/:id/tasks", isAuthenticated, async (req, res) => {
+  app.get("/api/properties/:id/tasks", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
-      const tasks = await storage.getTasksByProperty(req.params.id);
+      const includeCampusWide = req.query.includeCampusWide === "true";
+      const tasks = await storage.getTasksByProperty(req.params.id, { includeCampusWide });
       res.json(tasks);
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch property tasks");
@@ -171,25 +188,33 @@ export function registerFacilityRoutes(app: Express) {
   app.post("/api/spaces", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const spaceData = insertSpaceSchema.parse(req.body);
-      
-      const property = await storage.getProperty(spaceData.propertyId);
-      if (!property) {
-        return res.status(404).json({ message: "Property not found" });
-      }
-      if (property.type !== "building") {
-        return res.status(400).json({ message: "Spaces can only be added to building properties" });
-      }
-      
+      await validateBuildingProperty(spaceData.propertyId);
       const space = await storage.createSpace(spaceData);
       res.json(space);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create space");
+      handleFacilityRouteError(res, error, "Failed to create space");
     }
   });
 
   app.patch("/api/spaces/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const validated = insertSpaceSchema.partial().parse(req.body);
+      const existing = await storage.getSpace(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Space not found" });
+      }
+      const propertyId = validated.propertyId ?? existing.propertyId;
+      if (validated.propertyId) {
+        await validateBuildingProperty(propertyId);
+        if (validated.propertyId !== existing.propertyId) {
+          const equipCount = await storage.countEquipmentInSpace(req.params.id);
+          if (equipCount > 0) {
+            return res.status(400).json({
+              message: "Move or unassign equipment before moving this space to another property",
+            });
+          }
+        }
+      }
       const space = await storage.updateSpace(req.params.id, validated);
       if (!space) {
         return res.status(404).json({ message: "Space not found" });
@@ -199,17 +224,20 @@ export function registerFacilityRoutes(app: Express) {
       if (error.name === "ZodError") {
         return res.status(400).json({ message: "Invalid space data", errors: error.errors });
       }
-      console.error("Error updating space:", error);
-      res.status(500).json({ message: "Failed to update space" });
+      handleFacilityRouteError(res, error, "Failed to update space");
     }
   });
 
   app.delete("/api/spaces/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
+      const equipCount = await storage.countEquipmentInSpace(req.params.id);
       await storage.deleteSpace(req.params.id);
-      res.json({ success: true });
+      res.json({
+        success: true,
+        equipmentUnassigned: equipCount,
+      });
     } catch (error) {
-      handleRouteError(res, error, "Failed to delete space");
+      handleFacilityRouteError(res, error, "Failed to delete space");
     }
   });
 
@@ -257,16 +285,25 @@ export function registerFacilityRoutes(app: Express) {
   app.post("/api/equipment", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const equipmentData = insertEquipmentSchema.parse(req.body);
+      await validateEquipmentLocation(equipmentData.propertyId, equipmentData.spaceId);
       const item = await storage.createEquipment(equipmentData);
       res.json(item);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create equipment");
+      handleFacilityRouteError(res, error, "Failed to create equipment");
     }
   });
 
   app.patch("/api/equipment/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const validated = insertEquipmentSchema.partial().parse(req.body);
+      const existing = await storage.getEquipmentItem(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Equipment not found" });
+      }
+      const propertyId = validated.propertyId ?? existing.propertyId;
+      const spaceId =
+        validated.spaceId !== undefined ? validated.spaceId : existing.spaceId;
+      await validateEquipmentLocation(propertyId, spaceId);
       const item = await storage.updateEquipment(req.params.id, validated);
       if (!item) {
         return res.status(404).json({ message: "Equipment not found" });
@@ -276,8 +313,7 @@ export function registerFacilityRoutes(app: Express) {
       if (error.name === "ZodError") {
         return res.status(400).json({ message: "Invalid equipment data", errors: error.errors });
       }
-      console.error("Error updating equipment:", error);
-      res.status(500).json({ message: "Failed to update equipment" });
+      handleFacilityRouteError(res, error, "Failed to update equipment");
     }
   });
 
@@ -293,7 +329,7 @@ export function registerFacilityRoutes(app: Express) {
   app.get("/api/equipment/:id/resources", isAuthenticated, async (req, res) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(req.params.id)) {
-      return res.json([]);
+      return res.status(404).json({ message: "Equipment not found" });
     }
     try {
       const resourceList = await storage.getEquipmentResources(req.params.id);
@@ -303,7 +339,7 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.get("/api/equipment/:id/uploads", isAuthenticated, async (req, res) => {
+  app.get("/api/equipment/:id/uploads", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const equipmentId = req.params.id;
       const equipmentUploads = await storage.getUploadsByEquipment(equipmentId);
@@ -322,7 +358,7 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.get("/api/lockboxes/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/lockboxes/:id", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const lockbox = await storage.getLockbox(req.params.id);
       if (!lockbox) return res.status(404).json({ message: "Lockbox not found" });

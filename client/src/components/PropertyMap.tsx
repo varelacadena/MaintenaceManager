@@ -6,23 +6,31 @@ import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import type { Property } from "@shared/schema";
 
-// Add custom CSS for tooltips
-const style = document.createElement('style');
-style.textContent = `
-  .property-tooltip {
-    background-color: rgba(0, 0, 0, 0.8) !important;
-    border: none !important;
-    color: white !important;
-    font-weight: 500 !important;
-    padding: 4px 8px !important;
-    border-radius: 4px !important;
-    font-size: 13px !important;
+const PROPERTY_MAP_TOOLTIP_STYLE_ID = "property-map-tooltip-styles";
+let propertyMapStyleUsers = 0;
+
+function ensurePropertyMapTooltipStyles() {
+  if (typeof document === "undefined" || document.getElementById(PROPERTY_MAP_TOOLTIP_STYLE_ID)) {
+    return;
   }
-  .property-tooltip::before {
-    border-top-color: rgba(0, 0, 0, 0.8) !important;
-  }
-`;
-document.head.appendChild(style);
+  const style = document.createElement("style");
+  style.id = PROPERTY_MAP_TOOLTIP_STYLE_ID;
+  style.textContent = `
+    .property-tooltip {
+      background-color: rgba(0, 0, 0, 0.8) !important;
+      border: none !important;
+      color: white !important;
+      font-weight: 500 !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      font-size: 13px !important;
+    }
+    .property-tooltip::before {
+      border-top-color: rgba(0, 0, 0, 0.8) !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 interface PropertyMapProps {
   properties: Property[];
@@ -227,7 +235,7 @@ function PropertyLayers({
     return () => {
       layers.forEach((layer) => map.removeLayer(layer));
     };
-  }, [map, properties, onPropertySelect, selectedPropertyId]);
+  }, [map, properties, onPropertySelect, onPropertyDelete, selectedPropertyId]);
 
   return null;
 }
@@ -348,7 +356,6 @@ function DrawingControl({
         }
 
         if (coordinates) {
-          console.log('Shape created:', shapeType, coordinates);
           onShapeCreated(coordinates, shapeType);
         }
       } catch (error) {
@@ -374,6 +381,37 @@ function DrawingControl({
   return null;
 }
 
+function FitPropertyBounds({ properties, selectedPropertyId }: { properties: Property[]; selectedPropertyId?: string | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedPropertyId) return;
+    const points: L.LatLngExpression[] = [];
+    for (const property of properties) {
+      const coords = property.coordinates as any;
+      if (!coords) continue;
+      if (coords.type === "Point" || coords.type === "Circle") {
+        points.push([coords.coordinates[1], coords.coordinates[0]]);
+      } else if (coords.type === "Polygon") {
+        for (const [lng, lat] of coords.coordinates?.[0] ?? []) {
+          points.push([lat, lng]);
+        }
+      } else if (coords.type === "Rectangle") {
+        for (const [lng, lat] of coords.coordinates ?? []) {
+          points.push([lat, lng]);
+        }
+      }
+    }
+    if (points.length > 1) {
+      map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 18 });
+    } else if (points.length === 1) {
+      map.setView(points[0], 17);
+    }
+  }, [map, properties, selectedPropertyId]);
+
+  return null;
+}
+
 export default function PropertyMap({
   properties,
   onPropertySelect,
@@ -382,6 +420,17 @@ export default function PropertyMap({
   selectedPropertyId,
   editable = false,
 }: PropertyMapProps) {
+  useEffect(() => {
+    propertyMapStyleUsers += 1;
+    ensurePropertyMapTooltipStyles();
+    return () => {
+      propertyMapStyleUsers -= 1;
+      if (propertyMapStyleUsers === 0) {
+        document.getElementById(PROPERTY_MAP_TOOLTIP_STYLE_ID)?.remove();
+      }
+    };
+  }, []);
+
   const defaultCenter: [number, number] = [38.33346473042104, -78.0992983903181];
   const defaultZoom = 16;
 
@@ -416,6 +465,7 @@ export default function PropertyMap({
           onPropertyDelete={onPropertyDelete}
           selectedPropertyId={selectedPropertyId}
         />
+        <FitPropertyBounds properties={properties} selectedPropertyId={selectedPropertyId} />
         <DrawingControl editable={editable} onShapeCreated={onShapeCreated} />
       </MapContainer>
     </div>

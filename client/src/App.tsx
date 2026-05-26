@@ -259,17 +259,17 @@ function AuthenticatedApp() {
                 {/* Facilities & Properties */}
                 <Route path="/properties" component={() => (
                   <DomainErrorBoundary domain="Facilities & Properties">
-                    <RoleGuard allowedRoles={["admin"]}><PropertyMapPage /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><PropertyMapPage /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/properties/:id" component={() => (
                   <DomainErrorBoundary domain="Facilities & Properties">
-                    <RoleGuard allowedRoles={["admin"]}><PropertyDetail /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><PropertyDetail /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/equipment/:id/work-history" component={() => (
                   <DomainErrorBoundary domain="Facilities & Properties">
-                    <RoleGuard allowedRoles={["admin"]}><EquipmentWorkHistory /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><EquipmentWorkHistory /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
 

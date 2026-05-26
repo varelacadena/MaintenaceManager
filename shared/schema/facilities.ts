@@ -61,7 +61,7 @@ export type Space = typeof spaces.$inferSelect;
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
-  spaceId: varchar("space_id").references(() => spaces.id, { onDelete: "cascade" }),
+  spaceId: varchar("space_id").references(() => spaces.id, { onDelete: "set null" }),
   category: varchar("category", { length: 50 }).notNull().default("general"),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),

@@ -2,9 +2,12 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { canAccessTask } from "../middleware";
-import { handleRouteError, getAuthUser, canAccessServiceRequest } from "../routeUtils";
-import { insertUploadSchema } from "@shared/schema";
-import { z } from "zod";
+import { handleRouteError, canAccessServiceRequest } from "../routeUtils";
+import {
+  registerUpload,
+  sendUploadAuthError,
+  assertCanDownloadUpload,
+} from "../uploadRegistration";
 
 export function registerUploadRoutes(app: Express) {
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
@@ -12,10 +15,10 @@ export function registerUploadRoutes(app: Express) {
       const { getSignedUploadUrl } = await import("../objectStorage");
       const { uploadURL, objectPath } = await getSignedUploadUrl();
 
-      res.json({ 
+      res.json({
         uploadURL,
         objectPath,
-        isMock: false
+        isMock: false,
       });
     } catch (error) {
       handleRouteError(res, error, "Failed to get upload URL");
@@ -24,6 +27,7 @@ export function registerUploadRoutes(app: Express) {
 
   app.get("/api/objects/image", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req as any).userId;
       let rawPath = req.query.path as string;
       const { getDownloadUrl, getPrivateDir, parseSupabaseStorageUrl } =
         await import("../objectStorage");
@@ -66,6 +70,23 @@ export function registerUploadRoutes(app: Express) {
         objectKey = rawPath;
       }
 
+      if (!objectKey.startsWith("uploads/")) {
+        return res.status(400).json({ message: "Invalid image path" });
+      }
+
+      const storedUpload = await storage.getUploadByObjectPath(objectKey);
+      if (storedUpload) {
+        const hasAccess = await assertCanDownloadUpload(userId, storedUpload);
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      } else {
+        const user = await storage.getUser(userId);
+        if (!user || (user.role !== "admin" && user.role !== "technician")) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
       const signedUrl = await getDownloadUrl(objectKey, supabaseBucket);
       return res.redirect(302, signedUrl);
     } catch (error) {
@@ -73,127 +94,20 @@ export function registerUploadRoutes(app: Express) {
     }
   });
 
-  app.post("/api/uploads", isAuthenticated, async (req: any, res) => {
+  const handleUploadRegister = async (req: any, res: any) => {
     try {
-      const userId = req.userId;
-      const currentUser = await storage.getUser(userId);
-      if (!currentUser) return res.status(401).json({ message: "User not found" });
-
-      if (req.body.taskId) {
-        const hasAccess = await canAccessTask(userId, req.body.taskId);
-        if (!hasAccess && currentUser.role !== "admin") {
-          return res.status(403).json({ message: "You don't have access to this task" });
-        }
-      } else if (req.body.requestId) {
-        const request = await storage.getServiceRequest(req.body.requestId);
-        if (!request) return res.status(404).json({ message: "Service request not found" });
-        const hasRequestAccess = await canAccessServiceRequest(userId, req.body.requestId);
-        if (!hasRequestAccess && currentUser.role !== "admin") {
-          return res.status(403).json({ message: "You don't have access to this request" });
-        }
+      const result = await registerUpload(req.userId, req.body);
+      if (result.error) {
+        return sendUploadAuthError(res, result.error);
       }
-
-      const errors = [];
-      if (!req.body.fileName) {
-        errors.push({ field: "fileName", message: "fileName is required" });
-      }
-      if (!req.body.objectUrl) {
-        errors.push({ field: "objectUrl", message: "objectUrl is required" });
-      }
-      if (!req.body.fileType) {
-        errors.push({ field: "fileType", message: "fileType is required" });
-      }
-
-      if (errors.length > 0) {
-        return res.status(400).json({ 
-          message: "Invalid upload data", 
-          errors 
-        });
-      }
-
-      console.log("Upload payload received (POST):", JSON.stringify(req.body, null, 2));
-      
-      let objectUrl = req.body.objectUrl;
-      if (req.body.objectPath && (!objectUrl.startsWith('http') || objectUrl.includes('mock-storage.local'))) {
-        try {
-          const { getDownloadUrl, getBucketId } = await import("../objectStorage");
-          if (getBucketId()) {
-            objectUrl = await getDownloadUrl(req.body.objectPath);
-          }
-        } catch (e) {
-          console.warn("Could not get signed download URL, using original:", e);
-        }
-      }
-
-      const uploadData = insertUploadSchema.parse({
-        ...req.body,
-        objectUrl,
-        uploadedById: userId,
-      });
-      console.log("Upload data parsed successfully (POST)");
-      const upload = await storage.createUpload(uploadData);
-      res.json(upload);
+      res.json(result.upload);
     } catch (error) {
       handleRouteError(res, error, "Failed to create upload");
     }
-  });
+  };
 
-  app.put("/api/uploads", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.userId;
-      const currentUser = await storage.getUser(userId);
-      if (!currentUser) return res.status(401).json({ message: "User not found" });
-
-      if (req.body.taskId) {
-        const hasAccess = await canAccessTask(userId, req.body.taskId);
-        if (!hasAccess && currentUser.role !== "admin") {
-          return res.status(403).json({ message: "You don't have access to this task" });
-        }
-      } else if (req.body.requestId) {
-        const request = await storage.getServiceRequest(req.body.requestId);
-        if (!request) return res.status(404).json({ message: "Service request not found" });
-        const hasRequestAccess = await canAccessServiceRequest(userId, req.body.requestId);
-        if (!hasRequestAccess && currentUser.role !== "admin") {
-          return res.status(403).json({ message: "You don't have access to this request" });
-        }
-      }
-
-      if (!req.body.fileName || !req.body.objectUrl) {
-        return res.status(400).json({ 
-          message: "Invalid upload data", 
-          errors: [
-            { field: "fileName", message: "fileName is required" },
-            { field: "objectUrl", message: "objectUrl is required" }
-          ]
-        });
-      }
-
-      console.log("Upload payload received (PUT):", JSON.stringify(req.body, null, 2));
-      
-      let objectUrl = req.body.objectUrl;
-      if (req.body.objectPath && (!objectUrl.startsWith('http') || objectUrl.includes('mock-storage.local'))) {
-        try {
-          const { getDownloadUrl, getBucketId } = await import("../objectStorage");
-          if (getBucketId()) {
-            objectUrl = await getDownloadUrl(req.body.objectPath);
-          }
-        } catch (e) {
-          console.warn("Could not get signed download URL, using original:", e);
-        }
-      }
-
-      const uploadData = insertUploadSchema.parse({
-        ...req.body,
-        objectUrl,
-        uploadedById: userId,
-      });
-      console.log("Upload data parsed successfully (PUT)");
-      const upload = await storage.createUpload(uploadData);
-      res.json(upload);
-    } catch (error) {
-      handleRouteError(res, error, "Failed to create upload");
-    }
-  });
+  app.post("/api/uploads", isAuthenticated, handleUploadRegister);
+  app.put("/api/uploads", isAuthenticated, handleUploadRegister);
 
   app.get("/api/uploads/:uploadId/download", isAuthenticated, async (req: any, res) => {
     try {
@@ -203,51 +117,16 @@ export function registerUploadRoutes(app: Express) {
         return res.status(404).json({ message: "Upload not found" });
       }
 
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
+      const hasAccess = await assertCanDownloadUpload(userId, upload);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
-      const isStaff = user.role === 'admin' || user.role === 'technician';
-      
-      if (!isStaff) {
-        let hasAccess = false;
-        
-        if (upload.uploadedById === userId) {
-          hasAccess = true;
-        }
-        
-        if (!hasAccess && upload.requestId) {
-          hasAccess = await canAccessServiceRequest(userId, upload.requestId);
-        }
-        
-        if (!hasAccess && upload.taskId) {
-          hasAccess = await canAccessTask(userId, upload.taskId);
-        }
-        
-        if (!hasAccess && upload.vehicleCheckOutLogId) {
-          const checkOutLog = await storage.getVehicleCheckOutLog(upload.vehicleCheckOutLogId);
-          if (checkOutLog && checkOutLog.userId === userId) {
-            hasAccess = true;
-          }
-        }
-        
-        if (!hasAccess && upload.vehicleCheckInLogId) {
-          const checkInLog = await storage.getVehicleCheckInLog(upload.vehicleCheckInLogId);
-          if (checkInLog && checkInLog.userId === userId) {
-            hasAccess = true;
-          }
-        }
-        
-        if (!hasAccess) {
-          return res.status(403).json({ message: "Access denied" });
-        }
-      }
-
-      if (upload.objectUrl.includes('mock-storage.local')) {
-        return res.status(400).json({ 
-          message: "This file was uploaded before storage was properly configured and cannot be downloaded.",
-          isMock: true
+      if (upload.objectUrl.includes("mock-storage.local")) {
+        return res.status(400).json({
+          message:
+            "This file was uploaded before storage was properly configured and cannot be downloaded.",
+          isMock: true,
         });
       }
 
@@ -280,15 +159,15 @@ export function registerUploadRoutes(app: Express) {
         return res.status(400).json({ message: "File cannot be downloaded - invalid Supabase URL" });
       }
 
-      if (upload.objectUrl.startsWith('https://storage.googleapis.com/')) {
+      if (upload.objectUrl.startsWith("https://storage.googleapis.com/")) {
         try {
           const { getDownloadUrl, getPrivateDir } = await import("../objectStorage");
           const privateDir = getPrivateDir();
-          
+
           if (privateDir) {
             const url = new URL(upload.objectUrl);
             const fullPath = url.pathname;
-            
+
             const uploadsMatch = fullPath.match(/\/uploads\/(.+)$/);
             if (uploadsMatch) {
               const objectPath = `uploads/${uploadsMatch[1]}`;
@@ -299,7 +178,7 @@ export function registerUploadRoutes(app: Express) {
         } catch (error) {
           console.error("Error generating signed URL from objectUrl:", error);
         }
-        
+
         return res.json({ downloadUrl: upload.objectUrl, fileName: upload.fileName });
       }
 
@@ -323,14 +202,21 @@ export function registerUploadRoutes(app: Express) {
     }
   });
 
-  app.get("/api/uploads/task/:taskId", isAuthenticated, async (req, res) => {
+  app.get("/api/uploads/task/:taskId", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.userId;
+      const hasAccess = await canAccessTask(userId, req.params.taskId);
+      const user = await storage.getUser(userId);
+      if (!hasAccess && user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Cannot access these uploads" });
+      }
+
       const taskUploads = await storage.getUploadsByTask(req.params.taskId);
 
       if (req.query.includeSubtasks === "true") {
         const subTasks = await storage.getSubTasks(req.params.taskId);
         const subtaskUploadArrays = await Promise.all(
-          subTasks.map(st => storage.getUploadsByTask(st.id))
+          subTasks.map((st) => storage.getUploadsByTask(st.id))
         );
         const allUploads = [...taskUploads, ...subtaskUploadArrays.flat()];
         return res.json(allUploads);
@@ -344,6 +230,14 @@ export function registerUploadRoutes(app: Express) {
 
   app.get("/api/uploads/vehicle-checkout/:checkOutLogId", isAuthenticated, async (req, res) => {
     try {
+      const user = await storage.getUser((req as any).userId);
+      const log = await storage.getVehicleCheckOutLog(req.params.checkOutLogId);
+      if (!log) {
+        return res.status(404).json({ message: "Check-out log not found" });
+      }
+      if (!user || (user.role !== "admin" && user.role !== "technician" && log.userId !== user.id)) {
+        return res.status(403).json({ message: "Forbidden: Cannot access these uploads" });
+      }
       const uploads = await storage.getUploadsByVehicleCheckOutLog(req.params.checkOutLogId);
       res.json(uploads);
     } catch (error) {
@@ -353,6 +247,14 @@ export function registerUploadRoutes(app: Express) {
 
   app.get("/api/uploads/vehicle-checkin/:checkInLogId", isAuthenticated, async (req, res) => {
     try {
+      const user = await storage.getUser((req as any).userId);
+      const log = await storage.getVehicleCheckInLog(req.params.checkInLogId);
+      if (!log) {
+        return res.status(404).json({ message: "Check-in log not found" });
+      }
+      if (!user || (user.role !== "admin" && user.role !== "technician" && log.userId !== user.id)) {
+        return res.status(403).json({ message: "Forbidden: Cannot access these uploads" });
+      }
       const uploads = await storage.getUploadsByVehicleCheckInLog(req.params.checkInLogId);
       res.json(uploads);
     } catch (error) {
@@ -375,6 +277,8 @@ export function registerUploadRoutes(app: Express) {
           hasAccess = await canAccessTask(userId, upload.taskId);
         } else if (upload.requestId) {
           hasAccess = await canAccessServiceRequest(userId, upload.requestId);
+        } else if (upload.equipmentId && currentUser.role === "admin") {
+          hasAccess = true;
         }
         if (!hasAccess) {
           return res.status(403).json({ message: "You don't have permission to delete this upload" });

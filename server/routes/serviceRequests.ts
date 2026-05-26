@@ -3,6 +3,8 @@ import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin, getCurrentUser } from "../middleware";
 import { handleRouteError } from "../routeUtils";
+import { handleFacilityRouteError } from "../routeFacilityError";
+import { validateServiceRequestLocation } from "../facilityValidation";
 import { notificationService, notifyNewServiceRequest } from "../notifications";
 import { insertServiceRequestSchema } from "@shared/schema";
 import { z } from "zod";
@@ -109,12 +111,10 @@ export function registerServiceRequestRoutes(app: Express) {
         requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : undefined,
       });
 
-      if (requestData.propertyId) {
-        const property = await storage.getProperty(requestData.propertyId);
-        if (!property) {
-          return res.status(400).json({ message: "Invalid property" });
-        }
-      }
+      await validateServiceRequestLocation({
+        propertyId: requestData.propertyId,
+        spaceId: requestData.spaceId,
+      });
 
       const request = await storage.createServiceRequest(requestData);
 
@@ -128,7 +128,7 @@ export function registerServiceRequestRoutes(app: Express) {
 
       res.json(request);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create service request");
+      handleFacilityRouteError(res, error, "Failed to create service request");
     }
   });
 
@@ -151,17 +151,17 @@ export function registerServiceRequestRoutes(app: Express) {
           ? insertServiceRequestSchema.partial().parse(req.body)
           : requesterPatchSchema.parse(req.body);
 
-      if (validated.propertyId) {
-        const property = await storage.getProperty(validated.propertyId);
-        if (!property) {
-          return res.status(400).json({ message: "Invalid property" });
-        }
-      }
+      const mergedPropertyId = validated.propertyId ?? request.propertyId;
+      const mergedSpaceId = validated.spaceId ?? request.spaceId;
+      await validateServiceRequestLocation({
+        propertyId: mergedPropertyId,
+        spaceId: mergedSpaceId,
+      });
 
       const updatedRequest = await storage.updateServiceRequest(req.params.id, validated);
       res.json(updatedRequest);
     } catch (error) {
-      handleRouteError(res, error, "Failed to update service request");
+      handleFacilityRouteError(res, error, "Failed to update service request");
     }
   });
 

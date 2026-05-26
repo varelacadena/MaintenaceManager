@@ -111,6 +111,7 @@ export function useResourceLibrary() {
     description: "",
     type: "document" as "video" | "document" | "image" | "link",
     url: "",
+    objectPath: "" as string,
     fileName: "",
     categoryId: "",
     folderId: "" as string,
@@ -330,7 +331,7 @@ export function useResourceLibrary() {
   }
 
   function resetForm() {
-    setForm({ title: "", description: "", type: "document", url: "", fileName: "", categoryId: "", folderId: currentFolderId || "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
+    setForm({ title: "", description: "", type: "document", url: "", objectPath: "", fileName: "", categoryId: "", folderId: currentFolderId || "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
     setPasteUrlMode(false);
     setIsUploading(false);
     setEquipmentSearch("");
@@ -351,6 +352,7 @@ export function useResourceLibrary() {
       description: r.description || "",
       type: r.type,
       url: r.url,
+      objectPath: (r as Resource & { objectPath?: string }).objectPath || "",
       fileName: r.fileName || "",
       categoryId: r.categoryId || "",
       folderId: r.folderId || "",
@@ -390,16 +392,21 @@ export function useResourceLibrary() {
   async function getUploadParameters() {
     const res = await apiRequest("POST", "/api/objects/upload");
     const data = await res.json();
-    return { method: "PUT" as const, url: data.uploadURL };
+    return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
   }
 
   function handleUploadComplete(result: any) {
     setIsUploading(false);
     const file = result.successful?.[0];
     if (file) {
+      const objectPath = file.objectPath;
+      const displayUrl = objectPath
+        ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
+        : (file.url || file.objectUrl || file.uploadURL);
       setForm(f => ({
         ...f,
-        url: file.url || file.objectUrl || file.uploadURL,
+        url: displayUrl,
+        objectPath: objectPath || f.objectPath,
         fileName: f.fileName || file.fileName || file.name || "",
       }));
       toast({ title: "File uploaded successfully" });

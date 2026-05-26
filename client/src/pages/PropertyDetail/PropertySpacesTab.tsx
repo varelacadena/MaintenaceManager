@@ -19,7 +19,8 @@ export function PropertySpacesTab({ ctx }: PropertySpacesTabProps) {
     id,
     spaceSearch, setSpaceSearch,
     setEditingSpace, setIsSpaceDialogOpen,
-    setSelectedSpaceId,
+    handleSelectSpace,
+    selectedSpaceId,
     spaceForm,
     canEdit,
     equipment,
@@ -83,10 +84,10 @@ export function PropertySpacesTab({ ctx }: PropertySpacesTabProps) {
               return (
                 <div
                   key={space.id}
-                  className="flex items-center justify-between gap-2 p-2 rounded-md border hover-elevate cursor-pointer"
-                  onClick={() => {
-                    setSelectedSpaceId(space.id);
-                  }}
+                  className={`flex items-center justify-between gap-2 p-2 rounded-md border hover-elevate cursor-pointer ${
+                    selectedSpaceId === space.id ? "ring-2 ring-primary bg-primary/5" : ""
+                  }`}
+                  onClick={() => handleSelectSpace(space.id)}
                   data-testid={`card-space-${space.id}`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">

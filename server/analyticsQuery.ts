@@ -10,7 +10,7 @@ import {
   timeEntries,
 } from "@shared/schema";
 import type { AnalyticsFilters } from "./analyticsService";
-import { and, eq, gte, inArray, lte, sql, count, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, or, sql, count, type SQL } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 
 export function buildTaskWhere(filters: AnalyticsFilters): SQL | undefined {
@@ -23,7 +23,14 @@ export function buildTaskWhere(filters: AnalyticsFilters): SQL | undefined {
     end.setHours(23, 59, 59, 999);
     parts.push(lte(tasks.createdAt, end));
   }
-  if (filters.propertyId) parts.push(eq(tasks.propertyId, filters.propertyId));
+  if (filters.propertyId) {
+    parts.push(
+      or(
+        eq(tasks.propertyId, filters.propertyId),
+        sql`${filters.propertyId} = ANY(${tasks.propertyIds})`
+      )!
+    );
+  }
   if (filters.spaceId) parts.push(eq(tasks.spaceId, filters.spaceId));
   if (filters.areaId) parts.push(eq(tasks.areaId, filters.areaId));
   if (filters.technicianId) parts.push(eq(tasks.assignedToId, filters.technicianId));
@@ -111,23 +118,35 @@ export async function groupTasksByProperty(
   where: SQL | undefined,
   limit = 10,
 ): Promise<{ propertyId: string; propertyName: string; count: number }[]> {
-  const rows = await db
-    .select({
-      propertyId: tasks.propertyId,
-      propertyName: properties.name,
-      value: count(),
-    })
-    .from(tasks)
-    .leftJoin(properties, eq(tasks.propertyId, properties.id))
-    .where(where ? and(where, sql`${tasks.propertyId} IS NOT NULL`) : sql`${tasks.propertyId} IS NOT NULL`)
-    .groupBy(tasks.propertyId, properties.name)
-    .orderBy(sql`count(*) desc`)
-    .limit(limit);
-  return rows.map((r) => ({
-    propertyId: r.propertyId!,
-    propertyName: r.propertyName || "Unknown",
-    count: Number(r.value),
-  }));
+  const taskRows = where
+    ? await db
+        .select({ propertyId: tasks.propertyId, propertyIds: tasks.propertyIds })
+        .from(tasks)
+        .where(where)
+    : await db
+        .select({ propertyId: tasks.propertyId, propertyIds: tasks.propertyIds })
+        .from(tasks);
+  const propertyRows = await db.select({ id: properties.id, name: properties.name }).from(properties);
+  const propertyNames = new Map(propertyRows.map((p) => [p.id, p.name]));
+  const counts = new Map<string, number>();
+
+  for (const task of taskRows) {
+    const ids = new Set<string>();
+    if (task.propertyId) ids.add(task.propertyId);
+    for (const id of task.propertyIds ?? []) ids.add(id);
+    for (const id of Array.from(ids)) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+
+  return Array.from(counts.entries())
+    .map(([propertyId, value]) => ({
+      propertyId,
+      propertyName: propertyNames.get(propertyId) || "Unknown",
+      count: value,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
 }
 
 export async function groupTasksByTaskType(

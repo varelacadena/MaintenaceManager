@@ -935,8 +935,11 @@ export class AnalyticsService {
       ? propertiesList.filter((p) => p.id === filters.propertyId)
       : propertiesList;
 
+    const taskMatchesProperty = (task: (typeof allTasks)[number], propertyId: string) =>
+      task.propertyId === propertyId || (task.propertyIds ?? []).includes(propertyId);
+
     for (const prop of propertiesToProcess) {
-      const propertyTasks = allTasks.filter(t => t.propertyId === prop.id);
+      const propertyTasks = allTasks.filter(t => taskMatchesProperty(t, prop.id));
       const completedTasks = propertyTasks.filter(t => t.status === "completed");
       const openTasks = propertyTasks.filter(t => t.status !== "completed");
       const emergencyTasks = propertyTasks.filter(t => t.urgency === "high");

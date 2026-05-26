@@ -82,7 +82,6 @@ export default function PropertyMapPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<PropertyType | "all">("all");
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
@@ -90,9 +89,15 @@ export default function PropertyMapPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [pendingCoordinates, setPendingCoordinates] = useState<any>(null);
 
-  const canEdit = user?.role === "admin" || user?.role === "technician";
+  const canEdit = user?.role === "admin";
 
-  const { data: properties = [], isLoading } = useQuery<Property[]>({
+  const {
+    data: properties = [],
+    isLoading,
+    isError: isPropertiesError,
+    error: propertiesError,
+    refetch: refetchProperties,
+  } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
 
@@ -179,7 +184,6 @@ export default function PropertyMapPage() {
       return await apiRequest("DELETE", `/api/properties/${id}`, {});
     },
     onSuccess: () => {
-      setSelectedPropertyId(null);
       toast({ title: "Success", description: "Property deleted successfully" });
     },
     onSettled: () => {
@@ -254,6 +258,21 @@ export default function PropertyMapPage() {
     return (
       <div className="flex items-center justify-center h-full" data-testid="loading-state">
         <div className="text-muted-foreground">Loading properties...</div>
+      </div>
+    );
+  }
+
+  if (isPropertiesError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
+        <MapPin className="w-10 h-10 text-destructive opacity-70" />
+        <div className="font-medium text-destructive">Could not load properties</div>
+        <div className="text-sm text-muted-foreground">
+          {(propertiesError as Error)?.message || "Please try again."}
+        </div>
+        <Button variant="outline" onClick={() => refetchProperties()}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -372,17 +391,15 @@ export default function PropertyMapPage() {
           ) : (
             <div className="divide-y">
               {filteredProperties.map((property) => {
-                const cfg = typeConfig[property.type as PropertyType];
-                if (!cfg) return null;
+                const cfg = typeConfig[property.type as PropertyType] || typeConfig.other;
                 const Icon = cfg.icon;
-                const isSelected = selectedPropertyId === property.id;
                 const eqCount = equipmentCounts[property.id] || 0;
 
                 return (
                   <div
                     key={property.id}
                     onClick={() => navigate(`/properties/${property.id}`)}
-                    className={`cursor-pointer hover-elevate ${isSelected ? "bg-primary/5" : ""}`}
+                    className="cursor-pointer hover-elevate"
                     data-testid={`row-property-${property.id}`}
                   >
                     <div className="hidden md:grid grid-cols-[2rem_1fr_1fr_7rem_5rem_2rem] gap-2 items-center px-4 py-2.5">
@@ -399,7 +416,7 @@ export default function PropertyMapPage() {
                         <Settings2 className="w-3 h-3 shrink-0" />
                         <span>{eqCount}</span>
                       </div>
-                      <ChevronRight className={`w-4 h-4 ${isSelected ? "text-primary" : "text-muted-foreground/30"}`} />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
                     </div>
 
                     <div className="flex md:hidden items-center gap-3 px-4 py-3">
@@ -479,10 +496,9 @@ export default function PropertyMapPage() {
           <div className="flex-1 m-4 rounded-lg overflow-hidden border" data-testid="map-dialog-content">
             <PropertyMap
               properties={properties}
-              onPropertySelect={handlePropertySelect}
+              onPropertySelect={creationMode ? undefined : handlePropertySelect}
               onShapeCreated={creationMode ? handleShapeCreated : undefined}
               onPropertyDelete={canEdit ? (id: string) => { deletePropertyMutation.mutate(id); } : undefined}
-              selectedPropertyId={selectedPropertyId}
               editable={!!creationMode}
             />
           </div>

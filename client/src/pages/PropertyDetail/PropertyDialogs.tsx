@@ -10,6 +10,11 @@ import { FileAttachment } from "@/components/FileAttachment";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import {
+  getSignedUploadParameters,
+  buildDisplayUrlFromUpload,
+  mapUploaderResultToPending,
+} from "@/lib/uploadUtils";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -53,12 +58,13 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
     equipmentImageUrl, setEquipmentImageUrl,
     manufacturerImageUrl, setManufacturerImageUrl,
     pendingEquipmentUploads, setPendingEquipmentUploads,
-    uploadObjectPathRef,
+    equipmentImagePathRef,
+    manufacturerImagePathRef,
     propertyForm, form, spaceForm,
     onPropertySubmit, onSubmit, onSpaceSubmit,
     updatePropertyMutation, createEquipmentMutation, updateEquipmentMutation,
     createSpaceMutation, updateSpaceMutation,
-    isBuilding, spaces,
+    isBuilding, spaces, canEdit, handleEditEquipment,
   } = ctx;
   const equipmentIdForUploads = editingEquipment?.id ?? "";
   const { data: equipmentUploads = [], isLoading: isLoadingEquipmentUploads } = useQuery<UploadType[]>({
@@ -66,7 +72,13 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
     enabled: isCreateDialogOpen && !!equipmentIdForUploads,
   });
   const fileViewerEquipmentId = fileViewerEquipment?.id ?? "";
-  const { data: fileViewerUploads = [], isLoading: isLoadingFileViewerUploads } = useQuery<UploadType[]>({
+  const {
+    data: fileViewerUploads = [],
+    isLoading: isLoadingFileViewerUploads,
+    isError: isFileViewerUploadsError,
+    error: fileViewerUploadsError,
+    refetch: refetchFileViewerUploads,
+  } = useQuery<UploadType[]>({
     queryKey: ["/api/equipment", fileViewerEquipmentId, "uploads"],
     enabled: isEquipmentFilesDialogOpen && !!fileViewerEquipmentId,
   });
@@ -339,19 +351,17 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
                     maxFileSize={10485760}
                     onGetUploadParameters={async () => {
-                      const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-                      const data = await res.json();
-                      uploadObjectPathRef.current = data.objectPath || "";
-                      return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+                      const params = await getSignedUploadParameters();
+                      equipmentImagePathRef.current = params.objectPath || "";
+                      return params;
                     }}
                     onComplete={(result: any) => {
                       const file = result.successful?.[0];
                       if (file) {
-                        const objectPath = uploadObjectPathRef.current;
-                        const displayUrl = objectPath
-                          ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
-                          : (file.url || file.objectUrl || file.uploadURL);
-                        setEquipmentImageUrl(displayUrl);
+                        const objectPath = equipmentImagePathRef.current || file.objectPath;
+                        setEquipmentImageUrl(
+                          buildDisplayUrlFromUpload(objectPath, file.url || file.objectUrl || file.uploadURL)
+                        );
                       }
                     }}
                     onError={() => toast({ title: "Upload failed", variant: "destructive" })}
@@ -390,19 +400,17 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
                     maxFileSize={10485760}
                     onGetUploadParameters={async () => {
-                      const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-                      const data = await res.json();
-                      uploadObjectPathRef.current = data.objectPath || "";
-                      return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+                      const params = await getSignedUploadParameters();
+                      manufacturerImagePathRef.current = params.objectPath || "";
+                      return params;
                     }}
                     onComplete={(result: any) => {
                       const file = result.successful?.[0];
                       if (file) {
-                        const objectPath = uploadObjectPathRef.current;
-                        const displayUrl = objectPath
-                          ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
-                          : (file.url || file.objectUrl || file.uploadURL);
-                        setManufacturerImageUrl(displayUrl);
+                        const objectPath = manufacturerImagePathRef.current || file.objectPath;
+                        setManufacturerImageUrl(
+                          buildDisplayUrlFromUpload(objectPath, file.url || file.objectUrl || file.uploadURL)
+                        );
                       }
                     }}
                     onError={() => toast({ title: "Upload failed", variant: "destructive" })}
@@ -434,19 +442,11 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     maxNumberOfFiles={5}
                     maxFileSize={15728640}
                     accept=".pdf,.doc,.docx,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
-                    onGetUploadParameters={async () => {
-                      const res = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-                      const data = await res.json();
-                      return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
-                    }}
+                    onGetUploadParameters={getSignedUploadParameters}
                     onComplete={(result: any) => {
-                      const added = (result.successful || []).map((file: any) => ({
-                        fileName: file.fileName || file.name || "attachment",
-                        fileType: file.type || "application/octet-stream",
-                        objectUrl: file.objectUrl || file.url || file.uploadURL,
-                        objectPath: file.objectPath,
-                        label: attachmentLabel,
-                      }));
+                      const added = (result.successful || []).map((file: any) =>
+                        mapUploaderResultToPending(file, attachmentLabel)
+                      );
                       if (added.length > 0) {
                         setPendingEquipmentUploads((prev) => [...prev, ...added]);
                         toast({ title: "Files uploaded", description: `${added.length} file(s) ready to attach` });
@@ -532,6 +532,8 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     setEditingEquipment(null);
                     setEquipmentImageUrl("");
                     setManufacturerImageUrl("");
+                    equipmentImagePathRef.current = "";
+                    manufacturerImagePathRef.current = "";
                     setPendingEquipmentUploads([]);
                     form.reset({
                       propertyId: id || "", name: "", category: "general",
@@ -542,7 +544,13 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                   data-testid="button-cancel-equipment"
                 >Cancel</Button>
                 <Button type="submit" disabled={createEquipmentMutation.isPending || updateEquipmentMutation.isPending} data-testid="button-submit-equipment">
-                  {editingEquipment ? "Update Equipment" : "Add Equipment"}
+                  {updateEquipmentMutation.isPending
+                    ? "Updating..."
+                    : createEquipmentMutation.isPending
+                    ? "Adding..."
+                    : editingEquipment
+                    ? "Update Equipment"
+                    : "Add Equipment"}
                 </Button>
               </DialogFooter>
             </form>
@@ -566,7 +574,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
               <>
                 <div className="bg-white p-4 rounded-md border" id="qr-print-area">
                   <QRCode
-                    value={`${window.location.origin}/equipment/${qrEquipment.id}`}
+                    value={`${window.location.origin}/equipment/${qrEquipment.id}/work-history`}
                     size={200}
                   />
                   <div className="mt-2 text-center">
@@ -659,6 +667,22 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Loading files...
                 </div>
+              ) : isFileViewerUploadsError ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                  <p className="font-medium text-destructive">Could not load attached files</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(fileViewerUploadsError as Error)?.message || "Please try again."}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => refetchFileViewerUploads()}
+                  >
+                    Retry
+                  </Button>
+                </div>
               ) : fileViewerUploads.length === 0 ? (
                 <div className="text-xs text-muted-foreground rounded-md border p-2">No files attached yet.</div>
               ) : (
@@ -671,6 +695,18 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
             </div>
           </div>
           <DialogFooter>
+            {canEdit && fileViewerEquipment && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEquipmentFilesDialogOpen(false);
+                  handleEditEquipment(fileViewerEquipment);
+                }}
+                data-testid="button-edit-equipment-files"
+              >
+                Add or Manage Files
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setIsEquipmentFilesDialogOpen(false)} data-testid="button-close-equipment-files">
               Close
             </Button>

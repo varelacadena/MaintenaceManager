@@ -3,6 +3,9 @@ import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin, requireTechnicianOrAdmin, requireTaskExecutorOrAdmin, requireTaskAccess, canAccessTask, getCurrentUser } from "../middleware";
 import { handleRouteError, syncProjectStatusFromTasks, getAuthUser } from "../routeUtils";
+import { handleFacilityRouteError } from "../routeFacilityError";
+import { validateTaskLocation } from "../facilityValidation";
+import { touchPropertyLastWorkFromTask } from "../propertyMaintenance";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "../notifications";
 import { insertTaskSchema, insertPartUsedSchema, insertTaskNoteSchema, partsUsed } from "@shared/schema";
 import { resolvePartLineCost } from "../inventoryPartCost";
@@ -25,9 +28,17 @@ export function registerTaskRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden: Staff cannot access tasks" });
       }
 
-      let filters: any = {};
-
       const equipmentIdFilter = req.query.equipmentId as string | undefined;
+
+      if (
+        equipmentIdFilter &&
+        currentUser.role !== "admin" &&
+        currentUser.role !== "technician"
+      ) {
+        return res.status(403).json({ message: "Forbidden: Equipment work history is restricted" });
+      }
+
+      let filters: any = {};
 
       if (!equipmentIdFilter) {
         if (currentUser.role === "student") {
@@ -137,21 +148,9 @@ export function registerTaskRoutes(app: Express) {
         return res.status(404).json({ message: "Task not found" });
       }
 
-      if (currentUser.role === "staff") {
-        return res.status(403).json({ message: "Forbidden: Staff cannot access tasks" });
-      }
-      
-      if (currentUser.role === "student") {
-        const isHelper = await storage.isTaskHelper(task.id, userId);
-        if (task.assignedToId !== userId && !isHelper) {
-          return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
-        }
-      }
-      
-      if (currentUser.role === "technician") {
-        if (task.assignedToId !== userId) {
-          return res.status(403).json({ message: "Forbidden: You can only view tasks assigned to you" });
-        }
+      const hasAccess = await canAccessTask(userId, task.id);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
 
       const helpers = await storage.getTaskHelpers(task.id);
@@ -186,6 +185,13 @@ export function registerTaskRoutes(app: Express) {
         assignedPool: effectivePool,
         initialDate: taskPayload.initialDate ? new Date(taskPayload.initialDate) : new Date(),
         estimatedCompletionDate: taskPayload.estimatedCompletionDate ? new Date(taskPayload.estimatedCompletionDate) : undefined,
+      });
+
+      await validateTaskLocation({
+        propertyId: taskData.propertyId,
+        spaceId: taskData.spaceId,
+        equipmentId: taskData.equipmentId,
+        propertyIds: taskData.propertyIds,
       });
 
       const checklistGroupSchema = z.array(z.object({
@@ -257,7 +263,7 @@ export function registerTaskRoutes(app: Express) {
 
       res.json(task);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create task");
+      handleFacilityRouteError(res, error, "Failed to create task");
     }
   });
 
@@ -356,6 +362,14 @@ export function registerTaskRoutes(app: Express) {
 
       const { helperUserIds: patchHelperIds, ...restBody } = req.body;
 
+      const locationFields = ["propertyId", "spaceId", "equipmentId", "propertyIds"];
+      if (
+        currentUser.role !== "admin" &&
+        locationFields.some((field) => restBody[field] !== undefined)
+      ) {
+        return res.status(403).json({ message: "Only admins can change task location fields" });
+      }
+
       if (currentUser?.role === "admin" && patchHelperIds !== undefined && Array.isArray(patchHelperIds)) {
         const existingHelpers = await storage.getTaskHelpers(req.params.id);
         const existingUserIds = existingHelpers.map(h => h.userId);
@@ -409,15 +423,34 @@ export function registerTaskRoutes(app: Express) {
         updateData.estimatedCompletionDate = new Date(updateData.estimatedCompletionDate);
       }
 
+      if (
+        updateData.propertyId !== undefined ||
+        updateData.spaceId !== undefined ||
+        updateData.equipmentId !== undefined ||
+        updateData.propertyIds !== undefined
+      ) {
+        const existingTask = await storage.getTask(req.params.id);
+        await validateTaskLocation({
+          propertyId: updateData.propertyId ?? existingTask?.propertyId,
+          spaceId: updateData.spaceId ?? existingTask?.spaceId,
+          equipmentId: updateData.equipmentId ?? existingTask?.equipmentId,
+          propertyIds: updateData.propertyIds ?? existingTask?.propertyIds,
+        });
+      }
+
       const task = await storage.updateTask(req.params.id, updateData);
 
       if (task?.projectId) {
         await syncProjectStatusFromTasks(task.projectId);
       }
 
+      if (task?.status === "completed") {
+        await touchPropertyLastWorkFromTask(task);
+      }
+
       res.json(task);
     } catch (error) {
-      handleRouteError(res, error, "Failed to update task");
+      handleFacilityRouteError(res, error, "Failed to update task");
     }
   });
 
@@ -484,6 +517,10 @@ export function registerTaskRoutes(app: Express) {
 
   app.get("/api/tasks/:taskId/subtasks", isAuthenticated, async (req: any, res) => {
     try {
+      const hasAccess = await canAccessTask(req.userId, req.params.taskId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
       const subTasks = await storage.getSubTasks(req.params.taskId);
       res.json(subTasks);
     } catch (error) {
@@ -511,15 +548,16 @@ export function registerTaskRoutes(app: Express) {
       }
 
       let assetName = "";
+      let selectedEquipment: Awaited<ReturnType<typeof storage.getEquipmentItem>> | undefined;
       if (equipmentId) {
-        const equip = await storage.getEquipmentItem(equipmentId);
-        if (!equip) return res.status(404).json({ message: "Equipment not found" });
+        selectedEquipment = await storage.getEquipmentItem(equipmentId);
+        if (!selectedEquipment) return res.status(404).json({ message: "Equipment not found" });
         const locationParts = [];
-        if (equip.propertyId) {
-          const prop = await storage.getProperty(equip.propertyId);
+        if (selectedEquipment.propertyId) {
+          const prop = await storage.getProperty(selectedEquipment.propertyId);
           if (prop) locationParts.push(prop.name);
         }
-        assetName = equip.name + (locationParts.length ? ` (${locationParts.join(", ")})` : "");
+        assetName = selectedEquipment.name + (locationParts.length ? ` (${locationParts.join(", ")})` : "");
       } else if (vehicleId) {
         const vehicle = await storage.getVehicle(vehicleId);
         if (!vehicle) return res.status(404).json({ message: "Vehicle not found" });
@@ -541,8 +579,8 @@ export function registerTaskRoutes(app: Express) {
         estimatedCompletionDate: parentTask.estimatedCompletionDate,
         assignedToId: parentTask.assignedToId,
         areaId: parentTask.areaId,
-        propertyId: equipmentId ? (await storage.getEquipmentItem(equipmentId))?.propertyId || parentTask.propertyId : parentTask.propertyId,
-        spaceId: equipmentId ? (await storage.getEquipmentItem(equipmentId))?.spaceId || parentTask.spaceId : parentTask.spaceId,
+        propertyId: selectedEquipment?.propertyId || parentTask.propertyId,
+        spaceId: selectedEquipment?.spaceId || parentTask.spaceId,
         executorType: subExecType,
         assignedPool: subPool,
         instructions: parentTask.instructions,
@@ -553,6 +591,13 @@ export function registerTaskRoutes(app: Express) {
         equipmentId: equipmentId || null,
         vehicleId: vehicleId || null,
       };
+
+      await validateTaskLocation({
+        propertyId: subTaskData.propertyId,
+        spaceId: subTaskData.spaceId,
+        equipmentId: subTaskData.equipmentId,
+        propertyIds: parentTask.propertyIds,
+      });
 
       const subTask = await storage.createTask(subTaskData);
       res.status(201).json(subTask);
@@ -735,6 +780,7 @@ export function registerTaskRoutes(app: Express) {
             }
             if (completedParent) {
               await autoCreateVehicleMaintenanceLog(completedParent);
+              await touchPropertyLastWorkFromTask(completedParent);
             }
           }
         } catch (err) {
@@ -757,11 +803,18 @@ export function registerTaskRoutes(app: Express) {
 
       if (normalizedStatus === "completed") {
         await autoCreateVehicleMaintenanceLog(updatedTask);
+        await touchPropertyLastWorkFromTask(updatedTask);
+        if (updatedTask.parentTaskId) {
+          const parent = await storage.getTask(updatedTask.parentTaskId);
+          if (parent?.status === "completed") {
+            await touchPropertyLastWorkFromTask(parent);
+          }
+        }
       }
 
       res.json(updatedTask);
     } catch (error) {
-      handleRouteError(res, error, "Failed to update task status");
+      handleFacilityRouteError(res, error, "Failed to update task status");
     }
   });
 
@@ -1042,6 +1095,10 @@ export function registerTaskRoutes(app: Express) {
 
   app.get("/api/tasks/:taskId/checklist-groups", isAuthenticated, async (req: any, res) => {
     try {
+      const hasAccess = await canAccessTask(req.userId, req.params.taskId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
       const groups = await storage.getChecklistGroupsByTask(req.params.taskId);
       res.json(groups);
     } catch (error) {

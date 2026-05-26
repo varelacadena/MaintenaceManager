@@ -85,18 +85,43 @@ export async function deleteProperty(id: string): Promise<void> {
   await db.delete(properties).where(eq(properties.id, id));
 }
 
-export async function getTasksByProperty(propertyId: string): Promise<Task[]> {
+export async function getTasksByProperty(
+  propertyId: string,
+  options?: { includeCampusWide?: boolean }
+): Promise<Task[]> {
+  const includeCampusWide = options?.includeCampusWide ?? false;
+  const conditions = [
+    eq(tasks.propertyId, propertyId),
+    sql`${propertyId} = ANY(${tasks.propertyIds})`,
+  ];
+  if (includeCampusWide) {
+    conditions.push(
+      and(
+        eq(tasks.isCampusWide, true),
+        sql`${propertyId} = ANY(${tasks.propertyIds})`
+      )!
+    );
+  }
   return await db
     .select()
     .from(tasks)
-    .where(
-      or(
-        eq(tasks.propertyId, propertyId),
-        eq(tasks.isCampusWide, true),
-        sql`${propertyId} = ANY(${tasks.propertyIds})`
-      )
-    )
+    .where(or(...conditions))
     .orderBy(desc(tasks.initialDate));
+}
+
+export async function countEquipmentInSpace(spaceId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(equipment)
+    .where(eq(equipment.spaceId, spaceId));
+  return row?.count ?? 0;
+}
+
+export async function clearEquipmentSpaceAssignments(spaceId: string): Promise<void> {
+  await db
+    .update(equipment)
+    .set({ spaceId: null, updatedAt: new Date() })
+    .where(eq(equipment.spaceId, spaceId));
 }
 
 export async function getSpaces(): Promise<Space[]> {
@@ -131,6 +156,7 @@ export async function updateSpace(id: string, data: Partial<InsertSpace>): Promi
 }
 
 export async function deleteSpace(id: string): Promise<void> {
+  await clearEquipmentSpaceAssignments(id);
   await db.delete(spaces).where(eq(spaces.id, id));
 }
 

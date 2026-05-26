@@ -80,6 +80,14 @@ export async function getProjectComments(projectId: string): Promise<ProjectComm
     .orderBy(projectComments.createdAt);
 }
 
+export async function getProjectComment(id: string): Promise<ProjectComment | undefined> {
+  const [comment] = await db
+    .select()
+    .from(projectComments)
+    .where(eq(projectComments.id, id));
+  return comment;
+}
+
 export async function createProjectComment(commentData: InsertProjectComment): Promise<ProjectComment> {
   const [comment] = await db.insert(projectComments).values(commentData).returning();
   return comment;

@@ -1,6 +1,7 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Requests from "../Requests";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -53,7 +54,14 @@ describe("Requests Component", () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
+        queries: {
+          retry: false,
+          queryFn: async ({ queryKey }) => {
+            const res = await fetch(queryKey.join("/"));
+            if (!res.ok) throw new Error("Request failed");
+            return res.json();
+          },
+        },
         mutations: { retry: false },
       },
     });
@@ -87,6 +95,11 @@ describe("Requests Component", () => {
       }
       return Promise.reject(new Error(`Unknown endpoint: ${u}`));
     }) as any;
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it("renders submitter view title", async () => {
@@ -124,7 +137,7 @@ describe("Requests Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Leaking Faucet")).toBeInTheDocument();
-      expect(screen.getByText("Broken Light")).toBeInTheDocument();
+      expect(screen.queryByText("Broken Light")).not.toBeInTheDocument();
     });
   });
 

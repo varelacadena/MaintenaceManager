@@ -71,6 +71,14 @@ export async function createNotification(notification: InsertNotification): Prom
   return created;
 }
 
+export async function getNotification(id: string): Promise<Notification | undefined> {
+  const [notification] = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.id, id));
+  return notification;
+}
+
 export async function markNotificationRead(id: string): Promise<Notification | undefined> {
   const [updated] = await db
     .update(notifications)

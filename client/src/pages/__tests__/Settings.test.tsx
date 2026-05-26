@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Settings from "../Settings";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -66,6 +66,10 @@ function renderSettings() {
 }
 
 describe("Settings", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     wouterState.navigate.mockReset();
     wouterState.search = "";
@@ -132,7 +136,7 @@ describe("Settings", () => {
     expect(screen.getByText("System Settings Hub")).toBeInTheDocument();
     expect(screen.getByText("Email & Notifications")).toBeInTheDocument();
     expect(screen.getByText("Users, Roles & Access")).toBeInTheDocument();
-    expect(screen.getByText("Emergency Contacts")).toBeInTheDocument();
+    expect(screen.getByTestId("button-open-emergency-settings")).toBeInTheDocument();
     expect(screen.queryByText("Resource Library")).not.toBeInTheDocument();
     expect(screen.getByTestId("button-planned-organization-settings")).toBeDisabled();
 

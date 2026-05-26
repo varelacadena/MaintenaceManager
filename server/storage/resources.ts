@@ -155,9 +155,12 @@ export async function createResource(data: InsertResource, propertyIds: string[]
   return created;
 }
 
-export async function updateResource(id: string, data: Partial<InsertResource>, propertyIds: string[]): Promise<Resource | undefined> {
+export async function updateResource(id: string, data: Partial<InsertResource>, propertyIds?: string[]): Promise<Resource | undefined> {
   const [updated] = await db.update(resources).set(data as any).where(eq(resources.id, id)).returning();
   if (!updated) return undefined;
+  if (propertyIds === undefined) {
+    return updated;
+  }
   await db.delete(propertyResources).where(eq(propertyResources.resourceId, id));
   if (propertyIds.length > 0) {
     await db.insert(propertyResources).values(
@@ -217,5 +220,8 @@ export async function getEquipmentResources(equipmentId: string): Promise<(Resou
         };
       })
   );
-  return result;
+  return result.filter((resource) => {
+    if (resource.equipmentId === equipmentId) return true;
+    return resource.propertyIds.length === 0 || resource.propertyIds.includes(item.propertyId);
+  });
 }

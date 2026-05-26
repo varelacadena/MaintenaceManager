@@ -3,6 +3,9 @@ import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin, requireTechnicianOrAdmin, getCurrentUser, canAccessTask } from "../middleware";
 import { handleRouteError, getAuthUser, syncProjectStatusFromTasks } from "../routeUtils";
+import { handleFacilityRouteError } from "../routeFacilityError";
+import { validateProjectLocation } from "../facilityValidation";
+import { registerUpload, sendUploadAuthError } from "../uploadRegistration";
 import {
   insertProjectSchema,
   insertProjectTeamMemberSchema,
@@ -10,7 +13,6 @@ import {
   insertQuoteSchema,
   insertEmergencyContactSchema,
   insertProjectCommentSchema,
-  insertUploadSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -134,10 +136,18 @@ export function registerProjectRoutes(app: Express) {
 
   app.post("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
     try {
-      const notification = await storage.markNotificationRead(req.params.id);
-      if (!notification) {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const existing = await storage.getNotification(req.params.id);
+      if (!existing) {
         return res.status(404).json({ message: "Notification not found" });
       }
+      if (existing.userId && existing.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Cannot update this notification" });
+      }
+      const notification = await storage.markNotificationRead(req.params.id);
       res.json(notification);
     } catch (error) {
       handleRouteError(res, error, "Failed to mark notification as read");
@@ -159,6 +169,17 @@ export function registerProjectRoutes(app: Express) {
 
   app.post("/api/notifications/:id/dismiss", isAuthenticated, async (req, res) => {
     try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const existing = await storage.getNotification(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      if (existing.userId && existing.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Cannot update this notification" });
+      }
       await storage.dismissNotification(req.params.id);
       res.json({ message: "Notification dismissed" });
     } catch (error) {
@@ -222,6 +243,10 @@ export function registerProjectRoutes(app: Express) {
         ...body,
         createdById: userId,
       });
+      await validateProjectLocation({
+        propertyId: data.propertyId,
+        spaceId: data.spaceId,
+      });
       
       const project = await storage.createProject(data);
 
@@ -238,7 +263,7 @@ export function registerProjectRoutes(app: Express) {
 
       res.status(201).json(project);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create project");
+      handleFacilityRouteError(res, error, "Failed to create project");
     }
   });
 
@@ -258,6 +283,12 @@ export function registerProjectRoutes(app: Express) {
 
       const validated = insertProjectSchema.partial().parse(rawBody);
       const body: any = { ...validated };
+      if (validated.propertyId !== undefined || validated.spaceId !== undefined) {
+        await validateProjectLocation({
+          propertyId: validated.propertyId ?? existingProject.propertyId,
+          spaceId: validated.spaceId ?? existingProject.spaceId,
+        });
+      }
       const project = await storage.updateProject(req.params.id, body);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
@@ -292,7 +323,7 @@ export function registerProjectRoutes(app: Express) {
 
       res.json(project);
     } catch (error) {
-      handleRouteError(res, error, "Failed to update project");
+      handleFacilityRouteError(res, error, "Failed to update project");
     }
   });
 
@@ -769,36 +800,14 @@ export function registerProjectRoutes(app: Express) {
 
   app.post("/api/projects/:id/uploads", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.userId;
-
-      const errors = [];
-      if (!req.body.fileName) errors.push({ field: "fileName", message: "fileName is required" });
-      if (!req.body.objectUrl) errors.push({ field: "objectUrl", message: "objectUrl is required" });
-      if (!req.body.fileType) errors.push({ field: "fileType", message: "fileType is required" });
-      if (errors.length > 0) {
-        return res.status(400).json({ message: "Invalid upload data", errors });
-      }
-
-      let objectUrl = req.body.objectUrl;
-      if (req.body.objectPath && (!objectUrl.startsWith('http') || objectUrl.includes('mock-storage.local'))) {
-        try {
-          const { getDownloadUrl, getBucketId } = await import("../objectStorage");
-          if (getBucketId()) {
-            objectUrl = await getDownloadUrl(req.body.objectPath);
-          }
-        } catch (e) {
-          console.warn("Could not get signed download URL, using original:", e);
-        }
-      }
-
-      const uploadData = insertUploadSchema.parse({
+      const result = await registerUpload(req.userId, {
         ...req.body,
-        objectUrl,
         projectId: req.params.id,
-        uploadedById: userId,
       });
-      const upload = await storage.createUpload(uploadData);
-      res.status(201).json(upload);
+      if (result.error) {
+        return sendUploadAuthError(res, result.error);
+      }
+      res.status(201).json(result.upload);
     } catch (error) {
       handleRouteError(res, error, "Failed to upload project file");
     }

@@ -44,12 +44,17 @@ export async function applyMigrations() {
     { file: "017_add_reservation_handoff_details.sql", name: "017_add_reservation_handoff_details" },
     { file: "018_add_last_viewed_status_to_reservations.sql", name: "018_add_last_viewed_status_to_reservations" },
     { file: "021_create_uploads_table.sql", name: "021_create_uploads_table" },
+    { file: "019_add_vehicle_upload_columns.sql", name: "019_add_vehicle_upload_columns" },
+    { file: "023_add_vehicle_log_uploads.sql", name: "023_add_vehicle_log_uploads" },
     { file: "031_fix_checkout_columns.sql", name: "031_fix_checkout_columns" },
     { file: "032_fix_uploads_constraint.sql", name: "032_fix_uploads_constraint" },
     { file: "033_add_checklist_groups.sql", name: "033_add_checklist_groups" },
     { file: "034_add_emergency_contacts.sql", name: "034_add_emergency_contacts" },
     { file: "035_add_notifications_table.sql", name: "035_add_notifications_table" },
+    { file: "058_property_domain_reconciliation.sql", name: "058_property_domain_reconciliation" },
+    { file: "036_add_equipment_id_to_uploads.sql", name: "036_add_equipment_id_to_uploads" },
     { file: "037_add_project_management.sql", name: "037_add_project_management" },
+    { file: "038_add_space_to_projects.sql", name: "038_add_space_to_projects" },
     { file: "039_add_scheduled_start_time.sql", name: "039_add_scheduled_start_time" },
     { file: "040_add_password_reset_tokens.sql", name: "040_add_password_reset_tokens" },
     { file: "041_add_resource_library.sql", name: "041_add_resource_library" },
@@ -69,6 +74,8 @@ export async function applyMigrations() {
     { file: "055_create_vehicle_maintenance_logs.sql", name: "055_create_vehicle_maintenance_logs" },
     { file: "056_fleet_performance_indexes.sql", name: "056_fleet_performance_indexes" },
     { file: "057_inventory_barcode_unique.sql", name: "057_inventory_barcode_unique" },
+    { file: "059_fix_uploads_parent_check_equipment.sql", name: "059_fix_uploads_parent_check_equipment" },
+    { file: "060_add_space_id_to_tasks_and_requests.sql", name: "060_add_space_id_to_tasks_and_requests" },
   ];
 
   try {

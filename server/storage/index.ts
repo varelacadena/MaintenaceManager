@@ -233,6 +233,7 @@ export interface IStorage {
   getUploadsByVehicleCheckOutLog(checkOutLogId: string): Promise<Upload[]>;
   getUploadsByVehicleCheckInLog(checkInLogId: string): Promise<Upload[]>;
   getUpload(id: string): Promise<Upload | undefined>;
+  getUploadByObjectPath(objectPath: string): Promise<Upload | undefined>;
   deleteUpload(id: string): Promise<void>;
 
   getProperties(): Promise<Property[]>;
@@ -240,7 +241,7 @@ export interface IStorage {
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined>;
   deleteProperty(id: string): Promise<void>;
-  getTasksByProperty(propertyId: string): Promise<Task[]>;
+  getTasksByProperty(propertyId: string, options?: { includeCampusWide?: boolean }): Promise<Task[]>;
 
   getSpaces(): Promise<Space[]>;
   getSpace(id: string): Promise<Space | undefined>;
@@ -248,6 +249,7 @@ export interface IStorage {
   createSpace(space: InsertSpace): Promise<Space>;
   updateSpace(id: string, data: Partial<InsertSpace>): Promise<Space | undefined>;
   deleteSpace(id: string): Promise<void>;
+  countEquipmentInSpace(spaceId: string): Promise<number>;
 
   getEquipment(): Promise<Equipment[]>;
   getEquipmentItem(id: string): Promise<Equipment | undefined>;
@@ -349,6 +351,7 @@ export interface IStorage {
   getNotifications(userId?: string): Promise<Notification[]>;
   getUnreadNotificationCount(userId?: string): Promise<number>;
   hasNotificationForRelatedItem(relatedId: string, type: string): Promise<boolean>;
+  getNotification(id: string): Promise<Notification | undefined>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string): Promise<Notification | undefined>;
   markAllNotificationsRead(userId?: string): Promise<void>;
@@ -363,6 +366,7 @@ export interface IStorage {
   getTasksByProject(projectId: string): Promise<Task[]>;
 
   getProjectComments(projectId: string): Promise<ProjectComment[]>;
+  getProjectComment(id: string): Promise<ProjectComment | undefined>;
   createProjectComment(comment: InsertProjectComment): Promise<ProjectComment>;
   deleteProjectComment(id: string): Promise<void>;
 
@@ -439,7 +443,7 @@ export interface IStorage {
   getResources(filters?: { categoryId?: string; type?: string; folderId?: string | null }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
   getResourceById(id: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] }) | undefined>;
   createResource(data: InsertResource, propertyIds: string[]): Promise<Resource>;
-  updateResource(id: string, data: Partial<InsertResource>, propertyIds: string[]): Promise<Resource | undefined>;
+  updateResource(id: string, data: Partial<InsertResource>, propertyIds?: string[]): Promise<Resource | undefined>;
   deleteResource(id: string): Promise<void>;
   getPropertyResources(propertyId: string): Promise<(Resource & { category: ResourceCategory | null })[]>;
   getEquipmentResources(equipmentId: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
@@ -534,6 +538,7 @@ export class DatabaseStorage implements IStorage {
   createSpace = facilityStorage.createSpace;
   updateSpace = facilityStorage.updateSpace;
   deleteSpace = facilityStorage.deleteSpace;
+  countEquipmentInSpace = facilityStorage.countEquipmentInSpace;
   getEquipment = facilityStorage.getEquipment;
   getEquipmentItem = facilityStorage.getEquipmentItem;
   getEquipmentByProperty = facilityStorage.getEquipmentByProperty;
@@ -662,6 +667,7 @@ export class DatabaseStorage implements IStorage {
   getNotifications = messagingStorage.getNotifications;
   getUnreadNotificationCount = messagingStorage.getUnreadNotificationCount;
   hasNotificationForRelatedItem = messagingStorage.hasNotificationForRelatedItem;
+  getNotification = messagingStorage.getNotification;
   createNotification = messagingStorage.createNotification;
   markNotificationRead = messagingStorage.markNotificationRead;
   markAllNotificationsRead = messagingStorage.markAllNotificationsRead;
@@ -687,6 +693,7 @@ export class DatabaseStorage implements IStorage {
   deleteProject = projectStorage.deleteProject;
   getTasksByProject = projectStorage.getTasksByProject;
   getProjectComments = projectStorage.getProjectComments;
+  getProjectComment = projectStorage.getProjectComment;
   createProjectComment = projectStorage.createProjectComment;
   deleteProjectComment = projectStorage.deleteProjectComment;
   getUploadsByProject = projectStorage.getUploadsByProject;
@@ -716,6 +723,7 @@ export class DatabaseStorage implements IStorage {
   getUploadsByVehicleCheckOutLog = uploadStorage.getUploadsByVehicleCheckOutLog;
   getUploadsByVehicleCheckInLog = uploadStorage.getUploadsByVehicleCheckInLog;
   getUpload = uploadStorage.getUpload;
+  getUploadByObjectPath = uploadStorage.getUploadByObjectPath;
   deleteUpload = uploadStorage.deleteUpload;
   getEmergencyContacts = emergencyContactStorage.getEmergencyContacts;
   getActiveEmergencyContact = emergencyContactStorage.getActiveEmergencyContact;

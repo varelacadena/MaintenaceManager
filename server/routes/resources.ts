@@ -3,6 +3,11 @@ import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin } from "../middleware";
 import { handleRouteError } from "../routeUtils";
+import { handleFacilityRouteError } from "../routeFacilityError";
+import {
+  validatePropertyIdsExist,
+  FacilityValidationError,
+} from "../facilityValidation";
 import { insertResourceSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -133,6 +138,18 @@ export function registerResourceRoutes(app: Express) {
       if (!data.folderId) data.folderId = null;
       if (!data.equipmentId) data.equipmentId = null;
       if (!data.equipmentCategory) data.equipmentCategory = null;
+      if (Array.isArray(propertyIds) && propertyIds.length > 0) {
+        await validatePropertyIdsExist(propertyIds);
+      }
+      if (data.equipmentId) {
+        const equip = await storage.getEquipmentItem(data.equipmentId);
+        if (!equip) {
+          throw new FacilityValidationError("Equipment not found", 404);
+        }
+        if (Array.isArray(propertyIds) && propertyIds.length > 0 && !propertyIds.includes(equip.propertyId)) {
+          throw new FacilityValidationError("Resource property links must include the equipment property");
+        }
+      }
       const user = req.user as any;
       const resource = await storage.createResource(
         { ...data, createdById: user?.id },
@@ -140,27 +157,40 @@ export function registerResourceRoutes(app: Express) {
       );
       res.status(201).json(resource);
     } catch (error) {
-      handleRouteError(res, error, "Failed to create resource");
+      handleFacilityRouteError(res, error, "Failed to create resource");
     }
   });
 
   app.patch("/api/resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { propertyIds = [], ...rawData } = req.body;
+      const hasPropertyIds = Object.prototype.hasOwnProperty.call(req.body, "propertyIds");
+      const { propertyIds, ...rawData } = req.body;
       const data: any = insertResourceSchema.partial().parse(rawData);
       if ("categoryId" in data && !data.categoryId) data.categoryId = null;
       if ("folderId" in data && !data.folderId) data.folderId = null;
       if ("equipmentId" in data && !data.equipmentId) data.equipmentId = null;
       if ("equipmentCategory" in data && !data.equipmentCategory) data.equipmentCategory = null;
+      if (hasPropertyIds && Array.isArray(propertyIds) && propertyIds.length > 0) {
+        await validatePropertyIdsExist(propertyIds);
+      }
+      if (data.equipmentId) {
+        const equip = await storage.getEquipmentItem(data.equipmentId);
+        if (!equip) {
+          throw new FacilityValidationError("Equipment not found", 404);
+        }
+        if (hasPropertyIds && Array.isArray(propertyIds) && propertyIds.length > 0 && !propertyIds.includes(equip.propertyId)) {
+          throw new FacilityValidationError("Resource property links must include the equipment property");
+        }
+      }
       const resource = await storage.updateResource(
         req.params.id,
         data,
-        Array.isArray(propertyIds) ? propertyIds : []
+        hasPropertyIds ? (Array.isArray(propertyIds) ? propertyIds : []) : undefined
       );
       if (!resource) return res.status(404).json({ message: "Resource not found" });
       res.json(resource);
     } catch (error) {
-      handleRouteError(res, error, "Failed to update resource");
+      handleFacilityRouteError(res, error, "Failed to update resource");
     }
   });
 

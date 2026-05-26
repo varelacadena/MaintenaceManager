@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { toDisplayUrl } from "@/lib/imageUtils";
@@ -98,18 +98,34 @@ export function usePropertyDetail() {
   const [equipmentImageUrl, setEquipmentImageUrl] = useState("");
   const [manufacturerImageUrl, setManufacturerImageUrl] = useState("");
   const [pendingEquipmentUploads, setPendingEquipmentUploads] = useState<PendingEquipmentUpload[]>([]);
-  const uploadObjectPathRef = useRef<string>("");
+  const equipmentImagePathRef = useRef<string>("");
+  const manufacturerImagePathRef = useRef<string>("");
+  const [activeTab, setActiveTab] = useState<string>("equipment");
 
-  const { data: property, isLoading } = useQuery<Property>({
+  const {
+    data: property,
+    isLoading,
+    isError: isPropertyError,
+    error: propertyError,
+    refetch: refetchProperty,
+  } = useQuery<Property>({
     queryKey: ["/api/properties", id],
   });
 
-  const { data: equipment = [] } = useQuery<Equipment[]>({
+  const {
+    data: equipment = [],
+    isError: isEquipmentError,
+    refetch: refetchEquipment,
+  } = useQuery<Equipment[]>({
     queryKey: [`/api/equipment?propertyId=${id}`],
     enabled: !!id,
   });
 
-  const { data: tasks = [] } = useQuery<Task[]>({
+  const {
+    data: tasks = [],
+    isError: isTasksError,
+    refetch: refetchTasks,
+  } = useQuery<Task[]>({
     queryKey: ["/api/properties", id, "tasks"],
     enabled: !!id,
   });
@@ -126,7 +142,23 @@ export function usePropertyDetail() {
 
   const isBuilding = property?.type === "building";
 
-  const { data: spaces = [] } = useQuery<Space[]>({
+  useEffect(() => {
+    if (property) {
+      setActiveTab(property.type === "building" ? "spaces" : "equipment");
+    }
+  }, [property?.id]);
+
+  useEffect(() => {
+    if (!isBuilding && activeTab === "spaces") {
+      setActiveTab("equipment");
+    }
+  }, [isBuilding, activeTab]);
+
+  const {
+    data: spaces = [],
+    isError: isSpacesError,
+    refetch: refetchSpaces,
+  } = useQuery<Space[]>({
     queryKey: ["/api/spaces", id],
     enabled: !!id && isBuilding,
     queryFn: async () => {
@@ -171,13 +203,7 @@ export function usePropertyDetail() {
 
   const createSpaceMutation = useMutation({
     mutationFn: async (data: SpaceFormData) => {
-      const res = await fetch("/api/spaces", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await apiRequest("POST", "/api/spaces", data);
       return res.json();
     },
     onSuccess: () => {
@@ -225,18 +251,12 @@ export function usePropertyDetail() {
 
   const createEquipmentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      const res = await fetch("/api/equipment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await apiRequest("POST", "/api/equipment", data);
       return res.json();
     },
-    onSuccess: (newEquipment: Equipment) => {
+    onSuccess: async (newEquipment: Equipment) => {
       if (pendingEquipmentUploads.length > 0) {
-        Promise.allSettled(
+        const results = await Promise.allSettled(
           pendingEquipmentUploads.map((upload) =>
             apiRequest("POST", "/api/uploads", {
               equipmentId: newEquipment.id,
@@ -247,9 +267,16 @@ export function usePropertyDetail() {
               label: upload.label,
             })
           )
-        ).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/equipment", newEquipment.id, "uploads"] });
-        });
+        );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        if (failed > 0) {
+          toast({
+            title: "Some attachments failed",
+            description: `${failed} file(s) could not be registered. Re-open the equipment to retry.`,
+            variant: "destructive",
+          });
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/equipment", newEquipment.id, "uploads"] });
       }
       queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties", id] });
@@ -258,7 +285,8 @@ export function usePropertyDetail() {
       setEquipmentImageUrl("");
       setManufacturerImageUrl("");
       setPendingEquipmentUploads([]);
-      uploadObjectPathRef.current = "";
+      equipmentImagePathRef.current = "";
+      manufacturerImagePathRef.current = "";
       toast({ title: "Success", description: "Equipment added successfully" });
       setQrEquipment(newEquipment);
       setIsQrDialogOpen(true);
@@ -272,9 +300,9 @@ export function usePropertyDetail() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEquipment> }) => {
       return await apiRequest("PATCH", `/api/equipment/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       if (editingEquipment && pendingEquipmentUploads.length > 0) {
-        Promise.allSettled(
+        const results = await Promise.allSettled(
           pendingEquipmentUploads.map((upload) =>
             apiRequest("POST", "/api/uploads", {
               equipmentId: editingEquipment.id,
@@ -285,17 +313,26 @@ export function usePropertyDetail() {
               label: upload.label,
             })
           )
-        ).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/equipment", editingEquipment.id, "uploads"] });
-        });
+        );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        if (failed > 0) {
+          toast({
+            title: "Some attachments failed",
+            description: `${failed} file(s) could not be registered.`,
+            variant: "destructive",
+          });
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/equipment", editingEquipment.id, "uploads"] });
       }
       queryClient.invalidateQueries({ queryKey: [`/api/equipment?propertyId=${id}`] });
       toast({ title: "Success", description: "Equipment updated successfully" });
+      setIsCreateDialogOpen(false);
       setEditingEquipment(null);
       setEquipmentImageUrl("");
       setManufacturerImageUrl("");
       setPendingEquipmentUploads([]);
-      uploadObjectPathRef.current = "";
+      equipmentImagePathRef.current = "";
+      manufacturerImagePathRef.current = "";
       form.reset({ propertyId: id });
     },
     onError: (error: any) => {
@@ -369,9 +406,19 @@ export function usePropertyDetail() {
   };
 
   const handleDeleteSpace = (spaceId: string) => {
-    if (confirm("Are you sure you want to delete this space? This will also affect any equipment assigned to it.")) {
+    const count = equipment.filter((e) => e.spaceId === spaceId).length;
+    const message =
+      count > 0
+        ? `Delete this space? ${count} equipment item(s) will be moved to property-wide (not deleted).`
+        : "Are you sure you want to delete this space?";
+    if (confirm(message)) {
       deleteSpaceMutation.mutate(spaceId);
     }
+  };
+
+  const handleSelectSpace = (spaceId: string) => {
+    setSelectedSpaceId((current) => (current === spaceId ? null : spaceId));
+    setActiveTab("equipment");
   };
 
   const handleEditProperty = () => {
@@ -390,7 +437,8 @@ export function usePropertyDetail() {
     setEquipmentImageUrl("");
     setManufacturerImageUrl("");
     setPendingEquipmentUploads([]);
-    uploadObjectPathRef.current = "";
+    equipmentImagePathRef.current = "";
+    manufacturerImagePathRef.current = "";
     form.reset({
       propertyId: id || "",
       name: "",
@@ -412,7 +460,8 @@ export function usePropertyDetail() {
     setEquipmentImageUrl(toDisplayUrl(item.imageUrl));
     setManufacturerImageUrl(toDisplayUrl((item as any).manufacturerImageUrl));
     setPendingEquipmentUploads([]);
-    uploadObjectPathRef.current = "";
+    equipmentImagePathRef.current = "";
+    manufacturerImagePathRef.current = "";
     form.reset({
       propertyId: item.propertyId,
       name: item.name,
@@ -474,7 +523,7 @@ export function usePropertyDetail() {
       )
     : tasks;
 
-  const canEdit = user?.role === "admin" || user?.role === "technician";
+  const canEdit = user?.role === "admin";
   const openTaskCount = tasks.filter((t) => t.status !== "completed").length;
 
   return {
@@ -497,8 +546,15 @@ export function usePropertyDetail() {
     equipmentImageUrl, setEquipmentImageUrl,
     manufacturerImageUrl, setManufacturerImageUrl,
     pendingEquipmentUploads, setPendingEquipmentUploads,
-    uploadObjectPathRef,
-    property, isLoading,
+    equipmentImagePathRef,
+    manufacturerImagePathRef,
+    activeTab,
+    setActiveTab,
+    handleSelectSpace,
+    property, isLoading, isPropertyError, propertyError, refetchProperty,
+    isEquipmentError, refetchEquipment,
+    isTasksError, refetchTasks,
+    isSpacesError, refetchSpaces,
     equipment, tasks, users, spaces,
     isBuilding, canEdit, openTaskCount,
     form, propertyForm, spaceForm,

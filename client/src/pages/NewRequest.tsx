@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -38,6 +38,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import {
+  getSignedUploadParameters,
+  mapUploaderResultToPending,
+} from "@/lib/uploadUtils";
 
 const categories = [
   "HVAC",
@@ -73,11 +77,16 @@ export default function NewRequest() {
     fileName: string;
     url: string;
     objectUrl: string;
+    objectPath?: string;
     type: string;
     size: number;
   }>>([]);
 
-  const { data: properties = [] } = useQuery<Property[]>({
+  const {
+    data: properties = [],
+    isLoading: isPropertiesLoading,
+    isError: isPropertiesError,
+  } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
 
@@ -103,10 +112,16 @@ export default function NewRequest() {
       category: "",
       urgency: "medium",
       requestedDate: new Date().toISOString().split("T")[0],
-      requesterId: "",
+      requesterId: user?.id || "",
       spaceId: "",
     },
   });
+
+  useEffect(() => {
+    if (user?.id) {
+      form.setValue("requesterId", user.id);
+    }
+  }, [form, user?.id]);
 
   const createRequestMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -119,6 +134,7 @@ export default function NewRequest() {
 
       // Upload all pending attachments with proper field mapping
       if (pendingAttachments.length > 0) {
+        let failedAttachments = 0;
         for (const attachment of pendingAttachments) {
           try {
             await apiRequest("POST", "/api/uploads", {
@@ -126,11 +142,19 @@ export default function NewRequest() {
               fileName: attachment.fileName || attachment.name,
               fileType: attachment.type || "application/octet-stream",
               objectUrl: attachment.objectUrl || attachment.url,
+              objectPath: attachment.objectPath,
             });
           } catch (error) {
             console.error("Error uploading attachment:", error);
-            // Continue with other attachments even if one fails
+            failedAttachments += 1;
           }
+        }
+        if (failedAttachments > 0) {
+          toast({
+            title: "Some attachments failed",
+            description: `${failedAttachments} file(s) could not be attached to the request.`,
+            variant: "destructive",
+          });
         }
       }
 
@@ -159,36 +183,20 @@ export default function NewRequest() {
     createRequestMutation.mutate(data);
   };
 
-  const getUploadParameters = async () => {
-    const response = await fetch("/api/objects/upload", {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
-      throw new Error(error.message || "Failed to get upload URL");
-    }
-
-    const { uploadURL, isMock, warning } = await response.json();
-
-    if (warning) {
-      console.warn(warning);
-    }
-
-    return { method: "PUT" as const, url: uploadURL };
-  };
-
   const handleFileUpload = async (result: any) => {
     if (result.successful?.length > 0) {
-      const newAttachments = result.successful.map((file: any) => ({
-        name: file.file?.name || file.name || file.fileName || "Unknown File",
-        fileName: file.file?.name || file.name || file.fileName || "Unknown File",
-        url: file.url || file.objectUrl || file.uploadURL,
-        objectUrl: file.url || file.objectUrl || file.uploadURL,
-        type: file.file?.type || file.type || "application/octet-stream",
-        size: file.file?.size || file.size || 0,
-      }));
+      const newAttachments = result.successful.map((file: any) => {
+        const pending = mapUploaderResultToPending(file);
+        return {
+          name: file.file?.name || file.name || file.fileName || "Unknown File",
+          fileName: pending.fileName,
+          url: pending.objectUrl,
+          objectUrl: pending.objectUrl,
+          objectPath: pending.objectPath,
+          type: file.file?.type || file.type || "application/octet-stream",
+          size: file.file?.size || file.size || 0,
+        };
+      });
 
       setPendingAttachments((prev) => [...prev, ...newAttachments]);
 
@@ -338,10 +346,19 @@ export default function NewRequest() {
                       form.setValue("spaceId", "");
                     }}
                     value={field.value || undefined}
+                    disabled={isPropertiesLoading || isPropertiesError}
                   >
                     <FormControl>
                       <SelectTrigger data-testid="select-property">
-                        <SelectValue placeholder="Select property" />
+                        <SelectValue
+                          placeholder={
+                            isPropertiesLoading
+                              ? "Loading properties..."
+                              : isPropertiesError
+                              ? "Could not load properties"
+                              : "Select property"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -443,7 +460,7 @@ export default function NewRequest() {
                 <ObjectUploader
                   maxNumberOfFiles={10}
                   maxFileSize={10485760}
-                  onGetUploadParameters={getUploadParameters}
+                  onGetUploadParameters={getSignedUploadParameters}
                   onComplete={handleFileUpload}
                   onError={(error) => {
                     toast({

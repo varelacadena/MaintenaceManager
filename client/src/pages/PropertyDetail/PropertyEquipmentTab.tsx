@@ -67,6 +67,16 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
     categories, filteredEquipment, groupedEquipment,
     openCreateEquipmentDialog, handleEditEquipment, handleDeleteEquipment,
   } = ctx;
+  const selectedSpaceName = selectedSpaceId
+    ? spaces.find((space) => space.id === selectedSpaceId)?.name
+    : null;
+  const emptyMessage = equipmentSearch
+    ? "No equipment matches your search"
+    : selectedSpaceName
+    ? `No equipment assigned to ${selectedSpaceName}`
+    : selectedCategory
+    ? "No equipment in this category"
+    : "No equipment has been added yet";
 
   return (
     <>
@@ -131,7 +141,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                 data-testid={`filter-${cat}`}
               >
                 <Icon className="w-3 h-3" />
-                {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+                {EQUIPMENT_CATEGORIES.find(c => c.slug === cat.toLowerCase())?.label ?? cat} ({count})
               </Badge>
             );
           })}
@@ -142,7 +152,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
         {filteredEquipment.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Wrench className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">{equipmentSearch ? "No equipment matches your search" : "No equipment in this category"}</p>
+            <p className="text-sm">{emptyMessage}</p>
             {canEdit && !equipmentSearch && (
               <Button
                 variant="ghost"

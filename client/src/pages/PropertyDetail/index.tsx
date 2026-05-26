@@ -30,8 +30,13 @@ export default function PropertyDetail() {
   const ctx = usePropertyDetail();
   const {
     property, isLoading,
+    isPropertyError, propertyError, refetchProperty,
+    isEquipmentError, refetchEquipment,
+    isTasksError, refetchTasks,
+    isSpacesError, refetchSpaces,
     equipment, tasks, spaces,
     isBuilding, canEdit, openTaskCount,
+    activeTab, setActiveTab,
     summaryTaskId, setSummaryTaskId,
     handleEditProperty,
     id,
@@ -41,6 +46,20 @@ export default function PropertyDetail() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-muted-foreground">Loading property...</div>
+      </div>
+    );
+  }
+
+  if (isPropertyError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
+        <div className="text-destructive font-medium">Could not load property</div>
+        <div className="text-sm text-muted-foreground">
+          {(propertyError as Error)?.message || "Please try again."}
+        </div>
+        <Button variant="outline" onClick={() => refetchProperty()}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -92,7 +111,7 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      <Tabs defaultValue={isBuilding ? "spaces" : "equipment"} className="flex-1 flex flex-col min-h-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="w-full overflow-x-auto flex-shrink-0">
           {isBuilding && (
             <TabsTrigger value="spaces" data-testid="tab-spaces" className="text-xs md:text-sm">
@@ -120,26 +139,48 @@ export default function PropertyDetail() {
 
         {isBuilding && (
           <TabsContent value="spaces" className="flex flex-col min-h-0 mt-2">
-            <PropertySpacesTab ctx={ctx} />
+            {isSpacesError ? (
+              <TabError message="Could not load spaces" onRetry={() => refetchSpaces()} />
+            ) : (
+              <PropertySpacesTab ctx={ctx} />
+            )}
           </TabsContent>
         )}
 
         <TabsContent value="equipment" className="flex flex-col min-h-0 mt-2">
-          <PropertyEquipmentTab ctx={ctx} />
+          {isEquipmentError ? (
+            <TabError message="Could not load equipment" onRetry={() => refetchEquipment()} />
+          ) : (
+            <PropertyEquipmentTab ctx={ctx} />
+          )}
         </TabsContent>
 
         <TabsContent value="work-history" className="flex flex-col min-h-0 mt-2">
-          <PropertyWorkHistoryTab ctx={ctx} />
+          {isTasksError ? (
+            <TabError message="Could not load work history" onRetry={() => refetchTasks()} />
+          ) : (
+            <PropertyWorkHistoryTab ctx={ctx} />
+          )}
         </TabsContent>
 
         <TabsContent value="location" className="min-h-0 mt-2">
           <Card className="relative z-0 h-full" style={{ minHeight: "400px" }}>
             <CardContent className="p-0 h-full">
-              <PropertyMap
-                properties={[property]}
-                selectedPropertyId={property.id}
-                editable={false}
-              />
+              {property.coordinates ? (
+                <PropertyMap
+                  properties={[property]}
+                  selectedPropertyId={property.id}
+                  editable={false}
+                />
+              ) : (
+                <div className="h-full min-h-[400px] flex items-center justify-center text-center text-muted-foreground p-6">
+                  <div>
+                    <Map className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                    <p className="font-medium">No map location set</p>
+                    {canEdit && <p className="text-sm mt-1">Use the Properties map to draw this property location.</p>}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -156,6 +197,17 @@ export default function PropertyDetail() {
       />
 
       <PropertyDialogs ctx={ctx} />
+    </div>
+  );
+}
+
+function TabError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="text-center py-8 text-destructive">
+      <p className="font-medium">{message}</p>
+      <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+        Retry
+      </Button>
     </div>
   );
 }
