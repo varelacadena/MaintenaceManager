@@ -37,6 +37,8 @@ export interface InspectionStepProps {
   setCleanlinessViolationAck: VehicleCheckInContext["setCleanlinessViolationAck"];
   ciHasIssues: boolean | null;
   setCiHasIssues: VehicleCheckInContext["setCiHasIssues"];
+  ciIssueCategory: string;
+  setCiIssueCategory: VehicleCheckInContext["setCiIssueCategory"];
   ciIssues: string;
   setCiIssues: VehicleCheckInContext["setCiIssues"];
   dashPhoto: PhotoFile | null;

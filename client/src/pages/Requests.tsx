@@ -38,6 +38,8 @@ import {
 } from "@/lib/serviceRequestLabels";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import EmptyState from "@/components/dashboard/EmptyState";
+import { getServiceRequestNumber } from "@shared/recordNumbers";
+import { getUserDisplayName } from "@/utils/taskUtils";
 
 export default function Requests() {
   const [, navigate] = useLocation();
@@ -104,11 +106,10 @@ export default function Requests() {
   const getRequesterName = (requesterId: string) => {
     if (users?.length) {
       const requester = users.find((u: any) => u.id === requesterId);
-      if (requester) return `${requester.firstName} ${requester.lastName}`;
+      if (requester) return getUserDisplayName(requester);
     }
     if (requesters[requesterId]) {
-      const r = requesters[requesterId];
-      return `${r.firstName} ${r.lastName}`;
+      return getUserDisplayName(requesters[requesterId]);
     }
     return "Unknown";
   };
@@ -123,8 +124,10 @@ export default function Requests() {
     const query = searchQuery.toLowerCase();
     const requesterName = getRequesterName(request.requesterId).toLowerCase();
     const propertyName = getPropertyName(request.propertyId).toLowerCase();
+    const requestNumber = getServiceRequestNumber(request).toLowerCase();
     const matchesSearch =
       request.id.toLowerCase().includes(query) ||
+      requestNumber.includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
@@ -288,7 +291,7 @@ export default function Requests() {
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{request.title}</p>
                     <p className="text-xs text-muted-foreground" data-testid={`text-requester-${request.id}`}>
-                      {getRequesterName(request.requesterId)}
+                      Request {getServiceRequestNumber(request)} · {getRequesterName(request.requesterId)}
                     </p>
                   </div>
                   <Badge
@@ -317,6 +320,7 @@ export default function Requests() {
               <table className="w-full">
                 <thead className="bg-muted/30 border-b border-border/50">
                   <tr>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Request #</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Requester</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Title</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property</th>
@@ -333,6 +337,9 @@ export default function Requests() {
                       className="border-b border-border/40 hover-elevate transition-all duration-150"
                       data-testid={`card-request-${request.id}`}
                     >
+                      <td className="px-6 py-5">
+                        <div className="font-mono text-sm font-medium">{getServiceRequestNumber(request)}</div>
+                      </td>
                       <td className="px-6 py-5">
                         <div className="font-medium text-sm" data-testid={`text-requester-${request.id}`}>
                           {getRequesterName(request.requesterId)}

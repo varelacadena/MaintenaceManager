@@ -297,7 +297,7 @@ export default function AnalyticsFilters({
             <ChevronDown className="w-3 h-3 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-3" align="start">
+        <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3" align="start">
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               {datePresets.map((preset) => (
@@ -361,7 +361,7 @@ export default function AnalyticsFilters({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-3" align="start">
+        <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] p-3" align="start">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Filters</span>
@@ -519,7 +519,7 @@ export default function AnalyticsFilters({
               <ChevronDown className="w-3 h-3 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" align="end">
+          <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2" align="end">
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground px-2 py-1">Uses your active filters</p>
               {exportOptions.includes("xlsx") && (

@@ -30,6 +30,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import type { RequestDetailHookReturn } from "./useRequestDetail";
+import { getServiceRequestNumber } from "@shared/recordNumbers";
+import { getUserDisplayName } from "@/utils/taskUtils";
 
 type RequestDetailMobileProps = Pick<
   RequestDetailHookReturn,
@@ -219,7 +221,7 @@ export function RequestDetailMobile({
               <div className="bg-card rounded-lg border p-3 space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Request ID</span>
-                  <span className="font-mono text-xs" data-testid="text-request-id">#{request.id.substring(0, 8)}</span>
+                  <span className="font-mono text-xs" data-testid="text-request-id">{getServiceRequestNumber(request)}</span>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
@@ -254,7 +256,7 @@ export function RequestDetailMobile({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate" data-testid="text-requester-name">
-                            {requester.firstName} {requester.lastName}
+                            {getUserDisplayName(requester)}
                           </p>
                           {requester.email && (
                             <p className="text-xs text-muted-foreground truncate" data-testid="text-requester-email">

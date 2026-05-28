@@ -13,10 +13,11 @@ import {
   type Step,
   type VehicleCheckOutContext,
 } from "./useVehicleCheckOut";
+import { exitTo } from "@/lib/navigation";
 
 export function FuelLevelSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {FUEL_OPTIONS.map((opt) => {
         const isSelected = value === opt.value;
         const isLow = opt.value === "empty" || opt.value === "1/4";
@@ -170,7 +171,7 @@ export function AdvisoryPreAcceptStep({ ctx }: { ctx: VehicleCheckOutContext }) 
             <Check className="h-4 w-4 mr-2" />
             {acceptAdvisoryMutation.isPending ? "Processing..." : "I Accept & Continue"}
           </Button>
-          <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="w-full">
+          <Button variant="outline" onClick={() => exitTo(setLocation, "/my-reservations")} className="w-full">
             Cancel — Return to My Reservations
           </Button>
         </div>
@@ -251,7 +252,7 @@ export function AdvisoryKeyRevealStep({ ctx }: { ctx: VehicleCheckOutContext }) 
           </div>
         )}
         <Button
-          onClick={() => { setAdvisoryJustAccepted(false); advanceStep("safety"); }}
+          onClick={() => { setAdvisoryJustAccepted(false); advanceStep("responsibility"); }}
           className="w-full"
           disabled={codeLoading || (!!reservation?.lockboxId && codeError)}
           data-testid="button-have-keys-continue"
@@ -305,7 +306,7 @@ export function SafetyStep({ ctx }: { ctx: VehicleCheckOutContext }) {
           </Button>
           <Button
             variant="outline"
-            onClick={() => advisoryAccepted ? setLocation("/my-reservations") : goBackStep("advisory")}
+            onClick={() => advisoryAccepted ? exitTo(setLocation, "/my-reservations") : goBackStep("advisory")}
             className="w-full"
           >
             Back
@@ -318,6 +319,7 @@ export function SafetyStep({ ctx }: { ctx: VehicleCheckOutContext }) {
 
 export function ResponsibilityStep({ ctx }: { ctx: VehicleCheckOutContext }) {
   const {
+    safetyChecked, setSafetyChecked,
     fuelChecked, setFuelChecked, cleanlinessChecked, setCleanlinessChecked,
     setCheckoutSubStep, advanceStep, goBackStep,
   } = ctx;
@@ -329,11 +331,28 @@ export function ResponsibilityStep({ ctx }: { ctx: VehicleCheckOutContext }) {
             <ClipboardCheck className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
-        <CardTitle className="text-xl">Your Responsibilities</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">Confirm you understand your obligations.</p>
+        <CardTitle className="text-xl">Before You Drive</CardTitle>
+        <p className="text-sm text-muted-foreground mt-1">One final confirmation before recording the vehicle condition.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
+          <div className="bg-muted/50 border rounded-md p-4">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="safety-check"
+                checked={safetyChecked}
+                onCheckedChange={(v) => setSafetyChecked(v === true)}
+                data-testid="checkbox-safety"
+              />
+              <label htmlFor="safety-check" className="text-sm leading-relaxed cursor-pointer">
+                <span className="font-semibold flex items-center gap-1 mb-1">
+                  <Lock className="h-4 w-4 text-primary" />
+                  Checkout First
+                </span>
+                I will not operate or move the vehicle until checkout is fully completed and logged.
+              </label>
+            </div>
+          </div>
           <div className="bg-muted/50 border rounded-md p-4">
             <div className="flex items-start gap-3">
               <Checkbox
@@ -373,13 +392,13 @@ export function ResponsibilityStep({ ctx }: { ctx: VehicleCheckOutContext }) {
         <div className="flex flex-col gap-2 pt-2">
           <Button
             onClick={() => { setCheckoutSubStep("mileage"); advanceStep("checkout"); }}
-            disabled={!fuelChecked || !cleanlinessChecked}
+            disabled={!safetyChecked || !fuelChecked || !cleanlinessChecked}
             className="w-full"
             data-testid="button-responsibility-continue"
           >
             I Understand — Continue to Checkout
           </Button>
-          <Button variant="outline" onClick={() => goBackStep("safety")} className="w-full">Back</Button>
+          <Button variant="outline" onClick={() => goBackStep("advisory")} className="w-full">Back</Button>
         </div>
       </CardContent>
     </Card>

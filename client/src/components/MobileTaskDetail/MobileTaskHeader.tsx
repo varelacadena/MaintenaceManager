@@ -4,14 +4,14 @@ import { statusDotColors, statusPillStyles, statusLabels, priorityColors } from 
 
 interface MobileTaskHeaderProps {
   task: Task;
-  navigate: (path: string) => void;
+  navigate: (path: string, options?: { replace?: boolean }) => void;
 }
 
 export function MobileTaskHeader({ task, navigate }: MobileTaskHeaderProps) {
   return (
     <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #EEEEEE" }}>
       <button
-        onClick={() => navigate("/work")}
+        onClick={() => navigate("/work", { replace: true })}
         className="p-1"
         data-testid="button-back"
         aria-label="Back to work"

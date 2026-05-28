@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface ObjectUploaderProps {
@@ -36,6 +37,11 @@ export function ObjectUploader({
   children,
 }: ObjectUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    current: 0,
+    total: 0,
+  });
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -43,9 +49,22 @@ export function ObjectUploader({
 
     const successful = [];
     const failed = [];
+    const selectedFiles = Array.from(files).slice(0, maxNumberOfFiles);
 
-    for (let i = 0; i < Math.min(files.length, maxNumberOfFiles); i++) {
-      const file = files[i];
+    setUploadState({
+      isUploading: true,
+      current: 0,
+      total: selectedFiles.length,
+    });
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+
+      setUploadState({
+        isUploading: true,
+        current: i + 1,
+        total: selectedFiles.length,
+      });
 
       if (file.size > maxFileSize) {
         failed.push({
@@ -120,7 +139,19 @@ export function ObjectUploader({
     if (onComplete) {
       onComplete({ successful, failed });
     }
+
+    setUploadState({
+      isUploading: false,
+      current: 0,
+      total: 0,
+    });
   };
+
+  const isBusy = isLoading || uploadState.isUploading;
+  const uploadLabel =
+    uploadState.total > 1
+      ? `Uploading ${uploadState.current} of ${uploadState.total}...`
+      : "Uploading...";
 
   return (
     <div>
@@ -135,12 +166,19 @@ export function ObjectUploader({
       <Button
         type="button"
         variant={buttonVariant ?? "default"}
-        onClick={() => !isLoading && fileInputRef.current?.click()}
-        className={buttonClassName}
+        onClick={() => !isBusy && fileInputRef.current?.click()}
+        className={cn("w-full sm:w-auto min-h-10", buttonClassName)}
         data-testid={buttonTestId ?? "button-upload"}
-        disabled={isLoading}
+        disabled={isBusy}
       >
-        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : children}
+        {isBusy ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            {uploadState.isUploading ? uploadLabel : "Loading..."}
+          </>
+        ) : (
+          children
+        )}
       </Button>
     </div>
   );

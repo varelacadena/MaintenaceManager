@@ -280,7 +280,7 @@ export default function NotificationsWidget() {
         {triggerButton}
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0"
+        className="w-[min(20rem,calc(100vw-2rem))] p-0"
         align="end"
         data-testid="notifications-panel"
       >

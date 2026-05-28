@@ -486,7 +486,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", task.projectId, "tasks"] });
       }
       toast({ title: "Task deleted" });
-      navigate("/work");
+      navigate("/work", { replace: true });
     },
     onError: () => toast({ title: "Failed to delete task", variant: "destructive" }),
   });

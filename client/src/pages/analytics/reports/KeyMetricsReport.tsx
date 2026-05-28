@@ -93,7 +93,7 @@ export default function KeyMetricsReport() {
         <span className="text-muted-foreground">Click a metric to drill down</span>
       </p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         <MetricCard
           testId="metric-open-tasks"
           icon={ClipboardList}

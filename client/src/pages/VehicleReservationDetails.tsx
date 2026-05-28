@@ -35,6 +35,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { getVehicleReservationNumber } from "@shared/recordNumbers";
+import { getCheckoutOpenTime, isCheckoutWindowOpen } from "@shared/fleetReservationPolicy";
 
 export default function VehicleReservationDetails() {
   const { reservationId } = useParams();
@@ -59,7 +61,7 @@ export default function VehicleReservationDetails() {
 
   useEffect(() => {
     if (!reservation?.startDate) return;
-    const check = () => new Date() >= new Date(new Date(reservation.startDate).getTime() - 60 * 60 * 1000);
+    const check = () => isCheckoutWindowOpen(reservation.startDate);
     setIsTimeAvailable(check());
     if (check()) return;
     const interval = setInterval(() => {
@@ -113,7 +115,7 @@ export default function VehicleReservationDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/vehicle-reservations/${reservationId}`] });
       toast({ title: "Reservation Cancelled", description: "The reservation has been successfully cancelled." });
-      setLocation("/my-reservations");
+      setLocation("/my-reservations", { replace: true });
     },
     onError: (error: Error) => {
       toast({ title: "Cancellation Failed", description: error.message || "An error occurred.", variant: "destructive" });
@@ -220,7 +222,7 @@ export default function VehicleReservationDetails() {
   const isCheckoutComplete = reservation.status === "active" || reservation.status === "pending_review" || reservation.status === "completed";
   const hasVehicle = !!vehicle;
 
-  const isUnblurred = isAdmin || safetyAcknowledged || reservation.advisoryAccepted || isCheckoutComplete;
+  const isUnblurred = isAdmin || isCheckoutComplete || (isApproved && isTimeAvailable && (safetyAcknowledged || reservation.advisoryAccepted));
 
   const checkoutLocked = isApproved && !isTimeAvailable && !isAdmin;
   const showKeyPickup = hasVehicle && !!reservation.keyPickupMethod;
@@ -235,7 +237,9 @@ export default function VehicleReservationDetails() {
           <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
             Reservation Details
           </h2>
-          <p className="text-muted-foreground mt-0.5">{reservation.purpose}</p>
+          <p className="text-muted-foreground mt-0.5">
+            Reservation {getVehicleReservationNumber(reservation)} · {reservation.purpose}
+          </p>
         </div>
         <Badge variant={getStatusColor(reservation.status)} className="text-sm" data-testid="badge-status">
           {formatStatusLabel(reservation.status)}
@@ -253,9 +257,9 @@ export default function VehicleReservationDetails() {
               <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5">
                 You can begin checkout on{" "}
                 <span className="font-semibold">
-                  {format(new Date(reservation.startDate), "EEEE, MMM d 'at' h:mm a")}
+                  {format(getCheckoutOpenTime(reservation.startDate), "EEEE, MMM d 'at' h:mm a")}
                 </span>
-                . Come back then to pick up your key and start the checkout process.
+                . Come back then to view pickup instructions and start the checkout process.
               </p>
             </div>
           </div>
@@ -387,10 +391,11 @@ export default function VehicleReservationDetails() {
                 variant="default"
                 size="lg"
                 className="shadow-lg"
+                disabled={!isAdmin && isApproved && !isTimeAvailable}
                 data-testid="button-view-key-pickup"
               >
                 <Lock className="h-4 w-4 mr-2" />
-                View Key Pickup Instructions
+                {isApproved && !isTimeAvailable ? "Pickup Instructions Locked" : "View Key Pickup Instructions"}
               </Button>
             </div>
           )}
@@ -473,7 +478,7 @@ export default function VehicleReservationDetails() {
                 </Button>
                 <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1" data-testid="text-checkout-unlock-time">
                   <Lock className="h-3 w-3" />
-                  Checkout opens {format(new Date(new Date(reservation.startDate).getTime() - 60 * 60 * 1000), "MMM d 'at' h:mm a")}
+                  Checkout opens {format(getCheckoutOpenTime(reservation.startDate), "MMM d 'at' h:mm a")}
                 </p>
               </>
             )}

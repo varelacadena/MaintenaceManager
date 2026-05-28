@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Hand, MapPin, Clock, RefreshCw, Inbox, Loader2 } from "lucide-react";
+import { Hand, MapPin, Clock, RefreshCw, Inbox, Loader2, Wrench, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { urgencyBadgeStyles, statusBadgeStyles, statusLabels } from "@/utils/taskUtils";
@@ -46,7 +46,7 @@ export default function GrabAJob() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/available"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/available/count"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      navigate(`/tasks/${claimedTask.id}`);
+      navigate(`/tasks/${claimedTask.id}`, { replace: true });
     },
     onError: (error: Error) => {
       setConfirmTask(null);
@@ -74,6 +74,14 @@ export default function GrabAJob() {
     if (isNaN(d.getTime())) return "";
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+
+  function getIssueSummary(task: Task): string {
+    return (task.description || "")
+      .replace(/^Issues reported by user at check-in:\s*/i, "")
+      .replace(/^Issues confirmed from vehicle check-in:\s*/i, "")
+      .split("Check-in log ID:")[0]
+      .trim();
   }
 
   if (isLoading) {
@@ -137,63 +145,78 @@ export default function GrabAJob() {
           </Button>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-          {tasks.map((task) => (
-            <Card
-              key={task.id}
-              className="hover-elevate"
-              data-testid={`card-available-task-${task.id}`}
-            >
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-sm leading-snug mb-2" data-testid={`text-task-name-${task.id}`}>
-                  {task.name}
-                </h3>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="mx-auto max-w-3xl space-y-3">
+            {tasks.map((task) => {
+              const issueSummary = getIssueSummary(task);
 
-                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                  <Badge variant="outline" className={`text-xs ${urgencyBadgeStyles[task.urgency]}`}>
-                    {task.urgency.charAt(0).toUpperCase() + task.urgency.slice(1)}
-                  </Badge>
-                  <Badge variant="outline" className={`text-xs ${statusBadgeStyles[task.status]}`}>
-                    {statusLabels[task.status] || task.status.replace("_", " ")}
-                  </Badge>
-                  {task.executorType && (
-                    <Badge variant="outline" className="text-xs">
-                      {task.executorType === "student" ? "Student" : "Technician"}
-                    </Badge>
-                  )}
-                </div>
-
-                {task.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                    {task.description}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mb-3">
-                  {(task as any).propertyName && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{(task as any).propertyName}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>Submitted {formatDate(task.createdAt)}</span>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full"
-                  variant="default"
-                  onClick={() => setConfirmTask(task)}
-                  data-testid={`button-grab-${task.id}`}
+              return (
+                <Card
+                  key={task.id}
+                  className="border-border/70 shadow-sm hover-elevate"
+                  data-testid={`card-available-task-${task.id}`}
                 >
-                  <Hand className="w-4 h-4 mr-2" />
-                  Grab This Job
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <CardContent className="p-4 sm:p-5 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Wrench className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <h3 className="text-base font-semibold leading-snug" data-testid={`text-task-name-${task.id}`}>
+                            {task.name}
+                          </h3>
+                          <div className="flex shrink-0 items-center gap-1.5 flex-wrap">
+                            <Badge variant="outline" className={`text-xs ${urgencyBadgeStyles[task.urgency]}`}>
+                              {task.urgency.charAt(0).toUpperCase() + task.urgency.slice(1)}
+                            </Badge>
+                            <Badge variant="outline" className={`text-xs ${statusBadgeStyles[task.status]}`}>
+                              {statusLabels[task.status] || task.status.replace("_", " ")}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {task.executorType === "student" ? "Student pool" : "Technician pool"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {issueSummary && (
+                      <div className="rounded-lg border bg-muted/40 p-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reported issue</p>
+                        <p className="mt-1 text-sm leading-relaxed text-foreground">{issueSummary}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        {(task as any).propertyName && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5" />
+                            <span>{(task as any).propertyName}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>Submitted {formatDate(task.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        className="w-full sm:w-auto sm:min-w-40"
+                        variant="default"
+                        onClick={() => setConfirmTask(task)}
+                        data-testid={`button-grab-${task.id}`}
+                      >
+                        Grab job
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -221,6 +244,11 @@ export default function GrabAJob() {
                   {confirmTask.urgency.charAt(0).toUpperCase() + confirmTask.urgency.slice(1)}
                 </Badge>
               </div>
+              {getIssueSummary(confirmTask) && (
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {getIssueSummary(confirmTask)}
+                </p>
+              )}
             </div>
           )}
 

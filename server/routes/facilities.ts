@@ -455,16 +455,18 @@ export function registerFacilityRoutes(app: Express) {
       const lockboxId = req.params.lockboxId;
 
       if (user.role !== "admin") {
-        const reservations = await storage.getVehicleReservations();
+        const reservationId = req.body?.reservationId;
+        if (!reservationId) {
+          return res.status(400).json({ message: "Reservation ID is required to assign a lockbox code" });
+        }
+        const reservation = await storage.getVehicleReservation(reservationId);
         const now = new Date();
-        const hasValidReservation = reservations.some((r: any) => {
-          if (r.userId !== user.id) return false;
-          if (r.lockboxId !== lockboxId) return false;
-          if (r.status !== "approved") return false;
-          const startTime = new Date(r.startDate).getTime();
-          const oneHourBefore = startTime - 60 * 60 * 1000;
-          return now.getTime() >= oneHourBefore && now.getTime() <= new Date(r.endDate).getTime();
-        });
+        const hasValidReservation = !!reservation &&
+          reservation.userId === user.id &&
+          reservation.lockboxId === lockboxId &&
+          reservation.status === "approved" &&
+          now.getTime() >= new Date(reservation.startDate).getTime() - 60 * 60 * 1000 &&
+          now.getTime() <= new Date(reservation.endDate).getTime();
 
         if (!hasValidReservation) {
           return res.status(403).json({ message: "No valid reservation with this lockbox" });

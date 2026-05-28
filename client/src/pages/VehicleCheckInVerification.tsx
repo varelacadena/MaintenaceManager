@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Link } from "wouter";
 import type { VehicleCheckInLog, VehicleCheckOutLog, Vehicle, User, Upload } from "@shared/schema";
+import { exitTo } from "@/lib/navigation";
 
 export default function VehicleCheckInVerification() {
   const { checkInLogId } = useParams();
@@ -91,24 +92,30 @@ export default function VehicleCheckInVerification() {
   });
 
   const updateVehicleStatusMutation = useMutation({
-    mutationFn: async (status: string) => {
-      const response = await apiRequest("PATCH", `/api/vehicles/${checkInLog?.vehicleId}`, { status });
+    mutationFn: async (decision: "available" | "needs_cleaning" | "needs_maintenance") => {
+      const response = await apiRequest("POST", `/api/vehicle-checkin-logs/${checkInLogId}/verify`, { decision });
       return response.json();
     },
-    onSuccess: async (_, status) => {
+    onSuccess: async (result, decision) => {
       invalidateVehicleQueries(queryClient);
-      if (checkOutLog?.reservationId) {
-        await apiRequest("PATCH", `/api/vehicle-reservations/${checkOutLog.reservationId}`, { status: "completed" });
-        invalidateVehicleReservationQueries(queryClient);
+      if (result.task) {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks/available"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks/available/count"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       }
+      invalidateVehicleReservationQueries(queryClient);
       toast({
-        title: status === "available" ? "Vehicle Returned to Service" : "Vehicle Flagged for Maintenance",
-        description: status === "available"
+        title: decision === "available" ? "Vehicle Returned to Service" : decision === "needs_cleaning" ? "Vehicle Flagged for Cleaning" : "Vehicle Flagged for Maintenance",
+        description: decision === "available"
           ? "The vehicle has been marked as available for new reservations."
-          : "The vehicle has been marked as needing maintenance.",
+          : result.task
+            ? "A high-priority maintenance job is now available for technicians to claim."
+            : decision === "needs_cleaning"
+              ? "The vehicle has been marked as needing cleaning."
+              : "The vehicle has been marked as needing maintenance.",
       });
       if (checkInLog?.vehicleId) {
-        setLocation(`/vehicles/${checkInLog.vehicleId}`);
+        exitTo(setLocation, `/vehicles/${checkInLog.vehicleId}`);
       }
     },
     onError: (error: Error) => {
@@ -198,7 +205,7 @@ export default function VehicleCheckInVerification() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setLocation(`/vehicles/${vehicle.id}`)}
+          onClick={() => exitTo(setLocation, `/vehicles/${vehicle.id}`)}
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -513,35 +520,69 @@ export default function VehicleCheckInVerification() {
                 </AlertDialogContent>
               </AlertDialog>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    disabled={!checklistComplete || updateVehicleStatusMutation.isPending}
-                    className="w-full sm:flex-1"
-                    data-testid="button-confirm-maintenance"
-                  >
-                    <Wrench className="h-4 w-4 mr-2" />
-                    Confirm Needs Maintenance
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Vehicle Needs Maintenance?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will keep the vehicle flagged as <strong>needs maintenance</strong>. Use this when you've reviewed the issues and confirmed the vehicle needs shop time before returning to service.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => updateVehicleStatusMutation.mutate("needs_maintenance")}
+              {needsCleaning && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={!checklistComplete || updateVehicleStatusMutation.isPending}
+                      className="w-full sm:flex-1"
+                      data-testid="button-confirm-cleaning"
                     >
-                      Confirm — Needs Maintenance
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Confirm Needs Cleaning
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Vehicle Needs Cleaning?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will complete the trip review and keep the vehicle out of service until cleaning is handled.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => updateVehicleStatusMutation.mutate("needs_cleaning")}
+                      >
+                        Confirm — Needs Cleaning
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
+              {hasIssues && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={!checklistComplete || updateVehicleStatusMutation.isPending}
+                      className="w-full sm:flex-1"
+                      data-testid="button-confirm-maintenance"
+                    >
+                      <Wrench className="h-4 w-4 mr-2" />
+                      Create Maintenance Job
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Create Maintenance Job?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will keep the vehicle flagged as <strong>needs maintenance</strong> and create a high-priority job in the technician pool.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => updateVehicleStatusMutation.mutate("needs_maintenance")}
+                      >
+                        Confirm — Create Job
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
 
             {!checklistComplete && (

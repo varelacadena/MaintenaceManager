@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import type { VehicleCheckInContext } from "./useVehicleCheckIn";
+import { exitTo } from "@/lib/navigation";
 
 interface SummaryStepProps {
   vehicle: NonNullable<VehicleCheckInContext["vehicle"]>;
@@ -81,7 +82,7 @@ export function SummaryStep({ vehicle, checkOutLog, reservation, setInspSubStep,
           >
             Start Return Inspection
           </Button>
-          <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="w-full">
+          <Button variant="outline" onClick={() => exitTo(setLocation, "/my-reservations")} className="w-full">
             Cancel
           </Button>
         </div>
@@ -115,7 +116,7 @@ export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLo
             <Alert className="border-amber-500/50 bg-amber-500/10 text-left">
               <Wrench className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-                A <strong>high-priority maintenance task</strong> has been created for the admin team. The vehicle is flagged for review.
+                Your reported issue has been saved. The vehicle is flagged for admin review before any maintenance job is opened.
               </AlertDescription>
             </Alert>
           )}
@@ -160,7 +161,7 @@ export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLo
         <div className="flex flex-col gap-2 w-full">
           {checkOutLog.reservationId && (
             <Button
-              onClick={() => setLocation(`/vehicle-reservation-details/${checkOutLog.reservationId}`)}
+              onClick={() => exitTo(setLocation, `/vehicle-reservation-details/${checkOutLog.reservationId}`)}
               variant="outline"
               className="w-full"
               data-testid="button-view-details"
@@ -169,7 +170,7 @@ export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLo
             </Button>
           )}
           <Button
-            onClick={() => setLocation("/my-reservations")}
+            onClick={() => exitTo(setLocation, "/my-reservations")}
             variant="outline"
             className="w-full"
             data-testid="button-back-reservations"

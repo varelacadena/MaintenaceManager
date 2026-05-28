@@ -54,19 +54,16 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
-    { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
-    { title: "Vehicles", url: "/vehicles?tab=reservations", icon: Car },
-    { title: "My Reservations", url: "/my-reservations", icon: Car },
+    { title: "Vehicle Requests", url: "/my-reservations", icon: Car },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   staff: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
-    { title: "My Reservations", url: "/my-reservations", icon: Car },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   student: [
@@ -74,7 +71,6 @@ const roleMenus = {
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
-    { title: "My Reservations", url: "/my-reservations", icon: Car },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
 };

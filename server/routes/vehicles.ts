@@ -1,7 +1,13 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
-import { requireAdmin, getCurrentUser, requireStaffOrHigher, requireFleetPrivileged } from "../middleware";
+import {
+  requireAdmin,
+  getCurrentUser,
+  requireStaffOrHigher,
+  requireFleetPrivileged,
+  requireTechnicianOrAdmin,
+} from "../middleware";
 import {
   handleRouteError,
   syncVehicleStatus,
@@ -14,6 +20,8 @@ import {
   validateReservationStatusTransition,
   normalizePrivilegedCreateStatus,
   checkInManualVehicleStatus,
+  isReservationCheckoutAllowed,
+  requiresCheckInReview,
 } from "@shared/fleetReservationPolicy";
 import {
   insertVehicleSchema,
@@ -164,7 +172,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Vehicle reservation routes
-  app.get("/api/vehicle-reservations/my", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-reservations/my", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const pagination = parsePaginationQuery({
@@ -210,7 +218,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.get("/api/vehicle-reservations", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-reservations", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const currentUser = await getCurrentUser(req);
       if (!currentUser) {
@@ -259,7 +267,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.get("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-reservations/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const reservationId = req.params.id;
       const reservation = await storage.getVehicleReservation(reservationId);
@@ -281,7 +289,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicle-reservations", isAuthenticated, async (req: any, res) => {
+  app.post("/api/vehicle-reservations", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
 
@@ -377,7 +385,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Update vehicle reservation (PATCH endpoint)
-  app.patch("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/vehicle-reservations/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const currentUser = await storage.getUser(userId);
@@ -397,9 +405,8 @@ export function registerVehicleRoutes(app: Express) {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      const canUpdate = 
-        currentUser.role === "admin" || 
-        currentUser.role === "technician" || 
+      const canUpdate =
+        currentUser.role === "admin" ||
         reservation.userId === userId;
 
       if (!canUpdate) {
@@ -410,7 +417,7 @@ export function registerVehicleRoutes(app: Express) {
         updates.lastViewedStatus = reservation.status;
       }
 
-      if ((currentUser.role === "admin" || currentUser.role === "technician") && 
+      if (currentUser.role === "admin" &&
           reservation.userId !== userId) {
         updates.lastViewedStatus = "pending";
       }
@@ -531,7 +538,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Delete vehicle reservation
-  app.delete("/api/vehicle-reservations/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/vehicle-reservations/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const user = await storage.getUser(userId);
@@ -566,7 +573,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicle-reservations/:id/check-availability", isAuthenticated, async (req: any, res) => {
+  app.post("/api/vehicle-reservations/:id/check-availability", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const currentUser = await getCurrentUser(req);
       if (!currentUser) {
@@ -607,7 +614,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Accept advisory for reservation
-  app.post("/api/vehicle-reservations/:id/accept-advisory", isAuthenticated, async (req: any, res) => {
+  app.post("/api/vehicle-reservations/:id/accept-advisory", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const reservationId = req.params.id;
@@ -618,8 +625,8 @@ export function registerVehicleRoutes(app: Express) {
       }
 
       const currentUser = await storage.getUser(userId);
-      const isAdmin = currentUser?.role === "admin" || currentUser?.role === "technician";
-      if (reservation.userId !== userId && !isAdmin) {
+      const isPrivileged = isFleetPrivilegedRole(currentUser?.role);
+      if (reservation.userId !== userId && !isPrivileged) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -634,7 +641,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Mark reservation status as viewed
-  app.post("/api/vehicle-reservations/:id/mark-viewed", isAuthenticated, async (req: any, res) => {
+  app.post("/api/vehicle-reservations/:id/mark-viewed", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const userId = req.userId;
       const reservationId = req.params.id;
@@ -659,7 +666,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Vehicle check-out log routes
-  app.get("/api/vehicle-checkout-logs", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-checkout-logs", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const currentUser = await getCurrentUser(req);
       if (!currentUser) {
@@ -692,7 +699,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.get("/api/vehicle-checkout-logs/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-checkout-logs/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const log = await storage.getVehicleCheckOutLog(req.params.id);
       if (!log) {
@@ -711,19 +718,35 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicle-checkout-logs", isAuthenticated, async (req: any, res) => {
+  app.post("/api/vehicle-checkout-logs", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const checkoutUser = await storage.getUser(req.userId);
       const isCheckoutPrivileged = isFleetPrivilegedRole(checkoutUser?.role);
+      const adminOverride = isCheckoutPrivileged && req.body.adminOverride === true;
+
+      if (req.body.startMileage === undefined || req.body.startMileage === null || req.body.startMileage === "") {
+        return res.status(400).json({ message: "Starting mileage is required" });
+      }
+      if (!req.body.fuelLevel) {
+        return res.status(400).json({ message: "Fuel level is required" });
+      }
+      if (typeof req.body.cleanlinessConfirmed !== "boolean") {
+        return res.status(400).json({ message: "Cleanliness confirmation is required" });
+      }
+
+      const startMileage = Number(req.body.startMileage);
+      if (!Number.isFinite(startMileage) || startMileage <= 0) {
+        return res.status(400).json({ message: "Starting mileage must be a positive number" });
+      }
+
       const cleanedBody = {
         ...req.body,
         userId: req.userId,
-        startMileage: Number(req.body.startMileage) || 0,
-        fuelLevel: req.body.fuelLevel || "full",
-        cleanlinessConfirmed: Boolean(req.body.cleanlinessConfirmed),
+        startMileage,
+        fuelLevel: req.body.fuelLevel,
+        cleanlinessConfirmed: req.body.cleanlinessConfirmed,
         damageNotes: req.body.damageNotes || null,
-        adminOverride:
-          isCheckoutPrivileged && req.body.adminOverride === true ? true : undefined,
+        adminOverride: adminOverride ? true : undefined,
         assignedCodeId: req.body.assignedCodeId || null,
       };
 
@@ -744,10 +767,30 @@ export function registerVehicleRoutes(app: Express) {
           message: "Reservation must be approved before checkout",
         });
       }
+      if (!adminOverride && !isReservationCheckoutAllowed(reservation)) {
+        return res.status(400).json({
+          message: "Checkout is not available for this reservation yet",
+        });
+      }
 
       if (!reservation.advisoryAccepted && !isCheckoutPrivileged) {
         return res.status(400).json({
           message: "You must accept the vehicle advisory before checkout",
+        });
+      }
+
+      const vehicle = await storage.getVehicle(logData.vehicleId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      if (
+        !adminOverride &&
+        vehicle.currentMileage !== null &&
+        vehicle.currentMileage !== undefined &&
+        logData.startMileage < vehicle.currentMileage
+      ) {
+        return res.status(400).json({
+          message: `Starting mileage cannot be lower than the current vehicle mileage (${vehicle.currentMileage})`,
         });
       }
 
@@ -773,6 +816,9 @@ export function registerVehicleRoutes(app: Express) {
       const vehicleId = log?.vehicleId;
 
       await storage.deleteVehicleCheckOutLog(req.params.id);
+      if (log?.reservationId) {
+        await storage.updateReservationStatus(log.reservationId, "approved");
+      }
 
       if (vehicleId) {
         await syncVehicleStatus(vehicleId);
@@ -785,7 +831,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Vehicle check-in log routes
-  app.get("/api/vehicle-checkin-logs", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-checkin-logs", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const currentUser = await getCurrentUser(req);
       if (!currentUser) {
@@ -808,7 +854,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.get("/api/vehicle-checkin-logs/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/vehicle-checkin-logs/:id", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const log = await storage.getVehicleCheckInLog(req.params.id);
       if (!log) {
@@ -827,8 +873,18 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicle-checkin-logs", isAuthenticated, async (req: any, res) => {
+  app.post("/api/vehicle-checkin-logs", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
+      if (req.body.endMileage === undefined || req.body.endMileage === null || req.body.endMileage === "") {
+        return res.status(400).json({ message: "Ending mileage is required" });
+      }
+      if (!req.body.fuelLevel) {
+        return res.status(400).json({ message: "Fuel level is required" });
+      }
+      if (!req.body.cleanlinessStatus) {
+        return res.status(400).json({ message: "Cleanliness status is required" });
+      }
+
       const logData = insertVehicleCheckInLogSchema.parse(req.body);
 
       const checkOutLog = await storage.getVehicleCheckOutLog(logData.checkOutLogId);
@@ -855,21 +911,44 @@ export function registerVehicleRoutes(app: Express) {
         });
       }
 
+      const reservation = await storage.getVehicleReservation(checkOutLog.reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      if (reservation.status !== "active") {
+        return res.status(400).json({ message: "Only active reservations can be checked in" });
+      }
+
+      const hasIssues = Boolean(logData.issues?.trim());
+      const needsCleaning = logData.cleanlinessStatus === "needs_cleaning";
+      const needsReview = requiresCheckInReview({
+        hasIssues,
+        needsCleaning,
+        fuelLevel: logData.fuelLevel,
+      });
+      const fuelLevelPercent: Record<string, number> = {
+        empty: 0,
+        "1/4": 25,
+        "1/2": 50,
+        "3/4": 75,
+        full: 100,
+      };
+
       const logWithDefaults = {
         ...logData,
         userId: checkOutLog.userId,
         checkInDate: new Date(),
-        endFuelLevel: logData.fuelLevel ? parseInt(logData.fuelLevel) || 100 : 100,
+        endFuelLevel: logData.fuelLevel ? fuelLevelPercent[logData.fuelLevel] ?? 100 : 100,
       };
       const log = await storage.createVehicleCheckInLog(logWithDefaults as any);
 
       await storage.updateVehicleMileage(logData.vehicleId, logData.endMileage);
 
-      await storage.updateReservationStatus(checkOutLog.reservationId, "pending_review");
+      await storage.updateReservationStatus(checkOutLog.reservationId, needsReview ? "pending_review" : "completed");
 
       const manualStatus = checkInManualVehicleStatus({
-        hasIssues: Boolean(logData.issues?.trim()),
-        needsCleaning: logData.cleanlinessStatus === "needs_cleaning",
+        hasIssues,
+        needsCleaning,
       });
       if (manualStatus) {
         await storage.updateVehicleStatus(logData.vehicleId, manualStatus);
@@ -877,27 +956,112 @@ export function registerVehicleRoutes(app: Express) {
         await syncVehicleStatus(logData.vehicleId);
       }
 
-      if (logData.issues && logData.issues.trim().length > 0) {
-        const userId = req.userId;
-        const vehicle = await storage.getVehicle(logData.vehicleId);
-
-        if (vehicle) {
-          await storage.createTask({
-            vehicleId: logData.vehicleId,
-            name: `Maintenance Required: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
-            description: `Issues reported by user at check-in: ${logData.issues}\n\nCheck-in log ID: ${log.id}`,
-            urgency: "high",
-            initialDate: new Date(),
-            taskType: "one_time",
-            status: "not_started",
-            createdById: userId,
-          });
-        }
-      }
-
       res.json(log);
     } catch (error) {
       handleRouteError(res, error, "Failed to create vehicle check-in log");
+    }
+  });
+
+  app.post("/api/vehicle-checkin-logs/:id/maintenance-task", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const log = await storage.getVehicleCheckInLog(req.params.id);
+      if (!log) {
+        return res.status(404).json({ message: "Check-in log not found" });
+      }
+
+      const issues = log.issues?.trim();
+      if (!issues) {
+        return res.status(400).json({ message: "This check-in does not have reported mechanical issues" });
+      }
+
+      const vehicle = await storage.getVehicle(log.vehicleId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      const checkInReference = `Check-in log ID: ${log.id}`;
+      const existingTask = (await storage.getTasks({})).find((task) =>
+        task.vehicleId === log.vehicleId &&
+        task.description?.includes(checkInReference) &&
+        task.status !== "completed"
+      );
+      if (existingTask) {
+        return res.json(existingTask);
+      }
+
+      const task = await storage.createTask({
+        vehicleId: log.vehicleId,
+        name: `Maintenance Required: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
+        description: `Issues confirmed from vehicle check-in: ${issues}\n\n${checkInReference}`,
+        urgency: "high",
+        initialDate: new Date(),
+        taskType: "one_time",
+        status: "not_started",
+        createdById: req.userId,
+      });
+
+      res.status(201).json(task);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to create maintenance task from check-in");
+    }
+  });
+
+  app.post("/api/vehicle-checkin-logs/:id/verify", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const decision = z.enum(["available", "needs_cleaning", "needs_maintenance"]).parse(req.body.decision);
+      const log = await storage.getVehicleCheckInLog(req.params.id);
+      if (!log) {
+        return res.status(404).json({ message: "Check-in log not found" });
+      }
+
+      const checkOutLog = await storage.getVehicleCheckOutLog(log.checkOutLogId);
+      if (!checkOutLog) {
+        return res.status(404).json({ message: "Check-out log not found" });
+      }
+
+      const vehicle = await storage.getVehicle(log.vehicleId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      let task = null;
+      if (decision === "needs_maintenance" && log.issues?.trim()) {
+        const checkInReference = `Check-in log ID: ${log.id}`;
+        const existingTask = (await storage.getTasks({})).find((candidate) =>
+          candidate.vehicleId === log.vehicleId &&
+          candidate.description?.includes(checkInReference) &&
+          candidate.status !== "completed"
+        );
+        task = existingTask ?? (await storage.createTask({
+          vehicleId: log.vehicleId,
+          name: `Maintenance Required: ${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})`,
+          description: `Issues confirmed from vehicle check-in: ${log.issues.trim()}\n\n${checkInReference}`,
+          urgency: "high",
+          initialDate: new Date(),
+          taskType: "one_time",
+          status: "not_started",
+          createdById: req.userId,
+        }));
+      }
+
+      await storage.updateReservationStatus(checkOutLog.reservationId, "completed");
+      if (decision === "available") {
+        await storage.updateVehicleStatus(log.vehicleId, "available");
+        await syncVehicleStatus(log.vehicleId);
+      } else {
+        await storage.updateVehicleStatus(log.vehicleId, decision);
+      }
+
+      const updatedVehicle = await storage.getVehicle(log.vehicleId);
+      const updatedReservation = await storage.getVehicleReservation(checkOutLog.reservationId);
+
+      res.json({
+        vehicle: updatedVehicle,
+        reservation: updatedReservation,
+        task,
+      });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to verify vehicle check-in");
     }
   });
 
@@ -925,10 +1089,18 @@ export function registerVehicleRoutes(app: Express) {
     try {
       const log = await storage.getVehicleCheckInLog(req.params.id);
       const vehicleId = log?.vehicleId;
+      const checkOutLog = log ? await storage.getVehicleCheckOutLog(log.checkOutLogId) : undefined;
 
       await storage.deleteVehicleCheckInLog(req.params.id);
+      if (checkOutLog?.reservationId) {
+        await storage.updateReservationStatus(checkOutLog.reservationId, "active");
+      }
 
       if (vehicleId) {
+        const vehicle = await storage.getVehicle(vehicleId);
+        if (vehicle?.status === "needs_cleaning" || vehicle?.status === "needs_maintenance") {
+          await storage.updateVehicleStatus(vehicleId, "in_use");
+        }
         await syncVehicleStatus(vehicleId);
       }
 

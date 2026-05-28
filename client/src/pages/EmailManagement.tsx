@@ -264,7 +264,7 @@ function TemplatesTab() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-260px)] min-h-[500px]">
+    <div className="flex flex-col md:flex-row gap-4 min-h-[min(500px,calc(100dvh-12rem))] md:h-[calc(100dvh-260px)]">
       <div
         className={`flex-col w-full md:w-64 md:flex md:flex-shrink-0 border-r pr-4 overflow-y-auto ${panelView === "list" ? "flex" : "hidden md:flex"}`}
         data-testid="panel-template-list"
@@ -521,25 +521,31 @@ function SettingsTab() {
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
-            <div className="grid grid-cols-[1fr,auto,auto] gap-4 items-center pb-2 border-b">
+            <div className="hidden sm:grid grid-cols-[1fr,auto,auto] gap-4 items-center pb-2 border-b">
               <span className="text-sm font-medium text-muted-foreground">Notification Type</span>
               <span className="text-sm font-medium text-muted-foreground text-center w-20">Email</span>
               <span className="text-sm font-medium text-muted-foreground text-center w-20">In-App</span>
             </div>
             {settings?.map((setting) => (
-              <div key={setting.id} className="grid grid-cols-[1fr,auto,auto] gap-4 items-center" data-testid={`row-setting-${setting.id}`}>
-                <div>
+              <div
+                key={setting.id}
+                className="flex flex-col gap-3 py-3 border-b last:border-b-0 sm:grid sm:grid-cols-[1fr,auto,auto] sm:gap-4 sm:items-center sm:py-1 sm:border-0"
+                data-testid={`row-setting-${setting.id}`}
+              >
+                <div className="min-w-0">
                   <span className="text-sm font-medium" data-testid={`text-setting-label-${setting.id}`}>{setting.label}</span>
                   <Badge variant="outline" className="ml-2 font-mono text-xs">{setting.type}</Badge>
                 </div>
-                <div className="flex justify-center w-20">
+                <div className="flex items-center justify-between gap-4 sm:justify-center sm:w-20">
+                  <span className="text-sm text-muted-foreground sm:hidden">Email</span>
                   <Switch
                     checked={setting.emailEnabled}
                     onCheckedChange={(checked) => updateMutation.mutate({ id: setting.id, emailEnabled: checked })}
                     data-testid={`switch-email-${setting.id}`}
                   />
                 </div>
-                <div className="flex justify-center w-20">
+                <div className="flex items-center justify-between gap-4 sm:justify-center sm:w-20">
+                  <span className="text-sm text-muted-foreground sm:hidden">In-App</span>
                   <Switch
                     checked={setting.inAppEnabled}
                     onCheckedChange={(checked) => updateMutation.mutate({ id: setting.id, inAppEnabled: checked })}
@@ -597,7 +603,7 @@ function LogsTab() {
           />
         </div>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[200px]" data-testid="select-filter-type">
+          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-filter-type">
             <SelectValue placeholder="All types" />
           </SelectTrigger>
           <SelectContent>
@@ -608,7 +614,7 @@ function LogsTab() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[140px]" data-testid="select-filter-status">
+          <SelectTrigger className="w-full sm:w-[140px]" data-testid="select-filter-status">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>

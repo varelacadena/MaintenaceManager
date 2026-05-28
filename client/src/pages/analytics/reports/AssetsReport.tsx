@@ -244,7 +244,7 @@ export default function AssetsReport() {
         />
       ) : (
         <>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         <div className="cursor-pointer hover-elevate" onClick={() => setKpiModal("total")} data-testid="kpi-total-assets">
           <KpiCard
             title="Total Assets"

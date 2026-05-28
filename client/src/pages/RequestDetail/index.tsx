@@ -1,6 +1,7 @@
 import { useRequestDetail } from "./useRequestDetail";
 import { RequestDetailMobile } from "./RequestDetailMobile";
 import { RequestDetailDesktop } from "./RequestDetailDesktop";
+import { RequestDetailSubmitter } from "./RequestDetailSubmitter";
 import { Button } from "@/components/ui/button";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 
@@ -39,6 +40,23 @@ export default function RequestDetail() {
           Back to Requests
         </Button>
       </div>
+    );
+  }
+
+  if (hook.user?.role !== "admin") {
+    return (
+      <RequestDetailSubmitter
+        request={request}
+        attachments={hook.attachments}
+        property={hook.property}
+        space={hook.space}
+        linkedTask={hook.linkedTask}
+        navigate={hook.navigate}
+        getStatusLabel={hook.getStatusLabel}
+        getStatusVariant={hook.getStatusVariant}
+        getPriorityColor={hook.getPriorityColor}
+        getUrgencyLabel={hook.getUrgencyLabel}
+      />
     );
   }
 

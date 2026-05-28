@@ -87,8 +87,8 @@ export function ProjectsTab({ ctx }: { ctx: WorkContext }) {
           </p>
         </div>
       ) : (
-        <Card data-testid="projects-list">
-          <Table>
+        <Card data-testid="projects-list" className="overflow-x-auto">
+          <Table className="min-w-[640px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>

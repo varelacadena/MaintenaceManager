@@ -391,6 +391,17 @@
   position: absolute;
 }
 
+/* Mobile: prevent accidental horizontal page scroll */
+@layer base {
+  html {
+    overflow-x: hidden;
+  }
+  #root {
+    min-height: 100dvh;
+    min-height: 100svh;
+  }
+}
+
 /* Hide scrollbar but keep scrolling */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

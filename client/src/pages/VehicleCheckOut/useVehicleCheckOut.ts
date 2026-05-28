@@ -2,19 +2,20 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import type { VehicleReservation, Vehicle } from "@shared/schema";
+import type { VehicleReservation, Vehicle, VehicleCheckOutLog } from "@shared/schema";
+import { exitTo } from "@/lib/navigation";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Car, ScrollText, ShieldCheck, CircleCheck, ClipboardCheck } from "lucide-react";
+import { Car, ScrollText, CircleCheck, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { isCheckoutWindowOpen } from "@shared/fleetReservationPolicy";
 
-export type Step = "advisory" | "safety" | "responsibility" | "checkout" | "complete";
+export type Step = "advisory" | "responsibility" | "checkout" | "complete";
 export type CheckoutSubStep = "mileage" | "fuel" | "condition" | "damage" | "photos";
 
 export const STEPS: { id: Step; label: string; icon: LucideIcon }[] = [
   { id: "advisory", label: "Advisory", icon: ScrollText },
-  { id: "safety", label: "Safety", icon: ShieldCheck },
-  { id: "responsibility", label: "Responsibilities", icon: ClipboardCheck },
+  { id: "responsibility", label: "Before You Drive", icon: ClipboardCheck },
   { id: "checkout", label: "Checkout", icon: Car },
   { id: "complete", label: "Done", icon: CircleCheck },
 ];
@@ -88,9 +89,43 @@ export function useVehicleCheckOut() {
     }
   }, [vehicle?.currentMileage]);
 
+  useEffect(() => {
+    if (reservation?.advisoryAccepted) {
+      setAdvisoryAccepted(true);
+    }
+  }, [reservation?.advisoryAccepted]);
+
+  const { data: checkOutLogs } = useQuery<VehicleCheckOutLog[]>({
+    queryKey: ["/api/vehicle-checkout-logs"],
+    enabled: !!reservationId && !!user,
+  });
+
+  useEffect(() => {
+    if (!reservationId || !checkOutLogs || step === "complete") return;
+    const existing = checkOutLogs.find((co) => co.reservationId === reservationId);
+    if (existing) {
+      const destination = isAdmin ? "/vehicles?tab=reservations" : "/my-reservations";
+      exitTo(setLocation, destination);
+    }
+  }, [reservationId, checkOutLogs, step, setLocation, isAdmin]);
+
+  useEffect(() => {
+    const hasDraft =
+      step !== "complete" &&
+      (dashPhoto || damagePhotos.length > 0 || coFuelLevel || coIsClean !== null || coHasDamage !== null || coDamageNotes.trim());
+    if (!hasDraft) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [coDamageNotes, coFuelLevel, coHasDamage, coIsClean, damagePhotos.length, dashPhoto, step]);
+
   const isWithinReservationTime = (res: VehicleReservation | undefined): boolean => {
     if (!res) return false;
-    return new Date() >= new Date(new Date(res.startDate).getTime() - 60 * 60 * 1000);
+    return isCheckoutWindowOpen(res.startDate);
   };
 
   const advanceStep = (next: Step) => {
@@ -139,7 +174,9 @@ export function useVehicleCheckOut() {
         try {
           const codeRes = await fetch(`/api/lockboxes/${reservation.lockboxId}/assign-code`, {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
+            body: JSON.stringify({ reservationId }),
           });
           if (codeRes.ok) {
             const codeData = await codeRes.json();
@@ -158,7 +195,7 @@ export function useVehicleCheckOut() {
       }
 
       if (!reservation?.keyPickupMethod && !reservation?.lockboxId) {
-        advanceStep("safety");
+        advanceStep("responsibility");
       } else {
         setAdvisoryJustAccepted(true);
       }
@@ -187,7 +224,7 @@ export function useVehicleCheckOut() {
 
       for (const file of allFiles) {
         try {
-          await fetch("/api/uploads", {
+          const uploadResponse = await fetch("/api/uploads", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -199,8 +236,13 @@ export function useVehicleCheckOut() {
               vehicleCheckOutLogId: checkOutLog.id,
             }),
           });
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.json().catch(() => ({ message: "Failed to save photo evidence" }));
+            throw new Error(error.message || "Failed to save photo evidence");
+          }
         } catch (err) {
           console.error("Error saving upload:", err);
+          throw err;
         }
       }
 

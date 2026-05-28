@@ -12,9 +12,9 @@ import {
 
 describe("fleetUtils", () => {
   describe("isFleetPrivilegedRole", () => {
-    it("returns true for admin and technician", () => {
+    it("returns true for admin only", () => {
       expect(isFleetPrivilegedRole("admin")).toBe(true);
-      expect(isFleetPrivilegedRole("technician")).toBe(true);
+      expect(isFleetPrivilegedRole("technician")).toBe(false);
     });
 
     it("returns false for other roles", () => {

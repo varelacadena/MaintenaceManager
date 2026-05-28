@@ -10,6 +10,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,21 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertServiceRequestSchema } from "@shared/schema";
 import type { Property, Space } from "@shared/schema";
 import { z } from "zod";
-import { Upload, X, Check, CalendarIcon, Paperclip } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { X, Check, Paperclip, ChevronDown, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import {
@@ -56,13 +54,15 @@ const categories = [
   "General",
 ];
 
-const formSchema = insertServiceRequestSchema.extend({
-  requestedDate: z.string().min(1, "Date is required"),
-  title: z.string().min(1, "Request title is required"),
-  category: z.string().min(1, "Category is required"),
-  urgency: z.string().min(1, "Urgency is required"),
-  propertyId: z.string().min(1, "Property is required"),
+const formSchema = z.object({
+  title: z.string().min(1, "Please describe what needs attention"),
+  description: z.string().min(1, "Please tell us what happened"),
+  propertyId: z.string().min(1, "Please select where the issue is"),
   spaceId: z.string().optional(),
+  category: z.string().optional(),
+  isUrgent: z.boolean().default(false),
+  requesterId: z.string().min(1),
+  requestedDate: z.string().min(1),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -72,6 +72,7 @@ export default function NewRequest() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Array<{
     name: string;
     fileName: string;
@@ -90,11 +91,9 @@ export default function NewRequest() {
     queryKey: ["/api/properties"],
   });
 
-  // Get selected property to check if it's a building
-  const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+  const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
   const isBuilding = selectedProperty?.type === "building";
 
-  // Fetch spaces for building properties
   const { data: spaces = [] } = useQuery<Space[]>({
     queryKey: ["/api/spaces", selectedPropertyId],
     enabled: isBuilding && !!selectedPropertyId,
@@ -110,10 +109,11 @@ export default function NewRequest() {
       title: "",
       description: "",
       category: "",
-      urgency: "medium",
+      isUrgent: false,
       requestedDate: new Date().toISOString().split("T")[0],
       requesterId: user?.id || "",
       spaceId: "",
+      propertyId: "",
     },
   });
 
@@ -126,13 +126,17 @@ export default function NewRequest() {
   const createRequestMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const response = await apiRequest("POST", "/api/service-requests", {
-        ...data,
-        requestedDate: new Date(data.requestedDate),
+        title: data.title,
+        description: data.description,
+        propertyId: data.propertyId,
         spaceId: data.spaceId || undefined,
+        category: data.category?.trim() || "General",
+        urgency: data.isUrgent ? "high" : "medium",
+        requestedDate: new Date(data.requestedDate),
+        requesterId: data.requesterId,
       });
       const requestData = await response.json();
 
-      // Upload all pending attachments with proper field mapping
       if (pendingAttachments.length > 0) {
         let failedAttachments = 0;
         for (const attachment of pendingAttachments) {
@@ -168,7 +172,7 @@ export default function NewRequest() {
         title: "Request Submitted",
         description: "Your maintenance request has been submitted successfully.",
       });
-      navigate(`/requests/${data.id}`);
+      navigate(`/requests/${data.id}`, { replace: true });
     },
     onError: (error: any) => {
       toast({
@@ -201,8 +205,8 @@ export default function NewRequest() {
       setPendingAttachments((prev) => [...prev, ...newAttachments]);
 
       toast({
-        title: "File uploaded",
-        description: `${result.successful.length} file(s) ready to attach`,
+        title: "Photo added",
+        description: `${result.successful.length} file(s) will be attached when you submit`,
       });
     }
   };
@@ -212,91 +216,70 @@ export default function NewRequest() {
   };
 
   const getFileExtension = (filename: string) => {
-    if (!filename) return 'FILE';
-    const parts = filename.split('.');
-    if (parts.length <= 1) return 'FILE';
+    if (!filename) return "FILE";
+    const parts = filename.split(".");
+    if (parts.length <= 1) return "FILE";
     const ext = parts[parts.length - 1]?.toUpperCase();
-    return ext || 'FILE';
+    return ext || "FILE";
   };
 
   const formatFileSize = (bytes: number) => {
-    if (!bytes || bytes === 0) return '0 KB';
+    if (!bytes || bytes === 0) return "0 KB";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     const sizeIndex = Math.min(i, sizes.length - 1);
-    return parseFloat((bytes / Math.pow(k, sizeIndex)).toFixed(2)) + ' ' + sizes[sizeIndex];
+    return parseFloat((bytes / Math.pow(k, sizeIndex)).toFixed(2)) + " " + sizes[sizeIndex];
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-3 p-3 md:p-4 pb-8">
-      <div className="space-y-2">
-        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">New Service Request</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Submit a new maintenance request
+    <div className="max-w-2xl mx-auto space-y-3 p-3 md:p-4 pb-8">
+      <div className="space-y-1">
+        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Report an issue</h1>
+        <p className="text-sm text-muted-foreground">
+          Tell us where it is and what&apos;s wrong — we&apos;ll take it from there.
         </p>
       </div>
 
-      <Card className="p-3 md:p-4 border-0 shadow-md">
+      <Card className="p-3 md:p-5 border-0 shadow-md">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Request Title</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Brief description of the issue"
-                      {...field}
-                      data-testid="input-request-title"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+            {/* Location */}
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-foreground">Where is it?</p>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Provide detailed information about the maintenance issue"
-                      rows={5}
-                      {...field}
-                      data-testid="textarea-request-description"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="category"
+                name="propertyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel className="sr-only">Property</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedPropertyId(value);
+                        form.setValue("spaceId", "");
+                      }}
+                      value={field.value || undefined}
+                      disabled={isPropertiesLoading || isPropertiesError}
                     >
                       <FormControl>
-                        <SelectTrigger data-testid="select-category">
-                          <SelectValue placeholder="Select category" />
+                        <SelectTrigger data-testid="select-property">
+                          <SelectValue
+                            placeholder={
+                              isPropertiesLoading
+                                ? "Loading locations..."
+                                : isPropertiesError
+                                  ? "Could not load locations"
+                                  : "Select building or property"
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
+                        {properties.map((property) => (
+                          <SelectItem key={property.id} value={property.id}>
+                            {property.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -306,229 +289,236 @@ export default function NewRequest() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="urgency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Urgency Level</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-urgency">
-                          <SelectValue placeholder="Select urgency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {isBuilding && spaces.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="spaceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground font-normal">
+                        Room or area <span className="text-muted-foreground/70">(optional)</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === "__none__" ? "" : value)
+                        }
+                        value={field.value || "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-space">
+                            <SelectValue placeholder="Not sure — leave blank" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">Not sure / whole building</SelectItem>
+                          {spaces.map((space) => (
+                            <SelectItem key={space.id} value={space.id}>
+                              {space.name}
+                              {space.floor ? ` (Floor ${space.floor})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
-            <FormField
-              control={form.control}
-              name="propertyId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedPropertyId(value);
-                      form.setValue("spaceId", "");
-                    }}
-                    value={field.value || undefined}
-                    disabled={isPropertiesLoading || isPropertiesError}
-                  >
+            {/* Issue details */}
+            <div className="space-y-4 pt-1 border-t">
+              <p className="text-sm font-medium text-foreground pt-3">What&apos;s wrong?</p>
+
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="sr-only">Summary</FormLabel>
                     <FormControl>
-                      <SelectTrigger data-testid="select-property">
-                        <SelectValue
-                          placeholder={
-                            isPropertiesLoading
-                              ? "Loading properties..."
-                              : isPropertiesError
-                              ? "Could not load properties"
-                              : "Select property"
-                          }
-                        />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="e.g. Leaking faucet in restroom"
+                        {...field}
+                        data-testid="input-request-title"
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {properties.map((property) => (
-                        <SelectItem key={property.id} value={property.id}>
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {isBuilding && spaces.length > 0 && (
-              <FormField
-                control={form.control}
-                name="spaceId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Space</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)} 
-                      value={field.value || "__none__"}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-space">
-                          <SelectValue placeholder="Select space (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="__none__">All Spaces</SelectItem>
-                        {spaces.map((space) => (
-                          <SelectItem key={space.id} value={space.id}>
-                            {space.name}{space.floor ? ` (Floor ${space.floor})` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground font-normal">
+                      Tell us what happened
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="What did you notice? When did it start? Anything else we should know?"
+                        rows={4}
+                        {...field}
+                        data-testid="textarea-request-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Urgent */}
             <FormField
               control={form.control}
-              name="requestedDate"
+              name="isUrgent"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                          data-testid="input-requested-date"
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(new Date(field.value + 'T12:00:00'), "PPP") : "Pick a date"}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                            const day = String(date.getDate()).padStart(2, '0');
-                            field.onChange(`${year}-${month}-${day}`);
-                          }
-                        }}
-                        disabled={(date) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          return date < today;
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
+                <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-md border p-3 bg-muted/30">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="checkbox-urgent"
+                    />
+                  </FormControl>
+                  <div className="space-y-0.5 leading-none">
+                    <FormLabel className="flex items-center gap-1.5 font-medium cursor-pointer">
+                      <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                      This is urgent or a safety issue
+                    </FormLabel>
+                    <FormDescription className="text-xs">
+                      Check this for emergencies, flooding, no heat/AC, or anything unsafe.
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />
 
-            {/* Attachment Upload Section */}
-            <div className="space-y-3">
-              <FormLabel>Attachments</FormLabel>
-              <div className="flex flex-col gap-3">
-                <ObjectUploader
-                  maxNumberOfFiles={10}
-                  maxFileSize={10485760}
-                  onGetUploadParameters={getSignedUploadParameters}
-                  onComplete={handleFileUpload}
-                  onError={(error) => {
-                    toast({
-                      title: "Upload failed",
-                      description: error.message,
-                      variant: "destructive",
-                    });
-                  }}
-                  buttonClassName="w-full"
-                >
-                  <Paperclip className="w-4 h-4 mr-2" />
-                  Attach Files
-                </ObjectUploader>
+            {/* Optional photo */}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Add a photo <span className="text-muted-foreground/70">(optional)</span>
+              </p>
+              <ObjectUploader
+                maxNumberOfFiles={10}
+                maxFileSize={10485760}
+                onGetUploadParameters={getSignedUploadParameters}
+                onComplete={handleFileUpload}
+                onError={(error) => {
+                  toast({
+                    title: "Upload failed",
+                    description: error.message,
+                    variant: "destructive",
+                  });
+                }}
+                buttonVariant="outline"
+                buttonClassName="w-full border-dashed bg-muted/20 text-foreground hover:bg-muted"
+              >
+                <Paperclip className="w-4 h-4 mr-2" />
+                Add photo or file
+              </ObjectUploader>
 
-                {pendingAttachments.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      {pendingAttachments.length} file(s) ready to attach
-                    </p>
-                    <div className="space-y-2">
-                      {pendingAttachments.map((attachment, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded-md border bg-card"
-                          data-testid={`attachment-${index}`}
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex items-center justify-center w-10 h-10 rounded bg-primary/10 text-primary shrink-0">
-                              <span className="text-xs font-semibold">
-                                {getFileExtension(attachment.name)}
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">
-                                {attachment.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatFileSize(attachment.size)}
-                              </p>
-                            </div>
-                            <Check className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removePendingAttachment(index)}
-                            data-testid={`button-remove-attachment-${index}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
+              {pendingAttachments.length > 0 && (
+                <div className="space-y-2">
+                  {pendingAttachments.map((attachment, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2.5 rounded-md border bg-card"
+                      data-testid={`attachment-${index}`}
+                    >
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="flex items-center justify-center w-8 h-8 rounded bg-primary/10 text-primary shrink-0">
+                          <span className="text-[10px] font-semibold">
+                            {getFileExtension(attachment.name)}
+                          </span>
                         </div>
-                      ))}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{attachment.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.size)}
+                          </p>
+                        </div>
+                        <Check className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => removePendingAttachment(index)}
+                        data-testid={`button-remove-attachment-${index}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Advanced: category */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-advanced-details"
+                >
+                  <span>More details (optional)</span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-1 pb-2">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground font-normal">
+                        Type of issue
+                      </FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === "__none__" ? "" : value)
+                        }
+                        value={field.value || "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-category">
+                            <SelectValue placeholder="Let maintenance decide" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">Not sure</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription className="text-xs">
+                        Our team can categorize this when they review your request.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CollapsibleContent>
+            </Collapsible>
 
             <Button
               type="submit"
               className="w-full"
+              size="lg"
               disabled={createRequestMutation.isPending}
               data-testid="button-submit-request"
             >
-              {createRequestMutation.isPending
-                ? "Submitting..."
-                : "Submit Request"}
+              {createRequestMutation.isPending ? "Submitting..." : "Submit Request"}
             </Button>
           </form>
         </Form>

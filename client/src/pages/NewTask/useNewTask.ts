@@ -558,7 +558,7 @@ export function useNewTask() {
             : "The task has been created successfully.",
         });
       }
-      navigate(`/tasks/${data.id}`);
+      navigate(`/tasks/${data.id}`, { replace: true });
     },
     onError: (error: any) => {
       toast({

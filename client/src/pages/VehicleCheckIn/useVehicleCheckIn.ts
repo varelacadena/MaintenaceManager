@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import type { VehicleCheckOutLog, Vehicle, VehicleReservation, Lockbox } from "@shared/schema";
+import type { VehicleCheckOutLog, VehicleCheckInLog, Vehicle, VehicleReservation, Lockbox } from "@shared/schema";
+import { exitTo } from "@/lib/navigation";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,6 +58,7 @@ export function useVehicleCheckIn() {
   const [ciFuelLevel, setCiFuelLevel] = useState<string>("");
   const [ciIsClean, setCiIsClean] = useState<boolean | null>(null);
   const [ciHasIssues, setCiHasIssues] = useState<boolean | null>(null);
+  const [ciIssueCategory, setCiIssueCategory] = useState<string>("");
   const [ciIssues, setCiIssues] = useState<string>("");
   const [ciReturnNotes, setCiReturnNotes] = useState<string>("");
 
@@ -88,6 +90,36 @@ export function useVehicleCheckIn() {
   useEffect(() => {
     if (checkOutLog?.startMileage) setCiMileage(checkOutLog.startMileage);
   }, [checkOutLog?.startMileage]);
+
+  const { data: checkInLogs } = useQuery<VehicleCheckInLog[]>({
+    queryKey: ["/api/vehicle-checkin-logs"],
+    enabled: !!checkOutLogId && !!user,
+  });
+
+  useEffect(() => {
+    if (!checkOutLogId || !checkInLogs || step === "complete") return;
+    const existing = checkInLogs.find((ci) => ci.checkOutLogId === checkOutLogId);
+    if (existing) {
+      const destination =
+        user?.role === "admin" ? "/vehicles?tab=reservations" : "/my-reservations";
+      exitTo(setLocation, destination);
+    }
+  }, [checkOutLogId, checkInLogs, step, setLocation, user?.role]);
+
+  useEffect(() => {
+    const hasDraft =
+      step !== "complete" &&
+      (dashPhoto || interiorPhoto || damagePhotos.length > 0 || ciFuelLevel || ciIsClean !== null ||
+        ciHasIssues !== null || ciIssueCategory || ciIssues.trim() || ciReturnNotes.trim());
+    if (!hasDraft) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [ciFuelLevel, ciHasIssues, ciIsClean, ciIssueCategory, ciIssues, ciReturnNotes, damagePhotos.length, dashPhoto, interiorPhoto, step]);
 
   const advanceStep = (next: Step) => {
     setSlideDirection("left");
@@ -160,7 +192,7 @@ export function useVehicleCheckIn() {
 
       for (const file of allFiles) {
         try {
-          await fetch("/api/uploads", {
+          const uploadResponse = await fetch("/api/uploads", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -172,8 +204,13 @@ export function useVehicleCheckIn() {
               vehicleCheckInLogId: checkInLog.id,
             }),
           });
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.json().catch(() => ({ message: "Failed to save photo evidence" }));
+            throw new Error(error.message || "Failed to save photo evidence");
+          }
         } catch (uploadError) {
           console.error("Error saving upload:", uploadError);
+          throw uploadError;
         }
       }
 
@@ -207,11 +244,14 @@ export function useVehicleCheckIn() {
   });
 
   const handleCheckInSubmit = (notes = ciReturnNotes) => {
+    const issueText = ciHasIssues
+      ? `${ciIssueCategory ? `[${ciIssueCategory}] ` : ""}${ciIssues}`.trim()
+      : "";
     checkInMutation.mutate({
       endMileage: ciMileage,
       fuelLevel: ciFuelLevel,
       cleanlinessStatus: ciIsClean === false ? "needs_cleaning" : "clean",
-      issues: ciHasIssues ? ciIssues : "",
+      issues: issueText,
       returnNotes: notes,
     });
   };
@@ -248,6 +288,7 @@ export function useVehicleCheckIn() {
     ciFuelLevel, setCiFuelLevel,
     ciIsClean, setCiIsClean,
     ciHasIssues, setCiHasIssues,
+    ciIssueCategory, setCiIssueCategory,
     ciIssues, setCiIssues,
     ciReturnNotes, setCiReturnNotes,
     fuelViolationAck, setFuelViolationAck,

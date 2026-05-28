@@ -296,7 +296,7 @@ export default function EditTask() {
         title: "Task Updated",
         description: "The task has been updated successfully.",
       });
-      navigate(`/tasks/${id}`);
+      navigate(`/tasks/${id}`, { replace: true });
     },
     onError: (error: any) => {
       toast({

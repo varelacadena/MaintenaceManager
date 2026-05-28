@@ -65,8 +65,18 @@ function buildReservationConditions(filters?: VehicleReservationFilters) {
     conditions.push(eq(vehicleReservations.status, filters.status as any));
   }
   if (filters?.search?.trim()) {
-    const term = `%${filters.search.trim()}%`;
-    conditions.push(ilike(vehicleReservations.purpose, term));
+    const rawSearch = filters.search.trim();
+    const term = `%${rawSearch}%`;
+    const sequenceSearch = rawSearch.replace(/^[cC]/, "").replace(/\D/g, "");
+    conditions.push(
+      or(
+        ilike(vehicleReservations.purpose, term),
+        ilike(vehicleReservations.id, term),
+        sequenceSearch
+          ? sql`LPAD(CAST(${vehicleReservations.reservationNumber} AS TEXT), 3, '0') LIKE ${`%${sequenceSearch}%`}`
+          : undefined,
+      )!,
+    );
   }
   return conditions;
 }

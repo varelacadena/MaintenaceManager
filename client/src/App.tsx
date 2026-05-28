@@ -15,6 +15,7 @@ import NotificationsWidget from "./components/NotificationsWidget";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DomainErrorBoundary from "@/components/DomainErrorBoundary";
+import { exitTo, goBack, hasPageBackControl } from "@/lib/navigation";
 
 const Landing = lazy(() => import("@/pages/Landing"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
@@ -57,7 +58,7 @@ const GrabAJob = lazy(() => import("./pages/GrabAJob"));
 function VehicleReservationsTabRedirect() {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    setLocation("/vehicles?tab=reservations");
+    exitTo(setLocation, "/vehicles?tab=reservations");
   }, [setLocation]);
   return null;
 }
@@ -65,7 +66,7 @@ function VehicleReservationsTabRedirect() {
 function RedirectTo({ to }: { to: string }) {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    setLocation(to);
+    exitTo(setLocation, to);
   }, [setLocation, to]);
   return null;
 }
@@ -81,7 +82,7 @@ function SuspenseFallback() {
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const isMobileView = useIsMobile();
-  const [currentPath] = useLocation();
+  const [currentPath, setLocation] = useLocation();
 
   const style = {
     "--sidebar-width": "13rem",
@@ -116,6 +117,9 @@ function AuthenticatedApp() {
   const userInitials = user?.firstName && user?.lastName
     ? `${user.firstName[0]}${user.lastName[0]}`
     : user?.email?.[0]?.toUpperCase() || "U";
+  const showGlobalBack = user?.role !== "student" &&
+    user?.role !== "technician" &&
+    !hasPageBackControl(currentPath, user?.role);
 
   if (isMobileTaskDetail) {
     if (user?.role === "technician") {
@@ -130,19 +134,19 @@ function AuthenticatedApp() {
   return (
     <>
       <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full">
+        <div className="flex h-svh min-h-0 w-full">
           <AppSidebar
             userRole={user?.role as "admin" | "staff" | "student" | "technician"}
             userName={userName}
             userInitials={userInitials}
           />
-          <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
             <header className={`flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${(user?.role === "student" || user?.role === "technician") ? "py-1.5" : ""}`}>
               <div className="flex items-center gap-1 sm:gap-3">
                 <SidebarTrigger className="md:hidden h-8 w-8 text-muted-foreground" data-testid="button-sidebar-toggle" />
-                {user?.role !== "student" && user?.role !== "technician" && (
+                {showGlobalBack && (
                   <button
-                    onClick={() => window.history.back()}
+                    onClick={() => goBack(setLocation, currentPath, user?.role)}
                     className="flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                     aria-label="Go back"
                     data-testid="button-back-global"
@@ -178,15 +182,16 @@ function AuthenticatedApp() {
                       await fetch("/api/logout", { method: "POST" });
                       window.location.href = "/";
                     }}
-                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 sm:px-0 sm:py-0"
                     data-testid="button-logout"
                   >
-                    Sign Out
+                    <span className="hidden sm:inline">Sign Out</span>
+                    <span className="sm:hidden">Out</span>
                   </button>
                 )}
               </div>
             </header>
-            <main className={`flex-1 bg-muted/20 ${(user?.role === "student" || user?.role === "technician") ? "px-0 py-0" : "px-8 py-6"} ${/^\/tasks\/[a-f0-9-]+$/i.test(currentPath) ? "overflow-hidden" : "overflow-auto"}`}>
+            <main className={`flex-1 min-h-0 bg-muted/20 ${(user?.role === "student" || user?.role === "technician") ? "px-0 py-0" : "px-3 py-4 sm:px-6 sm:py-6 lg:px-8"} ${/^\/tasks\/[a-f0-9-]+$/i.test(currentPath) ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
               {(user?.role === "student" || user?.role === "technician") && (
                 <PwaInstallBanner />
               )}
@@ -294,19 +299,19 @@ function AuthenticatedApp() {
                 {/* Inventory */}
                 <Route path="/inventory" component={() => (
                   <DomainErrorBoundary domain="Inventory">
-                    <RoleGuard allowedRoles={["admin", "technician"]}><Inventory /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin"]}><Inventory /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
 
                 {/* Vehicle Fleet */}
                 <Route path="/vehicles" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin", "technician"]}><Vehicles /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin"]}><Vehicles /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicles/:id" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    {user?.role === "admin" || user?.role === "technician" ? (
+                    {user?.role === "admin" ? (
                       <VehicleDetail />
                     ) : (
                       <VehicleQRRedirect />
@@ -320,34 +325,34 @@ function AuthenticatedApp() {
                 )} />
                 <Route path="/my-reservations" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><MyReservations /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><MyReservations /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-reservations" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin", "technician"]}>
+                    <RoleGuard allowedRoles={["admin"]}>
                       <VehicleReservationsTabRedirect />
                     </RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-reservation-details/:reservationId" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleReservationDetails /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><VehicleReservationDetails /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-checkout/:reservationId" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckOut /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><VehicleCheckOut /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-checkin/:checkOutLogId" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}><VehicleCheckIn /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><VehicleCheckIn /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
                 <Route path="/vehicle-checkin-verify/:checkInLogId" component={() => (
                   <DomainErrorBoundary domain="Vehicle Fleet">
-                    <RoleGuard allowedRoles={["admin"]}><VehicleCheckInVerification /></RoleGuard>
+                    <RoleGuard allowedRoles={["admin", "technician"]}><VehicleCheckInVerification /></RoleGuard>
                   </DomainErrorBoundary>
                 )} />
 

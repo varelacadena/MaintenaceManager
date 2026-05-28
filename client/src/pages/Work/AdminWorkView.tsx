@@ -65,7 +65,7 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
 
   return (
     <>
-      <div className={`flex ${panelMounted ? "-mx-8 -mt-6 overflow-hidden" : ""}`} style={panelMounted ? { height: "calc(100vh - 49px)" } : undefined}>
+      <div className={`flex ${panelMounted ? "-mx-3 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 overflow-hidden min-h-0" : ""}`} style={panelMounted ? { height: "calc(100svh - 49px)" } : undefined}>
         <div
           className={`flex-1 min-w-0 overflow-y-auto ${panelMounted && isPanelFullscreen ? "hidden" : ""}`}
           style={{ transition: "all 280ms cubic-bezier(0.4, 0, 0.2, 1)" }}
@@ -195,9 +195,9 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                         id={workStatusGroupPanelId(status.key)}
                         role="region"
                         aria-labelledby={`work-group-header-${status.key}`}
-                        className="border-t"
+                        className="border-t overflow-x-auto"
                       >
-                        <Table>
+                        <Table className="min-w-[720px]">
                           <TableHeader>
                             <TableRow className="hover:bg-transparent">
                               <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>

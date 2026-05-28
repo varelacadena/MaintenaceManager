@@ -448,7 +448,7 @@ export default function PropertyMapPage() {
       </div>
 
       <Dialog open={mapDialogOpen} onOpenChange={handleMapDialogClose}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-4xl w-[calc(100vw-2rem)] h-[min(80dvh,calc(100dvh-2rem))] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <div className="flex items-center justify-between gap-3">
               <DialogTitle className="flex items-center gap-2">

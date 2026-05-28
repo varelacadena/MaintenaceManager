@@ -148,13 +148,13 @@ export function DateTimePicker({
 
         {/* Time picker footer */}
         <div className="border-t px-2 sm:px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-2">
             <span className="text-xs sm:text-sm text-muted-foreground">Time:</span>
             <Select value={selectedHour} onValueChange={(h) => handleTimeChange(h, selectedMinute)}>
-              <SelectTrigger className="w-14 h-8 text-sm" data-testid={testId ? `${testId}-hour` : undefined}>
+              <SelectTrigger className="h-8 w-16 shrink-0 text-sm" data-testid={testId ? `${testId}-hour` : undefined}>
                 <SelectValue placeholder="Hr" />
               </SelectTrigger>
-              <SelectContent className="max-h-48 z-[200]">
+              <SelectContent className="z-[200] max-h-48 w-16 min-w-[4rem]">
                 {hours.map((hour) => (
                   <SelectItem key={hour} value={hour} className="text-sm">
                     {hour}
@@ -164,10 +164,10 @@ export function DateTimePicker({
             </Select>
             <span className="text-sm text-muted-foreground">:</span>
             <Select value={selectedMinute} onValueChange={(m) => handleTimeChange(selectedHour, m)}>
-              <SelectTrigger className="w-14 h-8 text-sm" data-testid={testId ? `${testId}-minute` : undefined}>
+              <SelectTrigger className="h-8 w-16 shrink-0 text-sm" data-testid={testId ? `${testId}-minute` : undefined}>
                 <SelectValue placeholder="Min" />
               </SelectTrigger>
-              <SelectContent className="z-[200]">
+              <SelectContent className="z-[200] w-16 min-w-[4rem]">
                 {minutes.map((minute) => (
                   <SelectItem key={minute} value={minute} className="text-sm">
                     {minute}

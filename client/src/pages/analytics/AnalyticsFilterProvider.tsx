@@ -137,7 +137,7 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       if (!next.get("tab") || next.get("tab") === "key-metrics") next.delete("tab");
 
       const qs = next.toString();
-      setLocation(qs ? `/analytics?${qs}` : "/analytics");
+      setLocation(qs ? `/analytics?${qs}` : "/analytics", { replace: true });
     },
     [search, setLocation],
   );

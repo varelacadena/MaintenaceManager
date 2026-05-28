@@ -5,6 +5,7 @@ import { useLocation, useSearch } from "wouter";
 import { buildWorkPath, getTaskIdFromWorkSearch } from "./workTaskUrl";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { exitTo } from "@/lib/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Task, User, Property, Project } from "@shared/schema";
 import {
@@ -84,7 +85,7 @@ export function useWorkAdmin() {
     if (tasksLoading) return;
     if (tasks && !tasks.some((t) => t.id === fromUrl)) {
       setSelectedTaskId(null);
-      setLocation(buildWorkPath(null, search));
+      exitTo(setLocation, buildWorkPath(null, search));
       return;
     }
     setSelectedTaskId((prev) => (prev === fromUrl ? prev : fromUrl));
@@ -235,7 +236,7 @@ export function useWorkAdmin() {
     }
     setSelectedTaskId((prev) => {
       const next = prev === taskId ? null : taskId;
-      setLocation(buildWorkPath(next, search));
+      setLocation(buildWorkPath(next, search), { replace: true });
       return next;
     });
   };
@@ -243,7 +244,7 @@ export function useWorkAdmin() {
   const closeTaskPanel = () => {
     setSelectedTaskId(null);
     setIsPanelFullscreen(false);
-    setLocation(buildWorkPath(null, search));
+    exitTo(setLocation, buildWorkPath(null, search));
   };
 
   const handleUrgencyChange = (taskId: string, urgency: string) => {

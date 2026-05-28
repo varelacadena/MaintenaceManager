@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResponsiveTableScroll } from "@/components/ResponsiveTableScroll";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -157,7 +157,7 @@ export default function WorkOrdersReport() {
         />
       ) : (
         <>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="col-span-1" data-testid="card-total-work-orders">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -318,7 +318,7 @@ export default function WorkOrdersReport() {
           </Link>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <ScrollArea className="h-[400px]">
+          <ResponsiveTableScroll maxHeight="min(60vh, 400px)">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -395,7 +395,7 @@ export default function WorkOrdersReport() {
                 ))}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </ResponsiveTableScroll>
         </CardContent>
       </Card>
         </>

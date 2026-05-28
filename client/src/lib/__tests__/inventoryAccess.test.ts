@@ -14,9 +14,9 @@ describe("inventoryAccess", () => {
     expect(canReadInventory("staff")).toBe(false);
   });
 
-  it("canOperateInventory allows admin and technician only", () => {
+  it("canOperateInventory allows admin only", () => {
     expect(canOperateInventory("admin")).toBe(true);
-    expect(canOperateInventory("technician")).toBe(true);
+    expect(canOperateInventory("technician")).toBe(false);
     expect(canOperateInventory("student")).toBe(false);
   });
 

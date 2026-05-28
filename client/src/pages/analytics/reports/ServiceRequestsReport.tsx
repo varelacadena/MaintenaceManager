@@ -173,7 +173,7 @@ export default function ServiceRequestsReport() {
         />
       ) : (
         <>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="cursor-pointer hover-elevate" onClick={() => openDetailDialog("all", "All Requests")}>
           <KpiCard
             title="Total Requests"
@@ -383,7 +383,7 @@ export default function ServiceRequestsReport() {
       </Card>
 
       <Dialog open={detailDialog.open} onOpenChange={() => setDetailDialog({ open: false, type: "", title: "" })}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[min(80dvh,calc(100dvh-2rem))] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{detailDialog.title}</DialogTitle>
             <DialogDescription>
@@ -393,7 +393,8 @@ export default function ServiceRequestsReport() {
               {detailDialog.type === "rejected" && `Requests with status: ${getServiceRequestStatusLabel("rejected")}`}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 w-full">
+            <div className="min-w-[480px]">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -426,6 +427,8 @@ export default function ServiceRequestsReport() {
                   ))}
               </TableBody>
             </Table>
+            </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </DialogContent>
       </Dialog>

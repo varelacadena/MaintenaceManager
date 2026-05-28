@@ -10,10 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { InspectionStepProps } from "./CheckInInspectionStep";
 
+const ISSUE_CATEGORIES = [
+  "Mechanical",
+  "Safety",
+  "Damage",
+  "Key/Lockbox",
+  "Other",
+];
+
 export function InspectionStepExtra(props: InspectionStepProps) {
   const {
     inspSubStep,
-    ciHasIssues, setCiHasIssues, ciIssues, setCiIssues,
+    ciHasIssues, setCiHasIssues, ciIssueCategory, setCiIssueCategory, ciIssues, setCiIssues,
     advanceInspSubStep, goBackInspSubStep,
     dashPhoto, setDashPhoto, interiorPhoto, setInteriorPhoto,
     damagePhotos, setDamagePhotos, getUploadParameters, handleFileUpload, toast,
@@ -37,7 +45,7 @@ export function InspectionStepExtra(props: InspectionStepProps) {
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => { setCiHasIssues(false); setCiIssues(""); }}
+              onClick={() => { setCiHasIssues(false); setCiIssueCategory(""); setCiIssues(""); }}
               data-testid="issues-none"
               className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
                 ciHasIssues === false
@@ -67,7 +75,26 @@ export function InspectionStepExtra(props: InspectionStepProps) {
             </button>
           </div>
           {ciHasIssues === true && (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">What type of issue is it?</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {ISSUE_CATEGORIES.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setCiIssueCategory(category)}
+                      className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                        ciIssueCategory === category
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-muted text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Label className="text-sm font-medium">Describe the issue</Label>
               <Textarea
                 placeholder="e.g., Engine warning light on, brake noise, tire damage..."
@@ -81,7 +108,7 @@ export function InspectionStepExtra(props: InspectionStepProps) {
           <div className="flex flex-col gap-2">
             <Button
               onClick={() => advanceInspSubStep("photos")}
-              disabled={ciHasIssues === null || (ciHasIssues === true && !ciIssues.trim())}
+              disabled={ciHasIssues === null || (ciHasIssues === true && (!ciIssueCategory || !ciIssues.trim()))}
               className="w-full"
               data-testid="button-issues-next"
             >
@@ -234,43 +261,22 @@ export function InspectionStepExtra(props: InspectionStepProps) {
           />
           <div className="flex flex-col gap-2">
             {hasLockbox ? (
-              <>
-                <Button
-                  onClick={() => advanceInspSubStep("keyReturn")}
-                  className="w-full"
-                  data-testid="button-notes-next"
-                >
-                  Continue
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => { setCiReturnNotes(""); advanceInspSubStep("keyReturn"); }}
-                  className="w-full"
-                  data-testid="button-skip-notes"
-                >
-                  Skip Notes — Continue
-                </Button>
-              </>
+              <Button
+                onClick={() => advanceInspSubStep("keyReturn")}
+                className="w-full"
+                data-testid="button-notes-next"
+              >
+                Continue
+              </Button>
             ) : (
-              <>
-                <Button
-                  onClick={() => handleCheckInSubmit(ciReturnNotes)}
-                  disabled={checkInMutation.isPending}
-                  className="w-full"
-                  data-testid="button-submit-checkin"
-                >
-                  {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleCheckInSubmit("")}
-                  disabled={checkInMutation.isPending}
-                  className="w-full"
-                  data-testid="button-skip-notes"
-                >
-                  Skip — Complete Check-In
-                </Button>
-              </>
+              <Button
+                onClick={() => handleCheckInSubmit(ciReturnNotes)}
+                disabled={checkInMutation.isPending}
+                className="w-full"
+                data-testid="button-submit-checkin"
+              >
+                {checkInMutation.isPending ? "Completing Check-In..." : "Complete Check-In"}
+              </Button>
             )}
             <Button variant="ghost" onClick={() => goBackInspSubStep("photos")} className="w-full text-sm">
               <ChevronLeft className="h-4 w-4 mr-1" /> Back

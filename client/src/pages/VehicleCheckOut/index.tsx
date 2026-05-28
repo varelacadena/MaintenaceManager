@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { useVehicleCheckOut } from "./useVehicleCheckOut";
+import { exitTo } from "@/lib/navigation";
+import { getCheckoutOpenTime } from "@shared/fleetReservationPolicy";
 import {
   StepProgress,
   AdvisoryPreAcceptStep,
   AdvisoryKeyRevealStep,
-  SafetyStep,
   ResponsibilityStep,
 } from "./CheckOutComponents";
 import {
@@ -68,14 +69,14 @@ export default function VehicleCheckOut() {
               <p className="text-muted-foreground text-sm">
                 Checkout opens on{" "}
                 <span className="font-semibold text-foreground">
-                  {format(new Date(new Date(reservation.startDate).getTime() - 60 * 60 * 1000), "EEEE, MMM d 'at' h:mm a")}
+                  {format(getCheckoutOpenTime(reservation.startDate), "EEEE, MMM d 'at' h:mm a")}
                 </span>
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 Please come back 1 hour before your reservation to begin checkout.
               </p>
             </div>
-            <Button variant="outline" onClick={() => setLocation("/my-reservations")} className="mt-2">
+            <Button variant="outline" onClick={() => exitTo(setLocation, "/my-reservations")} className="mt-2">
               Back to My Reservations
             </Button>
           </CardContent>
@@ -97,7 +98,6 @@ export default function VehicleCheckOut() {
         <div className={`transition-all duration-300 ease-in-out ${animationClass}`}>
           {step === "advisory" && !advisoryJustAccepted && <AdvisoryPreAcceptStep ctx={ctx} />}
           {step === "advisory" && advisoryJustAccepted && <AdvisoryKeyRevealStep ctx={ctx} />}
-          {step === "safety" && <SafetyStep ctx={ctx} />}
           {step === "responsibility" && <ResponsibilityStep ctx={ctx} />}
           {step === "checkout" && <CheckoutStep ctx={ctx} />}
           {step === "complete" && <CompleteStep ctx={ctx} />}

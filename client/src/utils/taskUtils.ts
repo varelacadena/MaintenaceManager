@@ -183,18 +183,25 @@ export function getAvatarHexColor(id: string): string {
   return avatarHexColors[Math.abs(hash) % avatarHexColors.length];
 }
 
-export function getInitials(user: { firstName?: string | null; lastName?: string | null; username: string }): string {
+export function getInitials(user: { firstName?: string | null; lastName?: string | null; username?: string | null; email?: string | null }): string {
   if (user.firstName && user.lastName) {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   }
-  return (user.username?.[0] || "?").toUpperCase();
+  return (user.username?.[0] || user.email?.[0] || "?").toUpperCase();
 }
 
-export function getUserDisplayName(user: { firstName?: string | null; lastName?: string | null; username: string }): string {
-  if (user.firstName) {
-    return `${user.firstName} ${user.lastName || ""}`.trim();
+export function getUserDisplayName(user: {
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  email?: string | null;
+  role?: string | null;
+}): string {
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  if (name) {
+    return name;
   }
-  return user.username;
+  return user.username || user.email || user.role || "Unknown";
 }
 
 export function formatTaskDate(date: string | Date | null | undefined, fallback: string = ""): string {

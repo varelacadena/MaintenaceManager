@@ -84,6 +84,8 @@ export default function VehicleCheckIn() {
               setCleanlinessViolationAck={ctx.setCleanlinessViolationAck}
               ciHasIssues={ctx.ciHasIssues}
               setCiHasIssues={ctx.setCiHasIssues}
+              ciIssueCategory={ctx.ciIssueCategory}
+              setCiIssueCategory={ctx.setCiIssueCategory}
               ciIssues={ctx.ciIssues}
               setCiIssues={ctx.setCiIssues}
               dashPhoto={ctx.dashPhoto}

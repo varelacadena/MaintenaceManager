@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTableScroll } from "@/components/ResponsiveTableScroll";
 import type { UsersContext } from './useUsers';
 
 export function UsersTabContent({ ctx }: { ctx: UsersContext }) {
@@ -238,8 +239,9 @@ export function CredentialsTabContent({ ctx }: { ctx: UsersContext }) {
       <CardHeader>
         <CardTitle>All Users</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
+      <CardContent className="p-3 md:p-4 pt-0">
+        <ResponsiveTableScroll>
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
               <TableHead>Username</TableHead>
@@ -331,6 +333,7 @@ export function CredentialsTabContent({ ctx }: { ctx: UsersContext }) {
             ))}
           </TableBody>
         </Table>
+        </ResponsiveTableScroll>
       </CardContent>
     </Card>
   );

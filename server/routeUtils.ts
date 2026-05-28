@@ -68,7 +68,7 @@ export async function authenticateUser(req: any): Promise<any | null> {
 }
 
 export function isFleetPrivilegedRole(role: string | undefined): boolean {
-  return role === "admin" || role === "technician";
+  return role === "admin";
 }
 
 /** Non-privileged users may only read vehicles tied to their own non-cancelled reservations. */

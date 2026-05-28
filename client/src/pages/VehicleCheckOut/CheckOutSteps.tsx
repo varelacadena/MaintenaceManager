@@ -15,6 +15,7 @@ import {
   getKeyPickupMethodLabel,
   type VehicleCheckOutContext,
 } from "./useVehicleCheckOut";
+import { exitTo } from "@/lib/navigation";
 import { FuelLevelSelector, SubStepDots } from "./CheckOutComponents";
 
 export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
@@ -381,7 +382,7 @@ export function CompleteStep({ ctx }: { ctx: VehicleCheckOutContext }) {
         </Alert>
         <div className="flex flex-col gap-2 w-full">
           <Button
-            onClick={() => setLocation(`/vehicle-reservation-details/${reservationId}`)}
+            onClick={() => exitTo(setLocation, `/vehicle-reservation-details/${reservationId}`)}
             variant="outline"
             className="w-full"
             data-testid="button-view-details"
@@ -389,7 +390,7 @@ export function CompleteStep({ ctx }: { ctx: VehicleCheckOutContext }) {
             View Reservation Details
           </Button>
           <Button
-            onClick={() => setLocation("/my-reservations")}
+            onClick={() => exitTo(setLocation, "/my-reservations")}
             variant="outline"
             className="w-full"
             data-testid="button-back-reservations"

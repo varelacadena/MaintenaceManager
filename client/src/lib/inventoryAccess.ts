@@ -5,7 +5,7 @@ export function canReadInventory(role: string | undefined): boolean {
 
 /** Roles that can add items and adjust stock on the inventory page. */
 export function canOperateInventory(role: string | undefined): boolean {
-  return role === "admin" || role === "technician";
+  return role === "admin";
 }
 
 export function isInventoryAdmin(role: string | undefined): boolean {

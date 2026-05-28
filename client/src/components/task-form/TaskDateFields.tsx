@@ -60,6 +60,27 @@ function formatDisplay(hour: string, minute: string, period: string): string {
   return `${parseInt(hour, 10)}:${minute} ${period}`;
 }
 
+function toDateInputValue(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+function fromDateInputValue(value: string | undefined): Date | undefined {
+  return value ? new Date(`${value}T12:00:00`) : undefined;
+}
+
+function setRequiredDate(form: any, field: any, name: string, date: Date | undefined) {
+  if (!date) return;
+
+  const value = toDateInputValue(date);
+  field.onChange(value);
+  form.setValue(name, value, {
+    shouldDirty: true,
+    shouldTouch: true,
+    shouldValidate: true,
+  });
+  form.clearErrors(name);
+}
+
 function TimePopover({ field }: { field: any }) {
   const parsed = parseTimeValue(field.value);
   const [hour, setHour] = useState(parsed.hour);
@@ -176,7 +197,7 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
           name="initialDate"
           render={({ field }: { field: any }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Start Date</FormLabel>
+              <FormLabel>Start Date *</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -189,24 +210,15 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
                       type="button"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "Pick date"}
+                      {field.value ? format(fromDateInputValue(field.value)!, "MMM d, yyyy") : "Pick date"}
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                    onSelect={(date: Date | undefined) => {
-                      if (date) {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        field.onChange(`${year}-${month}-${day}`);
-                      } else {
-                        field.onChange(undefined);
-                      }
-                    }}
+                    selected={fromDateInputValue(field.value)}
+                    onSelect={(date: Date | undefined) => setRequiredDate(form, field, "initialDate", date)}
                     className="[--cell-size:2.5rem] p-4"
                     initialFocus
                     disabled={disabledDate}
@@ -236,24 +248,15 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
                       type="button"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "Pick date"}
+                      {field.value ? format(fromDateInputValue(field.value)!, "MMM d, yyyy") : "Pick date"}
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                    onSelect={(date: Date | undefined) => {
-                      if (date) {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        field.onChange(`${year}-${month}-${day}`);
-                      } else {
-                        field.onChange(undefined);
-                      }
-                    }}
+                    selected={fromDateInputValue(field.value)}
+                    onSelect={(date: Date | undefined) => setRequiredDate(form, field, "estimatedCompletionDate", date)}
                     className="[--cell-size:2.5rem] p-4"
                     initialFocus
                     disabled={disabledDate}

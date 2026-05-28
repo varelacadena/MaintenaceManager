@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   pgTable,
   varchar,
+  integer,
   text,
   timestamp,
   pgEnum,
@@ -41,6 +42,7 @@ export type Subdivision = typeof subdivisions.$inferSelect;
 
 export const serviceRequests = pgTable("service_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestNumber: integer("request_number").notNull().default(sql`nextval('service_request_number_seq')`),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   urgency: urgencyEnum("urgency").notNull(),
@@ -59,6 +61,7 @@ export const serviceRequests = pgTable("service_requests", {
 
 export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({
   id: true,
+  requestNumber: true,
   createdAt: true,
   updatedAt: true,
   status: true,

@@ -101,6 +101,7 @@ export type Vehicle = typeof vehicles.$inferSelect;
 
 export const vehicleReservations = pgTable("vehicle_reservations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reservationNumber: integer("reservation_number").notNull().default(sql`nextval('vehicle_reservation_number_seq')`),
   vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
   purpose: varchar("purpose", { length: 200 }).notNull(),
@@ -120,6 +121,7 @@ export const vehicleReservations = pgTable("vehicle_reservations", {
 
 export const insertVehicleReservationSchema = createInsertSchema(vehicleReservations).omit({
   id: true,
+  reservationNumber: true,
   createdAt: true,
   updatedAt: true,
 });

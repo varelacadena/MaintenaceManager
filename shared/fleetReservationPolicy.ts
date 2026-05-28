@@ -6,6 +6,28 @@ export const VEHICLE_ACCESS_RESERVATION_STATUSES = [
   "pending_review",
 ] as const;
 
+export const CHECKOUT_OPEN_LEAD_MS = 60 * 60 * 1000;
+
+export function getCheckoutOpenTime(startDate: string | Date): Date {
+  return new Date(new Date(startDate).getTime() - CHECKOUT_OPEN_LEAD_MS);
+}
+
+export function isCheckoutWindowOpen(
+  startDate: string | Date,
+  now: Date = new Date(),
+): boolean {
+  return now >= getCheckoutOpenTime(startDate);
+}
+
+export function isReservationCheckoutAllowed(
+  reservation: { status: string; startDate: string | Date; endDate: string | Date },
+  now: Date = new Date(),
+): boolean {
+  return reservation.status === "approved" &&
+    isCheckoutWindowOpen(reservation.startDate, now) &&
+    now <= new Date(reservation.endDate);
+}
+
 type ReservationStatus =
   | "pending"
   | "approved"
@@ -83,4 +105,16 @@ export function checkInManualVehicleStatus(
   if (condition.hasIssues) return "needs_maintenance";
   if (condition.needsCleaning) return "needs_cleaning";
   return null;
+}
+
+export function isLowFuelLevel(fuelLevel: string | null | undefined): boolean {
+  return fuelLevel === "empty" || fuelLevel === "1/4";
+}
+
+export function requiresCheckInReview(condition: {
+  hasIssues: boolean;
+  needsCleaning: boolean;
+  fuelLevel?: string | null;
+}): boolean {
+  return condition.hasIssues || condition.needsCleaning || isLowFuelLevel(condition.fuelLevel);
 }

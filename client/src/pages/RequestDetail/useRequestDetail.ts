@@ -66,7 +66,7 @@ export function useRequestDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
       toast({ title: "Request rejected" });
-      navigate("/requests");
+      navigate("/requests", { replace: true });
     },
     onError: () => {
       toast({ title: "Failed to reject request", variant: "destructive" });

@@ -55,6 +55,8 @@ import {
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
+import { getVehicleReservationNumber } from "@shared/recordNumbers";
+import { getUserDisplayName } from "@/utils/taskUtils";
 
 const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
@@ -346,7 +348,7 @@ export function VehicleReservationsContent() {
 
   const getUserName = (userId: string) => {
     const user = users?.find(u => u.id === userId);
-    return user ? `${user.firstName} ${user.lastName}` : "Unknown User";
+    return user ? getUserDisplayName(user) : "Unknown User";
   };
 
   const displayReservations = [...reservations].sort((a, b) => {
@@ -423,6 +425,10 @@ export function VehicleReservationsContent() {
               <CardContent className="pt-4 pb-3 px-4 space-y-2">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs font-semibold text-muted-foreground">
+                      {getVehicleReservationNumber(reservation)}
+                    </span>
+                    <span className="text-muted-foreground text-xs">·</span>
                     <Car className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="font-semibold text-sm truncate">{getVehicleName(reservation.vehicleId)}</span>
                     <span className="text-muted-foreground text-xs">·</span>

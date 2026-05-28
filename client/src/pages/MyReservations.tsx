@@ -34,6 +34,8 @@ import {
 } from "@/lib/fleetUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 import { invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
+import { getVehicleReservationNumber } from "@shared/recordNumbers";
+import { isReservationCheckoutAllowed } from "@shared/fleetReservationPolicy";
 
 interface VehicleReservation {
   id: string;
@@ -46,6 +48,7 @@ interface VehicleReservation {
   status: string;
   passengerCount: number | null;
   advisoryAccepted: boolean | null;
+  reservationNumber: number | null;
   createdAt: string;
 }
 
@@ -171,12 +174,7 @@ export default function MyReservations() {
   };
 
   const canCheckOut = (reservation: VehicleReservation) => {
-    if (reservation.status.toLowerCase() !== "approved") return false;
-    const now = new Date();
-    const startTime = new Date(reservation.startDate);
-    const endTime = new Date(reservation.endDate);
-    const hoursBefore = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return hoursBefore <= 24 && now <= endTime;
+    return isReservationCheckoutAllowed(reservation);
   };
 
   const showViewDetails = (status: string) =>
@@ -184,7 +182,7 @@ export default function MyReservations() {
 
   if (isError) {
     return (
-      <div className="p-4">
+      <div className="px-4 py-4 sm:px-6 lg:px-8">
         <WorkLoadError
           title="Could not load your reservations"
           message={error instanceof Error ? error.message : "Something went wrong"}
@@ -196,7 +194,7 @@ export default function MyReservations() {
 
   if (isLoading) {
     return (
-      <div className="space-y-3 md:space-y-4">
+      <div className="space-y-3 px-4 py-4 sm:px-6 md:space-y-4 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl md:text-2xl font-semibold">My Reservations</h1>
@@ -209,7 +207,7 @@ export default function MyReservations() {
   }
 
   return (
-    <div className="space-y-3 md:space-y-4 pb-6">
+    <div className="space-y-3 px-4 py-4 sm:px-6 md:space-y-4 lg:px-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 min-w-0">
           <h1 className="text-xl md:text-2xl font-semibold truncate">My Reservations</h1>
@@ -353,6 +351,9 @@ export default function MyReservations() {
                 <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Reservation {getVehicleReservationNumber(reservation)}
+                      </p>
                       <CardTitle className="text-lg sm:text-xl mb-1 truncate" data-testid={`text-purpose-${reservation.id}`}>
                         {reservation.purpose}
                       </CardTitle>

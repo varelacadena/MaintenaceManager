@@ -9,7 +9,7 @@ const STEP_ICONS: Record<string, any> = {
 
 export function FuelLevelSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {FUEL_OPTIONS.map((opt) => {
         const isSelected = value === opt.value;
         const isLow = opt.value === "empty" || opt.value === "1/4";

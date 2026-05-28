@@ -35,7 +35,7 @@ export default function MobileTaskDetail() {
           subtasks={subtasks || []}
           onCancel={() => setIsEditMode(false)}
           onSaved={() => setIsEditMode(false)}
-          onDeleted={() => navigate("/work")}
+          onDeleted={() => navigate("/work", { replace: true })}
           variant="mobile"
         />
       </div>

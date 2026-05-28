@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Car, Gauge, Fuel, Calendar, Wrench, AlertCircle, ArrowLeft } from "lucide-react";
 import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog } from "@shared/schema";
+import { exitTo } from "@/lib/navigation";
 
 export default function VehicleQRRedirect() {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +57,7 @@ export default function VehicleQRRedirect() {
     });
     if (activeLog) {
       setRedirected(true);
-      setLocation(`/vehicle-checkin/${activeLog.id}`);
+      exitTo(setLocation, `/vehicle-checkin/${activeLog.id}`);
       return;
     }
 
@@ -72,7 +73,7 @@ export default function VehicleQRRedirect() {
 
     if (approvedReservation) {
       setRedirected(true);
-      setLocation(`/vehicle-checkout/${approvedReservation.id}`);
+      exitTo(setLocation, `/vehicle-checkout/${approvedReservation.id}`);
       return;
     }
   }, [user, id, reservations, checkOutLogs, checkInLogs, reservationsLoading, logsLoading, checkInLogsLoading, redirected, setLocation]);
@@ -127,7 +128,7 @@ export default function VehicleQRRedirect() {
     return (
       <div className="p-4 max-w-2xl mx-auto space-y-6" data-testid="vehicle-info-technician">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => window.history.back()} data-testid="button-back">
+          <Button variant="ghost" size="icon" onClick={() => exitTo(setLocation, "/my-reservations")} data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-xl font-semibold">Vehicle Information</h1>
@@ -260,7 +261,7 @@ export default function VehicleQRRedirect() {
             <Button onClick={() => setLocation("/my-reservations")} data-testid="button-my-reservations">
               View My Reservations
             </Button>
-            <Button variant="outline" onClick={() => window.history.back()} data-testid="button-go-back">
+            <Button variant="outline" onClick={() => exitTo(setLocation, "/my-reservations")} data-testid="button-go-back">
               Go Back
             </Button>
           </div>

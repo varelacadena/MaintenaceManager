@@ -5,7 +5,7 @@ export default defineConfig({
   testMatch: '**/*.pw.spec.ts',
   timeout: 60000,
   use: {
-    baseURL: process.env.BASE_URL || `http://localhost:${process.env.PORT || '5000'}`,
+    baseURL: process.env.BASE_URL || `http://localhost:${process.env.PORT || '3000'}`,
     headless: true,
   },
 });

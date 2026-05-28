@@ -1,6 +1,6 @@
 /** Roles that can manage fleet reservations and see org-wide trip logs. */
 export function isFleetPrivilegedRole(role: string | undefined): boolean {
-  return role === "admin" || role === "technician";
+  return role === "admin";
 }
 
 export const FLEET_PAGE_SIZE = 24;

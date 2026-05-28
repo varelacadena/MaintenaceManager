@@ -8,6 +8,7 @@ import {
   MapPin,
 } from "lucide-react";
 import type { RequestDetailHookReturn } from "./useRequestDetail";
+import { getUserDisplayName } from "@/utils/taskUtils";
 
 type RequestDetailSidebarProps = Pick<
   RequestDetailHookReturn,
@@ -78,7 +79,7 @@ export function RequestDetailSidebar({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" data-testid="text-requester-name">
-                  {requester.firstName} {requester.lastName}
+                  {getUserDisplayName(requester)}
                 </p>
                 <p className="text-xs text-muted-foreground capitalize">
                   {requester.role}

@@ -370,7 +370,7 @@ export function useTaskDetail() {
     if (pendingNavigation === "back") {
       window.history.back();
     } else if (pendingNavigation) {
-      navigate(pendingNavigation);
+      navigate(pendingNavigation, { replace: true });
     }
     setIsLeaveConfirmDialogOpen(false);
     setPendingNavigation(null);

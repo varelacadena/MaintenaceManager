@@ -372,7 +372,7 @@ export function useProjectDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({ title: "Project deleted" });
-      setLocation("/work");
+      setLocation("/work", { replace: true });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

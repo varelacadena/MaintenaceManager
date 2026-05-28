@@ -194,7 +194,7 @@ export function useMobileTaskDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Task deleted" });
-      navigate("/work");
+      navigate("/work", { replace: true });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete task", variant: "destructive" });
