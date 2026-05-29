@@ -14,7 +14,7 @@ interface MutationDeps {
   timeEntries: TimeEntry[];
   inventoryItems: InventoryItem[];
   toast: (opts: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
-  navigate: (path: string) => void;
+  navigate: (path: string, options?: { replace?: boolean }) => void;
   safeNavigate: (path: string) => void;
 
   quickInventoryName: string;
