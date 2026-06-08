@@ -27,6 +27,7 @@ import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import { dateInputValueToTaskTimestamp, getTaskDateInputValue } from "@/lib/taskCalendarDates";
 import type { Task, InsertTask, User } from "@shared/schema";
 
 interface Area {
@@ -73,9 +74,7 @@ export function TaskEditMode({
   const [description, setDescription] = useState(task.description || "");
   const [urgency, setUrgency] = useState<string>(task.urgency);
   const [estimatedCompletionDate, setEstimatedCompletionDate] = useState(
-    task.estimatedCompletionDate
-      ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
-      : ""
+    getTaskDateInputValue(task.estimatedCompletionDate)
   );
   const [areaId, setAreaId] = useState<string>(task.areaId || "");
   const [subdivisionId, setSubdivisionId] = useState<string>(task.subdivisionId || "");
@@ -117,11 +116,7 @@ export function TaskEditMode({
     setName(task.name);
     setDescription(task.description || "");
     setUrgency(task.urgency);
-    setEstimatedCompletionDate(
-      task.estimatedCompletionDate
-        ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
-        : ""
-    );
+    setEstimatedCompletionDate(getTaskDateInputValue(task.estimatedCompletionDate));
     setAreaId(task.areaId || "");
     setSubdivisionId(task.subdivisionId || "");
     setAssignedToId(task.assignedToId || "");
@@ -201,11 +196,11 @@ export function TaskEditMode({
       const origAssignedToId = task.assignedToId || "";
       if (assignedToId !== origAssignedToId) patchData.assignedToId = assignedToId || null;
 
-      const origDate = task.estimatedCompletionDate
-        ? new Date(task.estimatedCompletionDate).toISOString().split("T")[0]
-        : "";
+      const origDate = getTaskDateInputValue(task.estimatedCompletionDate);
       if (estimatedCompletionDate !== origDate) {
-        patchData.estimatedCompletionDate = estimatedCompletionDate ? new Date(estimatedCompletionDate) : null;
+        patchData.estimatedCompletionDate = estimatedCompletionDate
+          ? new Date(dateInputValueToTaskTimestamp(estimatedCompletionDate))
+          : null;
       }
 
       if (Object.keys(patchData).length > 0) {

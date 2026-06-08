@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "@shared/schema";
 import {
+  dateInputValueToTaskTimestamp,
   getCalendarDateKey,
   getTaskActiveDateKeys,
+  getTaskDateInputValue,
   getTaskReschedulePayload,
   taskCoversDate,
 } from "../taskCalendarDates";
@@ -46,5 +48,10 @@ describe("task calendar dates", () => {
     expect(payload).not.toBeNull();
     expect(getCalendarDateKey(payload?.initialDate)).toBe("2026-05-08");
     expect(getCalendarDateKey(payload?.estimatedCompletionDate)).toBe("2026-05-10");
+  });
+
+  it("keeps date input values on the selected calendar day", () => {
+    expect(getTaskDateInputValue("2026-06-08T00:00:00.000Z")).toBe("2026-06-08");
+    expect(dateInputValueToTaskTimestamp("2026-06-08")).toBe("2026-06-08T12:00:00");
   });
 });

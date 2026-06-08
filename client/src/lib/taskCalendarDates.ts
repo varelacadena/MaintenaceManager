@@ -1,9 +1,18 @@
 import { differenceInCalendarDays, format } from "date-fns";
 import type { Task } from "@shared/schema";
 
+const ISO_DATE_PART_RE = /^(\d{4})-(\d{2})-(\d{2})/;
+
 export function toCalendarDate(date: Date | string | null | undefined): Date | null {
   if (!date) return null;
-  const parsed = date instanceof Date ? new Date(date) : new Date(date);
+  if (typeof date === "string") {
+    const datePart = ISO_DATE_PART_RE.exec(date);
+    if (datePart) {
+      const [, year, month, day] = datePart;
+      return new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0, 0);
+    }
+  }
+  const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return null;
   parsed.setHours(12, 0, 0, 0);
   return parsed;
@@ -12,6 +21,14 @@ export function toCalendarDate(date: Date | string | null | undefined): Date | n
 export function getCalendarDateKey(date: Date | string | null | undefined): string | null {
   const calendarDate = toCalendarDate(date);
   return calendarDate ? format(calendarDate, "yyyy-MM-dd") : null;
+}
+
+export function getTaskDateInputValue(date: Date | string | null | undefined): string {
+  return getCalendarDateKey(date) ?? "";
+}
+
+export function dateInputValueToTaskTimestamp(value: string): string {
+  return `${value}T12:00:00`;
 }
 
 export function getTaskDateSpan(task: Pick<Task, "initialDate" | "estimatedCompletionDate">): {
