@@ -19,6 +19,8 @@ import {
   MoreVertical,
   Building2,
   User as UserIcon,
+  Play,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,21 +47,22 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
     isMobile, task, subtasks, uploads, taskParts, taskNotes,
     timeEntries, totalMinutes, statusPill, statusDot, statusLabel,
     urg, isOverdue, property, assignee, assigneeInitials, assigneeName,
-    completedSubtasks, totalSubtasks,
+    completedSubtasks, totalSubtasks, allSubtasksComplete,
     editingNoteId, setEditingNoteId, editNoteContent, setEditNoteContent,
     updateNoteMutation, setDeleteNoteId, setIsAddNoteDialogOpen,
     setIsEditMode, setDeleteDialogOpen,
     setEditingTimeEntryId, setEditTimeDuration, setDeleteTimeEntryId,
     setIsLogTimeDialogOpen,
+    isNotStarted, isStarted, handleStartTask, handleMarkComplete, updateStatusMutation,
   } = ctx;
 
   if (!task) return null;
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: "#FFFFFF" }} data-testid="task-detail-panel">
+    <div className="h-full flex flex-col" style={{ backgroundColor: "#F8FAFC" }} data-testid="task-detail-panel">
       <div
-        className={`flex items-center shrink-0 ${isMobile ? "gap-2 px-4 py-3" : "gap-4 px-8 py-4"}`}
-        style={{ borderBottom: "1px solid #EEEEEE" }}
+        className={`flex items-center shrink-0 ${isMobile ? "gap-2 px-4 py-3" : "gap-3 px-8 py-4"}`}
+        style={{ borderBottom: "1px solid #E5E7EB", backgroundColor: "#FFFFFF" }}
       >
         <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-panel-close">
           <ArrowLeft className={isMobile ? "w-4 h-4" : "w-5 h-5"} style={{ color: "#1A1A1A" }} />
@@ -81,6 +84,30 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
           </span>
         )}
         <div className="flex-1" />
+        {!isMobile && isNotStarted && (
+          <Button
+            className="gap-2"
+            style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+            onClick={handleStartTask}
+            disabled={updateStatusMutation.isPending}
+            data-testid="button-admin-start-task"
+          >
+            {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Start Task
+          </Button>
+        )}
+        {!isMobile && isStarted && (
+          <Button
+            className="gap-2"
+            style={{ backgroundColor: "#15803D", color: "#FFFFFF" }}
+            onClick={handleMarkComplete}
+            disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
+            data-testid="button-admin-mark-complete"
+          >
+            {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Complete Task
+          </Button>
+        )}
         {!isMobile && (
           <Button variant="outline" className="gap-2" style={{ borderColor: "#E5E7EB" }} onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
             <Pencil className="w-4 h-4" />
@@ -110,22 +137,37 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
 
       <div className={isMobile ? "flex flex-col flex-1 overflow-y-auto" : "flex flex-1 overflow-hidden"}>
         <div className={isMobile ? "flex-1" : "flex-1 overflow-y-auto"}>
-          <div className={`${isMobile ? "px-5 pt-5 pb-4" : "px-8 pt-8 pb-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <h1
-              className={`${isMobile ? "text-xl" : "text-2xl"} font-semibold leading-snug mb-5`}
-              style={{ color: "#1A1A1A" }}
-              data-testid="text-panel-task-title"
+          <div className={isMobile ? "p-4 space-y-4" : "p-8 space-y-6"}>
+            <div
+              className={isMobile ? "rounded-2xl p-5" : "rounded-2xl p-7"}
+              style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 10px 25px rgba(15, 23, 42, 0.05)" }}
             >
-              {task.name}
-            </h1>
-            <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
-              {taskTypeLabels[task.taskType] || task.taskType} · {task.executorType === "student" ? "Student Pool" : "Technician Pool"}
-            </p>
-            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 gap-x-12 gap-y-4"}`}>
-              <div className="flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#6366F1" }}>
+                Work order
+              </p>
+              <h1
+                className={`${isMobile ? "text-2xl" : "text-3xl"} font-semibold leading-tight`}
+                style={{ color: "#111827" }}
+                data-testid="text-panel-task-title"
+              >
+                {task.name}
+              </h1>
+              <p className="text-sm mt-3" style={{ color: "#6B7280" }}>
+                {taskTypeLabels[task.taskType] || task.taskType} - {task.executorType === "student" ? "Student Pool" : "Technician Pool"}
+              </p>
+              {task.description && (
+                <p className={`${isMobile ? "text-sm" : "text-base"} leading-relaxed mt-5`} style={{ color: "#374151" }}>
+                  {task.description}
+                </p>
+              )}
+            </div>
+
+            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 gap-4"}`}>
+              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <UserIcon className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-sm" style={{ color: "#6B7280" }}>Assigned to</span>
-                <div className="flex items-center gap-2 ml-auto">
+                <div className="min-w-0">
+                  <p className="text-xs" style={{ color: "#6B7280" }}>Assigned to</p>
+                  <div className="flex items-center gap-2 mt-1">
                   {assignee && (
                     <Avatar className="w-6 h-6">
                       <AvatarFallback style={{ backgroundColor: getAvatarColorForId(assignee.id), color: "#FFFFFF", fontSize: "10px" }}>
@@ -133,46 +175,43 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{assigneeName}</span>
+                    <span className="text-sm font-medium truncate" style={{ color: "#1A1A1A" }}>{assigneeName}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <Building2 className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-sm" style={{ color: "#6B7280" }}>Location</span>
-                <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>
-                  {property?.name || "No location"}
-                  {property?.address ? ` — ${property.address}` : ""}
-                </span>
+                <div className="min-w-0">
+                  <p className="text-xs" style={{ color: "#6B7280" }}>Location</p>
+                  <p className="text-sm font-medium truncate mt-1" style={{ color: "#1A1A1A" }}>
+                    {property?.name || "No location"}
+                    {property?.address ? ` - ${property.address}` : ""}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <Calendar className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-sm" style={{ color: "#6B7280" }}>Due date</span>
-                <span className="text-sm font-medium ml-auto" style={{ color: isOverdue ? "#D94F4F" : "#1A1A1A" }}>
-                  {task.estimatedCompletionDate
-                    ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                    : "Not set"}
-                </span>
+                <div>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>Due date</p>
+                  <p className="text-sm font-medium mt-1" style={{ color: isOverdue ? "#D94F4F" : "#1A1A1A" }}>
+                    {task.estimatedCompletionDate
+                      ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                      : "Not set"}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <Clock className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <span className="text-sm" style={{ color: "#6B7280" }}>Time logged</span>
-                <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>
-                  {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
-                </span>
+                <div>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>Time logged</p>
+                  <p className="text-sm font-medium mt-1" style={{ color: "#1A1A1A" }}>
+                    {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {task.description && (
-            <div className={`${isMobile ? "px-5 py-4" : "px-8 py-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Description</p>
-              <p className={`${isMobile ? "text-sm" : "text-base"} leading-relaxed`} style={{ color: "#374151" }}>
-                {task.description}
-              </p>
-            </div>
-          )}
-
-          <div className={`${isMobile ? "px-5 py-4" : "px-8 py-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
             <div className="flex items-center justify-between gap-2 mb-3">
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Subtasks</p>
               <span className="text-sm font-medium" style={{ color: "#4338CA" }}>
@@ -191,7 +230,11 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               </div>
             )}
             {totalSubtasks === 0 ? (
-              <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No subtasks</p>
+              <div className="rounded-xl border border-dashed py-8 px-4 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" }}>
+                <CheckCircle2 className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
+                <p className="text-sm font-medium" style={{ color: "#374151" }}>No subtasks yet</p>
+                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Break this work into steps when it needs tracking.</p>
+              </div>
             ) : (
               <div className="space-y-1">
                 {subtasks?.map((subtask) => {
@@ -220,12 +263,16 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
             )}
           </div>
 
-          <div className={`${isMobile ? "px-5 py-4" : "px-8 py-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
               Notes ({taskNotes.length})
             </p>
             {taskNotes.length === 0 ? (
-              <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No notes yet</p>
+              <div className="rounded-xl border border-dashed py-8 px-4 text-center mb-3" style={{ borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" }}>
+                <StickyNote className="w-5 h-5 mx-auto mb-2" style={{ color: "#F59E0B" }} />
+                <p className="text-sm font-medium" style={{ color: "#374151" }}>No notes yet</p>
+                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Add context, updates, or instructions for the team.</p>
+              </div>
             ) : (
               <div className="space-y-4 mb-3">
                 {taskNotes.map((note) => {
@@ -297,6 +344,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               Add Note
             </button>
           </div>
+          </div>
         </div>
 
         <div
@@ -304,7 +352,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
           style={{
             borderLeft: isMobile ? "none" : "1px solid #EEEEEE",
             borderTop: isMobile ? "1px solid #EEEEEE" : "none",
-            backgroundColor: "#FAFAFA",
+            backgroundColor: "#F8FAFC",
           }}
           data-testid="panel-right-sidebar"
         >
@@ -313,7 +361,10 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               Parts ({taskParts.length})
             </p>
             {taskParts.length === 0 ? (
-              <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No parts used</p>
+              <div className="rounded-xl border border-dashed py-6 px-3 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF" }}>
+                <Package className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
+                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>No parts used</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {taskParts.map((part) => (
@@ -342,7 +393,10 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               </span>
             </div>
             {timeEntries.length === 0 ? (
-              <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No time entries</p>
+              <div className="rounded-xl border border-dashed py-6 px-3 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF" }}>
+                <Clock className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
+                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>No time logged yet</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {timeEntries.map((entry: TimeEntry) => {
@@ -417,7 +471,10 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               Resources ({(uploads?.length || 0)})
             </p>
             {(!uploads || uploads.length === 0) ? (
-              <p className="text-xs text-center py-3" style={{ color: "#9CA3AF" }}>No resources attached</p>
+              <div className="rounded-xl border border-dashed py-6 px-3 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF" }}>
+                <FileText className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
+                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>No resources attached</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {uploads.map((upload) => {
