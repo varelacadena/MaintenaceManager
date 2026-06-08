@@ -231,8 +231,7 @@ export function registerAuthRoutes(app: Express) {
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.userId;
-      const user = await storage.getUser(userId);
+      const user = req.currentUser;
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }

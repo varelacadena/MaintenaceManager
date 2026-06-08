@@ -238,7 +238,7 @@ export function registerUploadRoutes(app: Express) {
     try {
       const userId = req.userId;
       const hasAccess = await canAccessTask(userId, req.params.taskId);
-      const user = await storage.getUser(userId);
+      const user = req.currentUser;
       if (!hasAccess && user?.role !== "admin") {
         return res.status(403).json({ message: "Forbidden: Cannot access these uploads" });
       }

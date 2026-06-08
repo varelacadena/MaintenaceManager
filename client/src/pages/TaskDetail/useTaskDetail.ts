@@ -199,9 +199,30 @@ export function useTaskDetail() {
     enabled: !!id && !!task?.requiresEstimate,
   });
 
-  const { data: allTasks = [] } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
-    enabled: !!task?.propertyId && (user?.role === "technician" || user?.role === "admin"),
+  const previousWorkQueryKey = task?.equipmentId
+    ? ["/api/tasks", "previous-work", "equipment", task.equipmentId]
+    : task?.propertyId
+      ? ["/api/tasks", "previous-work", "property", task.propertyId]
+      : ["/api/tasks", "previous-work", "none"];
+
+  const { data: previousWorkTasks = [] } = useQuery<Task[]>({
+    queryKey: previousWorkQueryKey,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        status: "completed",
+        limit: "10",
+        summary: "true",
+      });
+      if (task?.equipmentId) {
+        params.set("equipmentId", task.equipmentId);
+      } else if (task?.propertyId) {
+        params.set("propertyId", task.propertyId);
+      }
+      const res = await fetch(`/api/tasks?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!(task?.equipmentId || task?.propertyId) && (user?.role === "technician" || user?.role === "admin"),
   });
 
   const { data: subTasks = [] } = useQuery<Task[]>({
@@ -240,6 +261,27 @@ export function useTaskDetail() {
     enabled: !!id && user?.role === "admin",
   });
 
+  const dependencyTaskIds = useMemo(
+    () => taskDependencies.map((dep: { dependsOnTaskId?: string }) => dep.dependsOnTaskId).filter(Boolean) as string[],
+    [taskDependencies],
+  );
+
+  const { data: dependencyTasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks", "dependency-lookup", dependencyTaskIds],
+    queryFn: async () => {
+      if (!dependencyTaskIds.length) return [];
+      const params = new URLSearchParams({
+        taskIds: dependencyTaskIds.join(","),
+        summary: "true",
+        limit: String(dependencyTaskIds.length),
+      });
+      const res = await fetch(`/api/tasks?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: dependencyTaskIds.length > 0 && user?.role === "admin",
+  });
+
   const { data: propertyResources = [] } = useQuery<any[]>({
     queryKey: ["/api/properties", task?.propertyId, "resources"],
     queryFn: () => fetch(`/api/properties/${task?.propertyId}/resources`).then(r => r.json()),
@@ -265,22 +307,16 @@ export function useTaskDetail() {
   }, [propertyResources, equipmentResources]);
 
   const previousWork = useMemo(() => {
-    if (!task || !allTasks.length) return [];
-    return allTasks
-      .filter((t) => {
-        if (t.id === task.id) return false;
-        if (t.status !== "completed") return false;
-        if (task.equipmentId && t.equipmentId === task.equipmentId) return true;
-        if (task.propertyId && t.propertyId === task.propertyId) return true;
-        return false;
-      })
+    if (!task || !previousWorkTasks.length) return [];
+    return previousWorkTasks
+      .filter((t) => t.id !== task.id)
       .sort((a, b) => {
         const dateA = a.updatedAt || "";
         const dateB = b.updatedAt || "";
         return new Date(dateB).getTime() - new Date(dateA).getTime();
       })
       .slice(0, 10);
-  }, [task, allTasks]);
+  }, [task, previousWorkTasks]);
 
   useEffect(() => {
     const runningEntry = timeEntries.find((e) => e.startTime && !e.endTime);
@@ -716,7 +752,7 @@ export function useTaskDetail() {
     checklistGroups,
     contactStaff,
     quotes,
-    allTasks,
+    dependencyTasks,
     subTasks,
     vehicle,
     parentTask,

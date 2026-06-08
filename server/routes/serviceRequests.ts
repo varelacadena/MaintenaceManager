@@ -34,7 +34,7 @@ export function registerServiceRequestRoutes(app: Express) {
   app.get("/api/service-requests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const currentUser = await storage.getUser(userId);
+      const currentUser = req.currentUser;
 
       let filters: { userId?: string; status?: string; limit?: number } = {};
 
@@ -44,6 +44,12 @@ export function registerServiceRequestRoutes(app: Express) {
 
       if (req.query.status) {
         filters.status = String(req.query.status);
+      }
+      if (req.query.limit) {
+        const limit = Number(req.query.limit);
+        if (Number.isFinite(limit)) {
+          filters.limit = Math.min(Math.max(Math.floor(limit), 1), 100);
+        }
       }
 
       const requests = await storage.getServiceRequests(filters);

@@ -45,7 +45,7 @@ type ResourceLibraryDialogsProps = Pick<
   | "editResource" | "setEditResource"
   | "form" | "setForm"
   | "pasteUrlMode" | "setPasteUrlMode"
-  | "isUploading"
+  | "isUploading" | "setIsUploading"
   | "showNewCategory" | "setShowNewCategory"
   | "newCategoryName" | "setNewCategoryName"
   | "newCategoryColor" | "setNewCategoryColor"
@@ -57,6 +57,7 @@ type ResourceLibraryDialogsProps = Pick<
   | "toggleProperty" | "getUploadParameters" | "handleUploadComplete"
   | "deleteId" | "setDeleteId"
   | "thumbnail"
+  | "clearResourceFileFields"
 >;
 
 export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
@@ -66,7 +67,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
     editResource, setEditResource,
     form, setForm,
     pasteUrlMode, setPasteUrlMode,
-    isUploading,
+    isUploading, setIsUploading,
     showNewCategory, setShowNewCategory,
     newCategoryName, setNewCategoryName,
     newCategoryColor, setNewCategoryColor,
@@ -78,6 +79,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
     toggleProperty, getUploadParameters, handleUploadComplete,
     deleteId, setDeleteId,
     thumbnail,
+    clearResourceFileFields,
   } = props;
 
   return (
@@ -117,7 +119,13 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
 
             <div className="space-y-1.5">
               <Label>Type <span className="text-destructive">*</span></Label>
-              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as any, url: "", fileName: "" }))}>
+              <Select
+                value={form.type}
+                onValueChange={v => {
+                  setForm(f => ({ ...f, type: v as typeof f.type, ...clearResourceFileFields() }));
+                  setPasteUrlMode(false);
+                }}
+              >
                 <SelectTrigger data-testid="select-resource-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -136,7 +144,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
                 <Input
                   placeholder="https://www.youtube.com/watch?v=..."
                   value={form.url}
-                  onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, url: e.target.value, objectPath: "" }))}
                   data-testid="input-resource-url"
                 />
                 {thumbnail && (
@@ -153,7 +161,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
                 <Input
                   placeholder="https://..."
                   value={form.url}
-                  onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, url: e.target.value, objectPath: "" }))}
                   data-testid="input-resource-url"
                 />
               </div>
@@ -168,7 +176,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
                     className="text-xs text-muted-foreground underline underline-offset-2"
                     onClick={() => {
                       setPasteUrlMode(v => !v);
-                      setForm(f => ({ ...f, url: "", fileName: "" }));
+                      setForm(f => ({ ...f, ...clearResourceFileFields() }));
                     }}
                   >
                     {pasteUrlMode ? "Upload a file instead" : "Paste URL instead"}
@@ -180,7 +188,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
                     <Input
                       placeholder={form.type === "document" ? "https://example.com/file.pdf" : "https://example.com/image.jpg"}
                       value={form.url}
-                      onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                      onChange={e => setForm(f => ({ ...f, url: e.target.value, objectPath: "" }))}
                       data-testid="input-resource-url"
                     />
                     <Input
@@ -213,7 +221,7 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setForm(f => ({ ...f, url: "", fileName: "" }))}
+                          onClick={() => setForm(f => ({ ...f, ...clearResourceFileFields() }))}
                         >
                           Remove
                         </Button>
@@ -238,7 +246,10 @@ export function ResourceLibraryDialogs(props: ResourceLibraryDialogsProps) {
                             maxFileSize={form.type === "document" ? 52428800 : 20971520}
                             onGetUploadParameters={getUploadParameters}
                             onComplete={handleUploadComplete}
-                            onError={() => toast({ title: "Upload failed", variant: "destructive" })}
+                            onError={() => {
+                              setIsUploading(false);
+                              toast({ title: "Upload failed", variant: "destructive" });
+                            }}
                             isLoading={isUploading}
                             buttonVariant="outline"
                             buttonTestId="button-upload-file"

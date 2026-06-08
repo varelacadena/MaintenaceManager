@@ -21,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskLists } from "@/lib/taskQueryInvalidation";
 import { invalidateVehicleQueries, invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 import { SecureImage } from "@/components/SecureImage";
 import { useFileDownload } from "@/hooks/use-download";
@@ -101,7 +102,7 @@ export default function VehicleCheckInVerification() {
       if (result.task) {
         queryClient.invalidateQueries({ queryKey: ["/api/tasks/available"] });
         queryClient.invalidateQueries({ queryKey: ["/api/tasks/available/count"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        invalidateTaskLists();
       }
       invalidateVehicleReservationQueries(queryClient);
       toast({

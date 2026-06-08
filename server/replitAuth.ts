@@ -15,13 +15,20 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
+    if ((req as any).currentUser?.id === userId) {
+      (req as any).userId = userId;
+      return next();
+    }
+
     const user = await storage.getUser(userId);
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Attach user to request
+    // Attach the session user once so downstream role guards and handlers do not
+    // repeat the same DB lookup for every protected request.
     (req as any).userId = userId;
+    (req as any).currentUser = user;
     next();
   } catch (error) {
     res.status(401).json({ message: "Unauthorized" });

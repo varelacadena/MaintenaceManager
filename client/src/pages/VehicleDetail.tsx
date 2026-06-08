@@ -727,15 +727,19 @@ export default function VehicleDetail() {
             }
 
             return (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {trips.map(({ checkOut, checkIn, reservation, user: tripUser }) => {
                   const isPendingReview = reservation?.status === "pending_review";
                   const milesDriven = checkIn && checkOut.startMileage ? checkIn.endMileage - checkOut.startMileage : null;
 
                   return (
-                    <Card key={checkOut.id} data-testid={`card-trip-${checkOut.id}`}>
-                      <CardHeader className="pb-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <Card
+                      key={checkOut.id}
+                      className="overflow-hidden border-border/80 bg-card shadow-sm ring-1 ring-border/40"
+                      data-testid={`card-trip-${checkOut.id}`}
+                    >
+                      <CardHeader className="border-b bg-muted/35 p-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
                           <div className="min-w-0">
                             <CardTitle className="text-sm sm:text-base">
                               {reservation
@@ -743,7 +747,7 @@ export default function VehicleDetail() {
                                 : checkOut.checkOutTime ? format(new Date(checkOut.checkOutTime), "MMM d, yyyy") : "Date unavailable"
                               }
                             </CardTitle>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               {tripUser && (
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                                   <UserIcon className="w-3 h-3" />
@@ -774,18 +778,18 @@ export default function VehicleDetail() {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
+                      <CardContent className="space-y-3 bg-muted/15 p-3">
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2 rounded-md border bg-background p-2.5 shadow-sm">
                             <div className="flex flex-col items-center">
-                              <div className="w-7 h-7 rounded-full border-2 border-foreground/20 flex items-center justify-center bg-background">
-                                <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
+                              <div className="w-6 h-6 rounded-full border-2 border-primary/35 flex items-center justify-center bg-primary/10">
+                                <LogOut className="w-3 h-3 text-muted-foreground" />
                               </div>
-                              <div className="w-0.5 h-full min-h-[2rem] bg-border" />
+                              <div className="w-0.5 h-full min-h-[1.5rem] bg-border/80" />
                             </div>
-                            <div className="flex-1 pb-2">
-                              <p className="text-xs font-medium text-muted-foreground mb-1">Check-Out</p>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-foreground mb-1">Check-Out</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-sm">
                                 <div>
                                   <span className="text-muted-foreground text-xs">Time</span>
                                   <p className="font-medium text-xs sm:text-sm">{checkOut.checkOutTime ? format(new Date(checkOut.checkOutTime), "M/d/yy h:mm a") : "N/A"}</p>
@@ -811,17 +815,17 @@ export default function VehicleDetail() {
                             </div>
                           </div>
 
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-2 rounded-md border bg-background p-2.5 shadow-sm">
                             <div className="flex flex-col items-center">
-                              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center bg-background ${checkIn ? 'border-foreground/20' : 'border-dashed border-muted-foreground/30'}`}>
-                                <LogIn className={`w-3.5 h-3.5 ${checkIn ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkIn ? 'border-primary/35 bg-primary/10' : 'border-dashed border-muted-foreground/40 bg-muted/40'}`}>
+                                <LogIn className={`w-3 h-3 ${checkIn ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
                               </div>
                             </div>
                             <div className="flex-1">
                               {checkIn ? (
                                 <>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1">Check-In</p>
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-foreground mb-1">Check-In</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-sm">
                                     <div>
                                       <span className="text-muted-foreground text-xs">Time</span>
                                       <p className="font-medium text-xs sm:text-sm">{checkIn.checkInTime ? format(new Date(checkIn.checkInTime), "M/d/yy h:mm a") : "N/A"}</p>

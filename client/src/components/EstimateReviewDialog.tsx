@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   Check,
@@ -88,7 +89,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(taskId);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "quotes"] });
       toast({
@@ -114,7 +115,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
       await apiRequest("POST", `/api/quotes/${quoteId}/reject`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(taskId);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "quotes"] });
       toast({

@@ -13,12 +13,13 @@ import { redactPartsUsedForRole } from "../inventoryDto";
 import { z } from "zod";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
+import { toTaskListSummary } from "../taskDto";
 
 export function registerTaskRoutes(app: Express) {
   app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const currentUser = await storage.getUser(userId);
+      const currentUser = req.currentUser ?? await storage.getUser(userId);
 
       if (!currentUser) {
         return res.status(401).json({ message: "User not found" });
@@ -66,22 +67,63 @@ export function registerTaskRoutes(app: Express) {
       if (equipmentIdFilter) {
         filters.equipmentId = equipmentIdFilter;
       }
+      if (req.query.propertyId) {
+        filters.propertyId = req.query.propertyId as string;
+      }
+      if (req.query.taskIds) {
+        filters.taskIds = String(req.query.taskIds)
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+      }
+      if (req.query.dateFrom) {
+        const dateFrom = new Date(String(req.query.dateFrom));
+        if (!Number.isNaN(dateFrom.getTime())) {
+          filters.dateFrom = dateFrom;
+        }
+      }
+      if (req.query.dateTo) {
+        const dateTo = new Date(String(req.query.dateTo));
+        if (!Number.isNaN(dateTo.getTime())) {
+          filters.dateTo = dateTo;
+        }
+      }
+      if (req.query.excludeCompleted === "true") {
+        filters.excludeCompleted = true;
+      }
+      if (req.query.view === "work" && currentUser.role === "admin") {
+        const recentCompletedAfter = new Date();
+        recentCompletedAfter.setDate(recentCompletedAfter.getDate() - 30);
+        filters.recentCompletedAfter = recentCompletedAfter;
+      }
+      if (req.query.limit) {
+        const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit), 10) || 100, 1), 500);
+        filters.limit = limit;
+      }
+      if (req.query.offset) {
+        filters.offset = Math.max(Number.parseInt(String(req.query.offset), 10) || 0, 0);
+      }
 
       let allTasks = await storage.getTasks(filters);
 
       if (currentUser.role === "student" && !equipmentIdFilter) {
         const helperTaskIds = await storage.getHelperTaskIds(userId);
         if (helperTaskIds.length > 0) {
-          const helperFilters: Record<string, string> = {};
+          const helperFilters: any = { taskIds: helperTaskIds };
           if (req.query.status) helperFilters.status = req.query.status as string;
           if (req.query.areaId) helperFilters.areaId = req.query.areaId as string;
+          if (filters.dateFrom) helperFilters.dateFrom = filters.dateFrom;
+          if (filters.dateTo) helperFilters.dateTo = filters.dateTo;
+          if (filters.excludeCompleted) helperFilters.excludeCompleted = true;
           const helperTasks = await storage.getTasks(helperFilters);
           const helperFiltered = helperTasks
-            .filter(t => helperTaskIds.includes(t.id) && !allTasks.some(at => at.id === t.id));
+            .filter(t => !allTasks.some(at => at.id === t.id));
           const tagged = helperFiltered.map(t => ({ ...t, isHelper: true as const }));
           allTasks = [...allTasks, ...tagged];
         }
       }
+
+      const useSummary = req.query.summary === "true";
 
       if (currentUser.role === "admin" || currentUser.role === "technician") {
         const helperCounts = await storage.getHelperCountsByTaskIds(allTasks.map((t) => t.id));
@@ -89,10 +131,12 @@ export function registerTaskRoutes(app: Express) {
           ...t,
           helperCount: helperCounts[t.id] ?? 0,
         }));
-        return res.json(tasksWithHelperCount);
+        return res.json(
+          useSummary ? tasksWithHelperCount.map((task) => toTaskListSummary(task)) : tasksWithHelperCount,
+        );
       }
 
-      res.json(allTasks);
+      res.json(useSummary ? allTasks.map((task) => toTaskListSummary(task)) : allTasks);
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch tasks");
     }
@@ -101,7 +145,7 @@ export function registerTaskRoutes(app: Express) {
   app.get("/api/tasks/available", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const currentUser = await storage.getUser(userId);
+      const currentUser = req.currentUser;
       if (!currentUser) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -154,16 +198,83 @@ export function registerTaskRoutes(app: Express) {
       }
 
       const helpers = await storage.getTaskHelpers(task.id);
-      const helperUsers = await Promise.all(
-        helpers.map(async (h) => {
-          const user = await storage.getUser(h.userId);
-          return user ? { id: h.id, userId: h.userId, taskId: h.taskId, assignedAt: h.assignedAt, user: { id: user.id, name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username, email: user.email, role: user.role } } : null;
-        })
+      const helperUsersById = new Map(
+        (await storage.getUsersByIds(helpers.map((h) => h.userId))).map((user) => [user.id, user])
       );
+      const helperUsers = helpers.map((h) => {
+        const user = helperUsersById.get(h.userId);
+        return user ? { id: h.id, userId: h.userId, taskId: h.taskId, assignedAt: h.assignedAt, user: { id: user.id, name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username, email: user.email, role: user.role } } : null;
+      });
       const isHelper = currentUser.role === "student" ? await storage.isTaskHelper(task.id, userId) : false;
       res.json({ ...task, helpers: helperUsers.filter(Boolean), isHelper });
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch task");
+    }
+  });
+
+  app.get("/api/tasks/:id/detail", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const taskId = req.params.id;
+      const hasAccess = await canAccessTask(userId, taskId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
+
+      const task = await storage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const [helpers, subtasks, taskUploads, parts, timeEntries, notes] = await Promise.all([
+        storage.getTaskHelpers(taskId),
+        storage.getSubTasks(taskId),
+        storage.getUploadsByTask(taskId),
+        storage.getPartsByTask(taskId),
+        storage.getTimeEntriesByTask(taskId),
+        storage.getNotesByTask(taskId),
+      ]);
+
+      const [helperUsers, subtaskUploadArrays] = await Promise.all([
+        storage.getUsersByIds(helpers.map((h) => h.userId)),
+        Promise.all(subtasks.map((subtask) => storage.getUploadsByTask(subtask.id))),
+      ]);
+      const helperUsersById = new Map(helperUsers.map((user) => [user.id, user]));
+      const helpersWithUsers = helpers
+        .map((h) => {
+          const user = helperUsersById.get(h.userId);
+          return user
+            ? {
+                id: h.id,
+                userId: h.userId,
+                taskId: h.taskId,
+                assignedAt: h.assignedAt,
+                user: {
+                  id: user.id,
+                  name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username,
+                  email: user.email,
+                  role: user.role,
+                },
+              }
+            : null;
+        })
+        .filter(Boolean);
+      const role = req.currentUser?.role as string | undefined;
+
+      res.json({
+        task: {
+          ...task,
+          helpers: helpersWithUsers,
+          isHelper: role === "student" ? await storage.isTaskHelper(task.id, userId) : false,
+        },
+        subtasks,
+        uploads: [...taskUploads, ...subtaskUploadArrays.flat()],
+        parts: redactPartsUsedForRole(parts, role),
+        timeEntries,
+        notes,
+      });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch task detail");
     }
   });
 

@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import type { Task, InsertTask, User } from "@shared/schema";
 
 interface Area {
@@ -143,7 +144,7 @@ export function TaskEditMode({
       return apiRequest("DELETE", `/api/tasks/${taskId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(taskId, { broad: true });
       toast({ title: "Task deleted" });
       if (onDeleted) onDeleted();
       else onCancel();
@@ -227,9 +228,7 @@ export function TaskEditMode({
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "subtasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(taskId, { broad: true });
       toast({ title: "Task updated" });
       onSaved();
     } catch {
@@ -356,7 +355,7 @@ export function TaskEditMode({
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
-            Location
+            Department
           </Label>
           <Select
             value={areaId || "__none__"}
@@ -365,11 +364,11 @@ export function TaskEditMode({
               setSubdivisionId("");
             }}
           >
-            <SelectTrigger data-testid="select-edit-location">
-              <SelectValue placeholder="Select location" />
+            <SelectTrigger data-testid="select-edit-department">
+              <SelectValue placeholder="Select department" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">No location</SelectItem>
+              <SelectItem value="__none__">Unassigned Department</SelectItem>
               {(areas || []).map((a) => (
                 <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
               ))}
@@ -380,7 +379,7 @@ export function TaskEditMode({
         {areaId && (
           <div className="space-y-1.5">
             <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
-              Sub-area
+              Sub-department
             </Label>
             <Select
               value={subdivisionId || "__none__"}

@@ -252,7 +252,7 @@ export default function AnalyticsFilters({
   if (filters.areaId) {
     activeChips.push({
       key: "areaId",
-      label: areas.find((a) => a.id === filters.areaId)?.name ?? "Area",
+      label: areas.find((a) => a.id === filters.areaId)?.name ?? "Department",
     });
   }
   if (filters.technicianId) {
@@ -411,13 +411,13 @@ export default function AnalyticsFilters({
               )}
 
               <div className="space-y-1">
-                <Label htmlFor="area" className="text-xs">Area / Department</Label>
+                <Label htmlFor="area" className="text-xs">Department</Label>
                 <Select value={filters.areaId || "all"} onValueChange={v => updateFilter("areaId", v === "all" ? "" : v)}>
                   <SelectTrigger id="area" data-testid="select-area" className="h-8 text-xs">
-                    <SelectValue placeholder="All Areas" />
+                    <SelectValue placeholder="All departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Areas</SelectItem>
+                    <SelectItem value="all">All departments</SelectItem>
                     {areas.map(a => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.name}

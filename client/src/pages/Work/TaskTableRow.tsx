@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import {
   User as UserIcon,
   Calendar,
@@ -30,11 +30,11 @@ import {
   taskStatusConfig,
   getAvatarColor,
 } from "@/utils/taskUtils";
-import type { Task, User, Property } from "@shared/schema";
+import type { Task, User, Property, Area } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
 
-export function TaskTableRow({
+export const TaskTableRow = memo(function TaskTableRow({
   task,
   userGroups,
   allUsers,
@@ -43,6 +43,8 @@ export function TaskTableRow({
   handleUrgencyChange,
   handleAssigneeChange,
   handlePropertyChange,
+  handleDepartmentChange,
+  areas,
   handleInlineEdit,
   isChildTask,
   rowIndex,
@@ -62,6 +64,8 @@ export function TaskTableRow({
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
+  handleDepartmentChange: (taskId: string, areaId: string) => void;
+  areas: Area[];
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isChildTask?: boolean;
   rowIndex?: number;
@@ -94,7 +98,7 @@ export function TaskTableRow({
       data-testid={`row-task-${task.id}`}
       aria-selected={onSelectTask ? selectedTaskId === task.id : undefined}
       aria-label={onSelectTask ? buildTaskRowAriaLabel(task) : undefined}
-      className={`cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""} ${rowClassName ?? ""}`}
+      className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""} ${rowClassName ?? ""}`}
       onClick={openTask}
       tabIndex={onSelectTask ? 0 : undefined}
       onKeyDown={onSelectTask ? (e) => handleKeyboardActivate(e, () => openTask()) : undefined}
@@ -293,6 +297,28 @@ export function TaskTableRow({
           </SelectContent>
         </Select>
       </TableCell>
+      <TableCell className="py-2.5 hidden lg:table-cell">
+        <Select
+          value={task.areaId || "__none__"}
+          onValueChange={(val) => handleDepartmentChange(task.id, val)}
+        >
+          <SelectTrigger
+            className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
+            data-testid={`select-department-${task.id}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SelectValue placeholder="No department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Unassigned</SelectItem>
+            {(areas || []).map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
       <TableCell className="py-2.5 hidden md:table-cell">
         <Select
           value={task.propertyId || "__none__"}
@@ -320,4 +346,4 @@ export function TaskTableRow({
       </TableCell>
     </TableRow>
   );
-}
+});

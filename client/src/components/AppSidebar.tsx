@@ -26,6 +26,7 @@ import {
   LogOut,
   BookOpen,
   Hand,
+  Hammer,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +48,7 @@ const roleMenus = {
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Resource Library", url: "/resources", icon: BookOpen },
     { title: "Vehicles", url: "/vehicles", icon: Car },
+    { title: "Tools & Equipment", url: "/tools-equipment", icon: Hammer },
     { title: "Properties", url: "/properties", icon: Map },
     { title: "Vendors", url: "/vendors", icon: Building2 },
     { title: "Inventory", url: "/inventory", icon: Package },
@@ -54,10 +56,12 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
+    { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
     { title: "Vehicle Requests", url: "/my-reservations", icon: Car },
+    { title: "Tools & Equipment", url: "/tools-equipment", icon: Hammer },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   staff: [
@@ -135,7 +139,9 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                       asChild
                       isActive={
                         location === item.url ||
-                        (item.url.startsWith("/vehicles") && location.startsWith("/vehicles"))
+                        (item.url.startsWith("/calendar") && location.startsWith("/calendar")) ||
+                        (item.url.startsWith("/vehicles") && location.startsWith("/vehicles")) ||
+                        (item.url.startsWith("/tools-equipment") && location.startsWith("/tools-equipment"))
                       }
                       tooltip={item.title}
                     >

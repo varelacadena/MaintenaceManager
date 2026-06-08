@@ -10,9 +10,12 @@ export function requireRole(...allowedRoles: string[]): RequestHandler {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get user from database to check current role
-    const { storage } = await import("./storage");
-    const user = await storage.getUser(userId);
+    let user = req.currentUser as User | undefined;
+    if (!user) {
+      const { storage } = await import("./storage");
+      user = await storage.getUser(userId);
+      req.currentUser = user;
+    }
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
@@ -35,10 +38,13 @@ export function requireRole(...allowedRoles: string[]): RequestHandler {
 // Helper to get current user from request
 export const getCurrentUser = async (req: any): Promise<User | null> => {
   try {
+    if (req.currentUser) return req.currentUser;
     const userId = req.userId;
     if (!userId) return null;
     const { storage } = await import("./storage");
-    return (await storage.getUser(userId)) ?? null;
+    const user = (await storage.getUser(userId)) ?? null;
+    req.currentUser = user;
+    return user;
   } catch (error) {
     return null;
   }
@@ -114,7 +120,6 @@ export async function canAccessTask(userId: string, taskId: string): Promise<boo
 // Middleware to require task access
 export function requireTaskAccess(): RequestHandler {
   return async (req: any, res, next) => {
-    // Get user if not already set by requireRole middleware
     if (!req.currentUser && req.userId) {
       const { storage } = await import("./storage");
       req.currentUser = await storage.getUser(req.userId);
@@ -143,7 +148,6 @@ export function requireTaskAccess(): RequestHandler {
 // Middleware to require request access
 export function requireRequestAccess(requireAssignedOrRequester: boolean = false): RequestHandler {
   return async (req: any, res, next) => {
-    // Get user if not already set by requireRole middleware
     if (!req.currentUser && req.userId) {
       const { storage } = await import("./storage");
       req.currentUser = await storage.getUser(req.userId);

@@ -199,14 +199,14 @@ export function ProjectDetailDialogs({
                   name="areaId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Area</FormLabel>
+                      <FormLabel>Department</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val === "__none__" ? null : val)}
                         value={field.value || "__none__"}
                       >
                         <FormControl>
-                          <SelectTrigger data-testid="select-edit-project-area">
-                            <SelectValue placeholder="No area" />
+                          <SelectTrigger data-testid="select-edit-project-department">
+                            <SelectValue placeholder="No department" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

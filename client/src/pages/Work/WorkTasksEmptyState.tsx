@@ -4,15 +4,43 @@ import { Link } from "wouter";
 
 interface WorkTasksEmptyStateProps {
   hasSearchQuery: boolean;
+  hasDepartmentFilter?: boolean;
+  departmentFilterName?: string | null;
   onClearSearch: () => void;
+  onClearDepartmentFilter?: () => void;
   onOpenProjectsTab: () => void;
 }
 
 export function WorkTasksEmptyState({
   hasSearchQuery,
+  hasDepartmentFilter = false,
+  departmentFilterName,
   onClearSearch,
+  onClearDepartmentFilter,
   onOpenProjectsTab,
 }: WorkTasksEmptyStateProps) {
+  if (hasDepartmentFilter) {
+    return (
+      <div className="text-center py-16 px-4" data-testid="work-tasks-empty-department">
+        <ClipboardList className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
+        <p className="text-sm font-medium">
+          No tasks in {departmentFilterName || "this department"}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1 mb-4">
+          Try another department or view all work.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClearDepartmentFilter}
+          data-testid="button-clear-department-filter"
+        >
+          View all departments
+        </Button>
+      </div>
+    );
+  }
+
   if (hasSearchQuery) {
     return (
       <div className="text-center py-16 px-4" data-testid="work-tasks-empty-search">

@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type { Task, User, Property, Upload, PartUsed, InventoryItem } from "@shared/schema";
@@ -134,7 +135,7 @@ export function useMobileTaskDetail() {
         try {
           await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: "in_progress" });
           queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+          invalidateTaskAfterMutation(id);
         } catch {}
       }
       toast({ title: "Timer started" });
@@ -168,7 +169,7 @@ export function useMobileTaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: "Status updated" });
     },
     onError: () => {
@@ -181,7 +182,7 @@ export function useMobileTaskDetail() {
       return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
     },
@@ -192,7 +193,7 @@ export function useMobileTaskDetail() {
       return apiRequest("DELETE", `/api/tasks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: "Task deleted" });
       navigate("/work", { replace: true });
     },

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,6 @@ import {
   Map,
   BookOpen,
 } from "lucide-react";
-import PropertyMap from "@/components/PropertyMap";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { usePropertyDetail } from "./usePropertyDetail";
 import { PropertyDialogs } from "./PropertyDialogs";
@@ -25,6 +25,8 @@ import { PropertyResourcesTab } from "./PropertyResourcesTab";
 import { PropertyEquipmentTab } from "./PropertyEquipmentTab";
 import { PropertyWorkHistoryTab } from "./PropertyWorkHistoryTab";
 import { PropertySpacesTab } from "./PropertySpacesTab";
+
+const PropertyMap = lazy(() => import("@/components/PropertyMap"));
 
 export default function PropertyDetail() {
   const ctx = usePropertyDetail();
@@ -167,11 +169,13 @@ export default function PropertyDetail() {
           <Card className="relative z-0 h-full" style={{ minHeight: "400px" }}>
             <CardContent className="p-0 h-full">
               {property.coordinates ? (
-                <PropertyMap
-                  properties={[property]}
-                  selectedPropertyId={property.id}
-                  editable={false}
-                />
+                <Suspense fallback={<div className="h-full min-h-[400px] flex items-center justify-center text-sm text-muted-foreground">Loading map...</div>}>
+                  <PropertyMap
+                    properties={[property]}
+                    selectedPropertyId={property.id}
+                    editable={false}
+                  />
+                </Suspense>
               ) : (
                 <div className="h-full min-h-[400px] flex items-center justify-center text-center text-muted-foreground p-6">
                   <div>

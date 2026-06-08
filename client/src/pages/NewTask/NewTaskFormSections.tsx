@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, MapPin, Calendar } from "lucide-react";
+import { FileText, MapPin, Calendar, Building2 } from "lucide-react";
 import { TaskLocationFields } from "@/components/task-form/TaskLocationFields";
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
@@ -32,7 +32,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
     form, selectedPropertyId, setSelectedPropertyId,
     selectedSpaceId, setSelectedSpaceId,
     selectedProperty, isBuilding,
-    properties, spaces, equipment, allVehicles,
+    properties, areas, spaces, equipment, allVehicles,
     selectedAssets, handleAddAsset, handleRemoveAsset, multiAssetMode,
     locationScope, setLocationScope, setSelectedAssets,
     selectedPropertyIds, setSelectedPropertyIds,
@@ -80,6 +80,37 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
                     data-testid="textarea-description"
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="areaId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  Department
+                </FormLabel>
+                <Select
+                  value={field.value || "__none__"}
+                  onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                >
+                  <FormControl>
+                    <SelectTrigger data-testid="select-department">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none__">Unassigned Department</SelectItem>
+                    {areas.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

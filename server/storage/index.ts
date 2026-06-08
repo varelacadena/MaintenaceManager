@@ -92,6 +92,9 @@ import type {
   TaskHelper,
   PendingUser,
   InsertPendingUser,
+  MobileEquipment,
+  InsertMobileEquipment,
+  MobileEquipmentMaintenanceLogWithParts,
 } from "@shared/schema";
 
 import * as userStorage from "./users";
@@ -101,6 +104,8 @@ import * as facilityStorage from "./facilities";
 import * as serviceRequestStorage from "./serviceRequests";
 import * as workOrderStorage from "./workOrders";
 import * as vehicleStorage from "./vehicles";
+import * as mobileEquipmentStorage from "./mobileEquipment";
+import type { MobileEquipmentFilters } from "./mobileEquipment";
 import * as messagingStorage from "./messaging";
 import * as projectStorage from "./projects";
 import * as uploadStorage from "./uploads";
@@ -110,6 +115,7 @@ import * as resourceStorage from "./resources";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
+  getUsersByIds(ids: string[]): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   updateUserPassword(id: string, hashedPassword: string): Promise<User | undefined>;
@@ -161,6 +167,7 @@ export interface IStorage {
 
   getAreas(): Promise<Area[]>;
   createArea(area: InsertArea): Promise<Area>;
+  updateArea(id: string, data: Partial<InsertArea>): Promise<Area | undefined>;
   deleteArea(id: string): Promise<void>;
 
   getSubdivisionsByArea(areaId: string): Promise<Subdivision[]>;
@@ -182,6 +189,15 @@ export interface IStorage {
     areaId?: string;
     executorType?: string;
     assignedToIdOrPool?: { userId: string; pool: string };
+    taskIds?: string[];
+    equipmentId?: string;
+    propertyId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    excludeCompleted?: boolean;
+    recentCompletedAfter?: Date;
+    limit?: number;
+    offset?: number;
   }): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   getTaskByRequestId(requestId: string): Promise<Task | undefined>;
@@ -325,6 +341,18 @@ export interface IStorage {
   createVehicleMaintenanceLog(log: InsertVehicleMaintenanceLog): Promise<VehicleMaintenanceLog>;
   deleteVehicleMaintenanceLog(id: string): Promise<void>;
 
+  getMobileEquipmentList(filters?: MobileEquipmentFilters): Promise<MobileEquipment[]>;
+  getMobileEquipment(id: string): Promise<MobileEquipment | undefined>;
+  createMobileEquipment(data: InsertMobileEquipment): Promise<MobileEquipment>;
+  updateMobileEquipment(id: string, data: Partial<InsertMobileEquipment>): Promise<MobileEquipment | undefined>;
+  deleteMobileEquipment(id: string): Promise<void>;
+  getMobileEquipmentMaintenanceLogs(equipmentId: string): Promise<MobileEquipmentMaintenanceLogWithParts[]>;
+  createMobileEquipmentMaintenanceLog(
+    log: Parameters<typeof mobileEquipmentStorage.createMobileEquipmentMaintenanceLog>[0],
+    parts: Parameters<typeof mobileEquipmentStorage.createMobileEquipmentMaintenanceLog>[1],
+  ): Promise<MobileEquipmentMaintenanceLogWithParts>;
+  deleteMobileEquipmentMaintenanceLog(id: string): Promise<void>;
+
   getVehicleDocuments(vehicleId: string): Promise<VehicleDocument[]>;
   getVehicleDocument(id: string): Promise<VehicleDocument | undefined>;
   createVehicleDocument(document: InsertVehicleDocument): Promise<VehicleDocument>;
@@ -434,6 +462,7 @@ export interface IStorage {
 
   getResourceCategories(): Promise<ResourceCategory[]>;
   createResourceCategory(data: InsertResourceCategory): Promise<ResourceCategory>;
+  getResourceCategoryById(id: string): Promise<ResourceCategory | undefined>;
   getResourceFolders(parentId?: string | null): Promise<ResourceFolder[]>;
   getAllResourceFolders(): Promise<ResourceFolder[]>;
   getResourceFolderById(id: string): Promise<(ResourceFolder & { breadcrumbs: { id: string; name: string }[] }) | undefined>;
@@ -468,6 +497,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   getUser = userStorage.getUser;
+  getUsersByIds = userStorage.getUsersByIds;
   upsertUser = userStorage.upsertUser;
   updateUserRole = userStorage.updateUserRole;
   updateUserPassword = userStorage.updateUserPassword;
@@ -522,6 +552,7 @@ export class DatabaseStorage implements IStorage {
 
   getAreas = facilityStorage.getAreas;
   createArea = facilityStorage.createArea;
+  updateArea = facilityStorage.updateArea;
   deleteArea = facilityStorage.deleteArea;
   getSubdivisionsByArea = facilityStorage.getSubdivisionsByArea;
   createSubdivision = facilityStorage.createSubdivision;
@@ -656,6 +687,14 @@ export class DatabaseStorage implements IStorage {
   getVehicleMaintenanceLogByTaskId = vehicleStorage.getVehicleMaintenanceLogByTaskId;
   createVehicleMaintenanceLog = vehicleStorage.createVehicleMaintenanceLog;
   deleteVehicleMaintenanceLog = vehicleStorage.deleteVehicleMaintenanceLog;
+  getMobileEquipmentList = mobileEquipmentStorage.getMobileEquipmentList;
+  getMobileEquipment = mobileEquipmentStorage.getMobileEquipment;
+  createMobileEquipment = mobileEquipmentStorage.createMobileEquipment;
+  updateMobileEquipment = mobileEquipmentStorage.updateMobileEquipment;
+  deleteMobileEquipment = mobileEquipmentStorage.deleteMobileEquipment;
+  getMobileEquipmentMaintenanceLogs = mobileEquipmentStorage.getMobileEquipmentMaintenanceLogs;
+  createMobileEquipmentMaintenanceLog = mobileEquipmentStorage.createMobileEquipmentMaintenanceLog;
+  deleteMobileEquipmentMaintenanceLog = mobileEquipmentStorage.deleteMobileEquipmentMaintenanceLog;
   getVehicleDocuments = vehicleStorage.getVehicleDocuments;
   getVehicleDocument = vehicleStorage.getVehicleDocument;
   createVehicleDocument = vehicleStorage.createVehicleDocument;
@@ -739,6 +778,7 @@ export class DatabaseStorage implements IStorage {
 
   getResourceCategories = resourceStorage.getResourceCategories;
   createResourceCategory = resourceStorage.createResourceCategory;
+  getResourceCategoryById = resourceStorage.getResourceCategoryById;
   getResourceFolders = resourceStorage.getResourceFolders;
   getAllResourceFolders = resourceStorage.getAllResourceFolders;
   getResourceFolderById = resourceStorage.getResourceFolderById;

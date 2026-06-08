@@ -1,5 +1,6 @@
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { Task, User, Property } from "@shared/schema";
+import type { Task, User, Property, Area } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { TaskTableRow } from "./TaskTableRow";
 
@@ -15,6 +16,8 @@ type ParentTaskRowGroupProps = {
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
+  handleDepartmentChange: (taskId: string, areaId: string) => void;
+  areas: Area[];
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
@@ -22,7 +25,7 @@ type ParentTaskRowGroupProps = {
   selectedTaskId?: string | null;
 };
 
-export function ParentTaskRowGroup({
+export const ParentTaskRowGroup = memo(function ParentTaskRowGroup({
   task,
   childSubTasks,
   isExpanded,
@@ -60,4 +63,4 @@ export function ParentTaskRowGroup({
         ))}
     </>
   );
-}
+});

@@ -15,11 +15,17 @@ import {
   type PasswordResetToken,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, desc, or, lte } from "drizzle-orm";
+import { eq, and, desc, or, lte, inArray } from "drizzle-orm";
 
 export async function getUser(id: string): Promise<User | undefined> {
   const [user] = await db.select().from(users).where(eq(users.id, id));
   return user;
+}
+
+export async function getUsersByIds(ids: string[]): Promise<User[]> {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return [];
+  return await db.select().from(users).where(inArray(users.id, uniqueIds));
 }
 
 export async function upsertUser(userData: UpsertUser): Promise<User> {

@@ -40,9 +40,11 @@ import {
 import { format, parseISO, isPast, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { invalidateDashboard, invalidateTaskLists } from "@/lib/taskQueryInvalidation";
 import { getServiceRequestStatusLabel } from "@/lib/serviceRequestLabels";
-import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
+import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog, Area } from "@shared/schema";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
+import DepartmentOverview from "@/components/dashboard/DepartmentOverview";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -206,8 +208,11 @@ export default function AdminDashboard({
   const { toast } = useToast();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [boardFilter, setBoardFilter] = useState<"today" | "weekly">("today");
   const [techFilter, setTechFilter] = useState<"today" | "weekly">("weekly");
+
+  const { data: areas = [] } = useQuery<Area[]>({
+    queryKey: ["/api/areas"],
+  });
   const [kpiModal, setKpiModal] = useState<{ title: string; tasks: Task[] } | null>(null);
   const [techModal, setTechModal] = useState<{ name: string; tasks: Task[] } | null>(null);
   const [selectedAiLog, setSelectedAiLog] = useState<AiAgentLog | null>(null);
@@ -228,7 +233,8 @@ export default function AdminDashboard({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ai-logs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ai-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskLists();
+      invalidateDashboard();
       toast({ title: "AI recommendation updated" });
       setSelectedAiLog(null);
     },
@@ -292,38 +298,6 @@ export default function AdminDashboard({
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const boardTasks = useMemo(() => {
-    let filtered = [...tasks];
-    const isOverdue = (t: typeof tasks[0]) => {
-      if (!t.initialDate || t.status === "completed") return false;
-      const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-      return taskDate.getTime() < today.getTime();
-    };
-
-    if (boardFilter === "today") {
-      filtered = filtered.filter(t => {
-        if (isOverdue(t)) return true;
-        if (!t.initialDate) return t.urgency === "high";
-        const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-        return taskDate.getTime() === today.getTime();
-      });
-    } else {
-      filtered = filtered.filter(t => {
-        if (isOverdue(t)) return true;
-        if (!t.initialDate) return t.urgency === "high";
-        const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-        return taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime();
-      });
-    }
-
-    const todo = filtered.filter(t => t.status === "not_started" || t.status === "needs_estimate" || t.status === "waiting_approval" || t.status === "ready");
-    const inProgress = filtered.filter(t => t.status === "in_progress");
-    const completed = filtered.filter(t => t.status === "completed");
-    const blocked = filtered.filter(t => t.status === "on_hold");
-
-    return { todo, inProgress, completed, blocked };
-  }, [tasks, boardFilter, today, weekStart, weekEnd]);
-
   const technicianStats = useMemo(() => {
     const techs = users.filter(u => u.role === "technician");
     return techs.map(tech => {
@@ -386,57 +360,6 @@ export default function AdminDashboard({
   };
 
   const strokeColors = ["stroke-blue-500", "stroke-emerald-500", "stroke-violet-500", "stroke-amber-500", "stroke-rose-500", "stroke-cyan-500", "stroke-orange-500"];
-
-  const renderTaskRow = (task: Task, variant: "todo" | "inProgress" | "completed" | "blocked") => {
-    const assignee = getUserById(task.assignedToId);
-    const property = getPropertyById(task.propertyId);
-    const firstName = assignee?.firstName || assignee?.username || "Unassigned";
-
-    const rowClasses = cn(
-      "flex items-center gap-2 py-1.5 rounded-md cursor-pointer hover-elevate",
-      variant === "inProgress" ? "pl-3 pr-2 bg-blue-50/40 dark:bg-blue-900/10" : "px-2",
-      variant === "completed" && "opacity-75",
-      variant === "blocked" ? "pl-3 pr-2 bg-red-50/40 dark:bg-red-900/10" : ""
-    );
-
-    const content = (
-      <div className={rowClasses} onClick={() => handleViewDetails(task)} data-testid={`task-row-${task.id}`}>
-        {variant === "completed" ? (
-          <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-        ) : variant === "blocked" ? (
-          <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
-        ) : (
-          <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", urgencyColors[task.urgency] || "bg-muted")} />
-        )}
-        <p className={cn(
-          "text-xs font-medium leading-tight truncate flex-1",
-          variant === "completed" && "line-through text-muted-foreground",
-          variant === "blocked" && "text-red-700 dark:text-red-400"
-        )}>
-          {task.name}
-        </p>
-        <span className="text-xs text-muted-foreground shrink-0">{firstName.split(" ")[0]}</span>
-      </div>
-    );
-
-    return (
-      <HoverCard key={task.id} openDelay={300} closeDelay={100}>
-        <HoverCardTrigger asChild>
-          {content}
-        </HoverCardTrigger>
-        <HoverCardContent side="right" align="start" className="w-72 p-3" sideOffset={8}>
-          <TaskRowPopover task={task} assignee={assignee} property={property} />
-        </HoverCardContent>
-      </HoverCard>
-    );
-  };
-
-  const columnConfig = [
-    { key: "todo" as const, title: "To Do", tasks: boardTasks.todo, bgClass: "bg-muted/10", titleClass: "text-muted-foreground", badgeClass: "" },
-    { key: "inProgress" as const, title: "In Progress", tasks: boardTasks.inProgress, bgClass: "bg-blue-50/30 dark:bg-blue-900/5", titleClass: "text-blue-600 dark:text-blue-400", badgeClass: "text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800" },
-    { key: "completed" as const, title: "Done", tasks: boardTasks.completed, bgClass: "bg-emerald-50/30 dark:bg-emerald-900/5", titleClass: "text-emerald-600 dark:text-emerald-400", badgeClass: "text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800" },
-    { key: "blocked" as const, title: "Blocked", tasks: boardTasks.blocked, bgClass: "bg-red-50/30 dark:bg-red-900/5", titleClass: "text-red-600 dark:text-red-400", badgeClass: "text-red-600 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800" },
-  ];
 
   return (
     <div className="space-y-6 pb-6">
@@ -572,82 +495,7 @@ export default function AdminDashboard({
         </div>
 
         <div className="lg:col-span-6 flex flex-col">
-          <Card className="flex-1 flex flex-col border-2 border-primary/5 shadow-md">
-            <CardHeader className="pb-2 bg-muted/20 border-b">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <CardTitle className="text-xl" data-testid="text-task-board-title">Task Board</CardTitle>
-                <Tabs value={boardFilter} onValueChange={(v) => setBoardFilter(v as "today" | "weekly")}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="today" className="text-xs px-3" data-testid="tab-today">
-                      Today
-                    </TabsTrigger>
-                    <TabsTrigger value="weekly" className="text-xs px-3" data-testid="tab-weekly">
-                      Weekly
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden">
-              <div className="hidden md:grid grid-cols-4 min-h-[500px]">
-                {columnConfig.map((col, colIdx) => (
-                  <div
-                    key={col.key}
-                    className={cn(
-                      "p-2 overflow-y-auto",
-                      col.bgClass,
-                      colIdx < columnConfig.length - 1 && "border-r"
-                    )}
-                  >
-                    <div className="flex items-center justify-between pb-2 px-1">
-                      <h4 className={cn("text-xs font-semibold uppercase tracking-wider", col.titleClass)}>{col.title}</h4>
-                      <Badge
-                        variant={col.key === "todo" ? "secondary" : "outline"}
-                        className={cn(
-                          "px-1.5 py-0 min-w-5 h-5 flex items-center justify-center text-xs rounded-full",
-                          col.badgeClass
-                        )}
-                      >
-                        {col.tasks.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-0.5">
-                      {col.tasks.map(task => renderTaskRow(task, col.key))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="md:hidden flex overflow-x-auto snap-x snap-mandatory">
-                {columnConfig.map((col, colIdx) => (
-                  <div
-                    key={col.key}
-                    className={cn(
-                      "min-w-[280px] w-[80vw] snap-center p-3 flex-shrink-0",
-                      col.bgClass,
-                      colIdx < columnConfig.length - 1 && "border-r"
-                    )}
-                  >
-                    <div className="flex items-center justify-between pb-2 px-1">
-                      <h4 className={cn("text-xs font-semibold uppercase tracking-wider", col.titleClass)}>{col.title}</h4>
-                      <Badge
-                        variant={col.key === "todo" ? "secondary" : "outline"}
-                        className={cn(
-                          "px-1.5 py-0 min-w-5 h-5 flex items-center justify-center text-xs rounded-full",
-                          col.badgeClass
-                        )}
-                      >
-                        {col.tasks.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-0.5">
-                      {col.tasks.map(task => renderTaskRow(task, col.key))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <DepartmentOverview tasks={tasks} areas={areas} />
         </div>
 
         <div className="lg:col-span-3 space-y-6">

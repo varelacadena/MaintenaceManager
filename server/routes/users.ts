@@ -50,7 +50,7 @@ export function registerUserRoutes(app: Express) {
   app.get("/api/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
-      const currentUser = await storage.getUser(userId);
+      const currentUser = req.currentUser;
 
       if (currentUser?.role === "staff") {
         return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
@@ -77,6 +77,32 @@ export function registerUserRoutes(app: Express) {
       }
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch users");
+    }
+  });
+
+  app.get("/api/users/directory", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = req.currentUser;
+      if (currentUser?.role === "staff") {
+        return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
+      }
+
+      const roleFilter = req.query.role as string | undefined;
+      let users = await storage.getAllUsers();
+      if (roleFilter && ["admin", "technician", "staff", "student"].includes(roleFilter)) {
+        users = users.filter((user) => user.role === roleFilter);
+      }
+
+      res.json(users.map((user) => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        username: user.username,
+        email: user.email,
+      })));
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch user directory");
     }
   });
 

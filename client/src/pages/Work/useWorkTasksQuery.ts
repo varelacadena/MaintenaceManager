@@ -10,7 +10,12 @@ export function useWorkTasksQuery(enabled: boolean) {
     error: tasksQueryError,
     refetch: refetchTasks,
   } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
+    queryKey: ["/api/tasks", { view: "work", summary: true }],
+    queryFn: async () => {
+      const res = await fetch("/api/tasks?view=work&summary=true", { credentials: "include" });
+      if (!res.ok) throw new Error("Could not load tasks.");
+      return res.json();
+    },
     staleTime: WORK_TASKS_STALE_MS,
     enabled,
   });

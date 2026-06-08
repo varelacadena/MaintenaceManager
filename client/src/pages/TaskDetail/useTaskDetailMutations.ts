@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import type {
   Task,
   TimeEntry,
@@ -82,7 +83,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: "Sub-task created" });
       setIsEquipmentInfoOpen(false);
       setIsVehicleInfoOpen(false);
@@ -101,7 +102,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: data?._requestedStatus === "completed" ? "Task completed" : "Status updated" });
       if (data?._requestedStatus === "completed" && task?.parentTaskId) {
         setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
@@ -117,7 +118,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
     },
@@ -130,7 +131,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: "Task updated" });
     },
     onError: (error: any) => {
@@ -154,7 +155,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
         try {
           await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: "in_progress" });
           queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+          invalidateTaskAfterMutation(id);
         } catch (error) {
           console.error("Error updating task status:", error);
         }
@@ -166,7 +167,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
             assignedPool: null,
           });
           queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+          invalidateTaskAfterMutation(id);
         } catch (error) {
           console.error("Error claiming pool task:", error);
         }
@@ -222,7 +223,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
     },
     onError: (error: any) => {
@@ -376,7 +377,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: "Quote approved", description: "The task is now ready to start work." });
     },
     onError: (error: any) => {
@@ -391,7 +392,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id);
       toast({ title: "Estimate rejected", description: "The estimate has been rejected." });
     },
     onError: (error: any) => {
@@ -481,7 +482,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       return await apiRequest("DELETE", `/api/tasks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id, { broad: true });
       if (task?.projectId) {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", task.projectId, "tasks"] });
       }

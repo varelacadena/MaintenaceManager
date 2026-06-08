@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { insertTaskSchema } from "@shared/schema";
 import type { Property, Equipment, User, Vendor, Task, Space } from "@shared/schema";
@@ -289,7 +290,7 @@ export default function EditTask() {
       return response.json();
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(id, { broad: true });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
 
       toast({

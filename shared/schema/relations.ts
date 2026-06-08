@@ -18,6 +18,11 @@ import { uploads, emergencyContacts } from "./misc";
 import {
   projects, projectTeamMembers, projectVendors, quotes, quoteAttachments,
 } from "./projects";
+import {
+  mobileEquipment,
+  mobileEquipmentMaintenanceLogs,
+  mobileEquipmentMaintenanceParts,
+} from "./mobileEquipment";
 
 export const usersRelations = relations(users, ({ many }) => ({
   requestsCreated: many(serviceRequests, { relationName: "requester" }),
@@ -409,3 +414,32 @@ export const taskHelpersRelations = relations(taskHelpers, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const mobileEquipmentRelations = relations(mobileEquipment, ({ one, many }) => ({
+  currentProperty: one(properties, {
+    fields: [mobileEquipment.currentPropertyId],
+    references: [properties.id],
+  }),
+  maintenanceLogs: many(mobileEquipmentMaintenanceLogs),
+}));
+
+export const mobileEquipmentMaintenanceLogsRelations = relations(
+  mobileEquipmentMaintenanceLogs,
+  ({ one, many }) => ({
+    equipment: one(mobileEquipment, {
+      fields: [mobileEquipmentMaintenanceLogs.mobileEquipmentId],
+      references: [mobileEquipment.id],
+    }),
+    parts: many(mobileEquipmentMaintenanceParts),
+  }),
+);
+
+export const mobileEquipmentMaintenancePartsRelations = relations(
+  mobileEquipmentMaintenanceParts,
+  ({ one }) => ({
+    maintenanceLog: one(mobileEquipmentMaintenanceLogs, {
+      fields: [mobileEquipmentMaintenanceParts.maintenanceLogId],
+      references: [mobileEquipmentMaintenanceLogs.id],
+    }),
+  }),
+);

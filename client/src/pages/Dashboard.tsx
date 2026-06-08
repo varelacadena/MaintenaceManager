@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { lazy, Suspense, useState, useMemo } from "react";
 import type { ServiceRequest, Task, VehicleReservation, User as UserType, Property, Project } from "@shared/schema";
 import {
   Dialog,
@@ -28,14 +28,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { getServiceRequestStatusLabel } from "@/lib/serviceRequestLabels";
 import TaskCard from "@/components/dashboard/TaskCard";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import EmptyState from "@/components/dashboard/EmptyState";
 import EmergencyContactBanner from "@/components/EmergencyContactBanner";
-import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import { parseISO, format, isSameDay } from "date-fns";
+
+const AdminDashboard = lazy(() => import("@/components/dashboard/AdminDashboard"));
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -53,31 +55,6 @@ export default function Dashboard() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
 
-  const { data: requests = [] } = useQuery<ServiceRequest[]>({
-    queryKey: ["/api/service-requests"],
-  });
-
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
-  });
-
-  const { data: users = [] } = useQuery<UserType[]>({
-    queryKey: ["/api/users"],
-  });
-
-  const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ["/api/properties"],
-  });
-
-  const { data: vehicleReservations = [], isLoading: reservationsLoading } = useQuery<VehicleReservation[]>({
-    queryKey: ["/api/vehicle-reservations/my"],
-  });
-
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    enabled: user?.role === "admin",
-  });
-
   type AiStats = {
     pending: number;
     approved: number;
@@ -88,18 +65,40 @@ export default function Dashboard() {
     pendingByAction?: Record<string, number>;
   };
 
-  const { data: aiStats } = useQuery<AiStats>({
-    queryKey: ["/api/ai-stats"],
-    enabled: user?.role === "admin",
+  type DashboardPayload = {
+    tasks?: Task[];
+    requests?: ServiceRequest[];
+    users?: UserType[];
+    properties?: Property[];
+    vehicleReservations?: VehicleReservation[];
+    projects?: Project[];
+    aiStats?: AiStats;
+  };
+
+  const { data: dashboard, isLoading: dashboardLoading } = useQuery<DashboardPayload>({
+    queryKey: ["/api/dashboard"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      return res.json();
+    },
   });
+
+  const tasks = dashboard?.tasks ?? [];
+  const requests = dashboard?.requests ?? [];
+  const users = dashboard?.users ?? [];
+  const properties = dashboard?.properties ?? [];
+  const vehicleReservations = dashboard?.vehicleReservations ?? [];
+  const projects = dashboard?.projects ?? [];
+  const aiStats = dashboard?.aiStats;
 
   const statusMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: Task["status"] }) => {
       const res = await apiRequest("PATCH", `/api/tasks/${taskId}`, { status });
       return res;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    onSuccess: (_data, variables) => {
+      invalidateTaskAfterMutation(variables.taskId, { patch: { status: variables.status } });
       toast({
         title: "Task updated",
         description: "Task status has been changed",
@@ -229,7 +228,7 @@ export default function Dashboard() {
     setDrawerOpen(true);
   };
 
-  const isLoading = tasksLoading || reservationsLoading;
+  const isLoading = dashboardLoading;
 
   if (isLoading) {
     return (
@@ -623,16 +622,25 @@ export default function Dashboard() {
   }
 
   return (
-    <AdminDashboard
-      tasks={baseTasks}
-      users={users}
-      properties={properties}
-      projects={projects}
-      requests={requests}
-      vehicleReservations={vehicleReservations}
-      aiStats={aiStats}
-      onStatusChange={handleStatusChange}
-      statusMutationPending={statusMutation.isPending}
-    />
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
+      <AdminDashboard
+        tasks={baseTasks}
+        users={users}
+        properties={properties}
+        projects={projects}
+        requests={requests}
+        vehicleReservations={vehicleReservations}
+        aiStats={aiStats}
+        onStatusChange={handleStatusChange}
+        statusMutationPending={statusMutation.isPending}
+      />
+    </Suspense>
   );
 }

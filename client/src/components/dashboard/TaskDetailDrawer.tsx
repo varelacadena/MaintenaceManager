@@ -35,7 +35,8 @@ import type { Task, User as UserType, Property, Vendor } from "@shared/schema";
 import { parseISO, isPast } from "date-fns";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -100,8 +101,13 @@ export default function TaskDetailDrawer({
         assignedVendorId,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    onSuccess: (_result, variables) => {
+      invalidateTaskAfterMutation(variables.taskId, {
+        patch: {
+          assignedToId: variables.assignedToId,
+          assignedVendorId: variables.assignedVendorId,
+        },
+      });
       toast({
         title: "Task reassigned",
         description: "The task has been reassigned successfully.",

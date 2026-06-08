@@ -38,7 +38,7 @@ export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
     task, user,
     timeEntries, users,
     contactStaff,
-    allTasks,
+    dependencyTasks,
     taskDependencies,
     activeTimer,
     isHistorySheetOpen, setIsHistorySheetOpen,
@@ -281,7 +281,7 @@ export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
           </div>
           <div className="space-y-1.5">
             {taskDependencies.map((dep: any) => {
-              const depTask = allTasks.find((t: any) => t.id === dep.dependsOnTaskId);
+              const depTask = dependencyTasks.find((t: any) => t.id === dep.dependsOnTaskId);
               return (
                 <div key={dep.id} className="flex items-center gap-2 text-sm">
                   <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />

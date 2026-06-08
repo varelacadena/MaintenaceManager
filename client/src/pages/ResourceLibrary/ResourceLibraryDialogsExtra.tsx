@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +29,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Folder } from "lucide-react";
 import { getCategoryStyle, CATEGORY_COLORS } from "@/lib/categoryColors";
-import { EQUIPMENT_CATEGORIES_RESOURCE } from "./useResourceLibrary";
+import { EQUIPMENT_CATEGORIES } from "@shared/equipmentCategories";
 import type { ResourceLibraryContext } from "./useResourceLibrary";
+import { buildFolderPathLabel } from "./resourceUtils";
 
 type ResourceFormBottomSectionProps = Pick<
   ResourceLibraryContext,
@@ -57,6 +59,59 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
     toggleProperty,
   } = props;
 
+  const equipmentListId = useId();
+  const equipmentContainerRef = useRef<HTMLDivElement>(null);
+  const [equipmentListOpen, setEquipmentListOpen] = useState(false);
+  const [equipmentHighlight, setEquipmentHighlight] = useState(0);
+
+  const equipmentMatches = equipmentSearch && !form.equipmentId
+    ? allEquipment
+      .filter((item) => item.name.toLowerCase().includes(equipmentSearch.toLowerCase()))
+      .slice(0, 20)
+    : [];
+
+  useEffect(() => {
+    setEquipmentHighlight(0);
+  }, [equipmentSearch]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!equipmentContainerRef.current?.contains(event.target as Node)) {
+        setEquipmentListOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  function selectEquipment(item: { id: string; name: string; propertyId: string }) {
+    setForm((current) => ({
+      ...current,
+      equipmentId: item.id,
+      propertyIds: current.propertyIds.includes(item.propertyId)
+        ? current.propertyIds
+        : [...current.propertyIds, item.propertyId],
+    }));
+    setEquipmentSearch(item.name);
+    setEquipmentListOpen(false);
+  }
+
+  function handleEquipmentKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!equipmentListOpen || equipmentMatches.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setEquipmentHighlight((index) => (index + 1) % equipmentMatches.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setEquipmentHighlight((index) => (index - 1 + equipmentMatches.length) % equipmentMatches.length);
+    } else if (event.key === "Enter" && equipmentMatches[equipmentHighlight]) {
+      event.preventDefault();
+      selectEquipment(equipmentMatches[equipmentHighlight]);
+    } else if (event.key === "Escape") {
+      setEquipmentListOpen(false);
+    }
+  }
+
   return (
     <>
       <div className="space-y-1.5">
@@ -67,11 +122,11 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">No folder (root)</SelectItem>
-            {allFolders.map(f => (
-              <SelectItem key={f.id} value={f.id}>
+            {allFolders.map(folder => (
+              <SelectItem key={folder.id} value={folder.id}>
                 <div className="flex items-center gap-2">
                   <Folder className="w-3.5 h-3.5 text-muted-foreground" />
-                  {f.name}
+                  {buildFolderPathLabel(folder, allFolders)}
                 </div>
               </SelectItem>
             ))}
@@ -102,7 +157,14 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
                 })}
               </SelectContent>
             </Select>
-            <Button type="button" variant="outline" size="icon" onClick={() => setShowNewCategory(true)} data-testid="button-new-category">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setShowNewCategory(true)}
+              aria-label="Create category"
+              data-testid="button-new-category"
+            >
               <Plus className="w-4 h-4" />
             </Button>
           </div>
@@ -156,55 +218,63 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
       <div className="space-y-3 rounded-md border p-3 bg-muted/30">
         <div>
           <Label className="text-sm font-medium">Link to Equipment (Optional)</Label>
-          <p className="text-xs text-muted-foreground mt-0.5">Resources linked here appear automatically when that equipment is scanned on the job.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Resources linked here appear automatically when that equipment is scanned on the job.
+            Selecting equipment also adds its property link.
+          </p>
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Specific Equipment Unit</Label>
-          <div className="relative">
+          <Label className="text-xs" htmlFor="input-equipment-search">Specific Equipment Unit</Label>
+          <div className="relative" ref={equipmentContainerRef}>
             <Input
+              id="input-equipment-search"
               placeholder="Search equipment by name..."
               value={equipmentSearch}
+              role="combobox"
+              aria-expanded={equipmentListOpen}
+              aria-controls={equipmentListId}
+              aria-autocomplete="list"
               onChange={e => {
                 setEquipmentSearch(e.target.value);
+                setEquipmentListOpen(true);
                 if (!e.target.value) setForm(f => ({ ...f, equipmentId: "" }));
               }}
+              onFocus={() => setEquipmentListOpen(true)}
+              onKeyDown={handleEquipmentKeyDown}
               data-testid="input-equipment-search"
             />
-            {equipmentSearch && !form.equipmentId && (
-              <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-44 overflow-y-auto">
-                <div
-                  className="px-3 py-2 cursor-pointer hover-elevate text-sm text-muted-foreground"
-                  onClick={() => { setEquipmentSearch(""); setForm(f => ({ ...f, equipmentId: "" })); }}
-                >
-                  None / Clear
-                </div>
-                {allEquipment
-                  .filter(e => e.name.toLowerCase().includes(equipmentSearch.toLowerCase()))
-                  .slice(0, 20)
-                  .map(e => {
-                    const prop = properties.find(p => p.id === e.propertyId);
-                    return (
-                      <div
-                        key={e.id}
-                        className="px-3 py-2 cursor-pointer hover-elevate text-sm"
-                        onClick={() => {
-                          setForm(f => ({ ...f, equipmentId: e.id }));
-                          setEquipmentSearch(e.name);
-                        }}
-                        data-testid={`equipment-option-${e.id}`}
-                      >
-                        <span className="font-medium">{e.name}</span>
-                        {prop && <span className="text-muted-foreground ml-1">— {prop.name}</span>}
-                      </div>
-                    );
-                  })}
+            {equipmentListOpen && equipmentMatches.length > 0 && (
+              <div
+                id={equipmentListId}
+                role="listbox"
+                className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-44 overflow-y-auto"
+              >
+                {equipmentMatches.map((item, index) => {
+                  const prop = properties.find(p => p.id === item.propertyId);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="option"
+                      aria-selected={index === equipmentHighlight}
+                      className={`w-full text-left px-3 py-2 hover-elevate text-sm ${index === equipmentHighlight ? "bg-muted" : ""}`}
+                      onMouseEnter={() => setEquipmentHighlight(index)}
+                      onClick={() => selectEquipment(item)}
+                      data-testid={`equipment-option-${item.id}`}
+                    >
+                      <span className="font-medium">{item.name}</span>
+                      {prop && <span className="text-muted-foreground ml-1">— {prop.name}</span>}
+                    </button>
+                  );
+                })}
               </div>
             )}
             {form.equipmentId && (
               <button
                 type="button"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                aria-label="Clear equipment selection"
                 onClick={() => { setEquipmentSearch(""); setForm(f => ({ ...f, equipmentId: "" })); }}
               >
                 x
@@ -221,7 +291,7 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None / Any category</SelectItem>
-              {EQUIPMENT_CATEGORIES_RESOURCE.map(cat => (
+              {EQUIPMENT_CATEGORIES.map(cat => (
                 <SelectItem key={cat.slug} value={cat.slug}>{cat.label}</SelectItem>
               ))}
             </SelectContent>

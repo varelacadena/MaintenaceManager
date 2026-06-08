@@ -1,8 +1,5 @@
 import {
   tasks,
-  serviceRequests,
-  users,
-  areas,
   timeEntries,
   taskNotes,
   taskChecklistGroups,
@@ -29,7 +26,7 @@ import {
   type TaskHelper,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, or, desc, isNull, sql, inArray } from "drizzle-orm";
+import { eq, and, or, desc, isNull, sql, inArray, gte, lte, ne } from "drizzle-orm";
 
 function normalizeTaskPool(data: any): any {
   const normalized = { ...data };
@@ -52,7 +49,15 @@ export async function getTasks(filters?: {
   areaId?: string;
   executorType?: string;
   assignedToIdOrPool?: { userId: string; pool: string };
+  taskIds?: string[];
   equipmentId?: string;
+  propertyId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  excludeCompleted?: boolean;
+  recentCompletedAfter?: Date;
+  limit?: number;
+  offset?: number;
 }): Promise<Task[]> {
   let query = db.select({
       id: tasks.id,
@@ -101,10 +106,7 @@ export async function getTasks(filters?: {
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
     })
-    .from(tasks)
-    .leftJoin(serviceRequests, eq(tasks.requestId, serviceRequests.id))
-    .leftJoin(users, eq(tasks.assignedToId, users.id))
-    .leftJoin(areas, eq(tasks.areaId, areas.id));
+    .from(tasks);
 
   const conditions = [];
   if (filters?.assignedToId) {
@@ -125,6 +127,32 @@ export async function getTasks(filters?: {
   if (filters?.equipmentId) {
     conditions.push(eq(tasks.equipmentId, filters.equipmentId));
   }
+  if (filters?.propertyId) {
+    conditions.push(eq(tasks.propertyId, filters.propertyId));
+  }
+  if (filters?.taskIds) {
+    if (filters.taskIds.length === 0) {
+      return [];
+    }
+    conditions.push(inArray(tasks.id, filters.taskIds));
+  }
+  if (filters?.recentCompletedAfter) {
+    conditions.push(
+      or(
+        ne(tasks.status, "completed"),
+        gte(tasks.actualCompletionDate, filters.recentCompletedAfter)
+      )
+    );
+  } else if (filters?.excludeCompleted) {
+    conditions.push(ne(tasks.status, "completed"));
+  }
+  if (filters?.dateFrom && filters?.dateTo) {
+    conditions.push(sql`${tasks.initialDate} <= ${filters.dateTo} AND coalesce(${tasks.estimatedCompletionDate}, ${tasks.initialDate}) >= ${filters.dateFrom}`);
+  } else if (filters?.dateFrom) {
+    conditions.push(gte(sql`coalesce(${tasks.estimatedCompletionDate}, ${tasks.initialDate})`, filters.dateFrom));
+  } else if (filters?.dateTo) {
+    conditions.push(lte(tasks.initialDate, filters.dateTo));
+  }
   if (filters?.assignedToIdOrPool) {
     const { userId, pool } = filters.assignedToIdOrPool;
     conditions.push(
@@ -139,7 +167,16 @@ export async function getTasks(filters?: {
     query = query.where(and(...conditions)) as any;
   }
 
-  return await query.orderBy(desc(tasks.initialDate));
+  query = query.orderBy(desc(tasks.initialDate)) as any;
+
+  if (typeof filters?.limit === "number") {
+    query = (query as any).limit(filters.limit);
+  }
+  if (typeof filters?.offset === "number") {
+    query = (query as any).offset(filters.offset);
+  }
+
+  return await query;
 }
 
 export async function getTask(id: string): Promise<Task | undefined> {
@@ -214,35 +251,20 @@ export async function getAvailablePoolTaskCount(pool: string): Promise<number> {
 }
 
 export async function backfillTaskPools(): Promise<number> {
-  const unassignedTasks = await db
-    .select()
-    .from(tasks)
-    .where(
-      and(
-        isNull(tasks.assignedToId),
-        isNull(tasks.assignedVendorId),
-        or(
-          isNull(tasks.assignedPool),
-          isNull(tasks.executorType)
-        ),
-        or(
-          eq(tasks.status, "not_started"),
-          eq(tasks.status, "ready")
-        )
-      )
-    );
-  
-  let count = 0;
-  for (const task of unassignedTasks) {
-    const execType = task.executorType || "technician";
-    const pool = execType === "student" ? "student_pool" : "technician_pool";
-    await db
-      .update(tasks)
-      .set({ executorType: execType, assignedPool: pool })
-      .where(eq(tasks.id, task.id));
-    count++;
-  }
-  return count;
+  const result = await db.execute(sql`
+    UPDATE tasks
+    SET
+      executor_type = COALESCE(executor_type, 'technician'),
+      assigned_pool = CASE
+        WHEN COALESCE(executor_type, 'technician') = 'student' THEN 'student_pool'
+        ELSE 'technician_pool'
+      END
+    WHERE assigned_to_id IS NULL
+      AND assigned_vendor_id IS NULL
+      AND (assigned_pool IS NULL OR executor_type IS NULL)
+      AND status IN ('not_started', 'ready')
+  `);
+  return Number(result.rowCount ?? 0);
 }
 
 export async function claimTask(taskId: string, userId: string, pool: string): Promise<Task | null> {

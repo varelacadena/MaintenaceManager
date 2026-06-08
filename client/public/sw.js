@@ -1,6 +1,5 @@
-const CACHE_NAME = 'hartland-v1';
+const CACHE_NAME = 'hartland-v2';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/favicon.png'
 ];
@@ -38,6 +37,38 @@ self.addEventListener('fetch', (event) => {
         return new Response(JSON.stringify({ error: 'Offline' }), {
           status: 503,
           headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+    return;
+  }
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        if (response.ok) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put('/', responseClone);
+          });
+        }
+        return response;
+      }).catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        return cachedResponse || fetch(event.request).then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
         });
       })
     );

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
@@ -24,13 +24,23 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import {
+  getCalendarDateKey,
+  getTaskActiveDateKeys,
+  getTaskReschedulePayload,
+  taskCoversDate,
+} from "@/lib/taskCalendarDates";
 import type { Task } from "@shared/schema";
 import {
   DndContext,
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
   useDraggable,
   useDroppable,
   closestCenter,
@@ -80,6 +90,7 @@ const statusColors: Record<string, string> = {
   completed: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
   needs_estimate: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20",
   waiting_approval: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
+  ready: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
 };
 
 const urgencyDotColors = {
@@ -118,32 +129,6 @@ function getAssigneeInfo(task: Task, users: any[], vendors: any[]): { name: stri
     return { name: label, colorIndex: -1 };
   }
   return { name: "", colorIndex: -1 };
-}
-
-// Build a set of dates a task is "active" — from initialDate through estimatedCompletionDate
-// Capped at 60 days to avoid huge renders
-function getTaskActiveDates(task: Task): string[] {
-  const dueDate = task.estimatedCompletionDate ? new Date(task.estimatedCompletionDate) : null;
-  const startDate = task.initialDate ? new Date(task.initialDate) : null;
-
-  if (!startDate && !dueDate) return [];
-
-  const start = startDate ?? dueDate!;
-  const end = dueDate ?? startDate!;
-
-  const dates: string[] = [];
-  const cursor = new Date(start);
-  cursor.setHours(12, 0, 0, 0);
-  const endNorm = new Date(end);
-  endNorm.setHours(12, 0, 0, 0);
-
-  let count = 0;
-  while (cursor <= endNorm && count < 60) {
-    dates.push(cursor.toDateString());
-    cursor.setDate(cursor.getDate() + 1);
-    count++;
-  }
-  return dates;
 }
 
 // ─── DraggableTask (compact card for month/week) ──────────────────────────────
@@ -274,7 +259,7 @@ function DroppableDay({
   vendors: any[];
   isMobile: boolean;
 }) {
-  const dateKey = date.toDateString();
+  const dateKey = getCalendarDateKey(date) ?? date.toDateString();
   const { setNodeRef, isOver } = useDroppable({ id: dateKey, data: { date } });
 
   if (isMobile) {
@@ -352,7 +337,6 @@ function TimeGrid({
   const now = new Date();
   const todayKey = now.toDateString();
   const currentHourOffset = ((now.getHours() - HOUR_START) * HOUR_HEIGHT) + (now.getMinutes() / 60) * HOUR_HEIGHT;
-  const showTimeLine = dates.some((d) => d.toDateString() === todayKey);
 
   const allDayTasks = tasks.filter((t) => !t.scheduledStartTime);
   const timedTasks = tasks.filter((t) => !!t.scheduledStartTime);
@@ -360,18 +344,7 @@ function TimeGrid({
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
   const getTasksForDate = (date: Date, timed: boolean) =>
-    (timed ? timedTasks : allDayTasks).filter((t) => {
-      const dueDate = t.estimatedCompletionDate ? new Date(t.estimatedCompletionDate) : null;
-      const startDate = t.initialDate ? new Date(t.initialDate) : null;
-      if (!startDate && !dueDate) return false;
-      const start = startDate ?? dueDate!;
-      const end = dueDate ?? startDate!;
-      const d = new Date(date);
-      d.setHours(12, 0, 0, 0);
-      const s = new Date(start); s.setHours(12, 0, 0, 0);
-      const e = new Date(end); e.setHours(12, 0, 0, 0);
-      return d >= s && d <= e;
-    });
+    (timed ? timedTasks : allDayTasks).filter((t) => taskCoversDate(t, date));
 
   function getTaskTopOffset(task: Task): number {
     if (!task.scheduledStartTime) return 0;
@@ -379,12 +352,46 @@ function TimeGrid({
     const h = parseInt(parts[0], 10);
     const m = parseInt(parts[1] || "0", 10);
     if (isNaN(h) || isNaN(m)) return 0;
-    return ((h - HOUR_START) * HOUR_HEIGHT) + (m / 60) * HOUR_HEIGHT;
+    const rawOffset = ((h - HOUR_START) * HOUR_HEIGHT) + (m / 60) * HOUR_HEIGHT;
+    const maxOffset = (HOUR_END - HOUR_START) * HOUR_HEIGHT - 28;
+    return Math.min(Math.max(rawOffset, 0), maxOffset);
   }
 
   function getTaskHeight(task: Task): number {
     const hours = task.estimatedHours ?? 1;
     return Math.max(hours * HOUR_HEIGHT, 28);
+  }
+
+  function getTimedTaskLayouts(dayTimed: Task[]) {
+    const blocks = dayTimed
+      .map((task) => {
+        const top = getTaskTopOffset(task);
+        const height = getTaskHeight(task);
+        return { task, top, height, end: top + height, column: 0, columnCount: 1 };
+      })
+      .sort((a, b) => a.top - b.top || a.end - b.end);
+
+    const groups: typeof blocks[] = [];
+    for (const block of blocks) {
+      const group = groups.find((candidate) => candidate.some((item) => block.top < item.end && block.end > item.top));
+      if (group) group.push(block);
+      else groups.push([block]);
+    }
+
+    for (const group of groups) {
+      const columnEnds: number[] = [];
+      for (const block of group) {
+        const availableColumn = columnEnds.findIndex((end) => end <= block.top);
+        const column = availableColumn >= 0 ? availableColumn : columnEnds.length;
+        block.column = column;
+        columnEnds[column] = block.end;
+      }
+      for (const block of group) {
+        block.columnCount = columnEnds.length;
+      }
+    }
+
+    return blocks;
   }
 
   const isSingleDay = dates.length === 1;
@@ -464,7 +471,7 @@ function TimeGrid({
 
           {/* Day columns */}
           {dates.map((date) => {
-            const dayTimed = getTasksForDate(date, true);
+            const dayTimed = getTimedTaskLayouts(getTasksForDate(date, true));
             const isTodayDate = date.toDateString() === todayKey;
             return (
               <div
@@ -493,20 +500,20 @@ function TimeGrid({
                 )}
 
                 {/* Timed task blocks */}
-                {dayTimed.map((task) => {
-                  const top = getTaskTopOffset(task);
-                  const height = getTaskHeight(task);
+                {dayTimed.map(({ task, top, height, column, columnCount }) => {
                   const assigneeInfo = getAssigneeInfo(task, users, vendors);
                   const area = areas.find((a) => a.id === task.areaId);
                   const color = getUserColor(assigneeInfo.colorIndex);
                   const overdue = isOverdue(task);
+                  const width = `${100 / columnCount}%`;
+                  const left = `${(100 / columnCount) * column}%`;
                   return (
                     <HoverCard key={task.id} openDelay={300}>
                       <HoverCardTrigger asChild>
                         <div
                           onClick={() => onTaskClick(task.id)}
-                          className={`absolute inset-x-0.5 rounded cursor-pointer hover-elevate overflow-hidden p-1 ${color.bg}`}
-                          style={{ top, height: Math.max(height, 28) }}
+                          className={`absolute rounded cursor-pointer hover-elevate overflow-hidden p-1 ${color.bg}`}
+                          style={{ top, height: Math.max(height, 28), left, width, maxWidth: width }}
                           data-testid={`timed-task-${task.id}`}
                         >
                           <div className="flex items-start gap-1 min-w-0">
@@ -646,11 +653,23 @@ function AssigneeFilter({
   );
 }
 
+function getWeekStart(date: Date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay());
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
+
 // ─── Main Calendar component ──────────────────────────────────────────────────
 export default function Calendar() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -671,55 +690,28 @@ export default function Calendar() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const { data: tasks = [] } = useQuery<Task[]>({ queryKey: ["/api/tasks"] });
-  const { data: users = [] } = useQuery<any[]>({ queryKey: ["/api/users"] });
+  const { data: users = [] } = useQuery<any[]>({ queryKey: ["/api/users/directory"] });
   const { data: areas = [] } = useQuery<any[]>({ queryKey: ["/api/areas"] });
   const { data: vendors = [] } = useQuery<any[]>({ queryKey: ["/api/vendors"] });
 
   const updateTaskDateMutation = useMutation({
-    mutationFn: async ({ taskId, newDate }: { taskId: string; newDate: Date }) => {
-      return await apiRequest("PATCH", `/api/tasks/${taskId}`, {
-        estimatedCompletionDate: newDate.toISOString(),
-      });
+    mutationFn: async ({
+      taskId,
+      payload,
+    }: {
+      taskId: string;
+      payload: { initialDate?: string; estimatedCompletionDate?: string };
+    }) => {
+      return await apiRequest("PATCH", `/api/tasks/${taskId}`, payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Task rescheduled", description: "Due date updated successfully" });
+    onSuccess: (_result, variables) => {
+      invalidateTaskAfterMutation(variables.taskId, { patch: variables.payload as Partial<Task> });
+      toast({ title: "Task rescheduled", description: "Task dates updated successfully" });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to update task", variant: "destructive" });
     },
   });
-
-  // Filter tasks by selected user IDs
-  const filteredTasks = useMemo(() => {
-    if (selectedUserIds.length === 0) return tasks;
-    return tasks.filter((t) =>
-      (t.assignedToId && selectedUserIds.includes(t.assignedToId)) ||
-      (t.assignedVendorId && selectedUserIds.includes(t.assignedVendorId))
-    );
-  }, [tasks, selectedUserIds]);
-
-  // Build date → tasks map (tasks span their full date range)
-  const tasksByDate = useMemo(() => {
-    const map = new Map<string, Task[]>();
-    for (const task of filteredTasks) {
-      const dates = getTaskActiveDates(task);
-      for (const dateKey of dates) {
-        if (!map.has(dateKey)) map.set(dateKey, []);
-        map.get(dateKey)!.push(task);
-      }
-    }
-    return map;
-  }, [filteredTasks]);
-
-  // Navigation helpers
-  const getWeekStart = (date: Date) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() - d.getDay());
-    d.setHours(12, 0, 0, 0);
-    return d;
-  };
 
   const weekDays = useMemo(() => {
     const start = getWeekStart(currentDate);
@@ -741,6 +733,63 @@ export default function Calendar() {
   }, [currentDate]);
 
   const today = new Date();
+
+  const visibleDateRange = useMemo(() => {
+    if (view === "month") {
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1, 12);
+      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 12);
+      return { start, end };
+    }
+    if (view === "week") {
+      const start = getWeekStart(currentDate);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return { start, end };
+    }
+    const day = new Date(currentDate);
+    day.setHours(12, 0, 0, 0);
+    return { start: day, end: day };
+  }, [currentDate, view]);
+
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks", "calendar", visibleDateRange.start.toISOString(), visibleDateRange.end.toISOString()],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        dateFrom: visibleDateRange.start.toISOString(),
+        dateTo: visibleDateRange.end.toISOString(),
+        summary: "true",
+      });
+      const res = await fetch(`/api/tasks?${params.toString()}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to load calendar tasks");
+      }
+      return res.json();
+    },
+  });
+
+  // Filter the visible date-window tasks by selected user IDs.
+  const filteredTasks = useMemo(() => {
+    if (selectedUserIds.length === 0) return tasks;
+    return tasks.filter((t) =>
+      (t.assignedToId && selectedUserIds.includes(t.assignedToId)) ||
+      (t.assignedVendorId && selectedUserIds.includes(t.assignedVendorId))
+    );
+  }, [tasks, selectedUserIds]);
+
+  // Build date → tasks map only for visible days to avoid truncating long spans.
+  const tasksByDate = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    for (const task of filteredTasks) {
+      const dates = getTaskActiveDateKeys(task, visibleDateRange.start, visibleDateRange.end);
+      for (const dateKey of dates) {
+        if (!map.has(dateKey)) map.set(dateKey, []);
+        map.get(dateKey)!.push(task);
+      }
+    }
+    return map;
+  }, [filteredTasks, visibleDateRange]);
 
   const goToPrevious = () => {
     if (view === "month") setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
@@ -770,6 +819,8 @@ export default function Calendar() {
   };
 
   const isTechnicianOrAdmin = user?.role === "admin" || user?.role === "technician";
+  const canCreateTasks = user?.role === "admin";
+  const canDragInCurrentView = isTechnicianOrAdmin && view === "month";
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTask(event.active.data.current?.task as Task);
@@ -778,20 +829,19 @@ export default function Calendar() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
-    if (!over || !isTechnicianOrAdmin) return;
+    if (!over || !canDragInCurrentView || updateTaskDateMutation.isPending) return;
 
     const taskId = active.id as string;
-    const newDateKey = over.id as string;
-    const newDate = new Date(newDateKey);
+    const newDate = over.data.current?.date as Date | undefined;
     const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
+    if (!task || !newDate) return;
 
-    const currentKey = task.estimatedCompletionDate
-      ? new Date(task.estimatedCompletionDate).toDateString()
-      : null;
+    const currentKey = getCalendarDateKey(task.estimatedCompletionDate ?? task.initialDate);
+    const newDateKey = getCalendarDateKey(newDate);
+    const payload = getTaskReschedulePayload(task, newDate);
 
-    if (currentKey !== newDateKey) {
-      updateTaskDateMutation.mutate({ taskId, newDate });
+    if (payload && currentKey !== newDateKey) {
+      updateTaskDateMutation.mutate({ taskId, payload });
     }
   };
 
@@ -812,7 +862,7 @@ export default function Calendar() {
             {monthDays.map((day, idx) => {
               if (day === null) return <div key={`empty-${idx}`} />;
               const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, 12);
-              const dayTasks = tasksByDate.get(date.toDateString()) || [];
+              const dayTasks = tasksByDate.get(getCalendarDateKey(date) ?? "") || [];
               const isToday = day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
               return (
                 <DroppableDay
@@ -836,9 +886,9 @@ export default function Calendar() {
     }
 
     if (view === "week") {
-      const dayTasksList = weekDays.map((date) => tasksByDate.get(date.toDateString()) || []);
+      const dayTasksList = weekDays.map((date) => tasksByDate.get(getCalendarDateKey(date) ?? "") || []);
       const allWeekTasks = Array.from(new Set(dayTasksList.flat().map((t) => t.id)))
-        .map((id) => tasks.find((t) => t.id === id)!)
+        .map((id) => filteredTasks.find((t) => t.id === id)!)
         .filter(Boolean);
 
       return (
@@ -854,7 +904,7 @@ export default function Calendar() {
     }
 
     // Day view
-    const dayTasks = tasksByDate.get(currentDate.toDateString()) || [];
+    const dayTasks = tasksByDate.get(getCalendarDateKey(currentDate) ?? "") || [];
     return (
       <TimeGrid
         dates={[currentDate]}
@@ -868,7 +918,7 @@ export default function Calendar() {
   };
 
   return (
-    <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="space-y-3 p-3 md:p-0">
 
         {/* Header */}
@@ -877,10 +927,10 @@ export default function Calendar() {
             <div>
               <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">Task Calendar</h1>
               <p className="text-sm text-muted-foreground">
-                {isTechnicianOrAdmin ? "Drag tasks to reschedule" : "View scheduled maintenance tasks"}
+                {canDragInCurrentView ? "Drag tasks to reschedule" : "View scheduled maintenance tasks"}
               </p>
             </div>
-            {isTechnicianOrAdmin && !isMobile && (
+            {canCreateTasks && !isMobile && (
               <Button onClick={() => navigate("/tasks/new")} data-testid="button-new-task">
                 <Plus className="w-4 h-4 mr-1.5" />
                 New Task
@@ -902,13 +952,13 @@ export default function Calendar() {
             </ToggleGroup>
 
             <div className="flex items-center gap-1 flex-1 justify-center">
-              <Button variant="outline" size="icon" onClick={goToPrevious} data-testid="button-prev">
+              <Button variant="outline" size="icon" onClick={goToPrevious} aria-label={`Previous ${view}`} data-testid="button-prev">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-sm font-medium px-2 text-center min-w-0 truncate" data-testid="text-date-display">
                 {getDisplayDate()}
               </span>
-              <Button variant="outline" size="icon" onClick={goToNext} data-testid="button-next">
+              <Button variant="outline" size="icon" onClick={goToNext} aria-label={`Next ${view}`} data-testid="button-next">
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -917,7 +967,7 @@ export default function Calendar() {
               Today
             </Button>
 
-            {isTechnicianOrAdmin && isMobile && (
+            {canCreateTasks && isMobile && (
               <Button size="sm" onClick={() => navigate("/tasks/new")} data-testid="button-new-task-mobile">
                 <Plus className="w-4 h-4" />
               </Button>
@@ -926,7 +976,7 @@ export default function Calendar() {
 
           {/* Assignee filter */}
           <AssigneeFilter
-            tasks={filteredTasks}
+            tasks={tasks}
             users={users}
             vendors={vendors}
             selectedIds={selectedUserIds}

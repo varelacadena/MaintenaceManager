@@ -15,7 +15,11 @@ export function useNotificationCounts() {
   const { data: counts = { pendingServiceRequests: 0, pendingVehicleReservations: 0, unreadMessages: 0, approvedReservations: 0, pendingSignups: 0 } } = useQuery<NotificationCounts>({
     queryKey: ["/api/notifications/counts"],
     enabled: !!user,
-    refetchInterval: 5000,
+    refetchInterval: () =>
+      typeof document !== "undefined" && document.visibilityState === "hidden"
+        ? false
+        : 60000,
+    refetchIntervalInBackground: false,
   });
 
   return counts;

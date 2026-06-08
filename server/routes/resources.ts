@@ -8,8 +8,44 @@ import {
   validatePropertyIdsExist,
   FacilityValidationError,
 } from "../facilityValidation";
-import { insertResourceSchema } from "@shared/schema";
+import {
+  parseResourceCreateBody,
+  parseResourceUpdateBody,
+} from "../resourceValidation";
 import { z } from "zod";
+
+async function validateResourceReferences(
+  data: {
+    categoryId?: string | null;
+    folderId?: string | null;
+    equipmentId?: string | null;
+  },
+  propertyIds: string[] | undefined,
+) {
+  if (data.categoryId) {
+    const category = await storage.getResourceCategoryById(data.categoryId);
+    if (!category) {
+      throw new FacilityValidationError("Category not found", 404);
+    }
+  }
+
+  if (data.folderId) {
+    const folder = await storage.getResourceFolderById(data.folderId);
+    if (!folder) {
+      throw new FacilityValidationError("Folder not found", 404);
+    }
+  }
+
+  if (data.equipmentId) {
+    const equip = await storage.getEquipmentItem(data.equipmentId);
+    if (!equip) {
+      throw new FacilityValidationError("Equipment not found", 404);
+    }
+    if (propertyIds && propertyIds.length > 0 && !propertyIds.includes(equip.propertyId)) {
+      throw new FacilityValidationError("Resource property links must include the equipment property");
+    }
+  }
+}
 
 export function registerResourceRoutes(app: Express) {
   app.get("/api/resource-categories", isAuthenticated, async (req, res) => {
@@ -130,26 +166,11 @@ export function registerResourceRoutes(app: Express) {
 
   app.post("/api/resources", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { propertyIds = [], ...data } = req.body;
-      if (!data.title || !data.type || !data.url) {
-        return res.status(400).json({ message: "Title, type, and url are required" });
-      }
-      if (!data.categoryId) data.categoryId = null;
-      if (!data.folderId) data.folderId = null;
-      if (!data.equipmentId) data.equipmentId = null;
-      if (!data.equipmentCategory) data.equipmentCategory = null;
+      const { propertyIds, data } = parseResourceCreateBody(req.body);
       if (Array.isArray(propertyIds) && propertyIds.length > 0) {
         await validatePropertyIdsExist(propertyIds);
       }
-      if (data.equipmentId) {
-        const equip = await storage.getEquipmentItem(data.equipmentId);
-        if (!equip) {
-          throw new FacilityValidationError("Equipment not found", 404);
-        }
-        if (Array.isArray(propertyIds) && propertyIds.length > 0 && !propertyIds.includes(equip.propertyId)) {
-          throw new FacilityValidationError("Resource property links must include the equipment property");
-        }
-      }
+      await validateResourceReferences(data, propertyIds);
       const resource = await storage.createResource(
         { ...data, createdById: (req as any).userId },
         Array.isArray(propertyIds) ? propertyIds : []
@@ -162,25 +183,11 @@ export function registerResourceRoutes(app: Express) {
 
   app.patch("/api/resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const hasPropertyIds = Object.prototype.hasOwnProperty.call(req.body, "propertyIds");
-      const { propertyIds, ...rawData } = req.body;
-      const data: any = insertResourceSchema.partial().parse(rawData);
-      if ("categoryId" in data && !data.categoryId) data.categoryId = null;
-      if ("folderId" in data && !data.folderId) data.folderId = null;
-      if ("equipmentId" in data && !data.equipmentId) data.equipmentId = null;
-      if ("equipmentCategory" in data && !data.equipmentCategory) data.equipmentCategory = null;
+      const { hasPropertyIds, propertyIds, data } = parseResourceUpdateBody(req.body);
       if (hasPropertyIds && Array.isArray(propertyIds) && propertyIds.length > 0) {
         await validatePropertyIdsExist(propertyIds);
       }
-      if (data.equipmentId) {
-        const equip = await storage.getEquipmentItem(data.equipmentId);
-        if (!equip) {
-          throw new FacilityValidationError("Equipment not found", 404);
-        }
-        if (hasPropertyIds && Array.isArray(propertyIds) && propertyIds.length > 0 && !propertyIds.includes(equip.propertyId)) {
-          throw new FacilityValidationError("Resource property links must include the equipment property");
-        }
-      }
+      await validateResourceReferences(data, hasPropertyIds ? propertyIds : undefined);
       const resource = await storage.updateResource(
         req.params.id,
         data,

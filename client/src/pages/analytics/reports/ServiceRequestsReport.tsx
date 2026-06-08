@@ -259,6 +259,17 @@ export default function ServiceRequestsReport() {
         />
       )}
 
+      {data?.byArea && data.byArea.length > 0 && (
+        <CountBarChart
+          title="Service requests by department"
+          testId="chart-requests-by-department"
+          data={data.byArea.map((a) => ({
+            name: a.areaName,
+            value: a.count,
+          }))}
+        />
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="p-3 sm:p-4 pb-2">
@@ -353,7 +364,8 @@ export default function ServiceRequestsReport() {
                   <TableHead className="text-xs">Urgency</TableHead>
                   <TableHead className="text-xs hidden sm:table-cell">Requester</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Property</TableHead>
-                  <TableHead className="text-xs hidden lg:table-cell">Created</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Department</TableHead>
+                  <TableHead className="text-xs hidden xl:table-cell">Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -370,7 +382,8 @@ export default function ServiceRequestsReport() {
                     <TableCell className="py-2">{getUrgencyBadge(req.urgency)}</TableCell>
                     <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell">{req.requesterName}</TableCell>
                     <TableCell className="text-xs sm:text-sm py-2 hidden md:table-cell">{req.propertyName}</TableCell>
-                    <TableCell className="text-xs py-2 hidden lg:table-cell">
+                    <TableCell className="text-xs sm:text-sm py-2 hidden lg:table-cell">{req.areaName || "—"}</TableCell>
+                    <TableCell className="text-xs py-2 hidden xl:table-cell">
                       {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : "-"}
                     </TableCell>
                   </TableRow>

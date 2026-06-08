@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
@@ -22,6 +23,15 @@ interface UseTaskDetailPanelArgs {
   allUsers?: User[];
   properties?: Property[];
 }
+
+type TaskDetailPayload = {
+  task: Task;
+  subtasks: Task[];
+  uploads: Upload[];
+  parts: PartUsed[];
+  timeEntries: TimeEntry[];
+  notes: TaskNote[];
+};
 
 export function useTaskDetailPanel({
   taskId,
@@ -71,70 +81,32 @@ export function useTaskDetailPanel({
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: task, isLoading, isError: isTaskLoadError } = useQuery<Task>({
-    queryKey: ["/api/tasks", taskId],
+  const { data: detail, isLoading, isError: isTaskLoadError } = useQuery<TaskDetailPayload>({
+    queryKey: ["/api/tasks", taskId, "detail"],
     queryFn: async () => {
-      const res = await fetch(`/api/tasks/${taskId}`);
+      const res = await fetch(`/api/tasks/${taskId}/detail`);
       if (!res.ok) throw new Error("Failed to fetch task");
       return res.json();
     },
     enabled: !!taskId,
   });
 
-  const { data: subtasks } = useQuery<Task[]>({
-    queryKey: ["/api/tasks", taskId, "subtasks"],
-    queryFn: async () => {
-      const res = await fetch(`/api/tasks/${taskId}/subtasks`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: uploads } = useQuery<Upload[]>({
-    queryKey: ["/api/uploads/task", taskId, "includeSubtasks"],
-    queryFn: async () => {
-      const res = await fetch(`/api/uploads/task/${taskId}?includeSubtasks=true`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
-
-  const { data: taskParts = [] } = useQuery<PartUsed[]>({
-    queryKey: ["/api/parts/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/parts/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
+  const task = detail?.task;
+  const subtasks = detail?.subtasks ?? [];
+  const uploads = detail?.uploads ?? [];
+  const taskParts = detail?.parts ?? [];
 
   const { inventoryItems } = useInventorySearch(inventorySearchQuery, {
     enabled: canReadInventory(user?.role),
     selectedItemId: selectedInventoryItemId || undefined,
   });
 
-  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
-    queryKey: ["/api/time-entries/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/time-entries/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
+  const timeEntries = detail?.timeEntries ?? [];
+  const taskNotes = detail?.notes ?? [];
 
-  const { data: taskNotes = [] } = useQuery<TaskNote[]>({
-    queryKey: ["/api/task-notes/task", taskId],
-    queryFn: async () => {
-      const res = await fetch(`/api/task-notes/task/${taskId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!taskId,
-  });
+  const refreshTaskDetail = (patch?: Partial<Task>) => {
+    invalidateTaskAfterMutation(taskId, patch ? { patch } : undefined);
+  };
 
   const totalMinutes = useMemo(() => {
     return timeEntries.reduce((sum: number, e: TimeEntry) => {
@@ -156,6 +128,7 @@ export function useTaskDetailPanel({
       return res.json();
     },
     onSuccess: () => {
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/parts/task", taskId] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       setNewPartQuantity("1");
@@ -172,9 +145,8 @@ export function useTaskDetailPanel({
     mutationFn: async (newStatus: string) => {
       return apiRequest("PATCH", `/api/tasks/${taskId}`, { status: newStatus });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
+    onSuccess: (_result, newStatus) => {
+      refreshTaskDetail({ status: newStatus as Task["status"] });
       toast({ title: "Task updated", description: "Status changed." });
     },
     onError: () => {
@@ -186,10 +158,10 @@ export function useTaskDetailPanel({
     mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
       return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
+    onSuccess: (_result, variables) => {
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "subtasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", variables.subtaskId] });
     },
   });
 
@@ -198,7 +170,7 @@ export function useTaskDetailPanel({
       return apiRequest("DELETE", `/api/tasks/${taskId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(taskId, { broad: true });
       toast({ title: "Task deleted", description: "Task has been permanently removed." });
       onClose();
     },
@@ -215,6 +187,7 @@ export function useTaskDetailPanel({
       setNewNoteContent("");
       setNewNoteType("job_note");
       setIsAddNoteDialogOpen(false);
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", taskId] });
       toast({ title: "Note added" });
     },
@@ -228,6 +201,7 @@ export function useTaskDetailPanel({
     onSuccess: () => {
       setEditingNoteId(null);
       setEditNoteContent("");
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", taskId] });
       toast({ title: "Note updated" });
     },
@@ -240,6 +214,7 @@ export function useTaskDetailPanel({
     },
     onSuccess: () => {
       setDeleteNoteId(null);
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", taskId] });
       toast({ title: "Note deleted" });
     },
@@ -253,6 +228,7 @@ export function useTaskDetailPanel({
     onSuccess: () => {
       setEditingTimeEntryId(null);
       setEditTimeDuration("");
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
       toast({ title: "Time entry updated" });
     },
@@ -265,6 +241,7 @@ export function useTaskDetailPanel({
     },
     onSuccess: () => {
       setDeleteTimeEntryId(null);
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
       toast({ title: "Time entry deleted" });
     },
@@ -283,6 +260,7 @@ export function useTaskDetailPanel({
       });
     },
     onSuccess: () => {
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
       setLogTimeDuration("");
       setIsLogTimeDialogOpen(false);
@@ -338,6 +316,7 @@ export function useTaskDetailPanel({
         objectUrl: pendingUploadForLabel.objectUrl,
         label,
       });
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
       toast({ title: "File uploaded" });
       if (pendingUploadForLabel.previewUrl) URL.revokeObjectURL(pendingUploadForLabel.previewUrl);
@@ -360,6 +339,7 @@ export function useTaskDetailPanel({
         objectUrl: pendingUploadForLabel.objectUrl,
         label: pendingUploadForLabel.fileName,
       });
+      refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", taskId, "includeSubtasks"] });
       toast({ title: "File uploaded" });
       if (pendingUploadForLabel.previewUrl) URL.revokeObjectURL(pendingUploadForLabel.previewUrl);

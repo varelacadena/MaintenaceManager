@@ -12,7 +12,34 @@ import {
   type InsertResource,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, or, desc, isNull, sql } from "drizzle-orm";
+import { eq, or, and, desc, isNull, inArray } from "drizzle-orm";
+
+async function attachPropertyIds<T extends { id: string }>(
+  items: T[],
+): Promise<(T & { propertyIds: string[] })[]> {
+  if (items.length === 0) return [];
+
+  const resourceIds = items.map((item) => item.id);
+  const propRows = await db
+    .select({
+      resourceId: propertyResources.resourceId,
+      propertyId: propertyResources.propertyId,
+    })
+    .from(propertyResources)
+    .where(inArray(propertyResources.resourceId, resourceIds));
+
+  const propsByResource = new Map<string, string[]>();
+  for (const row of propRows) {
+    const existing = propsByResource.get(row.resourceId) ?? [];
+    existing.push(row.propertyId);
+    propsByResource.set(row.resourceId, existing);
+  }
+
+  return items.map((item) => ({
+    ...item,
+    propertyIds: propsByResource.get(item.id) ?? [],
+  }));
+}
 
 export async function getResourceCategories(): Promise<ResourceCategory[]> {
   return await db.select().from(resourceCategories).orderBy(resourceCategories.name);
@@ -21,6 +48,11 @@ export async function getResourceCategories(): Promise<ResourceCategory[]> {
 export async function createResourceCategory(data: InsertResourceCategory): Promise<ResourceCategory> {
   const [created] = await db.insert(resourceCategories).values(data).returning();
   return created;
+}
+
+export async function getResourceCategoryById(id: string): Promise<ResourceCategory | undefined> {
+  const [category] = await db.select().from(resourceCategories).where(eq(resourceCategories.id, id));
+  return category;
 }
 
 export async function getResourceFolders(parentId?: string | null): Promise<ResourceFolder[]> {
@@ -99,35 +131,39 @@ export async function deleteResourceFolder(id: string, visited?: Set<string>): P
   await db.delete(resourceFolders).where(eq(resourceFolders.id, id));
 }
 
-export async function getResources(filters?: { categoryId?: string; type?: string; folderId?: string | null }): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {
-  const rows = await db.select().from(resources)
+export async function getResources(filters?: {
+  categoryId?: string;
+  type?: string;
+  folderId?: string | null;
+}): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {
+  const conditions = [];
+  if (filters?.categoryId) {
+    conditions.push(eq(resources.categoryId, filters.categoryId));
+  }
+  if (filters?.type) {
+    conditions.push(eq(resources.type, filters.type as Resource["type"]));
+  }
+  if (filters && "folderId" in filters) {
+    if (filters.folderId === null) {
+      conditions.push(isNull(resources.folderId));
+    } else if (filters.folderId !== undefined) {
+      conditions.push(eq(resources.folderId, filters.folderId));
+    }
+  }
+
+  const rows = await db
+    .select()
+    .from(resources)
     .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(resources.createdAt));
 
-  const filtered = rows.filter(row => {
-    if (filters?.categoryId && row.resources.categoryId !== filters.categoryId) return false;
-    if (filters?.type && row.resources.type !== filters.type) return false;
-    if (filters && 'folderId' in filters) {
-      if (filters.folderId === null) {
-        if (row.resources.folderId !== null) return false;
-      } else if (filters.folderId !== undefined) {
-        if (row.resources.folderId !== filters.folderId) return false;
-      }
-    }
-    return true;
-  });
-
-  const result = await Promise.all(filtered.map(async (row) => {
-    const propRows = await db.select({ propertyId: propertyResources.propertyId })
-      .from(propertyResources)
-      .where(eq(propertyResources.resourceId, row.resources.id));
-    return {
-      ...row.resources,
-      category: row.resource_categories,
-      propertyIds: propRows.map(p => p.propertyId),
-    };
+  const base = rows.map((row) => ({
+    ...row.resources,
+    category: row.resource_categories,
   }));
-  return result;
+
+  return attachPropertyIds(base);
 }
 
 export async function getResourceById(id: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] }) | undefined> {
@@ -135,14 +171,12 @@ export async function getResourceById(id: string): Promise<(Resource & { categor
     .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
     .where(eq(resources.id, id));
   if (!row) return undefined;
-  const propRows = await db.select({ propertyId: propertyResources.propertyId })
-    .from(propertyResources)
-    .where(eq(propertyResources.resourceId, id));
-  return {
+
+  const [withProps] = await attachPropertyIds([{
     ...row.resources,
     category: row.resource_categories,
-    propertyIds: propRows.map(p => p.propertyId),
-  };
+  }]);
+  return withProps;
 }
 
 export async function createResource(data: InsertResource, propertyIds: string[]): Promise<Resource> {
@@ -195,32 +229,26 @@ export async function getEquipmentResources(equipmentId: string): Promise<(Resou
     .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
     .where(
       or(
-        sql`${resources.equipmentId}::text = ${equipmentId}`,
+        eq(resources.equipmentId, equipmentId),
         eq(resources.equipmentCategory, item.category)
       )
     )
     .orderBy(resources.title);
 
   const seen = new Set<string>();
-  const result = await Promise.all(
-    rows
-      .filter(row => {
-        if (seen.has(row.resources.id)) return false;
-        seen.add(row.resources.id);
-        return true;
-      })
-      .map(async (row) => {
-        const propRows = await db.select({ propertyId: propertyResources.propertyId })
-          .from(propertyResources)
-          .where(eq(propertyResources.resourceId, row.resources.id));
-        return {
-          ...row.resources,
-          category: row.resource_categories,
-          propertyIds: propRows.map(p => p.propertyId),
-        };
-      })
-  );
-  return result.filter((resource) => {
+  const base = rows
+    .filter((row) => {
+      if (seen.has(row.resources.id)) return false;
+      seen.add(row.resources.id);
+      return true;
+    })
+    .map((row) => ({
+      ...row.resources,
+      category: row.resource_categories,
+    }));
+
+  const withProps = await attachPropertyIds(base);
+  return withProps.filter((resource) => {
     if (resource.equipmentId === equipmentId) return true;
     return resource.propertyIds.length === 0 || resource.propertyIds.includes(item.propertyId);
   });

@@ -20,6 +20,11 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+const areaUpdateSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  description: z.string().nullable().optional(),
+});
+
 export function registerFacilityRoutes(app: Express) {
   app.get("/api/areas", isAuthenticated, async (req, res) => {
     try {
@@ -40,12 +45,25 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/areas/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const areaData = areaUpdateSchema.parse(req.body);
+      const area = await storage.updateArea(req.params.id, areaData);
+      if (!area) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      res.json(area);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to update department");
+    }
+  });
+
   app.delete("/api/areas/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       await storage.deleteArea(req.params.id);
       res.status(204).send();
     } catch (error) {
-      handleRouteError(res, error, "Failed to delete area");
+      handleRouteError(res, error, "Failed to delete department");
     }
   });
 

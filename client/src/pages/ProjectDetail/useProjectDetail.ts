@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Project, Task, Property, Area, User, ProjectComment, Upload } from "@shared/schema";
 import { format } from "date-fns";
@@ -244,7 +245,7 @@ export function useProjectDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(undefined, { broad: true });
       toast({ title: "Task updated", description: "Changes saved successfully." });
     },
     onError: () => {
@@ -273,7 +274,7 @@ export function useProjectDetail() {
     onSettled: () => {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        invalidateTaskAfterMutation(undefined, { broad: true });
       }, 300);
     },
     onError: (error: any) => {

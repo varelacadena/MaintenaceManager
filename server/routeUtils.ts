@@ -43,10 +43,13 @@ export function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
 }
 
 export async function getAuthUser(req: any) {
+  if (req.currentUser) return req.currentUser;
   const userId = req.userId || (req.session as any)?.userId;
   if (!userId) return null;
   try {
-    return await storage.getUser(userId);
+    const user = await storage.getUser(userId);
+    req.currentUser = user;
+    return user;
   } catch (error) {
     console.error("Error fetching authenticated user:", error);
     return null;
@@ -56,11 +59,15 @@ export async function getAuthUser(req: any) {
 type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed" | "cancelled";
 
 export async function authenticateUser(req: any): Promise<any | null> {
+  if (req.currentUser) return { ...req.currentUser, role: req.currentUser.role };
   const userId = req.userId || (req.session as any)?.userId;
   if (!userId) return null;
   try {
     const user = await storage.getUser(userId);
-    if (user) return { ...user, role: user.role };
+    if (user) {
+      req.currentUser = user;
+      return { ...user, role: user.role };
+    }
   } catch (error) {
     console.error("Error during authenticateUser:", error);
   }

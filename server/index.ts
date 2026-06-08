@@ -38,9 +38,10 @@ app.set("trust proxy", 1);
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  max: 250,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: { message: "Too many requests, please try again later" },
 });
 app.use("/api", apiLimiter);
@@ -78,13 +79,9 @@ passport.serializeUser((user: any, done) => {
   done(null, user.id);
 });
 
-passport.deserializeUser(async (id: string, done) => {
-  try {
-    const user = await storage.getUser(id);
-    done(null, user);
-  } catch (error) {
-    done(error);
-  }
+passport.deserializeUser((id: string, done) => {
+  // Session identity only; full user is loaded once in isAuthenticated middleware.
+  done(null, { id });
 });
 
 app.use(passport.initialize());
@@ -93,12 +90,23 @@ app.use(passport.session());
 // Setup authentication routes
 setupAuth(app);
 
-// Disable HTTP caching for API routes to ensure fresh data
+const cacheableReferenceApiPaths = new Set([
+  "/api/areas",
+  "/api/properties",
+  "/api/resource-categories",
+  "/api/resource-folders",
+]);
+
+// Keep mutable API responses fresh, but allow short private caching for stable reference data.
 app.use((req, res, next) => {
   if (req.path.startsWith("/api")) {
-    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.set("Pragma", "no-cache");
-    res.set("Expires", "0");
+    if (req.method === "GET" && cacheableReferenceApiPaths.has(req.path)) {
+      res.set("Cache-Control", "private, max-age=300, stale-while-revalidate=60");
+    } else {
+      res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
+    }
   }
   next();
 });
@@ -119,7 +127,11 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const responseSummary = Array.isArray(capturedJsonResponse)
+          ? `array(${capturedJsonResponse.length})`
+          : `object(${Object.keys(capturedJsonResponse).slice(0, 5).join(",")})`;
+        const approxBytes = Buffer.byteLength(JSON.stringify(capturedJsonResponse), "utf8");
+        logLine += ` :: ${responseSummary} ~${approxBytes}B`;
       }
 
       if (logLine.length > 80) {
@@ -136,13 +148,15 @@ app.use((req, res, next) => {
 (async () => {
   // Schema is applied via drizzle-kit push (e.g. npm start); SQL migrations / applyInventoryTriggers are not run here.
 
-  try {
-    const backfilled = await storage.backfillTaskPools();
-    if (backfilled > 0) {
-      console.log(`Backfilled ${backfilled} unassigned tasks into their respective pools`);
+  if (process.env.SKIP_TASK_POOL_BACKFILL !== "true") {
+    try {
+      const backfilled = await storage.backfillTaskPools();
+      if (backfilled > 0) {
+        console.log(`Backfilled ${backfilled} unassigned tasks into their respective pools`);
+      }
+    } catch (err) {
+      console.error("Failed to backfill task pools:", err);
     }
-  } catch (err) {
-    console.error("Failed to backfill task pools:", err);
   }
 
   const server = await registerRoutes(app);
@@ -168,26 +182,52 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = Number(process.env.PORT) || 5000;
-  server.listen(port, () => {
-    log(`serving on port ${port}`);
-    
+  const startBackgroundSchedulers = () => {
     // Start the recurring task scheduler
     startRecurringTaskScheduler();
-    
+
     // Start the document expiration reminder scheduler
     startDocumentExpirationScheduler();
-    
+
     // Start the task reminder scheduler
     startTaskReminderScheduler();
-    
+
     // Start the pending user expiration scheduler
     startPendingUserExpirationScheduler();
-  });
+  };
+
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled in production. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  const requestedPort = Number(process.env.PORT) || 5000;
+  const maxPortAttempts = app.get("env") === "development" ? 10 : 1;
+
+  const listen = (port: number, attemptsLeft: number) => {
+    const handleListenError = (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE" && attemptsLeft > 1) {
+        const nextPort = port + 1;
+        log(`port ${port} is already in use, trying ${nextPort}`);
+        listen(nextPort, attemptsLeft - 1);
+        return;
+      }
+
+      if (err.code === "EADDRINUSE") {
+        console.error(`[server] Port ${port} is already in use. Stop the other process or set PORT to an available port.`);
+      } else {
+        console.error("[server] Failed to start:", err);
+      }
+      process.exit(1);
+    };
+
+    server.once("error", handleListenError);
+    server.listen(port, () => {
+      server.off("error", handleListenError);
+      log(`serving on port ${port}`);
+      startBackgroundSchedulers();
+    });
+  };
+
+  listen(requestedPort, maxPortAttempts);
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {

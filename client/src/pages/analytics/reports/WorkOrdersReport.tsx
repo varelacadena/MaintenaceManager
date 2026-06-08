@@ -302,6 +302,14 @@ export default function WorkOrdersReport() {
         )}
       </div>
 
+      {data?.byArea && data.byArea.length > 0 && (
+        <CountBarChart
+          title="Work orders by department"
+          testId="chart-work-orders-by-department"
+          data={data.byArea.map((a) => ({ name: a.areaName, value: a.count }))}
+        />
+      )}
+
       <Card>
         <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between gap-1">
           <div>
@@ -327,6 +335,7 @@ export default function WorkOrdersReport() {
                   <TableHead className="text-xs">Priority</TableHead>
                   <TableHead className="text-xs">Assigned To</TableHead>
                   <TableHead className="text-xs">Property</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Department</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Space</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Start Date</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Due Date</TableHead>
@@ -380,6 +389,7 @@ export default function WorkOrdersReport() {
                     </TableCell>
                     <TableCell className="text-sm py-2">{record.assignedToName}</TableCell>
                     <TableCell className="text-sm py-2">{record.propertyName}</TableCell>
+                    <TableCell className="text-sm py-2 hidden lg:table-cell">{record.areaName || "—"}</TableCell>
                     <TableCell className="text-sm py-2 hidden md:table-cell">{record.spaceName || "—"}</TableCell>
                     <TableCell className="text-sm py-2 hidden lg:table-cell">
                       {record.initialDate

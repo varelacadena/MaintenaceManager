@@ -43,6 +43,24 @@ describe("WorkStatusGroupHeader", () => {
 });
 
 describe("WorkTasksEmptyState", () => {
+  it("shows department filter empty state and clears filter", () => {
+    const onClearDepartmentFilter = vi.fn();
+    render(
+      <WorkTasksEmptyState
+        hasSearchQuery={false}
+        hasDepartmentFilter
+        departmentFilterName="Auto Shop"
+        onClearSearch={vi.fn()}
+        onClearDepartmentFilter={onClearDepartmentFilter}
+        onOpenProjectsTab={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("work-tasks-empty-department")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-clear-department-filter"));
+    expect(onClearDepartmentFilter).toHaveBeenCalledTimes(1);
+  });
+
   it("shows search empty state and clears search", () => {
     const onClearSearch = vi.fn();
     render(

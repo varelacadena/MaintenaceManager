@@ -15,6 +15,7 @@ import {
 import { Hand, MapPin, Clock, RefreshCw, Inbox, Loader2, Wrench, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { urgencyBadgeStyles, statusBadgeStyles, statusLabels } from "@/utils/taskUtils";
 import type { Task } from "@shared/schema";
 
@@ -45,7 +46,7 @@ export default function GrabAJob() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/available"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/available/count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      invalidateTaskAfterMutation(claimedTask.id, { broad: true });
       navigate(`/tasks/${claimedTask.id}`, { replace: true });
     },
     onError: (error: Error) => {

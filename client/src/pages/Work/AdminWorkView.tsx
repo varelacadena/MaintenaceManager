@@ -17,6 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, FolderKanban, Search } from "lucide-react";
 import { Link } from "wouter";
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
@@ -54,8 +61,14 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
     handleStatusChange, handleHoldReasonSubmit, handleInlineEdit,
     handleSelectTask, handleUrgencyChange, handleAssigneeChange,
     handlePropertyChange,
+    handleDepartmentChange,
     handleProjectStatusChange,
+    departmentFilter,
+    setDepartmentFilterAndUrl,
+    areas,
+    UNASSIGNED_DEPARTMENT_ID,
     getPropertyName,
+    getDepartmentName,
     allUsers, properties,
     subTasksMap, projectTasksMap, allProjectTasksMap,
     unifiedGroups, boardItemCount, userGroups,
@@ -157,6 +170,23 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                     data-testid="input-search-work"
                   />
                 </div>
+                <Select
+                  value={departmentFilter || "all"}
+                  onValueChange={(v) => setDepartmentFilterAndUrl(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="w-full sm:w-[220px]" data-testid="select-department-filter">
+                    <SelectValue placeholder="All departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All departments</SelectItem>
+                    {areas.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={UNASSIGNED_DEPARTMENT_ID}>Unassigned Department</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -167,7 +197,14 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
             {(user?.role !== "admin" || activeTab === "tasks") && !tasksError && boardItemCount === 0 && (
               <WorkTasksEmptyState
                 hasSearchQuery={searchQuery.trim().length > 0}
+                hasDepartmentFilter={!!departmentFilter}
+                departmentFilterName={
+                  departmentFilter === UNASSIGNED_DEPARTMENT_ID
+                    ? "Unassigned Department"
+                    : getDepartmentName(departmentFilter) || null
+                }
                 onClearSearch={() => setSearchQuery("")}
+                onClearDepartmentFilter={() => setDepartmentFilterAndUrl("")}
                 onOpenProjectsTab={() => setActiveTab("projects")}
               />
             )}
@@ -206,6 +243,7 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                               <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Due Date</TableHead>
                               <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Status</TableHead>
                               <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
+                              <TableHead className="w-[140px] hidden lg:table-cell text-xs font-medium text-muted-foreground">Department</TableHead>
                               <TableHead className="w-[150px] hidden md:table-cell text-xs font-medium text-muted-foreground">Property</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -229,6 +267,8 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                       handleUrgencyChange={handleUrgencyChange}
                                       handleAssigneeChange={handleAssigneeChange}
                                       handlePropertyChange={handlePropertyChange}
+                                      handleDepartmentChange={handleDepartmentChange}
+                                      areas={areas}
                                       handleInlineEdit={handleInlineEdit}
                                       isAdmin={isAdmin}
                                       onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
@@ -244,10 +284,12 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                     userGroups={userGroups}
                                     allUsers={allUsers}
                                     properties={properties}
+                                    areas={areas}
                                     handleStatusChange={handleStatusChange}
                                     handleUrgencyChange={handleUrgencyChange}
                                     handleAssigneeChange={handleAssigneeChange}
                                     handlePropertyChange={handlePropertyChange}
+                                    handleDepartmentChange={handleDepartmentChange}
                                     handleInlineEdit={handleInlineEdit}
                                     rowIndex={idx}
                                     isAdmin={isAdmin}
@@ -283,8 +325,11 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                   handleUrgencyChange={handleUrgencyChange}
                                   handleAssigneeChange={handleAssigneeChange}
                                   handlePropertyChange={handlePropertyChange}
+                                  handleDepartmentChange={handleDepartmentChange}
+                                  areas={areas}
                                   handleInlineEdit={handleInlineEdit}
                                   getPropertyName={getPropertyName}
+                                  getDepartmentName={getDepartmentName}
                                   handleProjectStatusChange={handleProjectStatusChange}
                                   isAdmin={isAdmin}
                                   onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}

@@ -1,29 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   DragEndEvent,
   DragStartEvent,
   PointerSensor,
-  KeyboardSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-
-type ResourceCategory = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type ResourceFolder = {
-  id: string;
-  name: string;
-  parentId: string | null;
-  createdAt: string;
-  breadcrumbs?: { id: string; name: string }[];
-};
+import {
+  buildDisplayUrlFromUpload,
+  getSignedUploadParameters,
+  mapUploaderResultToPending,
+} from "@/lib/uploadUtils";
+import { getYoutubeThumbnail } from "@/lib/youtubeUtils";
+import type { ResourceCategory, ResourceFolder } from "@shared/schema";
+import {
+  clearResourceFileFields,
+  shouldUsePasteUrlMode,
+  type ResourceFormState,
+} from "./resourceUtils";
 
 type Resource = {
   id: string;
@@ -31,6 +28,7 @@ type Resource = {
   description: string | null;
   type: "video" | "document" | "image" | "link";
   url: string;
+  objectPath?: string | null;
   fileName: string | null;
   categoryId: string | null;
   folderId: string | null;
@@ -53,31 +51,15 @@ type Equipment = {
   propertyId: string;
 };
 
-export const EQUIPMENT_CATEGORIES_RESOURCE = [
-  { slug: "hvac", label: "HVAC" },
-  { slug: "electrical", label: "Electrical" },
-  { slug: "plumbing", label: "Plumbing" },
-  { slug: "mechanical", label: "Mechanical / Fleet" },
-  { slug: "appliances", label: "Appliances" },
-  { slug: "grounds", label: "Grounds / Landscaping" },
-  { slug: "janitorial", label: "Janitorial" },
-  { slug: "structural", label: "Structural" },
-  { slug: "water_treatment", label: "Water Treatment" },
-  { slug: "general", label: "General" },
-];
+export { EQUIPMENT_CATEGORIES as EQUIPMENT_CATEGORIES_RESOURCE } from "@shared/equipmentCategories";
 
-export function getYoutubeThumbnail(url: string): string | null {
-  const patterns = [
-    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg`;
-  }
-  return null;
+async function invalidateResourceQueries(propertyIds: string[] = []) {
+  await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+  await Promise.all(
+    propertyIds.map((propertyId) =>
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", propertyId, "resources"] })
+    )
+  );
 }
 
 export function useResourceLibrary() {
@@ -96,8 +78,7 @@ export function useResourceLibrary() {
 
   const [activeDrag, setActiveDrag] = useState<{ id: string; title: string } | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor)
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -106,28 +87,29 @@ export function useResourceLibrary() {
   const [editingFolder, setEditingFolder] = useState<ResourceFolder | null>(null);
   const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ResourceFormState>({
     title: "",
     description: "",
-    type: "document" as "video" | "document" | "image" | "link",
+    type: "document",
     url: "",
-    objectPath: "" as string,
+    objectPath: "",
     fileName: "",
     categoryId: "",
-    folderId: "" as string,
+    folderId: "",
     equipmentId: "",
     equipmentCategory: "",
-    propertyIds: [] as string[],
+    propertyIds: [],
   });
 
   const [equipmentSearch, setEquipmentSearch] = useState("");
 
-  const { data: categories = [] } = useQuery<ResourceCategory[]>({
+  const { data: categories = [], isError: isCategoriesError, refetch: refetchCategories } = useQuery<ResourceCategory[]>({
     queryKey: ["/api/resource-categories"],
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: resourceList = [], isLoading, isError: isResourcesError, refetch: refetchResources } = useQuery<Resource[]>({
-    queryKey: ["/api/resources", currentFolderId],
+    queryKey: ["/api/resources", currentFolderId, typeFilter, categoryFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (currentFolderId) {
@@ -135,10 +117,13 @@ export function useResourceLibrary() {
       } else {
         params.set("folderId", "root");
       }
+      if (typeFilter !== "all") params.set("type", typeFilter);
+      if (categoryFilter !== "all") params.set("categoryId", categoryFilter);
       const res = await fetch(`/api/resources?${params.toString()}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch resources");
       return res.json();
     },
+    staleTime: 60 * 1000,
   });
 
   const { data: folders = [], isLoading: isFoldersLoading, isError: isFoldersError, refetch: refetchFolders } = useQuery<ResourceFolder[]>({
@@ -150,9 +135,10 @@ export function useResourceLibrary() {
       if (!res.ok) throw new Error("Failed to fetch folders");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: currentFolderData, isError: isFolderDetailError, refetch: refetchFolderDetail } = useQuery<ResourceFolder>({
+  const { data: folderDetail, isError: isFolderDetailError, refetch: refetchFolderDetail } = useQuery<ResourceFolder & { breadcrumbs: { id: string; name: string }[] }>({
     queryKey: ["/api/resource-folders", "detail", currentFolderId],
     queryFn: async () => {
       const res = await fetch(`/api/resource-folders/${currentFolderId}`, { credentials: "include" });
@@ -160,6 +146,7 @@ export function useResourceLibrary() {
       return res.json();
     },
     enabled: !!currentFolderId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: allFolders = [] } = useQuery<ResourceFolder[]>({
@@ -169,21 +156,34 @@ export function useResourceLibrary() {
       if (!res.ok) throw new Error("Failed to fetch folders");
       return res.json();
     },
+    enabled: dialogOpen,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+    enabled: dialogOpen,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: allEquipment = [] } = useQuery<Equipment[]>({
     queryKey: ["/api/equipment"],
+    enabled: dialogOpen,
   });
+
+  useEffect(() => {
+    if (!editResource?.equipmentId || allEquipment.length === 0) return;
+    const selected = allEquipment.find((item) => item.id === editResource.equipmentId);
+    if (selected) setEquipmentSearch(selected.name);
+  }, [editResource?.equipmentId, allEquipment]);
 
   const createCategoryMutation = useMutation({
     mutationFn: (data: { name: string; color: string }) =>
       apiRequest("POST", "/api/resource-categories", data),
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      const category = await response.json() as ResourceCategory;
       await queryClient.invalidateQueries({ queryKey: ["/api/resource-categories"] });
+      setForm((current) => ({ ...current, categoryId: category.id }));
       setNewCategoryName("");
       setNewCategoryColor("gray");
       setShowNewCategory(false);
@@ -193,56 +193,41 @@ export function useResourceLibrary() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: typeof form) => apiRequest("POST", "/api/resources", data),
-    onSuccess: () => {
+    mutationFn: (data: ResourceFormState) => apiRequest("POST", "/api/resources", data),
+    onSuccess: async (_response, variables) => {
       setDialogOpen(false);
       resetForm();
       toast({ title: "Resource created" });
-    },
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-        properties.forEach(p => {
-          queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
-        });
-      }, 300);
+      await invalidateResourceQueries(variables.propertyIds);
     },
     onError: () => toast({ title: "Failed to create resource", variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: typeof form & { id: string }) =>
+    mutationFn: (data: ResourceFormState & { id: string }) =>
       apiRequest("PATCH", `/api/resources/${data.id}`, data),
-    onSuccess: () => {
+    onSuccess: async (_response, variables) => {
       setDialogOpen(false);
       setEditResource(null);
       resetForm();
       toast({ title: "Resource updated" });
-    },
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-        properties.forEach(p => {
-          queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
-        });
-      }, 300);
+      await invalidateResourceQueries(variables.propertyIds);
     },
     onError: () => toast({ title: "Failed to update resource", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/resources/${id}`),
-    onSuccess: () => {
+    onSuccess: async () => {
       setDeleteId(null);
       toast({ title: "Resource deleted" });
-    },
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-        properties.forEach(p => {
-          queryClient.invalidateQueries({ queryKey: ["/api/properties", p.id, "resources"] });
-        });
-      }, 300);
+      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === "/api/properties" &&
+          query.queryKey[2] === "resources",
+      });
     },
     onError: () => toast({ title: "Failed to delete resource", variant: "destructive" }),
   });
@@ -250,16 +235,12 @@ export function useResourceLibrary() {
   const createFolderMutation = useMutation({
     mutationFn: (data: { name: string; parentId: string | null }) =>
       apiRequest("POST", "/api/resource-folders", data),
-    onSuccess: () => {
+    onSuccess: async () => {
       setFolderDialogOpen(false);
       setFolderName("");
       setEditingFolder(null);
       toast({ title: "Folder created" });
-    },
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
-      }, 300);
+      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
     },
     onError: () => toast({ title: "Failed to create folder", variant: "destructive" }),
   });
@@ -267,31 +248,23 @@ export function useResourceLibrary() {
   const updateFolderMutation = useMutation({
     mutationFn: (data: { id: string; name: string }) =>
       apiRequest("PATCH", `/api/resource-folders/${data.id}`, { name: data.name }),
-    onSuccess: () => {
+    onSuccess: async () => {
       setFolderDialogOpen(false);
       setFolderName("");
       setEditingFolder(null);
       toast({ title: "Folder renamed" });
-    },
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
-      }, 300);
+      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
     },
     onError: () => toast({ title: "Failed to rename folder", variant: "destructive" }),
   });
 
   const deleteFolderMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/resource-folders/${id}`),
-    onSuccess: () => {
+    onSuccess: async () => {
       setDeleteFolderId(null);
       toast({ title: "Folder deleted" });
-    },
-    onSettled: () => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-      }, 300);
+      await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
     },
     onError: () => toast({ title: "Failed to delete folder", variant: "destructive" }),
   });
@@ -299,10 +272,10 @@ export function useResourceLibrary() {
   const moveResourceMutation = useMutation({
     mutationFn: (data: { id: string; folderId: string | null }) =>
       apiRequest("PATCH", `/api/resources/${data.id}`, { folderId: data.folderId }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
       const targetFolder = variables.folderId
-        ? (folders.find(f => f.id === variables.folderId) || allFolders.find(f => f.id === variables.folderId))
+        ? (folders.find((folder) => folder.id === variables.folderId) || allFolders.find((folder) => folder.id === variables.folderId))
         : null;
       toast({
         title: "Resource moved",
@@ -313,7 +286,8 @@ export function useResourceLibrary() {
   });
 
   function handleDragStart(event: DragStartEvent) {
-    const data = event.active.data.current as { type: string; resourceId: string; title: string };
+    const data = event.active.data.current as { type?: string; resourceId?: string; title?: string } | undefined;
+    if (!data || data.type !== "resource" || !data.resourceId || !data.title) return;
     setActiveDrag({ id: data.resourceId, title: data.title });
   }
 
@@ -321,9 +295,10 @@ export function useResourceLibrary() {
     setActiveDrag(null);
     const { over, active } = event;
     if (!over) return;
-    const resourceId = active.data.current?.resourceId as string;
-    const targetFolderId = over.data.current?.folderId as string | null;
-    const resource = resourceList.find(r => r.id === resourceId);
+    const resourceId = active.data.current?.resourceId as string | undefined;
+    const targetFolderId = over.data.current?.folderId as string | null | undefined;
+    if (!resourceId || targetFolderId === undefined) return;
+    const resource = resourceList.find((item) => item.id === resourceId);
     if (!resource) return;
     const currentFolder = resource.folderId || null;
     if (currentFolder === targetFolderId) return;
@@ -331,7 +306,19 @@ export function useResourceLibrary() {
   }
 
   function resetForm() {
-    setForm({ title: "", description: "", type: "document", url: "", objectPath: "", fileName: "", categoryId: "", folderId: currentFolderId || "", equipmentId: "", equipmentCategory: "", propertyIds: [] });
+    setForm({
+      title: "",
+      description: "",
+      type: "document",
+      url: "",
+      objectPath: "",
+      fileName: "",
+      categoryId: "",
+      folderId: currentFolderId || "",
+      equipmentId: "",
+      equipmentCategory: "",
+      propertyIds: [],
+    });
     setPasteUrlMode(false);
     setIsUploading(false);
     setEquipmentSearch("");
@@ -343,24 +330,24 @@ export function useResourceLibrary() {
     setDialogOpen(true);
   }
 
-  function openEdit(r: Resource) {
-    setEditResource(r);
-    const selectedEq = r.equipmentId ? allEquipment.find(e => e.id === r.equipmentId) : null;
+  function openEdit(resource: Resource) {
+    setEditResource(resource);
+    const selectedEq = resource.equipmentId ? allEquipment.find((item) => item.id === resource.equipmentId) : null;
     setEquipmentSearch(selectedEq ? selectedEq.name : "");
     setForm({
-      title: r.title,
-      description: r.description || "",
-      type: r.type,
-      url: r.url,
-      objectPath: (r as Resource & { objectPath?: string }).objectPath || "",
-      fileName: r.fileName || "",
-      categoryId: r.categoryId || "",
-      folderId: r.folderId || "",
-      equipmentId: r.equipmentId || "",
-      equipmentCategory: r.equipmentCategory || "",
-      propertyIds: r.propertyIds,
+      title: resource.title,
+      description: resource.description || "",
+      type: resource.type,
+      url: resource.url,
+      objectPath: resource.objectPath || "",
+      fileName: resource.fileName || "",
+      categoryId: resource.categoryId || "",
+      folderId: resource.folderId || "",
+      equipmentId: resource.equipmentId || "",
+      equipmentCategory: resource.equipmentCategory || "",
+      propertyIds: resource.propertyIds,
     });
-    setPasteUrlMode(true);
+    setPasteUrlMode(shouldUsePasteUrlMode(resource.type, resource.url, resource.objectPath));
     setDialogOpen(true);
   }
 
@@ -373,6 +360,17 @@ export function useResourceLibrary() {
       toast({ title: "A URL or uploaded file is required", variant: "destructive" });
       return;
     }
+    if (form.equipmentId) {
+      const selectedEquipment = allEquipment.find((item) => item.id === form.equipmentId);
+      if (selectedEquipment && form.propertyIds.length > 0 && !form.propertyIds.includes(selectedEquipment.propertyId)) {
+        toast({
+          title: "Include the equipment property",
+          description: "Link the equipment's property or clear property links.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     if (editResource) {
       updateMutation.mutate({ ...form, id: editResource.id });
     } else {
@@ -380,34 +378,35 @@ export function useResourceLibrary() {
     }
   }
 
-  function toggleProperty(pid: string) {
-    setForm(f => ({
-      ...f,
-      propertyIds: f.propertyIds.includes(pid)
-        ? f.propertyIds.filter(id => id !== pid)
-        : [...f.propertyIds, pid],
+  function toggleProperty(propertyId: string) {
+    setForm((current) => ({
+      ...current,
+      propertyIds: current.propertyIds.includes(propertyId)
+        ? current.propertyIds.filter((id) => id !== propertyId)
+        : [...current.propertyIds, propertyId],
     }));
   }
 
   async function getUploadParameters() {
-    const res = await apiRequest("POST", "/api/objects/upload");
-    const data = await res.json();
-    return { method: "PUT" as const, url: data.uploadURL, objectPath: data.objectPath };
+    setIsUploading(true);
+    try {
+      return await getSignedUploadParameters();
+    } catch (error) {
+      setIsUploading(false);
+      throw error;
+    }
   }
 
-  function handleUploadComplete(result: any) {
+  function handleUploadComplete(result: { successful?: Array<Record<string, unknown>>; failed?: unknown[] }) {
     setIsUploading(false);
     const file = result.successful?.[0];
     if (file) {
-      const objectPath = file.objectPath;
-      const displayUrl = objectPath
-        ? `/api/objects/image?path=${encodeURIComponent(objectPath)}`
-        : (file.url || file.objectUrl || file.uploadURL);
-      setForm(f => ({
-        ...f,
-        url: displayUrl,
-        objectPath: objectPath || f.objectPath,
-        fileName: f.fileName || file.fileName || file.name || "",
+      const pending = mapUploaderResultToPending(file as Parameters<typeof mapUploaderResultToPending>[0]);
+      setForm((current) => ({
+        ...current,
+        url: pending.objectUrl,
+        objectPath: pending.objectPath || "",
+        fileName: current.fileName || pending.fileName,
       }));
       toast({ title: "File uploaded successfully" });
     } else if (result.failed?.length) {
@@ -444,23 +443,27 @@ export function useResourceLibrary() {
     setSearch("");
   }
 
-  const breadcrumbs = currentFolderData?.breadcrumbs || [];
+  function clearFilters() {
+    setSearch("");
+    setTypeFilter("all");
+    setCategoryFilter("all");
+  }
 
-  const filtered = resourceList.filter(r => {
-    const matchSearch = !search || r.title.toLowerCase().includes(search.toLowerCase()) ||
-      (r.description || "").toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === "all" || r.type === typeFilter;
-    const matchCat = categoryFilter === "all" || r.categoryId === categoryFilter;
-    return matchSearch && matchType && matchCat;
+  const breadcrumbItems = folderDetail?.breadcrumbs || [];
+
+  const filtered = resourceList.filter((resource) => {
+    const matchSearch = !search ||
+      resource.title.toLowerCase().includes(search.toLowerCase()) ||
+      (resource.description || "").toLowerCase().includes(search.toLowerCase());
+    return matchSearch;
   });
 
-  const filteredFolders = folders.filter(f => {
+  const filteredFolders = folders.filter((folder) => {
     if (!search) return true;
-    return f.name.toLowerCase().includes(search.toLowerCase());
+    return folder.name.toLowerCase().includes(search.toLowerCase());
   });
 
   const thumbnail = form.type === "video" ? getYoutubeThumbnail(form.url) : null;
-  const needsUpload = (form.type === "document" || form.type === "image") && !pasteUrlMode;
 
   return {
     toast,
@@ -483,9 +486,10 @@ export function useResourceLibrary() {
     deleteFolderId, setDeleteFolderId,
     form, setForm,
     equipmentSearch, setEquipmentSearch,
-    categories, resourceList, isLoading, isResourcesError, refetchResources,
+    categories, isCategoriesError, refetchCategories,
+    resourceList, isLoading, isResourcesError, refetchResources,
     folders, isFoldersLoading, isFoldersError, refetchFolders,
-    currentFolderData, isFolderDetailError, refetchFolderDetail,
+    isFolderDetailError, refetchFolderDetail,
     allFolders, properties, allEquipment,
     createCategoryMutation, createMutation, updateMutation, deleteMutation,
     createFolderMutation, updateFolderMutation, deleteFolderMutation,
@@ -494,9 +498,10 @@ export function useResourceLibrary() {
     resetForm, openCreate, openEdit, handleSubmit,
     toggleProperty, getUploadParameters, handleUploadComplete,
     openCreateFolder, openRenameFolder, handleFolderSubmit,
-    navigateToFolder,
-    breadcrumbs, filtered, filteredFolders,
-    thumbnail, needsUpload,
+    navigateToFolder, clearFilters,
+    breadcrumbs: breadcrumbItems, filtered, filteredFolders,
+    thumbnail,
+    clearResourceFileFields,
   };
 }
 

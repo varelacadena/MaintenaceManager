@@ -11,6 +11,71 @@ import {
 } from "@shared/schema";
 
 export function registerAiRoutes(app: Express) {
+  app.get("/api/ai-logs", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { status, entityType, limit } = req.query;
+      const logs = await storage.getAiAgentLogs({
+        status: typeof status === "string" ? status : undefined,
+        entityType: typeof entityType === "string" ? entityType : undefined,
+        limit: typeof limit === "string" ? Number.parseInt(limit, 10) || undefined : undefined,
+      });
+      res.json(logs);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch AI logs");
+    }
+  });
+
+  app.get("/api/ai-stats", isAuthenticated, requireAdmin, async (_req, res) => {
+    try {
+      const logs = await storage.getAiAgentLogs();
+      const pendingByAction: Record<string, number> = {};
+      const stats = logs.reduce(
+        (acc, log) => {
+          acc.total += 1;
+          if (log.status === "pending_review") {
+            acc.pending += 1;
+            pendingByAction[log.action] = (pendingByAction[log.action] ?? 0) + 1;
+          } else if (log.status === "approved") {
+            acc.approved += 1;
+          } else if (log.status === "rejected") {
+            acc.rejected += 1;
+          } else if (log.status === "auto_applied") {
+            acc.autoApplied += 1;
+          }
+          return acc;
+        },
+        { pending: 0, approved: 0, rejected: 0, autoApplied: 0, total: 0 },
+      );
+      const accepted = stats.approved + stats.autoApplied;
+      res.json({
+        ...stats,
+        acceptanceRate: stats.total > 0 ? Math.round((accepted / stats.total) * 100) : 0,
+        pendingByAction,
+      });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch AI stats");
+    }
+  });
+
+  app.patch("/api/ai-logs/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const { status } = req.body;
+      if (status !== "approved" && status !== "rejected") {
+        return res.status(400).json({ message: "Status must be approved or rejected" });
+      }
+      const updated = await storage.updateAiAgentLog(req.params.id, {
+        status,
+        reviewedBy: req.currentUser?.id,
+      });
+      if (!updated) {
+        return res.status(404).json({ message: "AI log not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to update AI log");
+    }
+  });
+
   // ─── Availability Schedules ──────────────────────────────────────────────
   app.get("/api/users/:id/availability", isAuthenticated, async (req, res) => {
     try {

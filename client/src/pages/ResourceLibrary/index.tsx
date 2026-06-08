@@ -35,18 +35,12 @@ import {
   RefreshCw,
   GripVertical,
 } from "lucide-react";
+import type { ResourceFolder } from "@shared/schema";
 import ResourceCard from "@/components/ResourceCard";
 import { useResourceLibrary } from "./useResourceLibrary";
 import { ResourceLibraryDialogs } from "./ResourceLibraryDialogs";
 import { ResourceLibraryDialogsExtra } from "./ResourceLibraryDialogsExtra";
-
-type ResourceFolder = {
-  id: string;
-  name: string;
-  parentId: string | null;
-  createdAt: string;
-  breadcrumbs?: { id: string; name: string }[];
-};
+import { hasActiveResourceFilters, isFilteredEmptyView } from "./resourceUtils";
 
 function DroppableFolder({ folder, children }: { folder: { id: string }; children: React.ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id: `folder-${folder.id}`, data: { type: "folder", folderId: folder.id } });
@@ -78,6 +72,7 @@ function DraggableResource({ resource, children }: { resource: { id: string; tit
         {...attributes}
         {...listeners}
         className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab active:cursor-grabbing z-10 text-muted-foreground/40 hover:text-muted-foreground"
+        aria-label={`Drag ${resource.title}`}
         data-testid={`drag-handle-${resource.id}`}
       >
         <GripVertical className="w-4 h-4" />
@@ -100,7 +95,12 @@ function FolderActionMenu({ folder, onRename, onDelete }: {
     <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button size="icon" variant="ghost" data-testid={`button-folder-menu-${folder.id}`}>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={`Folder actions for ${folder.name}`}
+            data-testid={`button-folder-menu-${folder.id}`}
+          >
             <MoreVertical className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -145,14 +145,25 @@ export default function ResourceLibrary() {
     categories, resourceList, isLoading, isResourcesError, refetchResources,
     folders, isFoldersLoading, isFoldersError, refetchFolders,
     isFolderDetailError, refetchFolderDetail,
+    isCategoriesError, refetchCategories,
     properties,
     handleDragStart, handleDragEnd,
     openCreate, openEdit,
     openCreateFolder, openRenameFolder,
-    navigateToFolder,
+    navigateToFolder, clearFilters,
     breadcrumbs, filtered, filteredFolders,
     setDeleteId, setDeleteFolderId,
   } = ctx;
+
+  const filtersActive = hasActiveResourceFilters(search, typeFilter, categoryFilter);
+  const showFilteredEmpty = isFilteredEmptyView(
+    filtered.length + filteredFolders.length,
+    resourceList.length,
+    folders.length,
+    search,
+    typeFilter,
+    categoryFilter,
+  );
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -175,9 +186,10 @@ export default function ResourceLibrary() {
       </div>
 
       {currentFolderId && (
-        <nav className="flex items-center gap-1 text-sm" data-testid="breadcrumb-nav">
+        <nav className="flex items-center gap-1 text-sm" aria-label="Folder breadcrumbs" data-testid="breadcrumb-nav">
           <DroppableBreadcrumb folderId={null}>
             <button
+              type="button"
               onClick={() => navigateToFolder(null)}
               className="text-muted-foreground hover:text-foreground transition-colors"
               data-testid="breadcrumb-root"
@@ -187,12 +199,13 @@ export default function ResourceLibrary() {
           </DroppableBreadcrumb>
           {breadcrumbs.map((crumb, idx) => (
             <span key={crumb.id} className="flex items-center gap-1">
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" aria-hidden />
               {idx === breadcrumbs.length - 1 ? (
                 <span className="font-medium" data-testid={`breadcrumb-current-${crumb.id}`}>{crumb.name}</span>
               ) : (
                 <DroppableBreadcrumb folderId={crumb.id}>
                   <button
+                    type="button"
                     onClick={() => navigateToFolder(crumb.id)}
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     data-testid={`breadcrumb-${crumb.id}`}
@@ -208,12 +221,13 @@ export default function ResourceLibrary() {
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden />
           <Input
-            placeholder="Search resources..."
+            placeholder="Search in this folder..."
             className="pl-9"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            aria-label="Search resources in current folder"
             data-testid="input-search-resources"
           />
         </div>
@@ -242,6 +256,13 @@ export default function ResourceLibrary() {
         </Select>
       </div>
 
+      {isCategoriesError && (
+        <div className="text-sm text-destructive flex items-center gap-2">
+          <span>Failed to load categories.</span>
+          <Button variant="outline" size="sm" onClick={() => refetchCategories()}>Retry</Button>
+        </div>
+      )}
+
       {(isResourcesError || isFoldersError || isFolderDetailError) ? (
         <div className="text-center py-16 text-muted-foreground">
           <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-40 text-destructive" />
@@ -263,6 +284,17 @@ export default function ResourceLibrary() {
             <div key={i} className="h-14 bg-muted animate-pulse" />
           ))}
         </div>
+      ) : showFilteredEmpty ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p className="font-medium">No matching resources</p>
+          <p className="text-sm mt-1">Try adjusting your search or filters.</p>
+          {filtersActive && (
+            <Button variant="outline" className="mt-4" onClick={clearFilters} data-testid="button-clear-filters">
+              Clear filters
+            </Button>
+          )}
+        </div>
       ) : (filteredFolders.length === 0 && filtered.length === 0) ? (
         <div className="text-center py-16 text-muted-foreground">
           <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -279,8 +311,9 @@ export default function ResourceLibrary() {
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
             .map(folder => (
               <DroppableFolder key={folder.id} folder={folder}>
-                <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover-elevate"
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover-elevate"
                   onClick={() => navigateToFolder(folder.id)}
                   data-testid={`folder-item-${folder.id}`}
                 >
@@ -297,7 +330,7 @@ export default function ResourceLibrary() {
                     onRename={openRenameFolder}
                     onDelete={(id) => setDeleteFolderId(id)}
                   />
-                </div>
+                </button>
               </DroppableFolder>
             ))}
           {[...filtered]

@@ -24,17 +24,19 @@ export function registerNotificationRoutes(app: Express) {
           statuses: ["pending", "under_review"],
         });
 
-        const vehicleReservations = await storage.getVehicleReservations({
-          status: "pending",
-        });
-        pendingVehicleReservations = vehicleReservations.length;
+        const vehicleReservations = await storage.getVehicleReservationsPage(
+          { status: "pending" },
+          { limit: 1, offset: 0 },
+        );
+        pendingVehicleReservations = vehicleReservations.total;
 
         pendingSignups = await storage.getPendingUserCount();
       } else if (currentUser.role === "technician") {
-        const vehicleReservations = await storage.getVehicleReservations({
-          status: "pending",
-        });
-        pendingVehicleReservations = vehicleReservations.length;
+        const vehicleReservations = await storage.getVehicleReservationsPage(
+          { status: "pending" },
+          { limit: 1, offset: 0 },
+        );
+        pendingVehicleReservations = vehicleReservations.total;
       } else {
         const myReservations = await storage.getVehicleReservations({
           userId: userId,

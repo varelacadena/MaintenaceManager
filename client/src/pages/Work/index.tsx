@@ -1,18 +1,33 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { StudentWorkView } from "./StudentWorkView";
 import { TechnicianWorkView } from "./TechnicianWorkView";
-import { AdminWorkView } from "./AdminWorkView";
 import { StaffWorkUnavailable } from "./StaffWorkUnavailable";
 import { WorkLoadError } from "./WorkLoadError";
 import { useWorkField } from "./useWorkField";
 import { useWorkAdmin } from "./useWorkAdmin";
 
+const AdminWorkView = lazy(() =>
+  import("./AdminWorkView").then((module) => ({ default: module.AdminWorkView }))
+);
+
 function WorkFieldLoading() {
   return (
     <div className="p-3 md:p-4 space-y-3">
       <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-96 w-full" />
+    </div>
+  );
+}
+
+function WorkAdminLoading() {
+  return (
+    <div className="p-3 md:p-4 space-y-3">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-10 w-32" />
+      </div>
       <Skeleton className="h-96 w-full" />
     </div>
   );
@@ -81,18 +96,14 @@ function WorkAdminPage() {
   const ctx = useWorkAdmin();
 
   if (ctx.isLoading) {
-    return (
-      <div className="p-3 md:p-4 space-y-3">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
+    return <WorkAdminLoading />;
   }
 
-  return <AdminWorkView ctx={ctx} />;
+  return (
+    <Suspense fallback={<WorkAdminLoading />}>
+      <AdminWorkView ctx={ctx} />
+    </Suspense>
+  );
 }
 
 export default function Work() {

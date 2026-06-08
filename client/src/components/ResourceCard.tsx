@@ -6,12 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Play, FileText, Image, ExternalLink, Edit, Trash2, ExternalLink as OpenIcon } from "lucide-react";
 import { getCategoryStyle } from "@/lib/categoryColors";
 import { toDisplayUrl } from "@/lib/imageUtils";
-
-type ResourceCategory = {
-  id: string;
-  name: string;
-  color: string;
-};
+import { getYoutubeEmbedUrl, getYoutubeThumbnail } from "@/lib/youtubeUtils";
+import type { ResourceCategory } from "@shared/schema";
 
 type Resource = {
   id: string;
@@ -23,30 +19,6 @@ type Resource = {
   categoryId: string | null;
   category: ResourceCategory | null;
 };
-
-function extractYoutubeId(url: string): string | null {
-  const patterns = [
-    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-function getYoutubeThumbnail(url: string): string | null {
-  const id = extractYoutubeId(url);
-  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
-}
-
-function getYoutubeEmbedUrl(url: string): string | null {
-  const id = extractYoutubeId(url);
-  return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : null;
-}
 
 interface ResourceCardProps {
   resource: Resource;
@@ -73,11 +45,11 @@ export default function ResourceCard({
 
   function handleClick() {
     if (resource.type === "video") {
-      embedUrl ? setVideoOpen(true) : window.open(toDisplayUrl(resource.url), "_blank", "noopener");
+      embedUrl ? setVideoOpen(true) : window.open(toDisplayUrl(resource.url), "_blank", "noopener,noreferrer");
     } else if (resource.type === "image") {
       setImageOpen(true);
     } else {
-      window.open(toDisplayUrl(resource.url), "_blank", "noopener");
+      window.open(toDisplayUrl(resource.url), "_blank", "noopener,noreferrer");
     }
   }
 
@@ -107,7 +79,7 @@ export default function ResourceCard({
             <div className="p-6 text-center text-muted-foreground">
               <Play className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm mb-3">This video cannot be embedded.</p>
-              <Button variant="outline" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener")}>
+              <Button variant="outline" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener,noreferrer")}>
                 <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
                 Open video
               </Button>
@@ -115,7 +87,7 @@ export default function ResourceCard({
           )}
           {embedUrl && (
             <div className="p-3 flex justify-end border-t">
-              <Button variant="ghost" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener")}>
+              <Button variant="ghost" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener,noreferrer")}>
                 <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
                 Open in new tab
               </Button>
@@ -135,7 +107,7 @@ export default function ResourceCard({
             className="w-full h-auto max-h-[75vh] object-contain rounded-md mt-2"
           />
           <div className="flex justify-end pt-1">
-            <Button variant="ghost" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener")}>
+            <Button variant="ghost" size="sm" onClick={() => window.open(toDisplayUrl(resource.url), "_blank", "noopener,noreferrer")}>
               <OpenIcon className="w-3.5 h-3.5 mr-1.5" />
               Open full size
             </Button>
@@ -151,9 +123,16 @@ export default function ResourceCard({
         <div
           className="flex items-center gap-3 px-4 py-3 cursor-pointer hover-elevate"
           onClick={handleClick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
+          role="button"
+          tabIndex={0}
           data-testid={`card-resource-${resource.id}`}
         >
-          {/* Icon / Thumbnail */}
           <div className="flex-shrink-0 w-10 h-10 rounded-md overflow-hidden bg-muted flex items-center justify-center">
             {resource.type === "video" && thumb ? (
               <div className="relative w-full h-full">
@@ -175,7 +154,6 @@ export default function ResourceCard({
             )}
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-sm font-medium truncate" data-testid={`text-resource-title-${resource.id}`}>
@@ -203,16 +181,27 @@ export default function ResourceCard({
             )}
           </div>
 
-          {/* Admin actions */}
           {hasAdminActions && (
             <div className="flex gap-0.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
               {onEdit && (
-                <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onEdit)} data-testid={`button-edit-resource-${resource.id}`}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Edit ${resource.title}`}
+                  onClick={e => stopAndRun(e, onEdit)}
+                  data-testid={`button-edit-resource-${resource.id}`}
+                >
                   <Edit className="w-3.5 h-3.5" />
                 </Button>
               )}
               {onDelete && (
-                <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onDelete)} data-testid={`button-delete-resource-${resource.id}`}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Delete ${resource.title}`}
+                  onClick={e => stopAndRun(e, onDelete)}
+                  data-testid={`button-delete-resource-${resource.id}`}
+                >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               )}
@@ -268,12 +257,24 @@ export default function ResourceCard({
             {hasAdminActions && (
               <div className="flex gap-0.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
                 {onEdit && (
-                  <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onEdit)} data-testid={`button-edit-resource-${resource.id}`}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Edit ${resource.title}`}
+                    onClick={e => stopAndRun(e, onEdit)}
+                    data-testid={`button-edit-resource-${resource.id}`}
+                  >
                     <Edit className="w-3.5 h-3.5" />
                   </Button>
                 )}
                 {onDelete && (
-                  <Button size="icon" variant="ghost" onClick={e => stopAndRun(e, onDelete)} data-testid={`button-delete-resource-${resource.id}`}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Delete ${resource.title}`}
+                    onClick={e => stopAndRun(e, onDelete)}
+                    data-testid={`button-delete-resource-${resource.id}`}
+                  >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 )}

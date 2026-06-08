@@ -255,9 +255,15 @@ export function registerVehicleRoutes(app: Express) {
         offset: req.query.offset as string | undefined,
       });
 
-      if (pagination) {
-        const page = await storage.getVehicleReservationsPage(filters, pagination);
-        return res.json({ ...page, ...pagination });
+      const resolvedPagination =
+        pagination ??
+        (isFleetPrivilegedRole(currentUser.role)
+          ? { limit: 100, offset: 0 }
+          : null);
+
+      if (resolvedPagination) {
+        const page = await storage.getVehicleReservationsPage(filters, resolvedPagination);
+        return res.json({ ...page, ...resolvedPagination });
       }
 
       const reservations = await storage.getVehicleReservations(filters);

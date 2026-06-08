@@ -13,11 +13,14 @@ import { registerTaskRoutes } from "./routes/tasks";
 import { registerUploadRoutes } from "./routes/uploads";
 import { registerNotificationRoutes } from "./routes/notifications";
 import { registerVehicleRoutes } from "./routes/vehicles";
+import { registerMobileEquipmentRoutes } from "./routes/mobileEquipment";
 import { registerAnalyticsRoutes } from "./routes/analytics";
+import { registerAiRoutes } from "./routes/ai";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerResourceRoutes } from "./routes/resources";
 import { registerSignupRoutes } from "./routes/signup";
 import { registerEmailRoutes } from "./routes/email";
+import { registerDashboardRoutes } from "./routes/dashboard";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
@@ -34,10 +37,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerUploadRoutes(app);
   registerNotificationRoutes(app);
   registerVehicleRoutes(app);
+  registerMobileEquipmentRoutes(app);
   registerAnalyticsRoutes(app);
+  registerAiRoutes(app);
   registerProjectRoutes(app);
   registerEmailRoutes(app);
   registerResourceRoutes(app);
+  registerDashboardRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

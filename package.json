@@ -16,6 +16,7 @@
     "test:e2e:fleet": "playwright test e2e/fleet-page.pw.spec.ts",
     "test:e2e:inventory": "playwright test e2e/inventory-page.pw.spec.ts",
     "verify:fleet-db": "tsx server/scripts/verifyFleetSchema.ts",
+    "verify:perf-indexes": "tsx server/scripts/verifyPerformanceIndexes.ts",
     "db:migrate:fleet": "tsx server/scripts/applyFleetMigrations.ts",
     "db:migrate": "tsx server/scripts/runMigrations.ts",
     "db:push": "drizzle-kit push"

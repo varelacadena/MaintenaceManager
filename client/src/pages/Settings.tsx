@@ -29,6 +29,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation, useSearch } from "wouter";
 import type { EmergencyContact, NotificationSetting, User as UserType } from "@shared/schema";
 import EmergencyContacts from "./EmergencyContacts";
+import DepartmentSettings from "./DepartmentSettings";
+import type { Area } from "@shared/schema";
 
 type InventorySummaryResponse = {
   total: number;
@@ -43,7 +45,7 @@ type SystemSettingCard = {
   icon: React.ComponentType<{ className?: string }>;
   actionLabel: string;
   href?: string;
-  tab?: "emergency";
+  tab?: "emergency" | "departments";
   testId: string;
 };
 
@@ -75,6 +77,15 @@ const systemSettingSections: SystemSettingSection[] = [
         actionLabel: "Open User Settings",
         href: "/users",
         testId: "button-open-user-settings",
+      },
+      {
+        title: "Departments",
+        description: "Manage Plant Services departments for the dashboard, work queues, and task routing.",
+        status: "embedded",
+        icon: Building2,
+        actionLabel: "Manage Departments",
+        tab: "departments",
+        testId: "button-open-department-settings",
       },
       {
         title: "Emergency Contacts",
@@ -137,7 +148,7 @@ const systemSettingSections: SystemSettingSection[] = [
       },
       {
         title: "Request Defaults",
-        description: "Request categories, default urgency, approval rules, and service area catalog.",
+        description: "Request categories, default urgency, and approval rules.",
         status: "planned",
         icon: ClipboardList,
         actionLabel: "Needs settings API",
@@ -195,12 +206,15 @@ export default function Settings() {
   const tabParam = params.get("tab");
 
   const isAdmin = user?.role === "admin";
-  const adminTabParam = isAdmin && (tabParam === "emergency" || tabParam === "system") ? tabParam : undefined;
+  const adminTabParam =
+    isAdmin && (tabParam === "emergency" || tabParam === "departments" || tabParam === "system")
+      ? tabParam
+      : undefined;
   const defaultTab = adminTabParam || "account";
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
-    if (isAdmin && (tabParam === "emergency" || tabParam === "system")) {
+    if (isAdmin && (tabParam === "emergency" || tabParam === "departments" || tabParam === "system")) {
       setActiveTab(tabParam);
       return;
     }
@@ -229,15 +243,22 @@ export default function Settings() {
   };
 
   const getSystemCardStatusText = (card: SystemSettingCard) => {
+    const safeNotificationSettings = Array.isArray(notificationSettings) ? notificationSettings : [];
+    const safeDepartments = Array.isArray(departments) ? departments : [];
+
     switch (card.testId) {
       case "button-open-email-settings":
-        return notificationSettings.length > 0
-          ? `${notificationSettings.length} notification rules configured`
+        return safeNotificationSettings.length > 0
+          ? `${safeNotificationSettings.length} notification rules configured`
           : "No notification rules found";
       case "button-open-user-settings":
         return notificationCounts.pendingSignups > 0
           ? `${notificationCounts.pendingSignups} pending signup${notificationCounts.pendingSignups === 1 ? "" : "s"}`
           : "No pending signups";
+      case "button-open-department-settings":
+        return safeDepartments.length > 0
+          ? `${safeDepartments.length} department${safeDepartments.length === 1 ? "" : "s"} configured`
+          : "No departments configured";
       case "button-open-emergency-settings":
         return activeEmergencyContact
           ? `Active: ${activeEmergencyContact.name}`
@@ -278,6 +299,11 @@ export default function Settings() {
 
   const { data: inventorySummary } = useQuery<InventorySummaryResponse>({
     queryKey: ["/api/inventory", "summary"],
+    enabled: isAdmin,
+  });
+
+  const { data: departments = [] } = useQuery<Area[]>({
+    queryKey: ["/api/areas"],
     enabled: isAdmin,
   });
 
@@ -400,6 +426,10 @@ export default function Settings() {
               <TabsTrigger value="system" data-testid="tab-system">
                 <Shield className="w-4 h-4 mr-2" />
                 System
+              </TabsTrigger>
+              <TabsTrigger value="departments" data-testid="tab-departments">
+                <Building2 className="w-4 h-4 mr-2" />
+                Departments
               </TabsTrigger>
               <TabsTrigger value="emergency" data-testid="tab-emergency">
                 <Phone className="w-4 h-4 mr-2" />
@@ -591,11 +621,11 @@ export default function Settings() {
                       <p className="text-xs text-muted-foreground">built admin settings areas</p>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-2xl font-semibold">1</div>
-                      <p className="text-xs text-muted-foreground">embedded settings editor</p>
+                      <div className="text-2xl font-semibold">2</div>
+                      <p className="text-xs text-muted-foreground">embedded settings editors</p>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-2xl font-semibold">6</div>
+                      <div className="text-2xl font-semibold">5</div>
                       <p className="text-xs text-muted-foreground">recommended dynamic settings to add</p>
                     </div>
                   </div>
@@ -649,6 +679,12 @@ export default function Settings() {
                 </section>
               ))}
             </div>
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="departments" className="mt-4">
+            <DepartmentSettings />
           </TabsContent>
         )}
 

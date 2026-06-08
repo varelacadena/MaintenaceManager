@@ -68,12 +68,18 @@ export default function NotificationsWidget() {
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 30000,
+    enabled: open,
+    refetchInterval: open ? 60000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const { data: countData } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/unread-count"],
-    refetchInterval: 30000,
+    refetchInterval: () =>
+      typeof document !== "undefined" && document.visibilityState === "hidden"
+        ? false
+        : 60000,
+    refetchIntervalInBackground: false,
   });
 
   const markReadMutation = useMutation({
