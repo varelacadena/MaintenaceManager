@@ -46,7 +46,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         ariaLabel={`Open task ${task.name}`}
         testIdPrefix="tech"
         onOpen={() => navigate(`/tasks/${task.id}`)}
-        className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
+        className={`rounded-lg border-2 p-3.5 sm:p-4 cursor-pointer active-elevate-2 transition-colors ${
           isInProgress
             ? "border-primary bg-primary/5"
             : isHighUrgency
@@ -54,8 +54,8 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             : "border-border"
         }`}
       >
-        <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0 ${
             isInProgress
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-muted-foreground"
@@ -74,12 +74,12 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             )}
           </div>
           {isInProgress && (
-            <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
+            <Badge variant="default" className="shrink-0 max-w-[5.75rem] justify-center truncate text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
               In Progress
             </Badge>
           )}
           {isHighUrgency && !isInProgress && (
-            <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
+            <Badge variant="destructive" className="shrink-0 text-[10px] sm:text-xs" data-testid={`badge-urgency-${task.id}`}>
               Urgent
             </Badge>
           )}
@@ -98,11 +98,11 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         ariaLabel={`Open completed task ${task.name}`}
         testIdPrefix="tech"
         onOpen={() => navigate(`/tasks/${task.id}`)}
-        className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 cursor-pointer active-elevate-2 transition-colors"
+        className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-3.5 sm:p-4 cursor-pointer active-elevate-2 transition-colors"
       >
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
-            <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
+            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base leading-tight truncate text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
@@ -115,7 +115,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
               </p>
             )}
           </div>
-          <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400" data-testid={`badge-completed-${task.id}`}>
+          <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400 text-[10px] sm:text-xs" data-testid={`badge-completed-${task.id}`}>
             Done
           </Badge>
         </div>
@@ -124,7 +124,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
   };
 
   return (
-    <div className="p-4 pb-8 space-y-5 max-w-lg mx-auto">
+    <div className="px-3 py-4 pb-8 sm:p-4 sm:pb-8 space-y-5 max-w-lg mx-auto">
       <div className="pt-2">
         <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
           My Tasks

@@ -46,58 +46,63 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
   if (!task) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
-      <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50">
+      <div
+        className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 pt-2.5 sm:pt-3 max-w-lg mx-auto"
+        style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}
+      >
         {taskIsHelper ? (
           activeTimer ? (
-            <div className="flex-1 flex items-center gap-3">
-              <Badge variant="outline" data-testid="badge-helper-status">Helper</Badge>
+            <div className="min-w-0 flex-1 flex items-center gap-2.5 sm:gap-3">
+              <Badge variant="outline" className="shrink-0" data-testid="badge-helper-status">Helper</Badge>
               <Button
                 size="lg"
                 variant="outline"
+                className="shrink-0 px-4"
                 onClick={handleStartOrPause}
                 disabled={stopTimerMutation.isPending}
                 data-testid="bottom-button-helper-pause"
               >
                 <Pause className="w-5 h-5" />
               </Button>
-              <span className="text-sm text-muted-foreground flex-1 text-center">Timer running</span>
+              <span className="min-w-0 text-sm text-muted-foreground flex-1 text-center truncate">Timer running</span>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-3">
-              <Badge variant="outline" data-testid="badge-helper-status">Helper</Badge>
+            <div className="min-w-0 flex-1 flex items-center gap-2.5 sm:gap-3">
+              <Badge variant="outline" className="shrink-0" data-testid="badge-helper-status">Helper</Badge>
               <Button
                 size="lg"
-                className="flex-1"
+                className="min-w-0 flex-1 px-4"
                 onClick={handleStartOrPause}
                 disabled={startTimerMutation.isPending}
                 data-testid="bottom-button-helper-start"
               >
-                <Play className="w-5 h-5 mr-2" />
-                Log Time
+                <Play className="w-5 h-5" />
+                <span className="truncate">Log Time</span>
               </Button>
             </div>
           )
         ) : isParentTask ? (
-          <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
+          <div className="min-w-0 flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
             <Layers className="w-5 h-5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
+            <span className="min-w-0 text-sm text-muted-foreground truncate">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
           </div>
         ) : task.status === "completed" ? (
           <Button
             size="lg"
-            className="flex-1 font-bold bg-green-600 text-white border-green-600"
+            className="min-w-0 flex-1 px-4 font-bold bg-green-600 text-white border-green-600"
             disabled
             data-testid="bottom-button-done"
           >
-            <CheckCircle2 className="w-5 h-5 mr-2" />
-            Task Completed
+            <CheckCircle2 className="w-5 h-5" />
+            <span className="truncate">Task Completed</span>
           </Button>
         ) : activeTimer ? (
           <>
             <Button
               size="lg"
               variant="outline"
+              className="shrink-0 px-4"
               onClick={handleStartOrPause}
               disabled={stopTimerMutation.isPending}
               data-testid="bottom-button-pause"
@@ -106,14 +111,14 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             </Button>
             <Button
               size="lg"
-              className="flex-1 font-bold bg-green-600 text-white border-green-600"
+              className="min-w-0 flex-1 px-4 text-sm sm:text-base font-bold bg-green-600 text-white border-green-600"
               onClick={handleComplete}
               disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
               title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
               data-testid="bottom-button-complete"
             >
-              <CheckCircle2 className="w-5 h-5 mr-2" />
-              {estimateBlocksCompletion ? "Estimate Required" : "Mark as Completed"}
+              <CheckCircle2 className="w-5 h-5" />
+              <span className="truncate">{estimateBlocksCompletion ? "Estimate Required" : "Mark Complete"}</span>
             </Button>
           </>
         ) : task.status === "in_progress" ? (
@@ -121,6 +126,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             <Button
               size="lg"
               variant="outline"
+              className="shrink-0 px-4"
               onClick={handleStartOrPause}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-resume"
@@ -129,32 +135,32 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             </Button>
             <Button
               size="lg"
-              className="flex-1 font-bold bg-green-600 text-white border-green-600"
+              className="min-w-0 flex-1 px-4 text-sm sm:text-base font-bold bg-green-600 text-white border-green-600"
               onClick={handleComplete}
               disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
               title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
               data-testid="bottom-button-complete"
             >
-              <CheckCircle2 className="w-5 h-5 mr-2" />
-              {estimateBlocksCompletion ? "Estimate Required" : "Mark as Completed"}
+              <CheckCircle2 className="w-5 h-5" />
+              <span className="truncate">{estimateBlocksCompletion ? "Estimate Required" : "Mark Complete"}</span>
             </Button>
           </>
         ) : (
           <Button
             size="lg"
-            className="flex-1 font-bold"
+            className="min-w-0 flex-1 px-4 font-bold"
             onClick={handleStartOrPause}
             disabled={startTimerMutation.isPending}
             data-testid="bottom-button-start"
           >
-            <Play className="w-5 h-5 mr-2" />
-            Start Task
+            <Play className="w-5 h-5" />
+            <span className="truncate">Start Task</span>
           </Button>
         )}
         <Button
           variant="ghost"
           size="sm"
-          className="flex-col gap-0.5 h-14 px-3 shrink-0"
+          className="flex-col gap-0.5 h-14 px-2.5 sm:px-3 shrink-0"
           onClick={() => setIsScanEquipmentOpen(true)}
           disabled={isEquipmentLoading}
           data-testid="bottom-button-scan-equipment"

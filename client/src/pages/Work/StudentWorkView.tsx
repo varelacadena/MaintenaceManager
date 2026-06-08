@@ -49,7 +49,7 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
         ariaLabel={`Open task ${task.name}`}
         testIdPrefix="student"
         onOpen={() => navigate(`/tasks/${task.id}`)}
-        className={`rounded-lg border-2 p-4 cursor-pointer active-elevate-2 transition-colors ${
+        className={`rounded-lg border-2 p-3.5 sm:p-4 cursor-pointer active-elevate-2 transition-colors ${
           isInProgress
             ? "border-primary bg-primary/5"
             : isHighUrgency
@@ -57,8 +57,8 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
             : "border-border"
         }`}
       >
-        <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0 ${
             isInProgress
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-muted-foreground"
@@ -76,21 +76,23 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
               </p>
             )}
           </div>
-          {isHelper && (
-            <Badge variant="outline" className="shrink-0" data-testid={`badge-helper-${task.id}`}>
-              Helper
-            </Badge>
-          )}
-          {isInProgress && (
-            <Badge variant="default" className="shrink-0" data-testid={`badge-status-${task.id}`}>
-              In Progress
-            </Badge>
-          )}
-          {isHighUrgency && !isInProgress && (
-            <Badge variant="destructive" className="shrink-0" data-testid={`badge-urgency-${task.id}`}>
-              Urgent
-            </Badge>
-          )}
+          <div className="shrink-0 flex flex-col items-end gap-1">
+            {isHelper && (
+              <Badge variant="outline" className="text-[10px] sm:text-xs" data-testid={`badge-helper-${task.id}`}>
+                Helper
+              </Badge>
+            )}
+            {isInProgress && (
+              <Badge variant="default" className="max-w-[5.75rem] justify-center truncate text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
+                In Progress
+              </Badge>
+            )}
+            {isHighUrgency && !isInProgress && (
+              <Badge variant="destructive" className="text-[10px] sm:text-xs" data-testid={`badge-urgency-${task.id}`}>
+                Urgent
+              </Badge>
+            )}
+          </div>
         </div>
       </FieldWorkTaskCard>
     );
@@ -124,7 +126,7 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
   };
 
   return (
-    <div className="p-4 pb-28 space-y-5 max-w-lg mx-auto">
+    <div className="px-3 py-4 pb-28 sm:p-4 sm:pb-28 space-y-5 max-w-lg mx-auto">
       <div className="pt-2">
         <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
           Your Tasks

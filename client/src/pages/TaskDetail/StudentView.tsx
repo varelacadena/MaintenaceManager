@@ -40,9 +40,9 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
   if (!task) return null;
 
   return (
-      <div className="flex flex-col h-full bg-background pb-28">
+      <div className="flex flex-col h-full bg-background pb-32 sm:pb-28">
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
+          <div className="px-3.5 sm:px-4 py-4 space-y-5 max-w-lg mx-auto">
             {isSubTask && parentTask && (
               <button
                 className="flex items-center gap-1.5 text-sm text-primary"
@@ -54,31 +54,33 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
               </button>
             )}
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold leading-tight" data-testid="text-task-name">
+              <div className="flex items-start gap-2 min-w-0">
+                <h1 className="min-w-0 flex-1 text-lg sm:text-xl font-bold leading-tight break-words" data-testid="text-task-name">
                   {task.name}
                 </h1>
                 {taskIsHelper && (
-                  <Badge variant="outline" data-testid="badge-helper">Helper</Badge>
+                  <Badge variant="outline" className="shrink-0" data-testid="badge-helper">Helper</Badge>
                 )}
               </div>
               {property && (
-                <p className="text-muted-foreground flex items-center gap-1.5">
+                <p className="text-sm sm:text-base text-muted-foreground flex items-center gap-1.5 min-w-0">
                   <MapPin className="w-4 h-4 shrink-0" />
-                  {property.name}
-                  {space && ` - ${space.name}`}
+                  <span className="truncate">
+                    {property.name}
+                    {space && ` - ${space.name}`}
+                  </span>
                 </p>
               )}
             </div>
 
             {isParentTask && (
               <div className="space-y-3" data-testid="subtasks-section">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2 min-w-0">
                     <Layers className="w-4 h-4" />
                     Sub-Tasks
                   </p>
-                  <span className="text-sm text-muted-foreground" data-testid="text-subtask-progress">
+                  <span className="shrink-0 text-xs sm:text-sm text-muted-foreground" data-testid="text-subtask-progress">
                     {completedSubTasks} of {subTasks.length} complete
                   </span>
                 </div>
@@ -87,7 +89,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                   {subTasks.map((st) => (
                     <div
                       key={st.id}
-                      className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
+                      className="flex items-start justify-between gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover-elevate"
                       onClick={() => safeNavigate(`/tasks/${st.id}`)}
                       data-testid={`subtask-card-${st.id}`}
                     >
@@ -98,10 +100,10 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                           <Package className="w-4 h-4 text-muted-foreground shrink-0" />
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{st.name}</p>
+                          <p className="text-sm font-medium break-words">{st.name}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`text-xs shrink-0 ${statusColors[st.status] || ""}`}>
+                      <Badge variant="outline" className={`text-[10px] sm:text-xs shrink-0 ${statusColors[st.status] || ""}`}>
                         {statusLabels[st.status] || st.status}
                       </Badge>
                     </div>
@@ -125,14 +127,14 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
 
             {task.requiresEstimate && (
               task.estimateStatus === "approved" ? (
-                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
+                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
                   <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                  <p className="text-sm text-green-800 dark:text-green-300">Estimate approved — you can complete this task.</p>
+                  <p className="text-sm leading-relaxed text-green-800 dark:text-green-300">Estimate approved — you can complete this task.</p>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-pending">
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-pending">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <p className="text-sm text-amber-800 dark:text-amber-300">This task requires approved estimates. Contact your supervisor.</p>
+                  <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-300">This task requires approved estimates. Contact your supervisor.</p>
                 </div>
               )
             )}
@@ -143,12 +145,12 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 onClick={() => setIsResourcesSheetOpen(true)}
                 data-testid="button-resources"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <BookOpen className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Resources</span>
-                  <Badge variant="secondary">{allTaskResources.length}</Badge>
+                  <span className="font-medium truncate">Resources</span>
+                  <Badge variant="secondary" className="shrink-0">{allTaskResources.length}</Badge>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
               </button>
             )}
 
@@ -165,12 +167,12 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                     {group.items.map((item) => (
                       <div
                         key={item.id}
-                        className={`flex items-center gap-4 p-4 bg-muted/30 rounded-lg min-h-[56px] ${taskIsHelper ? "opacity-80" : "cursor-pointer active-elevate-2"}`}
+                        className={`flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 bg-muted/30 rounded-lg min-h-[56px] ${taskIsHelper ? "opacity-80" : "cursor-pointer active-elevate-2"}`}
                         onClick={taskIsHelper ? undefined : () => toggleChecklistItemMutation.mutate({ itemId: item.id, isCompleted: !item.isCompleted })}
                         data-testid={`checklist-item-${item.id}`}
                       >
-                        <Checkbox checked={item.isCompleted} disabled={taskIsHelper} className="w-6 h-6" />
-                        <span className={`text-base flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                        <Checkbox checked={item.isCompleted} disabled={taskIsHelper} className="mt-0.5 w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                        <span className={`min-w-0 flex-1 text-sm sm:text-base break-words ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
                           {item.text}
                         </span>
                       </div>
@@ -180,14 +182,14 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
               </div>
             )}
 
-            <div className="p-4 bg-muted/30 rounded-lg flex items-center justify-between" data-testid="time-logged-card">
+            <div className="p-3.5 sm:p-4 bg-muted/30 rounded-lg flex items-center justify-between gap-3" data-testid="time-logged-card">
               <div className="flex items-center gap-3">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${activeTimer ? "bg-primary text-primary-foreground animate-pulse" : "bg-muted"}`}>
                   <Clock className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Time Logged</p>
-                  <p className="text-xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
+                  <p className="text-lg sm:text-xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
                 </div>
               </div>
               {activeTimer && (
@@ -221,7 +223,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 <div className="space-y-2">
                   {notes.slice(0, 3).map((note) => (
                     <div key={note.id} className="p-3 bg-muted/20 rounded-lg">
-                      <p className="text-sm">{note.content}</p>
+                      <p className="text-sm break-words">{note.content}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {note.createdAt && formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
                       </p>
@@ -233,7 +235,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
 
             <div className="space-y-3">
               <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Photos</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
                 <ObjectUploader
                   maxNumberOfFiles={5}
                   maxFileSize={10485760}
@@ -254,7 +256,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 {uploads.length > 0 && (
                   <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg" data-testid="text-photo-count">
                     <Paperclip className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{uploads.length} photo{uploads.length !== 1 ? "s" : ""} attached</span>
+                    <span className="text-sm min-w-0 break-words">{uploads.length} photo{uploads.length !== 1 ? "s" : ""} attached</span>
                   </div>
                 )}
               </div>

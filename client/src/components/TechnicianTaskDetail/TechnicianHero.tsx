@@ -37,15 +37,15 @@ export function TechnicianHero({
 }: TechnicianHeroProps) {
   return (
     <div
-      className="px-4 pt-4 pb-5 shrink-0"
+      className="px-3.5 sm:px-4 pt-3.5 sm:pt-4 pb-4 sm:pb-5 shrink-0"
       style={{
         background: getGradient(task.status, isPaused),
         transition: "background 0.4s",
       }}
       data-testid="tech-hero"
     >
-      <div className="flex items-center justify-between flex-wrap gap-1 mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center justify-between flex-wrap gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
           <button
             className="flex items-center justify-center shrink-0 rounded-full"
             style={{
@@ -102,14 +102,14 @@ export function TechnicianHero({
         )}
       </div>
       <h1
-        className="text-lg font-bold text-white leading-snug mb-1.5"
+        className="text-base sm:text-lg font-bold text-white leading-snug mb-1.5 break-words"
         data-testid="text-task-name"
       >
         {task.name}
       </h1>
       {locationText && (
         <div
-          className={`flex items-center gap-1.5 ${multiProperties.length > 2 ? "cursor-pointer" : ""}`}
+          className={`flex items-center gap-1.5 min-w-0 ${multiProperties.length > 2 ? "cursor-pointer" : ""}`}
           onClick={() => multiProperties.length > 2 && setLocationExpanded(!locationExpanded)}
           data-testid="tech-location-display"
         >
@@ -118,7 +118,7 @@ export function TechnicianHero({
           ) : (
             <MapPin className="w-3.5 h-3.5 shrink-0 text-white/70" />
           )}
-          <span className="text-sm text-white/70">
+          <span className="text-xs sm:text-sm text-white/70 truncate min-w-0">
             {locationText}
           </span>
           {hasMoreBuildings && (
@@ -134,9 +134,9 @@ export function TechnicianHero({
         </div>
       )}
       {task.estimatedCompletionDate && (
-        <div className="flex items-center gap-1.5 mt-1.5">
+        <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
           <Clock className="w-3.5 h-3.5 shrink-0 text-white/70" />
-          <span className="text-sm text-white/70">
+          <span className="text-xs sm:text-sm text-white/70 truncate">
             Due {format(new Date(task.estimatedCompletionDate), "MMM d, yyyy")}
           </span>
         </div>

@@ -64,7 +64,7 @@ export function TechnicianMoreTab({
                 {contactName}
               </p>
               {contactPhone && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground truncate">
                   Tap to call &middot; {contactPhone}
                 </p>
               )}
@@ -104,7 +104,7 @@ export function TechnicianMoreTab({
                 Estimate / Quote
               </p>
               {existingQuote && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground truncate">
                   {task.estimateStatus === "waiting_approval"
                     ? `Pending approval \u00B7 $${(existingQuote.estimatedCost || 0).toFixed(2)}`
                     : task.estimateStatus === "approved"
@@ -209,19 +209,19 @@ export function TechnicianMoreTab({
             {parts.map((part) => (
               <div
                 key={part.id}
-                className="flex items-center justify-between py-1.5 border-b border-border/50"
+                className="flex items-start justify-between gap-3 py-1.5 border-b border-border/50"
               >
-                <div>
-                  <p className="text-sm font-medium text-foreground">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground break-words">
                     {part.partName}
                   </p>
                   {part.notes && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground break-words">
                       {part.notes}
                     </p>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <p className="text-sm text-foreground">
                     Qty: {part.quantity}
                   </p>

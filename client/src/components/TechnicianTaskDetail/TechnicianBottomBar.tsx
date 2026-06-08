@@ -43,14 +43,14 @@ export function TechnicianBottomBar({
 }: TechnicianBottomBarProps) {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-inset-bottom"
-      style={{ padding: "8px 14px 16px" }}
+      className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
+      style={{ padding: "8px 12px calc(14px + env(safe-area-inset-bottom, 0px))" }}
       data-testid="tech-bottom-bar"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3 max-w-lg mx-auto">
         <button
           className="flex items-center justify-center shrink-0 border border-border rounded-[10px]"
-          style={{ width: 44, height: 44 }}
+          style={{ width: 42, height: 42 }}
           onClick={() => setIsScanEquipmentOpen(true)}
           disabled={isEquipmentLoading}
           data-testid="bottom-button-scan"
@@ -59,39 +59,39 @@ export function TechnicianBottomBar({
         </button>
 
         {task.status === "completed" ? (
-          <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-green-700">
+          <div className="min-w-0 flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-green-700">
             <Check className="w-4 h-4" />
-            Completed
+            <span className="truncate">Completed</span>
           </div>
         ) : !taskStarted ? (
           <button
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
+            className="min-w-0 flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
             onClick={handleStartTask}
             disabled={startTimerMutation.isPending}
             data-testid="bottom-button-start"
           >
             <Play className="w-4 h-4" />
-            Start Task
+            <span className="truncate">Start Task</span>
           </button>
         ) : isPaused ? (
           <button
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
+            className="min-w-0 flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
             onClick={handleResume}
             disabled={startTimerMutation.isPending}
             data-testid="bottom-button-resume"
           >
             <Play className="w-4 h-4" />
-            Resume
+            <span className="truncate">Resume</span>
           </button>
         ) : (
           <button
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-gray-600 dark:bg-gray-500 transition-colors"
+            className="min-w-0 flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-gray-600 dark:bg-gray-500 transition-colors"
             onClick={handlePauseTap}
             disabled={stopTimerMutation.isPending}
             data-testid="bottom-button-pause"
           >
             <Pause className="w-4 h-4" />
-            Pause
+            <span className="truncate">Pause</span>
           </button>
         )}
 
@@ -120,7 +120,7 @@ export function TechnicianBottomBar({
           >
             <div
               className={`flex items-center justify-center rounded-[10px] ${taskStarted ? "border-primary bg-primary/10" : "border-border"}`}
-              style={{ width: 44, height: 44, borderWidth: 1, borderStyle: "solid" }}
+              style={{ width: 42, height: 42, borderWidth: 1, borderStyle: "solid" }}
             >
               <Camera
                 className={`w-5 h-5 ${taskStarted ? "text-primary" : "text-muted-foreground"}`}

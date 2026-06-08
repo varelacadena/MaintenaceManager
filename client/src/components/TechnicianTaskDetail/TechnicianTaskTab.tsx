@@ -62,7 +62,7 @@ export function TechnicianTaskTab({
     <>
       {isCompleted && (
         <div
-          className="flex items-center gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+          className="flex items-start gap-2.5 sm:gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
           data-testid="banner-completed"
         >
           <div
@@ -75,7 +75,7 @@ export function TechnicianTaskTab({
             <p className="text-sm font-semibold text-green-800 dark:text-green-300">
               Task Completed
             </p>
-            <p className="text-xs text-green-700 dark:text-green-400">
+            <p className="text-xs text-green-700 dark:text-green-400 leading-relaxed">
               You can still add photos, parts, and notes.
             </p>
           </div>
@@ -199,12 +199,12 @@ export function TechnicianTaskTab({
               return (
                 <div
                   key={st.id}
-                  className="flex items-center gap-3 py-2 cursor-pointer rounded-md hover-elevate"
+                  className="flex items-start gap-3 py-2 cursor-pointer rounded-md hover-elevate"
                   onClick={() => taskStarted && safeNavigate(`/tasks/${st.id}`)}
                   data-testid={`subtask-row-${st.id}`}
                 >
                   <div
-                    className={`flex items-center justify-center shrink-0 rounded-md ${isDone ? "bg-primary" : "border-2 border-muted-foreground/30"}`}
+                    className={`mt-0.5 flex items-center justify-center shrink-0 rounded-md ${isDone ? "bg-primary" : "border-2 border-muted-foreground/30"}`}
                     style={{ width: 22, height: 22 }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -216,7 +216,7 @@ export function TechnicianTaskTab({
                     {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                   </div>
                   <span
-                    className={`flex-1 ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}
+                    className={`min-w-0 flex-1 break-words ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}
                     style={{ fontSize: 13 }}
                   >
                     {st.name}
@@ -278,7 +278,7 @@ export function TechnicianTaskTab({
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 py-2 cursor-pointer"
+                    className="flex items-start gap-3 py-2 cursor-pointer"
                     onClick={() =>
                       toggleChecklistItemMutation.mutate({
                         itemId: item.id,
@@ -288,7 +288,7 @@ export function TechnicianTaskTab({
                     data-testid={`checklist-item-${item.id}`}
                   >
                     <div
-                      className={`flex items-center justify-center shrink-0 ${isDone ? "bg-primary" : "border-2 border-muted-foreground/30"}`}
+                      className={`mt-0.5 flex items-center justify-center shrink-0 ${isDone ? "bg-primary" : "border-2 border-muted-foreground/30"}`}
                       style={{
                         width: 22,
                         height: 22,
@@ -298,7 +298,7 @@ export function TechnicianTaskTab({
                       {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                     </div>
                     <span
-                      className={`flex-1 ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}
+                      className={`min-w-0 flex-1 break-words ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}
                       style={{ fontSize: 13 }}
                     >
                       {item.text}
@@ -358,7 +358,7 @@ export function TechnicianTaskTab({
                   className="px-2.5 py-2 rounded-lg bg-muted/50"
                   data-testid={`saved-note-${note.id}`}
                 >
-                  <p className="text-xs text-foreground">
+                  <p className="text-xs text-foreground break-words">
                     {note.content}
                   </p>
                   <p className="text-xs mt-1 text-muted-foreground">
