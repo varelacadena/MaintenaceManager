@@ -22,6 +22,7 @@ export function EditableDateCell({
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
+      inputRef.current.showPicker?.();
     }
   }, [isEditing]);
 

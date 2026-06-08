@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
@@ -153,6 +153,26 @@ export function useTaskDetailPanel({
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
     },
   });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: string }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}`, { [field]: value });
+    },
+    onSuccess: (_result, variables) => {
+      const patch = { [variables.field]: variables.value } as Partial<Task>;
+      patchTaskInListCaches(taskId, patch);
+      refreshTaskDetail(patch);
+      toast({ title: "Task updated", description: "Changes saved successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update task.", variant: "destructive" });
+    },
+  });
+
+  const handleInlineEdit = (editTaskId: string, field: string, value: string) => {
+    if (editTaskId !== taskId) return;
+    updateTaskMutation.mutate({ field, value });
+  };
 
   const updateSubtaskStatusMutation = useMutation({
     mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
@@ -494,6 +514,8 @@ export function useTaskDetailPanel({
 
     addPartMutation,
     updateStatusMutation,
+    updateTaskMutation,
+    handleInlineEdit,
     deleteTaskMutation,
     addNoteMutation,
     updateNoteMutation,

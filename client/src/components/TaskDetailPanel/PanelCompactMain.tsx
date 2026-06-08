@@ -13,6 +13,7 @@ import {
   ExternalLink,
   ClipboardCheck,
 } from "lucide-react";
+import { EditableDateCell } from "@/components/EditableDateCell";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelResourcesSection } from "./PanelResourcesSection";
@@ -40,7 +41,7 @@ function MetaCell({
         {icon}
         <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
       </div>
-      <div className="text-sm font-medium text-foreground truncate">{children}</div>
+      <div className="text-sm font-medium text-foreground min-w-0">{children}</div>
     </div>
   );
 }
@@ -69,6 +70,8 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
     assigneeInitials,
     assigneeName,
     toggleSubtaskExpanded,
+    isAdmin,
+    handleInlineEdit,
   } = ctx;
 
   const [subtasksOpen, setSubtasksOpen] = useState(() => (subtasks?.length ?? 0) > 0);
@@ -131,25 +134,51 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
             <MetaCell label="Location" icon={<MapPin className="w-3 h-3" />}>
               {property?.name || "\u2014"}
             </MetaCell>
-            <MetaCell label="Due" icon={<Calendar className="w-3 h-3" />}>
-              <span className={isOverdue ? "text-destructive" : undefined}>
-                {task.estimatedCompletionDate
-                  ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", {
+            <MetaCell label="Start" icon={<Calendar className="w-3 h-3" />}>
+              {isAdmin ? (
+                <EditableDateCell
+                  value={task.initialDate}
+                  taskId={taskId}
+                  field="initialDate"
+                  onSave={handleInlineEdit}
+                />
+              ) : (
+                task.initialDate
+                  ? new Date(task.initialDate).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
                     })
-                  : "Not set"}
-              </span>
+                  : "Not set"
+              )}
+            </MetaCell>
+            <MetaCell label="Due" icon={<Calendar className="w-3 h-3" />}>
+              {isAdmin ? (
+                <span className={isOverdue ? "text-destructive" : undefined}>
+                  <EditableDateCell
+                    value={task.estimatedCompletionDate}
+                    taskId={taskId}
+                    field="estimatedCompletionDate"
+                    onSave={handleInlineEdit}
+                  />
+                </span>
+              ) : (
+                <span className={isOverdue ? "text-destructive" : undefined}>
+                  {task.estimatedCompletionDate
+                    ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "Not set"}
+                </span>
+              )}
             </MetaCell>
             <MetaCell label="Priority" icon={<Flag className="w-3 h-3" style={{ color: urg.color }} />}>
               <span style={{ color: urg.color }}>{urg.label}</span>
             </MetaCell>
             <MetaCell label="Logged" icon={<Clock className="w-3 h-3" />}>
               {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
-            </MetaCell>
-            <MetaCell label="Estimate" icon={<Clock className="w-3 h-3" />}>
-              {task.estimatedHours ? `${task.estimatedHours}h` : "Not set"}
             </MetaCell>
           </div>
         </div>
@@ -205,7 +234,7 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
           </Button>
         </Link>
         <p className="text-[11px] text-center text-muted-foreground leading-snug">
-          Use the panel for a quick look. Open the full page to edit, log time, or add parts.
+          Click start or due dates to edit. Open the full page to log time or add parts.
         </p>
       </div>
     </div>
