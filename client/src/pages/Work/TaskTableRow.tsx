@@ -91,6 +91,12 @@ export const TaskTableRow = memo(function TaskTableRow({
   const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
   const openTask = () => onSelectTask?.(task.id);
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return !!target.closest(
+      "a,button,input,textarea,select,[role='button'],[role='combobox'],[contenteditable='true'],[data-no-row-open]"
+    );
+  };
 
   return (
     <TableRow
@@ -99,9 +105,15 @@ export const TaskTableRow = memo(function TaskTableRow({
       aria-selected={onSelectTask ? selectedTaskId === task.id : undefined}
       aria-label={onSelectTask ? buildTaskRowAriaLabel(task) : undefined}
       className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""} ${rowClassName ?? ""}`}
-      onClick={openTask}
+      onClick={(e) => {
+        if (isInteractiveTarget(e.target)) return;
+        openTask();
+      }}
       tabIndex={onSelectTask ? 0 : undefined}
-      onKeyDown={onSelectTask ? (e) => handleKeyboardActivate(e, () => openTask()) : undefined}
+      onKeyDown={onSelectTask ? (e) => {
+        if (isInteractiveTarget(e.target)) return;
+        handleKeyboardActivate(e, () => openTask());
+      } : undefined}
     >
       <TableCell className="py-2.5">
         <div className={`flex items-center gap-2 ${isChildTask ? "pl-8" : ""}`}>
@@ -170,6 +182,8 @@ export const TaskTableRow = memo(function TaskTableRow({
           <SelectTrigger
             className="border-0 bg-transparent p-0 shadow-none h-auto"
             data-testid={`select-assignee-${task.id}`}
+            data-no-row-open
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             {assignee ? (
@@ -235,6 +249,8 @@ export const TaskTableRow = memo(function TaskTableRow({
             <SelectTrigger
               className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
               data-testid={`select-status-${task.id}`}
+              data-no-row-open
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <Badge
@@ -283,6 +299,8 @@ export const TaskTableRow = memo(function TaskTableRow({
           <SelectTrigger
             className="text-xs border-0 bg-transparent p-0 shadow-none h-auto"
             data-testid={`select-urgency-${task.id}`}
+            data-no-row-open
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <span className="flex items-center gap-1 cursor-pointer">
@@ -305,6 +323,8 @@ export const TaskTableRow = memo(function TaskTableRow({
           <SelectTrigger
             className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
             data-testid={`select-department-${task.id}`}
+            data-no-row-open
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <SelectValue placeholder="No department" />
@@ -327,6 +347,8 @@ export const TaskTableRow = memo(function TaskTableRow({
           <SelectTrigger
             className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
             data-testid={`select-property-${task.id}`}
+            data-no-row-open
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <span className="flex items-center gap-1.5 text-muted-foreground">

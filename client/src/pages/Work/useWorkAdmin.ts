@@ -82,6 +82,19 @@ export function useWorkAdmin() {
   }, [search]);
 
   useEffect(() => {
+    if (!isMobile) return;
+    const fromUrl = getTaskIdFromWorkSearch(search);
+    if (!fromUrl && !selectedTaskId && !panelMounted) return;
+    setSelectedTaskId(null);
+    setIsPanelFullscreen(false);
+    setPanelVisible(false);
+    setPanelMounted(false);
+    if (fromUrl) {
+      exitTo(setLocation, buildWorkPath(null, search));
+    }
+  }, [isMobile, panelMounted, search, selectedTaskId, setLocation]);
+
+  useEffect(() => {
     if (isMobile) return;
     const fromUrl = getTaskIdFromWorkSearch(search);
     if (!fromUrl) {
@@ -271,6 +284,10 @@ export function useWorkAdmin() {
   const handleAssigneeChange = (taskId: string, assignedToId: string) => {
     const data: Record<string, unknown> =
       assignedToId === "__none__" ? { assignedToId: null } : { assignedToId };
+    if (isMobile) {
+      setSelectedTaskId(null);
+      setIsPanelFullscreen(false);
+    }
     updateTaskMutation.mutate({ taskId, data });
   };
 

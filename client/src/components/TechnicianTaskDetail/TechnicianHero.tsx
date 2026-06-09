@@ -35,16 +35,18 @@ export function TechnicianHero({
   taskStarted,
   elapsedSeconds,
 }: TechnicianHeroProps) {
+  const taskName = task.name?.trim() || "Untitled task";
+
   return (
     <div
-      className="px-3.5 sm:px-4 pt-3.5 sm:pt-4 pb-4 sm:pb-5 shrink-0"
+      className="px-3.5 sm:px-4 py-3 shrink-0"
       style={{
         background: getGradient(task.status, isPaused),
         transition: "background 0.4s",
       }}
       data-testid="tech-hero"
     >
-      <div className="flex items-center justify-between flex-wrap gap-1.5 mb-3">
+      <div className="flex items-center justify-between flex-wrap gap-1.5 mb-2">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
           <button
             className="flex items-center justify-center shrink-0 rounded-full"
@@ -102,10 +104,10 @@ export function TechnicianHero({
         )}
       </div>
       <h1
-        className="text-base sm:text-lg font-bold text-white leading-snug mb-1.5 break-words"
+        className="text-sm sm:text-base font-semibold text-white leading-snug mb-1 line-clamp-2 break-words"
         data-testid="text-task-name"
       >
-        {task.name}
+        {taskName}
       </h1>
       {locationText && (
         <div
