@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,14 +18,14 @@ import { queryClient } from "./lib/queryClient";
 import { markRouteNavigation, measureRouteNavigation } from "@/lib/performanceMarks";
 import { AppRoutes } from "@/routes/AppRoutes";
 
-const Landing = lazy(() => import("@/pages/Landing"));
-const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
-const RequestAccess = lazy(() => import("@/pages/RequestAccess"));
-const AdminTaskDetailPage = lazy(() => import("@/pages/AdminTaskDetailPage"));
-const TaskDetail = lazy(() => import("@/pages/TaskDetail"));
-const MobileTaskDetail = lazy(() => import("@/components/MobileTaskDetail"));
-const NotificationsWidget = lazy(() => import("./components/NotificationsWidget"));
+const Landing = lazyWithRetry(() => import("@/pages/Landing"));
+const ForgotPassword = lazyWithRetry(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("@/pages/ResetPassword"));
+const RequestAccess = lazyWithRetry(() => import("@/pages/RequestAccess"));
+const AdminTaskDetailPage = lazyWithRetry(() => import("@/pages/AdminTaskDetailPage"));
+const TaskDetail = lazyWithRetry(() => import("@/pages/TaskDetail"));
+const MobileTaskDetail = lazyWithRetry(() => import("@/components/MobileTaskDetail"));
+const NotificationsWidget = lazyWithRetry(() => import("./components/NotificationsWidget"));
 
 function SuspenseFallback() {
   return (

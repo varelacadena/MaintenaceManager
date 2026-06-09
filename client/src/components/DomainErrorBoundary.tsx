@@ -2,6 +2,7 @@ import { Component, type ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { isChunkLoadError, reloadForStaleChunk } from "@/lib/lazyWithRetry";
 
 interface DomainErrorBoundaryProps {
   domain: string;
@@ -25,6 +26,9 @@ export default class DomainErrorBoundary extends Component<DomainErrorBoundaryPr
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
     console.error(`[${this.props.domain}] Error boundary caught:`, error, info.componentStack);
+    if (isChunkLoadError(error)) {
+      reloadForStaleChunk();
+    }
   }
 
   render() {
@@ -37,7 +41,9 @@ export default class DomainErrorBoundary extends Component<DomainErrorBoundaryPr
               <h3 className="text-base font-semibold">{this.props.domain}</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              Something went wrong in this section. The rest of the app is still working.
+              {this.state.error && isChunkLoadError(this.state.error)
+                ? "A new version of the app was deployed. Reload to continue."
+                : "Something went wrong in this section. The rest of the app is still working."}
             </p>
             {this.state.error && (
               <p className="text-xs text-muted-foreground font-mono bg-muted rounded-md px-3 py-2 text-left break-all">
