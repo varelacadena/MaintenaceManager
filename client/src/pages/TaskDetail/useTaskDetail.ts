@@ -31,8 +31,9 @@ import { useTaskDetailMutations } from "./useTaskDetailMutations";
 type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
 
 export function useTaskDetail() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
   const [location, navigate] = useLocation();
+  const id = params.id || location.split("/tasks/")[1]?.split("?")[0]?.split("/")[0];
   const { user } = useAuth();
   const taskPagePath = `/tasks/${id}`;
   const { toast } = useToast();
@@ -107,6 +108,12 @@ export function useTaskDetail() {
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/tasks/${encodeURIComponent(id!)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch task");
+      return res.json();
+    },
+    enabled: !!id,
   });
 
   const { data: timeEntries = [] } = useQuery<TimeEntry[]>({

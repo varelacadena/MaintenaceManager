@@ -6,8 +6,8 @@ import { exitTo } from "@/lib/navigation";
 
 export default function AdminTaskDetailPage() {
   const params = useParams<{ id: string }>();
-  const [, setLocation] = useLocation();
-  const taskId = params.id || "";
+  const [location, setLocation] = useLocation();
+  const taskId = params.id || location.split("/tasks/")[1]?.split("?")[0]?.split("/")[0] || "";
 
   const { data: allUsers = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
