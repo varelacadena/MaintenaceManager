@@ -14,9 +14,14 @@ export function filterStudentWorkTasks(tasks: Task[], userId: string): Task[] {
   });
 }
 
-/** Tasks shown on the technician Work page (directly assigned only; pool jobs use Grab a Job). */
+/** Tasks shown on the technician Work page (assigned, additional assignee, or helper). Pool jobs use Grab a Job. */
 export function filterTechnicianWorkTasks(tasks: Task[], userId: string): Task[] {
-  return tasks.filter((t) => !t.parentTaskId && t.assignedToId === userId);
+  return tasks.filter((t) => {
+    if (t.parentTaskId) return false;
+    const ext = t as TaskWithHelperFlag;
+    if (ext.isHelper) return true;
+    return t.assignedToId === userId;
+  });
 }
 
 export const getTaskDate = (task: Task): Date | null => {

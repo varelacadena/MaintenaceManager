@@ -33,6 +33,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
     selectedSpaceId, setSelectedSpaceId,
     selectedProperty, isBuilding,
     properties, areas, spaces, equipment, allVehicles,
+    showVehicle,
     selectedAssets, handleAddAsset, handleRemoveAsset, multiAssetMode,
     locationScope, setLocationScope, setSelectedAssets,
     selectedPropertyIds, setSelectedPropertyIds,
@@ -165,6 +166,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
           }}
           selectedPropertyIds={selectedPropertyIds}
           onSelectedPropertyIdsChange={setSelectedPropertyIds}
+          showVehicle={showVehicle}
         />
       </section>
 

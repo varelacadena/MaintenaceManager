@@ -45,7 +45,7 @@ describe("filterStudentWorkTasks", () => {
 describe("filterTechnicianWorkTasks", () => {
   const userId = "tech-1";
 
-  it("includes only tasks assigned to the technician", () => {
+  it("includes tasks assigned to the technician", () => {
     const tasks = [
       { ...baseTask, id: "a", assignedToId: userId },
       { ...baseTask, id: "b", assignedToId: "other" },
@@ -53,5 +53,19 @@ describe("filterTechnicianWorkTasks", () => {
     ] as Task[];
     const result = filterTechnicianWorkTasks(tasks, userId);
     expect(result.map((t) => t.id)).toEqual(["a"]);
+  });
+
+  it("includes helper tasks", () => {
+    const tasks = [
+      { ...baseTask, id: "h", assignedToId: "other", isHelper: true },
+    ] as (Task & { isHelper?: boolean })[];
+    expect(filterTechnicianWorkTasks(tasks as Task[], userId)).toHaveLength(1);
+  });
+
+  it("excludes subtasks", () => {
+    const tasks = [
+      { ...baseTask, id: "s", assignedToId: userId, parentTaskId: "parent" },
+    ] as Task[];
+    expect(filterTechnicianWorkTasks(tasks, userId)).toHaveLength(0);
   });
 });

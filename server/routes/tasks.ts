@@ -23,6 +23,7 @@ export function registerTaskRoutes(app: Express) {
     propertyId: z.string().trim().min(1, "Property is required"),
     spaceId: z.string().trim().optional().or(z.literal("")),
     equipmentId: z.string().trim().optional().or(z.literal("")),
+    vehicleId: z.string().trim().optional().or(z.literal("")),
     areaId: z.string().trim().optional().or(z.literal("")),
   });
 
@@ -311,6 +312,7 @@ export function registerTaskRoutes(app: Express) {
         propertyId: payload.propertyId,
         spaceId: payload.spaceId || undefined,
         equipmentId: payload.equipmentId || undefined,
+        vehicleId: payload.vehicleId || undefined,
         areaId: payload.areaId || undefined,
         assignedToId: userId,
         assignedVendorId: undefined,

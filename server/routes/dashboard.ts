@@ -42,9 +42,19 @@ async function fetchWorkTasksForAdmin() {
   );
 }
 
-async function fetchAssignedTasks(userId: string) {
-  const tasks = await storage.getTasks({ assignedToId: userId });
-  return tasks.map((task) => toTaskListSummary(task));
+async function fetchTechnicianDashboardTasks(userId: string) {
+  const assignedTasks = await storage.getTasks({ assignedToId: userId });
+  const helperTaskIds = await storage.getHelperTaskIds(userId);
+  if (helperTaskIds.length === 0) {
+    return assignedTasks.map((task) => toTaskListSummary(task));
+  }
+
+  const assignedIds = new Set(assignedTasks.map((task) => task.id));
+  const helperTasks = (await storage.getTasks({ taskIds: helperTaskIds }))
+    .filter((task) => !assignedIds.has(task.id))
+    .map((task) => toTaskListSummary({ ...task, isHelper: true }));
+
+  return [...assignedTasks.map((task) => toTaskListSummary(task)), ...helperTasks];
 }
 
 async function fetchDirectoryUsers() {
@@ -84,7 +94,7 @@ export function registerDashboardRoutes(app: Express) {
             ? storage.getTasks({ assignedToIdOrPool: { userId, pool: "student_pool" } }).then((rows) =>
                 rows.map((task) => toTaskListSummary(task)),
               )
-            : fetchAssignedTasks(userId),
+            : fetchTechnicianDashboardTasks(userId),
           fetchDirectoryUsers(),
           storage.getProperties(),
         ]);

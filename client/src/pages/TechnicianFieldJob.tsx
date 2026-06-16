@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, ClipboardList, MapPin, Plus, Send } from "lucide-react";
-import type { Area, Equipment, Property, Space, Task } from "@shared/schema";
+import type { Area, Equipment, Property, Space, Task, Vehicle } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import { isAutoShopName } from "@/lib/autoShopUtils";
+import { sortByName } from "@/lib/propertyDisplayUtils";
 
 type FieldJobForm = {
   name: string;
@@ -26,6 +28,7 @@ type FieldJobForm = {
   propertyId: string;
   spaceId: string;
   equipmentId: string;
+  vehicleId: string;
   areaId: string;
 };
 
@@ -42,6 +45,7 @@ const defaultForm: FieldJobForm = {
   propertyId: "",
   spaceId: "",
   equipmentId: "",
+  vehicleId: "",
   areaId: "",
 };
 
@@ -60,6 +64,11 @@ export default function TechnicianFieldJob() {
   const { data: areas = [] } = useQuery<Area[]>({
     queryKey: ["/api/areas"],
   });
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  const sortedProperties = useMemo(() => sortByName(properties), [properties]);
 
   const selectedProperty = useMemo(
     () => properties.find((property) => property.id === form.propertyId),
@@ -88,7 +97,10 @@ export default function TechnicianFieldJob() {
 
   const selectedSpace = spaces.find((space) => space.id === form.spaceId);
   const selectedEquipment = equipment.find((item) => item.id === form.equipmentId);
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === form.vehicleId);
   const selectedArea = areas.find((area) => area.id === form.areaId);
+  const showVehicle =
+    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
   const progressValue = ((step + 1) / steps.length) * 100;
   const currentStep = steps[step];
 
@@ -101,6 +113,7 @@ export default function TechnicianFieldJob() {
         propertyId: form.propertyId,
         spaceId: form.spaceId || undefined,
         equipmentId: form.equipmentId || undefined,
+        vehicleId: form.vehicleId || undefined,
         areaId: form.areaId || undefined,
       });
       return response.json() as Promise<Task>;
@@ -274,21 +287,31 @@ export default function TechnicianFieldJob() {
               <Select
                 value={form.propertyId}
                 onValueChange={(value) => {
-                  setForm((current) => ({
-                    ...current,
-                    propertyId: value,
-                    spaceId: "",
-                    equipmentId: "",
-                  }));
+                  const property = sortedProperties.find((item) => item.id === value);
+                  setForm((current) => {
+                    const area = areas.find((item) => item.id === current.areaId);
+                    const nextShowVehicle =
+                      isAutoShopName(property?.name) || isAutoShopName(area?.name);
+                    return {
+                      ...current,
+                      propertyId: value,
+                      spaceId: "",
+                      equipmentId: "",
+                      vehicleId: nextShowVehicle ? current.vehicleId : "",
+                    };
+                  });
                 }}
               >
                 <SelectTrigger className={touchSelectClass} data-testid="select-field-job-property">
-                  <SelectValue placeholder="Select property" />
+                  <SelectValue placeholder="Select building" />
                 </SelectTrigger>
                 <SelectContent>
-                  {properties.map((property) => (
+                  {sortedProperties.map((property) => (
                     <SelectItem key={property.id} value={property.id}>
                       {property.name}
+                      {property.address && (
+                        <span className="text-muted-foreground ml-1">({property.address})</span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -329,7 +352,13 @@ export default function TechnicianFieldJob() {
               <Select
                 value={form.equipmentId || "__none__"}
                 disabled={!form.propertyId}
-                onValueChange={(value) => updateForm("equipmentId", value === "__none__" ? "" : value)}
+                onValueChange={(value) => {
+                  setForm((current) => ({
+                    ...current,
+                    equipmentId: value === "__none__" ? "" : value,
+                    vehicleId: value !== "__none__" ? "" : current.vehicleId,
+                  }));
+                }}
               >
                 <SelectTrigger className={touchSelectClass} data-testid="select-field-job-equipment">
                   <SelectValue placeholder="Optional equipment" />
@@ -345,11 +374,49 @@ export default function TechnicianFieldJob() {
               </Select>
             </div>
 
+            {showVehicle && (
+              <div className="space-y-2">
+                <Label>Vehicle</Label>
+                <Select
+                  value={form.vehicleId || "__none__"}
+                  onValueChange={(value) => {
+                    setForm((current) => ({
+                      ...current,
+                      vehicleId: value === "__none__" ? "" : value,
+                      equipmentId: value !== "__none__" ? "" : current.equipmentId,
+                    }));
+                  }}
+                >
+                  <SelectTrigger className={touchSelectClass} data-testid="select-field-job-vehicle">
+                    <SelectValue placeholder="Optional vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No specific vehicle</SelectItem>
+                    {vehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vehicleId}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Department</Label>
               <Select
                 value={form.areaId || "__none__"}
-                onValueChange={(value) => updateForm("areaId", value === "__none__" ? "" : value)}
+                onValueChange={(value) => {
+                  const areaId = value === "__none__" ? "" : value;
+                  const area = areas.find((item) => item.id === areaId);
+                  const nextShowVehicle =
+                    isAutoShopName(selectedProperty?.name) || isAutoShopName(area?.name);
+                  setForm((current) => ({
+                    ...current,
+                    areaId,
+                    vehicleId: nextShowVehicle ? current.vehicleId : "",
+                  }));
+                }}
               >
                 <SelectTrigger className={touchSelectClass} data-testid="select-field-job-department">
                   <SelectValue placeholder="Optional department" />
@@ -384,6 +451,9 @@ export default function TechnicianFieldJob() {
                   <p className="text-muted-foreground break-words">
                     {selectedSpace?.name || "No specific space"}
                     {selectedEquipment ? ` - ${selectedEquipment.name}` : ""}
+                    {selectedVehicle
+                      ? ` - ${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.vehicleId})`
+                      : ""}
                   </p>
                   {selectedArea && <p className="text-muted-foreground break-words">{selectedArea.name}</p>}
                 </div>

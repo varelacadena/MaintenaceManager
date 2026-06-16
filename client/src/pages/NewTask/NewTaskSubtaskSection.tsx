@@ -18,7 +18,7 @@ interface NewTaskSubtaskSectionProps {
 }
 
 export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
-  const { pendingSubTasks, setPendingSubTasks, equipment, allVehicles } = ctx;
+  const { pendingSubTasks, setPendingSubTasks, equipment, allVehicles, showVehicle } = ctx;
 
   return (
     <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-subtasks">
@@ -83,7 +83,7 @@ export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
                     }}
                     data-testid={`textarea-subtask-description-${index}`}
                   />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className={`grid gap-2 ${showVehicle ? "grid-cols-2" : "grid-cols-1"}`}>
                     <div>
                       <Label className="text-xs text-muted-foreground mb-1 block">Equipment (optional)</Label>
                       <Select
@@ -105,29 +105,31 @@ export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground mb-1 block">Vehicle (optional)</Label>
-                      <Select
-                        value={subTask.vehicleId || "none"}
-                        onValueChange={(value) => {
-                          setPendingSubTasks(prev => prev.map((st, i) =>
-                            i === index ? { ...st, vehicleId: value === "none" ? "" : value, equipmentId: value !== "none" ? "" : st.equipmentId } : st
-                          ));
-                        }}
-                      >
-                        <SelectTrigger data-testid={`select-subtask-vehicle-${index}`}>
-                          <SelectValue placeholder="None" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {allVehicles.map((v) => (
-                            <SelectItem key={v.id} value={v.id}>
-                              {v.make} {v.model} {v.vehicleId}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {showVehicle && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground mb-1 block">Vehicle (optional)</Label>
+                        <Select
+                          value={subTask.vehicleId || "none"}
+                          onValueChange={(value) => {
+                            setPendingSubTasks(prev => prev.map((st, i) =>
+                              i === index ? { ...st, vehicleId: value === "none" ? "" : value, equipmentId: value !== "none" ? "" : st.equipmentId } : st
+                            ));
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-subtask-vehicle-${index}`}>
+                            <SelectValue placeholder="None" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {allVehicles.map((v) => (
+                              <SelectItem key={v.id} value={v.id}>
+                                {v.make} {v.model} {v.vehicleId}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Button

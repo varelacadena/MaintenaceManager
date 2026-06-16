@@ -12,6 +12,7 @@ import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
 import type { User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle, Area } from "@shared/schema";
 import { z } from "zod";
 import type { SelectedAsset } from "@/components/task-form/TaskLocationFields";
+import { isAutoShopName } from "@/lib/autoShopUtils";
 
 const equipmentFormSchema = insertEquipmentSchema.omit({ propertyId: true }).extend({
   name: z.string().min(1, "Name is required"),
@@ -405,6 +406,11 @@ export function useNewTask() {
     },
   });
 
+  const selectedAreaId = form.watch("areaId");
+  const selectedArea = areas.find((area) => area.id === selectedAreaId);
+  const showVehicle =
+    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
+
   const { data: requester } = useQuery<User>({
     queryKey: ["/api/users", request?.requesterId],
     enabled: !!request?.requesterId,
@@ -433,6 +439,16 @@ export function useNewTask() {
       form.setValue("areaId", project.areaId);
     }
   }, [project, form]);
+
+  useEffect(() => {
+    if (!showVehicle) {
+      form.setValue("vehicleId", undefined);
+      setSelectedAssets((prev) => prev.filter((asset) => asset.type !== "vehicle"));
+      setPendingSubTasks((prev) =>
+        prev.map((subTask) => ({ ...subTask, vehicleId: "" }))
+      );
+    }
+  }, [showVehicle, form]);
 
   useEffect(() => {
     const assignedVendorId = form.watch("assignedVendorId");
@@ -645,6 +661,7 @@ export function useNewTask() {
     allVehicles,
     selectedProperty,
     isBuilding,
+    showVehicle,
     spaces,
     equipment,
     checklistGroups, setChecklistGroups,

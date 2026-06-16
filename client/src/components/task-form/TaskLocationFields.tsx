@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Property, Space, Equipment, Vehicle } from "@shared/schema";
+import { sortByName, propertyMatchesSearch } from "@/lib/propertyDisplayUtils";
 
 export type SelectedAsset = {
   type: "equipment" | "vehicle";
@@ -54,6 +55,7 @@ interface TaskLocationFieldsProps {
   onLocationScopeChange: (scope: "single" | "multiple" | "campus") => void;
   selectedPropertyIds: string[];
   onSelectedPropertyIdsChange: (ids: string[]) => void;
+  showVehicle?: boolean;
 }
 
 const MAX_VISIBLE_TAGS = 3;
@@ -81,6 +83,7 @@ export function TaskLocationFields({
   onLocationScopeChange,
   selectedPropertyIds,
   onSelectedPropertyIdsChange,
+  showVehicle = false,
 }: TaskLocationFieldsProps) {
   const [multiSelectOpen, setMultiSelectOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
@@ -92,14 +95,10 @@ export function TaskLocationFields({
     .filter((a) => a.type === "vehicle")
     .map((a) => a.id);
 
-  const sortedProperties = [...properties].sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-  );
+  const sortedProperties = sortByName(properties);
   const buildings = sortedProperties.filter((p) => p.type === "building");
   const filteredBuildings = buildingSearch.trim()
-    ? buildings.filter((b) =>
-        b.name.toLowerCase().includes(buildingSearch.toLowerCase())
-      )
+    ? buildings.filter((b) => propertyMatchesSearch(b, buildingSearch))
     : buildings;
 
   const handleScopeChange = (scope: "single" | "multiple" | "campus") => {
@@ -292,6 +291,11 @@ export function TaskLocationFields({
                         />
                         <span className="text-sm truncate flex-1">
                           {building.name}
+                          {building.address && (
+                            <span className="text-muted-foreground ml-1">
+                              ({building.address})
+                            </span>
+                          )}
                         </span>
                         {isSelected && (
                           <Check className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -381,7 +385,7 @@ export function TaskLocationFields({
             name="propertyId"
             render={({ field }: { field: any }) => (
               <FormItem>
-                <FormLabel>Property *</FormLabel>
+                <FormLabel>Building *</FormLabel>
                 <Select
                   onValueChange={(value: string) => {
                     field.onChange(value);
@@ -389,16 +393,17 @@ export function TaskLocationFields({
                     setSelectedSpaceId("");
                     form.setValue("spaceId", undefined);
                     form.setValue("equipmentId", undefined);
+                    form.setValue("vehicleId", undefined);
                   }}
                   value={field.value || ""}
                 >
                   <FormControl>
                     <SelectTrigger data-testid="select-property">
-                      <SelectValue placeholder="Select a property" />
+                      <SelectValue placeholder="Select a building" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {sortedProperties.map((property) => (
+                    {buildings.map((property) => (
                       <SelectItem key={property.id} value={property.id}>
                         {property.name}
                         {property.address && (
@@ -529,27 +534,31 @@ export function TaskLocationFields({
                 </SelectContent>
               </Select>
 
-              <FormLabel>Add Vehicle</FormLabel>
-              <Select
-                onValueChange={handleVehicleSelect}
-                value="__none__"
-              >
-                <FormControl>
-                  <SelectTrigger data-testid="select-vehicle">
-                    <SelectValue placeholder="Select vehicle to add" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {vehicles
-                    .filter((v) => !alreadySelectedVehicleIds.includes(v.id))
-                    .map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.make} {v.model} {v.year} — {v.vehicleId}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              {showVehicle && (
+                <>
+                  <FormLabel>Add Vehicle</FormLabel>
+                  <Select
+                    onValueChange={handleVehicleSelect}
+                    value="__none__"
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-vehicle">
+                        <SelectValue placeholder="Select vehicle to add" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {vehicles
+                        .filter((v) => !alreadySelectedVehicleIds.includes(v.id))
+                        .map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.make} {v.model} {v.year} — {v.vehicleId}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -595,36 +604,38 @@ export function TaskLocationFields({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="vehicleId"
-                render={({ field }: { field: any }) => (
-                  <FormItem>
-                    <FormLabel>Vehicle</FormLabel>
-                    <Select
-                      onValueChange={(val: string) => {
-                        field.onChange(val === "__none__" ? undefined : val);
-                      }}
-                      value={field.value || "__none__"}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-vehicle">
-                          <SelectValue placeholder="Select vehicle (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
-                        {vehicles.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.make} {v.model} {v.year} — {v.vehicleId}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {showVehicle && (
+                <FormField
+                  control={form.control}
+                  name="vehicleId"
+                  render={({ field }: { field: any }) => (
+                    <FormItem>
+                      <FormLabel>Vehicle</FormLabel>
+                      <Select
+                        onValueChange={(val: string) => {
+                          field.onChange(val === "__none__" ? undefined : val);
+                        }}
+                        value={field.value || "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-vehicle">
+                            <SelectValue placeholder="Select vehicle (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {vehicles.map((v) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.make} {v.model} {v.year} — {v.vehicleId}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </>
           )}
 
@@ -635,7 +646,7 @@ export function TaskLocationFields({
               size="sm"
               onClick={() => {
                 const equipmentId = form.getValues("equipmentId");
-                const vehicleId = form.getValues("vehicleId");
+                const vehicleId = showVehicle ? form.getValues("vehicleId") : undefined;
                 if (equipmentId) {
                   const item = equipment.find((e) => e.id === equipmentId);
                   if (item) {
@@ -658,7 +669,7 @@ export function TaskLocationFields({
               data-testid="button-add-another-asset"
             >
               <Plus className="w-3 h-3 mr-1" />
-              Add Another Equipment/Vehicle
+              {showVehicle ? "Add Another Equipment/Vehicle" : "Add Another Equipment"}
             </Button>
           )}
         </>

@@ -9,6 +9,7 @@ import {
   groupTasksByDay,
   DateFilterBar,
   DaySeparator,
+  type TaskWithHelperFlag,
 } from "./helpers";
 import { FieldWorkActiveList } from "./FieldWorkActiveList";
 import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
@@ -39,6 +40,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
     const property = getPropertyById(task.propertyId);
     const isInProgress = task.status === "in_progress";
     const isHighUrgency = task.urgency === "high";
+    const isHelper = (task as TaskWithHelperFlag).isHelper;
     return (
       <FieldWorkTaskCard
         key={task.id}
@@ -77,6 +79,11 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
           {isInProgress && (
             <Badge variant="default" className="shrink-0 max-w-[5.75rem] justify-center truncate text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
               In Progress
+            </Badge>
+          )}
+          {isHelper && !isInProgress && (
+            <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs" data-testid={`badge-helper-${task.id}`}>
+              Team
             </Badge>
           )}
           {isHighUrgency && !isInProgress && (
