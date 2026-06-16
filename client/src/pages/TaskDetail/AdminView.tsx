@@ -134,7 +134,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
               <div className="flex items-start gap-3">
                 <Users className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium mb-2">Student Helpers</p>
+                  <p className="font-medium mb-2">Additional Assignees</p>
                   <div className="flex flex-wrap gap-2">
                     {taskHelpers.map((h: { userId: string; user?: { id: string; name: string; email: string; role: string } }) => (
                       <Badge key={h.userId} variant="secondary" data-testid={`badge-helper-${h.userId}`}>

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import type { Task, User } from "@shared/schema";
+import { TechnicianWorkView } from "../TechnicianWorkView";
 import { WorkStatusGroupHeader } from "../WorkStatusGroupHeader";
 import { WorkTasksEmptyState } from "../WorkTasksEmptyState";
 
@@ -89,5 +91,30 @@ describe("WorkTasksEmptyState", () => {
     expect(screen.getByTestId("work-tasks-empty")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-empty-view-projects"));
     expect(onOpenProjectsTab).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("TechnicianWorkView", () => {
+  it("opens the guided add job flow from My Tasks", () => {
+    const navigate = vi.fn();
+    const user = { id: "tech-1", role: "technician" } as User;
+    const tasks = [
+      {
+        id: "task-1",
+        name: "Today task",
+        description: "Task description",
+        urgency: "medium",
+        initialDate: new Date(),
+        estimatedCompletionDate: new Date(),
+        assignedToId: "tech-1",
+        status: "not_started",
+        taskType: "one_time",
+      },
+    ] as Task[];
+
+    render(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+
+    fireEvent.click(screen.getByTestId("button-add-field-job"));
+    expect(navigate).toHaveBeenCalledWith("/work/add-job");
   });
 });

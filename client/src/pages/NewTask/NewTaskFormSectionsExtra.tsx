@@ -25,6 +25,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
     vendors, projects,
     selectedHelperIds, setSelectedHelperIds,
   } = ctx;
+  const primaryAssigneeId = form.watch("assignedToId");
 
   return (
     <div className="bg-muted/30 border rounded-xl p-5 shadow-sm space-y-6">
@@ -144,6 +145,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
                 form.setValue("assignedVendorId", undefined);
                 form.setValue("executorType", tab.executorType);
                 form.setValue("assignedPool", tab.pool);
+                setSelectedHelperIds([]);
               }}
               className={`flex-1 py-1.5 text-xs font-medium rounded-sm transition-colors ${
                 assignmentOption === tab.value
@@ -192,7 +194,13 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
               name="assignedToId"
               render={({ field }) => (
                 <FormItem>
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedHelperIds(prev => prev.filter(id => id !== value));
+                    }}
+                    value={field.value || ""}
+                  >
                     <FormControl>
                       <SelectTrigger className="bg-background" data-testid="select-assigned-user">
                         <SelectValue placeholder="Select a technician" />
@@ -213,10 +221,43 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
               )}
             />
             <div className="p-3 border rounded-md bg-muted/30 space-y-2">
+              <p className="text-xs font-medium">Additional Technicians</p>
+              <div className="flex flex-wrap gap-1.5">
+                {technicianUsers
+                  .filter(t => t.id !== primaryAssigneeId)
+                  .map((technician) => {
+                    const isSelected = selectedHelperIds.includes(technician.id);
+                    return (
+                      <button
+                        key={technician.id}
+                        type="button"
+                        data-testid={`additional-tech-toggle-${technician.id}`}
+                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border hover-elevate"
+                        }`}
+                        onClick={() => {
+                          setSelectedHelperIds(prev =>
+                            isSelected
+                              ? prev.filter(id => id !== technician.id)
+                              : [...prev, technician.id]
+                          );
+                        }}
+                      >
+                        {technician.firstName && technician.lastName
+                          ? `${technician.firstName} ${technician.lastName}`
+                          : technician.username}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+            <div className="p-3 border rounded-md bg-muted/30 space-y-2">
               <p className="text-xs font-medium">Student Helpers</p>
               <div className="flex flex-wrap gap-1.5">
                 {studentUsers
-                  .filter(s => s.id !== form.watch("assignedToId"))
+                  .filter(s => s.id !== primaryAssigneeId)
                   .map((student) => {
                     const isSelected = selectedHelperIds.includes(student.id);
                     return (
@@ -246,7 +287,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
               </div>
               {selectedHelperIds.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {selectedHelperIds.length} helper{selectedHelperIds.length !== 1 ? "s" : ""} selected
+                  {selectedHelperIds.length} additional assignee{selectedHelperIds.length !== 1 ? "s" : ""} selected
                 </p>
               )}
             </div>

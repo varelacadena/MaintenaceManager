@@ -156,12 +156,12 @@ export const TaskTableRow = memo(function TaskTableRow({
               <>
                 {ext.isHelper && (
                   <Badge variant="outline" className="shrink-0 text-xs px-1.5 py-0" data-testid={`badge-helper-${task.id}`}>
-                    Helper
+                    Additional
                   </Badge>
                 )}
                 {ext.helperCount != null && ext.helperCount > 0 && (
                   <Badge variant="secondary" className="shrink-0 text-xs px-1.5 py-0" data-testid={`badge-helpers-count-${task.id}`}>
-                    {ext.helperCount} Helper{ext.helperCount > 1 ? "s" : ""}
+                    {ext.helperCount} Additional
                   </Badge>
                 )}
               </>

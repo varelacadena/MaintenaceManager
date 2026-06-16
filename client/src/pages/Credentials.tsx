@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDirectoryQueries, upsertUserInDirectoryCaches } from "@/lib/userQueryInvalidation";
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,8 +80,9 @@ export default function Credentials() {
       const response = await apiRequest("POST", "/api/credentials/create", userData);
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    onSuccess: (createdUser: User) => {
+      upsertUserInDirectoryCaches(queryClient, createdUser);
+      invalidateUserDirectoryQueries(queryClient);
       setIsCreateDialogOpen(false);
       resetCreateForm();
       toast({ title: "User created successfully" });
@@ -100,7 +102,7 @@ export default function Credentials() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateUserDirectoryQueries(queryClient);
       setIsEditDialogOpen(false);
       toast({ title: "User updated successfully" });
     },
@@ -121,7 +123,7 @@ export default function Credentials() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateUserDirectoryQueries(queryClient);
       setIsPasswordDialogOpen(false);
       setEditPassword("");
       toast({ title: "Password updated successfully" });
@@ -141,7 +143,7 @@ export default function Credentials() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateUserDirectoryQueries(queryClient);
       toast({ title: "Role updated successfully" });
     },
     onError: (error: any) => {
@@ -159,7 +161,7 @@ export default function Credentials() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateUserDirectoryQueries(queryClient);
       toast({ title: "User deleted successfully" });
     },
     onError: (error: any) => {

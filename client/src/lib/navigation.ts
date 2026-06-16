@@ -46,7 +46,7 @@ export function getParentRoute(pathname: string, role?: string): string {
   if (/^\/tasks\/[^/]+\/edit$/.test(path)) {
     return path.replace(/\/edit$/, "");
   }
-  if (path === "/tasks/new") {
+  if (path === "/tasks/new" || path === "/work/add-job") {
     return "/work";
   }
   if (/^\/tasks\/[^/]+$/.test(path)) {
@@ -103,6 +103,10 @@ export function hasPageBackControl(pathname: string, role?: string): boolean {
   const path = pathname.split("?")[0].replace(/\/$/, "") || "/";
 
   if (/^\/tasks\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (path === "/work/add-job") {
     return true;
   }
 

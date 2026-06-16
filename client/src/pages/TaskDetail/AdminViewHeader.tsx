@@ -141,7 +141,7 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
             {taskHelpers.length > 0 && (
               <div className="flex items-center gap-1" data-testid="text-helpers-count">
                 <Users className="w-3.5 h-3.5" />
-                <span>{taskHelpers.length} helper{taskHelpers.length !== 1 ? "s" : ""}</span>
+                <span>{taskHelpers.length} additional assignee{taskHelpers.length !== 1 ? "s" : ""}</span>
               </div>
             )}
             <div className={`flex items-center gap-1 ${isOverdue ? "text-red-500" : ""}`}>

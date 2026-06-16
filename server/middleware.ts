@@ -98,9 +98,12 @@ export async function canAccessTask(userId: string, taskId: string): Promise<boo
   const task = await storage.getTask(taskId);
   if (!task) return false;
 
-  // Technicians can access tasks directly assigned to them, or technician-type tasks in the technician pool
+  // Technicians can access tasks directly assigned to them, technician-type tasks in the technician pool,
+  // or tasks where they were added as an additional assignee.
   if (user.role === "technician") {
     if (task.assignedToId === userId) return true;
+    const isHelper = await storage.isTaskHelper(taskId, userId);
+    if (isHelper) return true;
     return task.executorType === "technician" && task.assignedPool === "technician_pool";
   }
 

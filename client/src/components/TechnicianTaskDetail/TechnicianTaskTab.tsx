@@ -150,7 +150,7 @@ export function TechnicianTaskTab({
             className="text-xs uppercase font-medium mb-2 text-muted-foreground"
             style={{ letterSpacing: "0.05em" }}
           >
-            Student Helpers ({taskHelpers.length})
+            Additional Assignees ({taskHelpers.length})
           </p>
           <div className="flex flex-wrap gap-1.5">
             {taskHelpers.map((h) => (

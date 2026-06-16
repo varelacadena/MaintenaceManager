@@ -16,6 +16,16 @@ import { eq } from "drizzle-orm";
 import { toTaskListSummary } from "../taskDto";
 
 export function registerTaskRoutes(app: Express) {
+  const fieldJobSchema = z.object({
+    name: z.string().trim().min(1, "Job name is required").max(200, "Job name is too long"),
+    description: z.string().trim().min(1, "Description is required"),
+    urgency: z.enum(["low", "medium", "high"]).default("medium"),
+    propertyId: z.string().trim().min(1, "Property is required"),
+    spaceId: z.string().trim().optional().or(z.literal("")),
+    equipmentId: z.string().trim().optional().or(z.literal("")),
+    areaId: z.string().trim().optional().or(z.literal("")),
+  });
+
   app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.userId;
@@ -106,7 +116,7 @@ export function registerTaskRoutes(app: Express) {
 
       let allTasks = await storage.getTasks(filters);
 
-      if (currentUser.role === "student" && !equipmentIdFilter) {
+      if ((currentUser.role === "student" || currentUser.role === "technician") && !equipmentIdFilter) {
         const helperTaskIds = await storage.getHelperTaskIds(userId);
         if (helperTaskIds.length > 0) {
           const helperFilters: any = { taskIds: helperTaskIds };
@@ -205,7 +215,9 @@ export function registerTaskRoutes(app: Express) {
         const user = helperUsersById.get(h.userId);
         return user ? { id: h.id, userId: h.userId, taskId: h.taskId, assignedAt: h.assignedAt, user: { id: user.id, name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username, email: user.email, role: user.role } } : null;
       });
-      const isHelper = currentUser.role === "student" ? await storage.isTaskHelper(task.id, userId) : false;
+      const isHelper = (currentUser.role === "student" || currentUser.role === "technician")
+        ? await storage.isTaskHelper(task.id, userId)
+        : false;
       res.json({ ...task, helpers: helperUsers.filter(Boolean), isHelper });
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch task");
@@ -265,7 +277,7 @@ export function registerTaskRoutes(app: Express) {
         task: {
           ...task,
           helpers: helpersWithUsers,
-          isHelper: role === "student" ? await storage.isTaskHelper(task.id, userId) : false,
+          isHelper: (role === "student" || role === "technician") ? await storage.isTaskHelper(task.id, userId) : false,
         },
         subtasks,
         uploads: [...taskUploads, ...subtaskUploadArrays.flat()],
@@ -275,6 +287,70 @@ export function registerTaskRoutes(app: Express) {
       });
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch task detail");
+    }
+  });
+
+  app.post("/api/tasks/field-job", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const currentUser = req.currentUser ?? await storage.getUser(userId);
+
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      if (currentUser.role !== "technician") {
+        return res.status(403).json({ message: "Only technicians can add field jobs" });
+      }
+
+      const payload = fieldJobSchema.parse(req.body);
+      const today = new Date();
+      const taskData = insertTaskSchema.parse({
+        name: payload.name,
+        description: payload.description,
+        urgency: payload.urgency,
+        propertyId: payload.propertyId,
+        spaceId: payload.spaceId || undefined,
+        equipmentId: payload.equipmentId || undefined,
+        areaId: payload.areaId || undefined,
+        assignedToId: userId,
+        assignedVendorId: undefined,
+        taskType: "one_time",
+        executorType: "technician",
+        assignedPool: null,
+        status: "not_started",
+        createdById: userId,
+        initialDate: today,
+        estimatedCompletionDate: today,
+        requiresPhoto: false,
+        requiresEstimate: false,
+        estimateStatus: "none",
+      });
+
+      await validateTaskLocation({
+        propertyId: taskData.propertyId,
+        spaceId: taskData.spaceId,
+        equipmentId: taskData.equipmentId,
+      });
+
+      const task = await storage.createTask(taskData);
+      const displayName = currentUser.firstName && currentUser.lastName
+        ? `${currentUser.firstName} ${currentUser.lastName}`
+        : currentUser.username;
+
+      try {
+        await storage.createTaskNote({
+          taskId: task.id,
+          userId,
+          content: `Field job added by ${displayName}`,
+          noteType: "job_note",
+        });
+      } catch (noteError) {
+        console.error("Failed to create field job note:", noteError);
+      }
+
+      res.status(201).json(task);
+    } catch (error) {
+      handleFacilityRouteError(res, error, "Failed to add field job");
     }
   });
 
@@ -355,14 +431,18 @@ export function registerTaskRoutes(app: Express) {
             );
           }
         }
-        if (task.assignedToId) {
-          const assignedUser = await storage.getUser(task.assignedToId);
-          if (assignedUser) {
-            const fakeRequest = {
-              title: task.name,
-              description: task.description,
-              urgency: task.urgency,
-            } as any;
+        const assignedUserIds = [
+          task.assignedToId,
+          ...(Array.isArray(helperUserIds) ? helperUserIds : []),
+        ].filter((id, index, ids): id is string => !!id && ids.indexOf(id) === index);
+        if (assignedUserIds.length > 0) {
+          const fakeRequest = {
+            title: task.name,
+            description: task.description,
+            urgency: task.urgency,
+          } as any;
+          const assignedUsers = await storage.getUsersByIds(assignedUserIds);
+          for (const assignedUser of assignedUsers) {
             notifyTaskAssigned(fakeRequest, assignedUser, notificationService).catch(err =>
               console.error("Failed to send task assigned notification:", err)
             );
@@ -449,8 +529,9 @@ export function registerTaskRoutes(app: Express) {
 
         if (currentUser.role === "technician") {
           const directlyAssigned = task.assignedToId === userId;
+          const isAdditionalAssignee = await storage.isTaskHelper(task.id, userId);
           const inPool = task.executorType === "technician" && task.assignedPool === "technician_pool";
-          if (!directlyAssigned && !inPool) {
+          if (!directlyAssigned && !isAdditionalAssignee && !inPool) {
             return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
           }
         }
@@ -757,8 +838,9 @@ export function registerTaskRoutes(app: Express) {
       
       if (currentUser.role === "technician") {
         const directlyAssigned = task.assignedToId === userId;
+        const isAdditionalAssignee = await storage.isTaskHelper(taskId, userId);
         const inPool = task.executorType === "technician" && task.assignedPool === "technician_pool";
-        if (!directlyAssigned && !inPool) {
+        if (!directlyAssigned && !isAdditionalAssignee && !inPool) {
           return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
         }
       }
@@ -1048,7 +1130,7 @@ export function registerTaskRoutes(app: Express) {
       const parsed = insertPartUsedSchema.parse(req.body);
       const userId = req.currentUser?.id || req.userId;
       const isHelper = await storage.isTaskHelper(parsed.taskId, userId);
-      if (isHelper) {
+      if (isHelper && req.currentUser?.role === "student") {
         return res.status(403).json({ message: "Forbidden: Student helpers cannot add parts" });
       }
       const role = req.currentUser?.role as string | undefined;
@@ -1077,7 +1159,7 @@ export function registerTaskRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
       const isHelper = await storage.isTaskHelper(part.taskId, userId);
-      if (isHelper) {
+      if (isHelper && req.currentUser?.role === "student") {
         return res.status(403).json({ message: "Forbidden: Student helpers cannot delete parts" });
       }
       await storage.deletePartUsed(req.params.id);
@@ -1249,7 +1331,7 @@ export function registerTaskRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
       const isHelper = await storage.isTaskHelper(existingGroup.taskId, userId);
-      if (isHelper) {
+      if (isHelper && req.currentUser?.role === "student") {
         return res.status(403).json({ message: "Forbidden: Student helpers cannot modify checklists" });
       }
       
@@ -1316,7 +1398,7 @@ export function registerTaskRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
       }
       const isHelper = await storage.isTaskHelper(group.taskId, userId);
-      if (isHelper) {
+      if (isHelper && req.currentUser?.role === "student") {
         return res.status(403).json({ message: "Forbidden: Student helpers cannot modify checklists" });
       }
       

@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { dateInputValueToTaskTimestamp, getTaskDateInputValue } from "@/lib/taskCalendarDates";
-import type { Task, InsertTask, User } from "@shared/schema";
+import type { Task, InsertTask, User, Property } from "@shared/schema";
 
 interface Area {
   id: string;
@@ -49,9 +49,19 @@ interface SubtaskEdit {
   isRemoved: boolean;
 }
 
+type TaskHelperAssignment = {
+  userId: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+};
+
 interface TaskEditModeProps {
   taskId: string;
-  task: Task;
+  task: Task & { helpers?: TaskHelperAssignment[] };
   subtasks: Task[];
   onCancel: () => void;
   onSaved: () => void;
@@ -76,9 +86,13 @@ export function TaskEditMode({
   const [estimatedCompletionDate, setEstimatedCompletionDate] = useState(
     getTaskDateInputValue(task.estimatedCompletionDate)
   );
+  const [propertyId, setPropertyId] = useState<string>(task.propertyId || "");
   const [areaId, setAreaId] = useState<string>(task.areaId || "");
   const [subdivisionId, setSubdivisionId] = useState<string>(task.subdivisionId || "");
   const [assignedToId, setAssignedToId] = useState<string>(task.assignedToId || "");
+  const [helperUserIds, setHelperUserIds] = useState<string[]>(
+    () => task.helpers?.map((helper) => helper.userId) ?? []
+  );
 
   const [editSubtasks, setEditSubtasks] = useState<SubtaskEdit[]>(
     subtasks.map((s) => ({
@@ -101,6 +115,10 @@ export function TaskEditMode({
     queryKey: ["/api/areas"],
   });
 
+  const { data: properties } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
   const { data: subdivisions } = useQuery<Subdivision[]>({
     queryKey: ["/api/subdivisions", areaId],
     queryFn: async () => {
@@ -117,10 +135,12 @@ export function TaskEditMode({
     setDescription(task.description || "");
     setUrgency(task.urgency);
     setEstimatedCompletionDate(getTaskDateInputValue(task.estimatedCompletionDate));
+    setPropertyId(task.propertyId || "");
     setAreaId(task.areaId || "");
     setSubdivisionId(task.subdivisionId || "");
     setAssignedToId(task.assignedToId || "");
-  }, [task.id]);
+    setHelperUserIds(task.helpers?.map((helper) => helper.userId) ?? []);
+  }, [task.id, task.helpers]);
 
   useEffect(() => {
     setEditSubtasks(
@@ -190,11 +210,20 @@ export function TaskEditMode({
       const origAreaId = task.areaId || "";
       if (areaId !== origAreaId) patchData.areaId = areaId || null;
 
+      const origPropertyId = task.propertyId || "";
+      if (propertyId !== origPropertyId) patchData.propertyId = propertyId || null;
+
       const origSubdivisionId = task.subdivisionId || "";
       if (subdivisionId !== origSubdivisionId) patchData.subdivisionId = subdivisionId || null;
 
       const origAssignedToId = task.assignedToId || "";
       if (assignedToId !== origAssignedToId) patchData.assignedToId = assignedToId || null;
+
+      const originalHelperIds = task.helpers?.map((helper) => helper.userId) ?? [];
+      const normalizedHelperIds = helperUserIds.filter((id) => id !== assignedToId);
+      const helpersChanged =
+        normalizedHelperIds.length !== originalHelperIds.length ||
+        normalizedHelperIds.some((id) => !originalHelperIds.includes(id));
 
       const origDate = getTaskDateInputValue(task.estimatedCompletionDate);
       if (estimatedCompletionDate !== origDate) {
@@ -203,8 +232,11 @@ export function TaskEditMode({
           : null;
       }
 
-      if (Object.keys(patchData).length > 0) {
-        await apiRequest("PATCH", `/api/tasks/${taskId}`, patchData);
+      if (Object.keys(patchData).length > 0 || helpersChanged) {
+        await apiRequest("PATCH", `/api/tasks/${taskId}`, {
+          ...patchData,
+          ...(helpersChanged ? { helperUserIds: normalizedHelperIds } : {}),
+        });
       }
 
       for (const sub of editSubtasks) {
@@ -323,7 +355,11 @@ export function TaskEditMode({
           </Label>
           <Select
             value={assignedToId || "__none__"}
-            onValueChange={(v) => setAssignedToId(v === "__none__" ? "" : v)}
+            onValueChange={(v) => {
+              const nextAssigneeId = v === "__none__" ? "" : v;
+              setAssignedToId(nextAssigneeId);
+              setHelperUserIds((prev) => prev.filter((id) => id !== nextAssigneeId));
+            }}
           >
             <SelectTrigger data-testid="select-edit-assignee">
               <SelectValue placeholder="Select assignee" />
@@ -344,6 +380,63 @@ export function TaskEditMode({
                   </SelectGroup>
                 );
               })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+            Additional Technicians
+          </Label>
+          <div className="flex flex-wrap gap-1.5">
+            {(allUsers || [])
+              .filter((u) => u.role === "technician" && u.id !== assignedToId)
+              .map((u) => {
+                const isSelected = helperUserIds.includes(u.id);
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    data-testid={`edit-additional-tech-toggle-${u.id}`}
+                    className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border hover-elevate"
+                    }`}
+                    onClick={() => {
+                      setHelperUserIds((prev) =>
+                        isSelected ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                      );
+                    }}
+                  >
+                    {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username}
+                  </button>
+                );
+              })}
+          </div>
+          <p className="text-xs" style={{ color: "#9CA3AF" }}>
+            Additional technicians can view and update this task.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+            Property
+          </Label>
+          <Select
+            value={propertyId || "__none__"}
+            onValueChange={(v) => setPropertyId(v === "__none__" ? "" : v)}
+          >
+            <SelectTrigger data-testid="select-edit-property">
+              <SelectValue placeholder="Select property" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">No property</SelectItem>
+              {(properties || []).map((property) => (
+                <SelectItem key={property.id} value={property.id}>
+                  {property.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

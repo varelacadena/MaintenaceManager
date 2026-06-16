@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateUserDirectoryQueries, upsertUserInDirectoryCaches } from "@/lib/userQueryInvalidation";
 import type { User, PendingUser } from "@shared/schema";
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -129,7 +130,7 @@ export function useUsers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pending-users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateUserDirectoryQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/counts"] });
       setIsPendingReviewOpen(false);
       setSelectedPendingUser(null);
@@ -200,13 +201,12 @@ export function useUsers() {
       const response = await apiRequest("POST", "/api/credentials/create", userData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (createdUser: User) => {
+      upsertUserInDirectoryCaches(queryClient, createdUser);
+      invalidateUserDirectoryQueries(queryClient);
       setIsCreateDialogOpen(false);
       resetCreateForm();
       toast({ title: "User created successfully" });
-    },
-    onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
     },
     onError: (error: any) => {
       toast({
@@ -228,7 +228,7 @@ export function useUsers() {
       });
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
+      invalidateUserDirectoryQueries(queryClient);
     },
     onError: (error: any) => {
       toast({
@@ -249,7 +249,7 @@ export function useUsers() {
       toast({ title: "User updated successfully" });
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
+      invalidateUserDirectoryQueries(queryClient);
     },
     onError: (error: any) => {
       toast({
@@ -273,7 +273,7 @@ export function useUsers() {
       toast({ title: "Password updated successfully" });
     },
     onSettled: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/users"] }), 300);
+      invalidateUserDirectoryQueries(queryClient);
     },
     onError: (error: any) => {
       toast({
@@ -290,7 +290,7 @@ export function useUsers() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateUserDirectoryQueries(queryClient);
       toast({ title: "User deleted successfully" });
     },
     onError: (error: any) => {

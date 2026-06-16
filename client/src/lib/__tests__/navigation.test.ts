@@ -23,12 +23,14 @@ describe("getParentRoute", () => {
   it("returns list parents for detail routes", () => {
     expect(getParentRoute("/requests/req-1")).toBe("/requests");
     expect(getParentRoute("/tasks/task-1")).toBe("/work");
+    expect(getParentRoute("/work/add-job", "technician")).toBe("/work");
     expect(getParentRoute("/vehicles/v-1/edit")).toBe("/vehicles/v-1");
     expect(getParentRoute("/vehicles/v-1")).toBe("/vehicles");
   });
 
   it("identifies routes that already render their own back control", () => {
     expect(hasPageBackControl("/tasks/task-1", "admin")).toBe(true);
+    expect(hasPageBackControl("/work/add-job", "technician")).toBe(true);
     expect(hasPageBackControl("/vehicle-checkin-verify/checkin-1", "admin")).toBe(true);
     expect(hasPageBackControl("/requests/request-1", "staff")).toBe(true);
     expect(hasPageBackControl("/requests/request-1", "admin")).toBe(false);

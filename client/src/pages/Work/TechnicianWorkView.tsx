@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, MapPin, Plus } from "lucide-react";
 import type { Task, Property, User } from "@shared/schema";
 import {
   filterTechnicianWorkTasks,
@@ -125,26 +126,48 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
 
   return (
     <div className="px-3 py-4 pb-8 sm:p-4 sm:pb-8 space-y-5 max-w-lg mx-auto">
-      <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
-          My Tasks
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {activeTasks.length === 0
-            ? "Nothing assigned right now"
-            : `${activeTasks.length} task${activeTasks.length !== 1 ? "s" : ""} to do`}
-        </p>
+      <div className="pt-2 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+            My Tasks
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {activeTasks.length === 0
+              ? "Nothing assigned right now"
+              : `${activeTasks.length} task${activeTasks.length !== 1 ? "s" : ""} to do`}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="shrink-0 h-10 px-3"
+          onClick={() => navigate("/work/add-job")}
+          aria-label="Add job"
+          data-testid="button-add-field-job"
+        >
+          <Plus className="w-4 h-4 sm:mr-1" />
+          <span className="hidden sm:inline">Add Job</span>
+        </Button>
       </div>
 
       <DateFilterBar dateFilter={dateFilter} setDateFilter={setDateFilter} />
 
       {activeTasks.length === 0 && completedTasks.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-10 px-2">
           <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
           <p className="text-xl font-semibold">All done!</p>
           <p className="text-muted-foreground mt-1">
             {dateFilter === "today" ? "No tasks for today." : dateFilter === "week" ? "No tasks this week." : "No tasks assigned to you right now."}
           </p>
+          <Button
+            type="button"
+            className="mt-6 w-full sm:w-auto h-11"
+            onClick={() => navigate("/work/add-job")}
+            data-testid="button-add-field-job-empty"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Job
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">

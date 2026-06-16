@@ -170,7 +170,10 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2">
+      <SidebarFooter
+        className="shrink-0 border-t border-sidebar-border bg-sidebar p-2"
+        style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         <div className="flex items-center gap-2 p-2 rounded-md group-data-[collapsible=icon]:justify-center">
           <Avatar className="w-7 h-7 shrink-0">
             <AvatarImage />

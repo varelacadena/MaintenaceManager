@@ -151,6 +151,7 @@ export default function EditTask() {
       propertyIds: [],
     },
   });
+  const primaryAssigneeId = form.watch("assignedToId");
 
 
   useEffect(() => {
@@ -489,9 +490,11 @@ export default function EditTask() {
                       form.setValue("assignedVendorId", undefined);
                     } else if (value === "vendor") {
                       form.setValue("assignedToId", undefined);
+                      setSelectedHelperIds([]);
                     } else {
                       form.setValue("assignedToId", undefined);
                       form.setValue("assignedVendorId", undefined);
+                      setSelectedHelperIds([]);
                     }
                   }} 
                   value={assignmentType}
@@ -516,7 +519,10 @@ export default function EditTask() {
                     <FormItem>
                       <FormLabel>Select Technician</FormLabel>
                       <Select 
-                        onValueChange={field.onChange} 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedHelperIds(prev => prev.filter(id => id !== value));
+                        }} 
                         value={field.value || ""}
                       >
                         <FormControl>
@@ -580,13 +586,47 @@ export default function EditTask() {
 
               {assignmentType === "technician" && (
                 <div className="p-4 border rounded-md bg-muted/30 space-y-3">
+                  <p className="text-sm font-medium">Additional Technicians (Optional)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add other technicians who should see and work this task.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {technicianUsers
+                      .filter(t => t.id !== primaryAssigneeId)
+                      .map((technician) => {
+                        const isSelected = selectedHelperIds.includes(technician.id);
+                        return (
+                          <button
+                            key={technician.id}
+                            type="button"
+                            data-testid={`additional-tech-toggle-${technician.id}`}
+                            className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background border-border hover-elevate"
+                            }`}
+                            onClick={() => {
+                              setSelectedHelperIds(prev =>
+                                isSelected
+                                  ? prev.filter(id => id !== technician.id)
+                                  : [...prev, technician.id]
+                              );
+                            }}
+                          >
+                            {technician.firstName && technician.lastName
+                              ? `${technician.firstName} ${technician.lastName}`
+                              : technician.username}
+                          </button>
+                        );
+                      })}
+                  </div>
                   <p className="text-sm font-medium">Student Helpers (Optional)</p>
                   <p className="text-xs text-muted-foreground">
                     Assign student workers to assist with this task. They can log time and add notes but cannot change task status.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {studentUsers
-                      .filter(s => s.id !== form.watch("assignedToId"))
+                      .filter(s => s.id !== primaryAssigneeId)
                       .map((student) => {
                         const isSelected = selectedHelperIds.includes(student.id);
                         return (
@@ -616,7 +656,7 @@ export default function EditTask() {
                   </div>
                   {selectedHelperIds.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      {selectedHelperIds.length} helper{selectedHelperIds.length !== 1 ? "s" : ""} selected
+                      {selectedHelperIds.length} additional assignee{selectedHelperIds.length !== 1 ? "s" : ""} selected
                     </p>
                   )}
                 </div>

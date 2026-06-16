@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Work = lazyWithRetry(() => import("@/pages/Work"));
 const GrabAJob = lazyWithRetry(() => import("@/pages/GrabAJob"));
+const TechnicianFieldJob = lazyWithRetry(() => import("@/pages/TechnicianFieldJob"));
 const NewTask = lazyWithRetry(() => import("@/pages/NewTask"));
 const EditTask = lazyWithRetry(() => import("@/pages/EditTask"));
 const TaskDetail = lazyWithRetry(() => import("@/pages/TaskDetail"));
@@ -95,6 +96,16 @@ function GrabRoute() {
     <DomainErrorBoundary domain="Work Orders & Tasks">
       <RoleGuard allowedRoles={["student", "technician"]}>
         <GrabAJob />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function TechnicianFieldJobRoute() {
+  return (
+    <DomainErrorBoundary domain="Work Orders & Tasks">
+      <RoleGuard allowedRoles={["technician"]}>
+        <TechnicianFieldJob />
       </RoleGuard>
     </DomainErrorBoundary>
   );
@@ -437,6 +448,7 @@ export function AppRoutes() {
   return (
     <Switch>
       <Route path="/" component={HomeRoute} />
+      <Route path="/work/add-job" component={TechnicianFieldJobRoute} />
       <Route path="/work" component={WorkRoute} />
       <Route path="/grab" component={GrabRoute} />
       <Route path="/tasks" component={TasksRedirectRoute} />

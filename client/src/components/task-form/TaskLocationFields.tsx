@@ -92,7 +92,10 @@ export function TaskLocationFields({
     .filter((a) => a.type === "vehicle")
     .map((a) => a.id);
 
-  const buildings = properties.filter((p) => p.type === "building");
+  const sortedProperties = [...properties].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  );
+  const buildings = sortedProperties.filter((p) => p.type === "building");
   const filteredBuildings = buildingSearch.trim()
     ? buildings.filter((b) =>
         b.name.toLowerCase().includes(buildingSearch.toLowerCase())
@@ -395,10 +398,12 @@ export function TaskLocationFields({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {properties.map((property) => (
+                    {sortedProperties.map((property) => (
                       <SelectItem key={property.id} value={property.id}>
                         {property.name}
-                        <span className="text-muted-foreground ml-1">({property.type})</span>
+                        {property.address && (
+                          <span className="text-muted-foreground ml-1">({property.address})</span>
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
