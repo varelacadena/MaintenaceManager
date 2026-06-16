@@ -205,7 +205,7 @@ export default function TechnicianFieldJob() {
 
       <div
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4"
-        style={{ paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}
       >
         {step === 0 && (
           <div className="space-y-4">
@@ -397,7 +397,8 @@ export default function TechnicianFieldJob() {
       </div>
 
       <div
-        className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-3 sm:px-4 py-3 safe-area-inset-bottom"
+        className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-3 pt-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-4"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="mx-auto flex max-w-lg gap-2">
           {step > 0 && (

@@ -171,10 +171,10 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter
-        className="shrink-0 border-t border-sidebar-border bg-sidebar p-2"
-        style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
+        className="shrink-0 border-t border-sidebar-border bg-sidebar px-2 pt-2"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
       >
-        <div className="flex items-center gap-2 p-2 rounded-md group-data-[collapsible=icon]:justify-center">
+        <div className="flex min-h-12 items-center gap-2 rounded-md p-2 group-data-[collapsible=icon]:justify-center">
           <Avatar className="w-7 h-7 shrink-0">
             <AvatarImage />
             <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
@@ -188,7 +188,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
               await fetch("/api/logout", { method: "POST" });
               window.location.href = "/";
             }}
-            className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover-elevate"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover-elevate"
             title="Sign Out"
             data-testid="button-sidebar-logout"
           >

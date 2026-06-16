@@ -171,7 +171,7 @@ function AuthenticatedApp() {
                       await fetch("/api/logout", { method: "POST" });
                       window.location.href = "/";
                     }}
-                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 sm:px-0 sm:py-0"
+                    className="min-h-9 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-0 sm:min-w-0 sm:px-0 sm:py-0 sm:hover:bg-transparent"
                     data-testid="button-logout"
                   >
                     <span className="hidden sm:inline">Sign Out</span>

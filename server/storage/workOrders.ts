@@ -262,7 +262,7 @@ export async function backfillTaskPools(): Promise<number> {
     WHERE assigned_to_id IS NULL
       AND assigned_vendor_id IS NULL
       AND (assigned_pool IS NULL OR executor_type IS NULL)
-      AND status IN ('not_started', 'ready')
+      AND task_status IN ('not_started', 'ready')
   `);
   return Number(result.rowCount ?? 0);
 }

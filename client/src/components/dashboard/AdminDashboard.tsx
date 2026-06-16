@@ -327,9 +327,11 @@ export default function AdminDashboard({
         currentTask: currentTask?.name || null,
         allTasks: techTasks,
       };
-    }).filter(t => t.total > 0).sort((a, b) => {
+    }).sort((a, b) => {
       const aPct = a.total > 0 ? a.completed / a.total : 0;
       const bPct = b.total > 0 ? b.completed / b.total : 0;
+      if (a.total === 0 && b.total > 0) return 1;
+      if (a.total > 0 && b.total === 0) return -1;
       return bPct - aPct;
     });
   }, [users, tasks, techFilter, today, weekStart, weekEnd]);
@@ -436,7 +438,13 @@ export default function AdminDashboard({
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{tech.name}</p>
-                          <p className="text-xs text-muted-foreground tabular-nums">{tech.completed} / {tech.total} tasks</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            {tech.total > 0
+                              ? `${tech.completed} / ${tech.total} tasks`
+                              : techFilter === "today"
+                              ? "No tasks today"
+                              : "No tasks this week"}
+                          </p>
                         </div>
                         <RadialProgress
                           completed={tech.completed}
