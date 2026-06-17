@@ -36,21 +36,37 @@ export type PendingUploadPayload = {
   label?: string;
 };
 
+export type UploaderFileResult = {
+  fileName?: string;
+  name?: string;
+  type?: string;
+  objectUrl?: string;
+  url?: string;
+  uploadURL?: string;
+  objectPath?: string;
+};
+
+function rawStorageUrl(file: UploaderFileResult): string {
+  const rawUrl = file.objectUrl || file.url || file.uploadURL || "";
+  return rawUrl.split("?")[0];
+}
+
+/** Maps ObjectUploader output for DB registration (keeps raw storage URL + objectPath). */
+export function mapUploaderResultForRegistration(file: UploaderFileResult) {
+  return {
+    fileName: file.fileName || file.name || "attachment",
+    fileType: file.type || "application/octet-stream",
+    objectUrl: rawStorageUrl(file),
+    objectPath: file.objectPath,
+  };
+}
+
 export function mapUploaderResultToPending(
-  file: {
-    fileName?: string;
-    name?: string;
-    type?: string;
-    objectUrl?: string;
-    url?: string;
-    uploadURL?: string;
-    objectPath?: string;
-  },
+  file: UploaderFileResult,
   label?: string
 ): PendingUploadPayload {
   const objectPath = file.objectPath;
-  const rawUrl = file.objectUrl || file.url || file.uploadURL || "";
-  const fallbackUrl = rawUrl.split("?")[0];
+  const fallbackUrl = rawStorageUrl(file);
   return {
     fileName: file.fileName || file.name || "attachment",
     fileType: file.type || "application/octet-stream",

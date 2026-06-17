@@ -39,6 +39,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import {
   getSignedUploadParameters,
   mapUploaderResultToPending,
+  mapUploaderResultForRegistration,
 } from "@/lib/uploadUtils";
 
 const categories = [
@@ -143,10 +144,12 @@ export default function NewRequest() {
           try {
             await apiRequest("POST", "/api/uploads", {
               requestId: requestData.id,
-              fileName: attachment.fileName || attachment.name,
-              fileType: attachment.type || "application/octet-stream",
-              objectUrl: attachment.objectUrl || attachment.url,
-              objectPath: attachment.objectPath,
+              ...mapUploaderResultForRegistration({
+                fileName: attachment.fileName || attachment.name,
+                type: attachment.type,
+                objectUrl: attachment.objectUrl || attachment.url,
+                objectPath: attachment.objectPath,
+              }),
             });
           } catch (error) {
             console.error("Error uploading attachment:", error);

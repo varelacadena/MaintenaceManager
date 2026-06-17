@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getSignedUploadParameters, mapUploaderResultForRegistration } from "@/lib/uploadUtils";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
@@ -203,12 +204,24 @@ export function useMobileTaskDetail() {
   });
 
   const addUploadMutation = useMutation({
-    mutationFn: async ({ fileName, fileType, objectUrl }: { fileName: string, fileType: string, objectUrl: string }) => {
+    mutationFn: async ({
+      fileName,
+      fileType,
+      objectUrl,
+      objectPath,
+    }: {
+      fileName: string;
+      fileType: string;
+      objectUrl: string;
+      objectPath?: string;
+    }) => {
       const response = await apiRequest("PUT", "/api/uploads", {
         taskId: id,
         fileName,
         fileType,
         objectUrl,
+        objectPath,
+        label: fileName,
       });
       return response.json();
     },
@@ -253,27 +266,29 @@ export function useMobileTaskDetail() {
     },
   });
 
-  const getUploadParameters = async () => {
-    const response = await fetch("/api/objects/upload", {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw new Error("Failed to get upload parameters");
-    }
-    const { uploadURL } = await response.json();
-    return { method: "PUT" as const, url: uploadURL };
-  };
+  const getUploadParameters = getSignedUploadParameters;
 
   const handleAutoSaveUpload = async (result: any) => {
     if (result.successful?.length > 0) {
       for (const file of result.successful) {
-        await addUploadMutation.mutateAsync({
-          fileName: file.name,
-          fileType: file.type || "application/octet-stream",
-          objectUrl: file.uploadURL || file.url,
-        });
+        const registered = mapUploaderResultForRegistration(file);
+        try {
+          await addUploadMutation.mutateAsync(registered);
+        } catch {
+          toast({
+            title: "Upload failed",
+            description: "Could not save file",
+            variant: "destructive",
+          });
+        }
       }
+    }
+    if (result.failed?.length > 0) {
+      toast({
+        title: "Upload failed",
+        description: result.failed[0]?.error || "Could not upload file",
+        variant: "destructive",
+      });
     }
   };
 

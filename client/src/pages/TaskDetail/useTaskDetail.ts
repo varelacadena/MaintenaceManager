@@ -27,6 +27,10 @@ import type {
 } from "@shared/schema";
 import { getDateLabel } from "./helpers";
 import { useTaskDetailMutations } from "./useTaskDetailMutations";
+import {
+  getSignedUploadParameters,
+  mapUploaderResultForRegistration,
+} from "@/lib/uploadUtils";
 
 type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
 
@@ -101,6 +105,7 @@ export function useTaskDetail() {
     fileName: string;
     fileType: string;
     objectUrl: string;
+    objectPath?: string;
     previewUrl?: string;
   } | null>(null);
 
@@ -560,29 +565,60 @@ export function useTaskDetail() {
     updateStatusMutation,
   } = mutations;
 
-  const getUploadParameters = async () => {
-    const response = await fetch("/api/objects/upload", {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to get upload URL" }));
-      throw new Error(error.message || "Failed to get upload URL");
-    }
-    const { uploadURL } = await response.json();
-    return { method: "PUT" as const, url: uploadURL };
-  };
+  const getUploadParameters = getSignedUploadParameters;
 
-  const pendingUploadQueueRef = useRef<Array<{ fileName: string; fileType: string; objectUrl: string; previewUrl?: string }>>([]);
+  const pendingUploadQueueRef = useRef<
+    Array<{
+      fileName: string;
+      fileType: string;
+      objectUrl: string;
+      objectPath?: string;
+      previewUrl?: string;
+    }>
+  >([]);
 
   const handleAutoSaveUpload = async (result: any) => {
     if (result.successful?.length > 0) {
-      const files = result.successful.map((file: any) => ({
-        fileName: file.name,
-        fileType: file.type || "application/octet-stream",
-        objectUrl: file.uploadURL || file.url,
-        previewUrl: file.file && file.type?.startsWith("image/") ? URL.createObjectURL(file.file) : undefined,
-      }));
+      const files = result.successful.map((file: any) => {
+        const registered = mapUploaderResultForRegistration(file);
+        return {
+          ...registered,
+          previewUrl:
+            file.file && file.type?.startsWith("image/")
+              ? URL.createObjectURL(file.file)
+              : undefined,
+        };
+      });
+
+      const saveImmediately =
+        user?.role === "technician" || user?.role === "student";
+
+      if (saveImmediately) {
+        let failedCount = 0;
+        for (const file of files) {
+          try {
+            await addUploadMutation.mutateAsync({
+              fileName: file.fileName,
+              fileType: file.fileType,
+              objectUrl: file.objectUrl,
+              objectPath: file.objectPath,
+              label: file.fileName,
+            });
+            if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+          } catch {
+            failedCount += 1;
+          }
+        }
+        if (failedCount > 0) {
+          toast({
+            title: "Upload failed",
+            description: `${failedCount} file(s) could not be saved`,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
       pendingUploadQueueRef.current = files.slice(1);
       setPendingUploadForLabel(files[0]);
     }
@@ -613,6 +649,7 @@ export function useTaskDetail() {
         fileName: pendingUploadForLabel.fileName,
         fileType: pendingUploadForLabel.fileType,
         objectUrl: pendingUploadForLabel.objectUrl,
+        objectPath: pendingUploadForLabel.objectPath,
         label,
       });
       advanceUploadQueue();
@@ -631,6 +668,7 @@ export function useTaskDetail() {
         fileName: pendingUploadForLabel.fileName,
         fileType: pendingUploadForLabel.fileType,
         objectUrl: pendingUploadForLabel.objectUrl,
+        objectPath: pendingUploadForLabel.objectPath,
         label: pendingUploadForLabel.fileName,
       });
       advanceUploadQueue();

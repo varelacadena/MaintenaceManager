@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getSignedUploadParameters } from "@/lib/uploadUtils";
 import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
@@ -77,6 +78,7 @@ export function useTaskDetailPanel({
     fileName: string;
     fileType: string;
     objectUrl: string;
+    objectPath?: string;
     previewUrl?: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -294,9 +296,7 @@ export function useTaskDetailPanel({
     if (!file) return;
     setIsFileUploading(true);
     try {
-      const paramRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-      if (!paramRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL } = await paramRes.json();
+      const { url: uploadURL, objectPath } = await getSignedUploadParameters();
       const isMock = uploadURL.startsWith("https://mock-storage.local/");
       let objectUrl = uploadURL;
       if (!isMock) {
@@ -313,6 +313,7 @@ export function useTaskDetailPanel({
         fileName: file.name,
         fileType: file.type || "application/octet-stream",
         objectUrl,
+        objectPath,
         previewUrl,
       });
     } catch {
@@ -334,6 +335,7 @@ export function useTaskDetailPanel({
         fileName: pendingUploadForLabel.fileName,
         fileType: pendingUploadForLabel.fileType,
         objectUrl: pendingUploadForLabel.objectUrl,
+        objectPath: pendingUploadForLabel.objectPath,
         label,
       });
       refreshTaskDetail();
@@ -357,6 +359,7 @@ export function useTaskDetailPanel({
         fileName: pendingUploadForLabel.fileName,
         fileType: pendingUploadForLabel.fileType,
         objectUrl: pendingUploadForLabel.objectUrl,
+        objectPath: pendingUploadForLabel.objectPath,
         label: pendingUploadForLabel.fileName,
       });
       refreshTaskDetail();

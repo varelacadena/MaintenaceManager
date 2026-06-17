@@ -133,15 +133,24 @@ export async function assertCanDownloadUpload(
 }
 
 async function resolveObjectUrl(body: Record<string, unknown>): Promise<string> {
-  let objectUrl = body.objectUrl as string;
-  if (
-    body.objectPath &&
-    (!objectUrl.startsWith("http") || objectUrl.includes("mock-storage.local"))
-  ) {
+  const objectPath = body.objectPath as string | undefined;
+  if (objectPath) {
     try {
       const { getDownloadUrl, getBucketId } = await import("./objectStorage");
       if (getBucketId()) {
-        objectUrl = await getDownloadUrl(body.objectPath as string);
+        return await getDownloadUrl(objectPath);
+      }
+    } catch {
+      // fall through to objectUrl handling
+    }
+  }
+
+  let objectUrl = body.objectUrl as string;
+  if (objectUrl.includes("mock-storage.local") && objectPath) {
+    try {
+      const { getDownloadUrl, getBucketId } = await import("./objectStorage");
+      if (getBucketId()) {
+        objectUrl = await getDownloadUrl(objectPath);
       }
     } catch {
       // keep original url

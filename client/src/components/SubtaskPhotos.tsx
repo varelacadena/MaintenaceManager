@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getSignedUploadParameters } from "@/lib/uploadUtils";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import type { Upload } from "@shared/schema";
 
@@ -35,9 +36,7 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
 
     setIsUploading(true);
     try {
-      const paramRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
-      if (!paramRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL } = await paramRes.json();
+      const { url: uploadURL, objectPath } = await getSignedUploadParameters();
 
       const isMock = uploadURL.startsWith("https://mock-storage.local/");
       let objectUrl = uploadURL;
@@ -57,6 +56,8 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
         fileName: file.name,
         fileType: file.type || "image/jpeg",
         objectUrl,
+        objectPath,
+        label: file.name,
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", subtaskId] });

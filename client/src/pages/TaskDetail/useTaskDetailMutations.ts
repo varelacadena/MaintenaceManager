@@ -436,12 +436,25 @@ export function useTaskDetailMutations(deps: MutationDeps) {
   });
 
   const addUploadMutation = useMutation({
-    mutationFn: async ({ fileName, fileType, objectUrl, label }: { fileName: string, fileType: string, objectUrl: string, label?: string }) => {
+    mutationFn: async ({
+      fileName,
+      fileType,
+      objectUrl,
+      objectPath,
+      label,
+    }: {
+      fileName: string;
+      fileType: string;
+      objectUrl: string;
+      objectPath?: string;
+      label?: string;
+    }) => {
       const response = await apiRequest("PUT", "/api/uploads", {
         taskId: id,
         fileName,
         fileType,
         objectUrl,
+        objectPath,
         label,
       });
       return response.json();

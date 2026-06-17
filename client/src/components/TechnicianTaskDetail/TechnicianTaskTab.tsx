@@ -6,7 +6,7 @@ import {
   Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { toDisplayUrl } from "@/lib/imageUtils";
+import { buildDisplayUrlFromUpload } from "@/lib/uploadUtils";
 import { format } from "date-fns";
 import type { Task, TaskNote, Upload } from "@shared/schema";
 import type { ChecklistGroupWithItems, TaskHelperDisplay } from "./types";
@@ -387,7 +387,7 @@ export function TechnicianTaskTab({
                   >
                     {isImage ? (
                       <img
-                        src={toDisplayUrl(upload.objectUrl)}
+                        src={buildDisplayUrlFromUpload(upload.objectPath ?? undefined, upload.objectUrl, upload.fileType)}
                         alt={upload.fileName}
                         className="w-full h-full object-cover"
                       />
