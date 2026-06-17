@@ -56,6 +56,7 @@ interface TaskLocationFieldsProps {
   selectedPropertyIds: string[];
   onSelectedPropertyIdsChange: (ids: string[]) => void;
   showVehicle?: boolean;
+  hideSpaceAndEquipment?: boolean;
 }
 
 const MAX_VISIBLE_TAGS = 3;
@@ -84,6 +85,7 @@ export function TaskLocationFields({
   selectedPropertyIds,
   onSelectedPropertyIdsChange,
   showVehicle = false,
+  hideSpaceAndEquipment = false,
 }: TaskLocationFieldsProps) {
   const [multiSelectOpen, setMultiSelectOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
@@ -418,7 +420,7 @@ export function TaskLocationFields({
             )}
           />
 
-          {isBuilding && (
+          {isBuilding && !hideSpaceAndEquipment && (
             <FormField
               control={form.control}
               name="spaceId"
@@ -474,7 +476,11 @@ export function TaskLocationFields({
             <div className="space-y-2" data-testid="section-selected-assets">
               <FormLabel>Selected Assets ({selectedAssets.length})</FormLabel>
               <div className="flex flex-wrap gap-2">
-                {selectedAssets.map((asset, index) => (
+                {selectedAssets.map((asset, index) => {
+                  if (hideSpaceAndEquipment && asset.type !== "vehicle") {
+                    return null;
+                  }
+                  return (
                   <Badge
                     key={`${asset.type}-${asset.id}`}
                     variant="secondary"
@@ -498,41 +504,46 @@ export function TaskLocationFields({
                       <X className="w-3 h-3" />
                     </Button>
                   </Badge>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
 
           {multiAssetMode ? (
             <div className="space-y-3">
-              <FormLabel>Add Equipment</FormLabel>
-              <Select
-                onValueChange={handleEquipmentSelect}
-                value="__none__"
-                disabled={!selectedPropertyId}
-              >
-                <FormControl>
-                  <SelectTrigger data-testid="select-equipment">
-                    <SelectValue placeholder={selectedPropertyId ? "Select equipment to add" : "Select property first"} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {showEquipmentCreate && (
-                    <SelectItem value="create_new" className="font-medium text-primary">
-                      <Plus className="w-3 h-3 inline mr-1" />
-                      Add New Equipment
-                    </SelectItem>
-                  )}
-                  <SelectItem value="__none__">None</SelectItem>
-                  {equipment
-                    .filter((item) => !alreadySelectedEquipmentIds.includes(item.id))
-                    .map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              {!hideSpaceAndEquipment && (
+                <>
+                  <FormLabel>Add Equipment</FormLabel>
+                  <Select
+                    onValueChange={handleEquipmentSelect}
+                    value="__none__"
+                    disabled={!selectedPropertyId}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-equipment">
+                        <SelectValue placeholder={selectedPropertyId ? "Select equipment to add" : "Select property first"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {showEquipmentCreate && (
+                        <SelectItem value="create_new" className="font-medium text-primary">
+                          <Plus className="w-3 h-3 inline mr-1" />
+                          Add New Equipment
+                        </SelectItem>
+                      )}
+                      <SelectItem value="__none__">None</SelectItem>
+                      {equipment
+                        .filter((item) => !alreadySelectedEquipmentIds.includes(item.id))
+                        .map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
 
               {showVehicle && (
                 <>
@@ -562,47 +573,49 @@ export function TaskLocationFields({
             </div>
           ) : (
             <>
-              <FormField
-                control={form.control}
-                name="equipmentId"
-                render={({ field }: { field: any }) => (
-                  <FormItem>
-                    <FormLabel>Equipment</FormLabel>
-                    <Select
-                      onValueChange={(val: string) => {
-                        if (showEquipmentCreate && val === "create_new" && onAddEquipment) {
-                          onAddEquipment();
-                        } else {
-                          field.onChange(val === "__none__" ? undefined : val);
-                        }
-                      }}
-                      value={field.value || "__none__"}
-                      disabled={!selectedPropertyId}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-equipment">
-                          <SelectValue placeholder={selectedPropertyId ? "Select equipment (optional)" : "Select property first"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {showEquipmentCreate && (
-                          <SelectItem value="create_new" className="font-medium text-primary">
-                            <Plus className="w-3 h-3 inline mr-1" />
-                            Add New Equipment
-                          </SelectItem>
-                        )}
-                        <SelectItem value="__none__">None</SelectItem>
-                        {equipment.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!hideSpaceAndEquipment && (
+                <FormField
+                  control={form.control}
+                  name="equipmentId"
+                  render={({ field }: { field: any }) => (
+                    <FormItem>
+                      <FormLabel>Equipment</FormLabel>
+                      <Select
+                        onValueChange={(val: string) => {
+                          if (showEquipmentCreate && val === "create_new" && onAddEquipment) {
+                            onAddEquipment();
+                          } else {
+                            field.onChange(val === "__none__" ? undefined : val);
+                          }
+                        }}
+                        value={field.value || "__none__"}
+                        disabled={!selectedPropertyId}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-equipment">
+                            <SelectValue placeholder={selectedPropertyId ? "Select equipment (optional)" : "Select property first"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {showEquipmentCreate && (
+                            <SelectItem value="create_new" className="font-medium text-primary">
+                              <Plus className="w-3 h-3 inline mr-1" />
+                              Add New Equipment
+                            </SelectItem>
+                          )}
+                          <SelectItem value="__none__">None</SelectItem>
+                          {equipment.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {showVehicle && (
                 <FormField
@@ -639,37 +652,45 @@ export function TaskLocationFields({
             </>
           )}
 
-          {!multiAssetMode && onAddAsset && (
+          {!multiAssetMode && onAddAsset && (!hideSpaceAndEquipment || showVehicle) && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => {
-                const equipmentId = form.getValues("equipmentId");
-                const vehicleId = showVehicle ? form.getValues("vehicleId") : undefined;
-                if (equipmentId) {
-                  const item = equipment.find((e) => e.id === equipmentId);
-                  if (item) {
-                    onAddAsset({ type: "equipment", id: item.id, label: item.name });
-                    form.setValue("equipmentId", undefined);
+                if (!hideSpaceAndEquipment) {
+                  const equipmentId = form.getValues("equipmentId");
+                  if (equipmentId) {
+                    const item = equipment.find((e) => e.id === equipmentId);
+                    if (item) {
+                      onAddAsset({ type: "equipment", id: item.id, label: item.name });
+                      form.setValue("equipmentId", undefined);
+                    }
                   }
                 }
-                if (vehicleId) {
-                  const v = vehicles.find((v) => v.id === vehicleId);
-                  if (v) {
-                    onAddAsset({
-                      type: "vehicle",
-                      id: v.id,
-                      label: `${v.make} ${v.model} ${v.year} — ${v.vehicleId}`,
-                    });
-                    form.setValue("vehicleId", undefined);
+                if (showVehicle) {
+                  const vehicleId = form.getValues("vehicleId");
+                  if (vehicleId) {
+                    const v = vehicles.find((v) => v.id === vehicleId);
+                    if (v) {
+                      onAddAsset({
+                        type: "vehicle",
+                        id: v.id,
+                        label: `${v.make} ${v.model} ${v.year} — ${v.vehicleId}`,
+                      });
+                      form.setValue("vehicleId", undefined);
+                    }
                   }
                 }
               }}
               data-testid="button-add-another-asset"
             >
               <Plus className="w-3 h-3 mr-1" />
-              {showVehicle ? "Add Another Equipment/Vehicle" : "Add Another Equipment"}
+              {hideSpaceAndEquipment
+                ? "Add Another Vehicle"
+                : showVehicle
+                ? "Add Another Equipment/Vehicle"
+                : "Add Another Equipment"}
             </Button>
           )}
         </>

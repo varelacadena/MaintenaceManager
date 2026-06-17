@@ -18,7 +18,8 @@ interface NewTaskSubtaskSectionProps {
 }
 
 export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
-  const { pendingSubTasks, setPendingSubTasks, equipment, allVehicles, showVehicle } = ctx;
+  const { user, pendingSubTasks, setPendingSubTasks, equipment, allVehicles, showVehicle } = ctx;
+  const hideSpaceAndEquipment = user?.role === "technician";
 
   return (
     <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-subtasks">
@@ -83,7 +84,9 @@ export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
                     }}
                     data-testid={`textarea-subtask-description-${index}`}
                   />
-                  <div className={`grid gap-2 ${showVehicle ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {(showVehicle || !hideSpaceAndEquipment) && (
+                  <div className={`grid gap-2 ${showVehicle && !hideSpaceAndEquipment ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {!hideSpaceAndEquipment && (
                     <div>
                       <Label className="text-xs text-muted-foreground mb-1 block">Equipment (optional)</Label>
                       <Select
@@ -105,6 +108,7 @@ export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
                         </SelectContent>
                       </Select>
                     </div>
+                    )}
                     {showVehicle && (
                       <div>
                         <Label className="text-xs text-muted-foreground mb-1 block">Vehicle (optional)</Label>
@@ -131,6 +135,7 @@ export function NewTaskSubtaskSection({ ctx }: NewTaskSubtaskSectionProps) {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
                 <Button
                   type="button"

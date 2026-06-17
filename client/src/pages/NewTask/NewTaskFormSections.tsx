@@ -29,6 +29,7 @@ export interface NewTaskFormSectionsProps {
 
 export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
   const {
+    user,
     form, selectedPropertyId, setSelectedPropertyId,
     selectedSpaceId, setSelectedSpaceId,
     selectedProperty, isBuilding,
@@ -41,6 +42,8 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
     setIsEquipmentDialogOpen, setIsSpaceDialogOpen,
     taskType,
   } = ctx;
+
+  const hideSpaceAndEquipment = user?.role === "technician";
 
   return (
     <>
@@ -122,7 +125,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
       <section className="border-b border-border/50 pb-8 space-y-4" data-testid="section-location">
         <div className="flex items-center gap-2 mb-2">
           <MapPin className="w-5 h-5 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Location & Equipment</h2>
+          <h2 className="text-lg font-semibold">{hideSpaceAndEquipment ? "Location" : "Location & Equipment"}</h2>
         </div>
         <TaskLocationFields
           form={form}
@@ -137,8 +140,8 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
           isBuilding={isBuilding}
           selectedProperty={selectedProperty}
           onAddSpace={() => setIsSpaceDialogOpen(true)}
-          showEquipmentCreate
-          onAddEquipment={() => {
+          showEquipmentCreate={!hideSpaceAndEquipment}
+          onAddEquipment={hideSpaceAndEquipment ? undefined : () => {
             equipmentForm.reset({
               name: "",
               category: "other",
@@ -167,6 +170,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
           selectedPropertyIds={selectedPropertyIds}
           onSelectedPropertyIdsChange={setSelectedPropertyIds}
           showVehicle={showVehicle}
+          hideSpaceAndEquipment={hideSpaceAndEquipment}
         />
       </section>
 

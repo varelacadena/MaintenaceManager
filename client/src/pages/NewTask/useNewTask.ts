@@ -138,7 +138,7 @@ export function useNewTask() {
 
   const { data: spaces = [] } = useQuery<Space[]>({
     queryKey: ["/api/spaces", selectedPropertyId],
-    enabled: !!selectedPropertyId && isBuilding,
+    enabled: !!selectedPropertyId && isBuilding && user?.role !== "technician",
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/spaces?propertyId=${selectedPropertyId}`);
       return response.json();
@@ -147,7 +147,7 @@ export function useNewTask() {
 
   const { data: equipment = [] } = useQuery<Equipment[]>({
     queryKey: equipmentKeys.list({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
-    enabled: !!selectedPropertyId,
+    enabled: !!selectedPropertyId && user?.role !== "technician",
     queryFn: () => fetchEquipmentList({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
   });
 

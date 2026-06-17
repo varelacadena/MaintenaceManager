@@ -24,6 +24,8 @@ export default function NewTask() {
     setSelectedSpaceId,
   } = ctx;
 
+  const isTechnician = user?.role === "technician";
+
   if (user?.role !== "admin" && user?.role !== "technician") {
     return (
       <div className="p-6 text-center">
@@ -100,8 +102,9 @@ export default function NewTask() {
         </form>
       </Form>
 
-      <NewTaskEquipmentDialog ctx={ctx} />
+      {!isTechnician && <NewTaskEquipmentDialog ctx={ctx} />}
 
+      {!isTechnician && (
       <SpaceDialog
         open={isSpaceDialogOpen}
         onOpenChange={setIsSpaceDialogOpen}
@@ -112,6 +115,7 @@ export default function NewTask() {
           setSelectedSpaceId(newSpace.id);
         }}
       />
+      )}
     </div>
   );
 }

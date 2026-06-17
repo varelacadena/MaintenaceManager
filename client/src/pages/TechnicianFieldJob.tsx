@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, ClipboardList, MapPin, Plus, Send } from "lucide-react";
-import type { Area, Equipment, Property, Space, Task, Vehicle } from "@shared/schema";
+import type { Area, Property, Task, Vehicle } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +26,6 @@ type FieldJobForm = {
   description: string;
   urgency: "low" | "medium" | "high";
   propertyId: string;
-  spaceId: string;
-  equipmentId: string;
   vehicleId: string;
   areaId: string;
 };
@@ -43,8 +41,6 @@ const defaultForm: FieldJobForm = {
   description: "",
   urgency: "medium",
   propertyId: "",
-  spaceId: "",
-  equipmentId: "",
   vehicleId: "",
   areaId: "",
 };
@@ -75,28 +71,6 @@ export default function TechnicianFieldJob() {
     [form.propertyId, properties],
   );
 
-  const { data: spaces = [] } = useQuery<Space[]>({
-    queryKey: ["/api/spaces", form.propertyId],
-    enabled: !!form.propertyId && selectedProperty?.type === "building",
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/spaces?propertyId=${form.propertyId}`);
-      return response.json();
-    },
-  });
-
-  const { data: equipment = [] } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment", form.propertyId, form.spaceId],
-    enabled: !!form.propertyId,
-    queryFn: async () => {
-      const params = new URLSearchParams({ propertyId: form.propertyId });
-      if (form.spaceId) params.set("spaceId", form.spaceId);
-      const response = await apiRequest("GET", `/api/equipment?${params.toString()}`);
-      return response.json();
-    },
-  });
-
-  const selectedSpace = spaces.find((space) => space.id === form.spaceId);
-  const selectedEquipment = equipment.find((item) => item.id === form.equipmentId);
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === form.vehicleId);
   const selectedArea = areas.find((area) => area.id === form.areaId);
   const showVehicle =
@@ -111,8 +85,6 @@ export default function TechnicianFieldJob() {
         description: form.description.trim(),
         urgency: form.urgency,
         propertyId: form.propertyId,
-        spaceId: form.spaceId || undefined,
-        equipmentId: form.equipmentId || undefined,
         vehicleId: form.vehicleId || undefined,
         areaId: form.areaId || undefined,
       });
@@ -295,8 +267,6 @@ export default function TechnicianFieldJob() {
                     return {
                       ...current,
                       propertyId: value,
-                      spaceId: "",
-                      equipmentId: "",
                       vehicleId: nextShowVehicle ? current.vehicleId : "",
                     };
                   });
@@ -319,72 +289,13 @@ export default function TechnicianFieldJob() {
               <p className="text-xs text-muted-foreground">Property is required for technician-created jobs.</p>
             </div>
 
-            {selectedProperty?.type === "building" && (
-              <div className="space-y-2">
-                <Label>Space or room</Label>
-                <Select
-                  value={form.spaceId || "__none__"}
-                  onValueChange={(value) => {
-                    setForm((current) => ({
-                      ...current,
-                      spaceId: value === "__none__" ? "" : value,
-                      equipmentId: "",
-                    }));
-                  }}
-                >
-                  <SelectTrigger className={touchSelectClass} data-testid="select-field-job-space">
-                    <SelectValue placeholder="Select space" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">No specific space</SelectItem>
-                    {spaces.map((space) => (
-                      <SelectItem key={space.id} value={space.id}>
-                        {space.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Equipment</Label>
-              <Select
-                value={form.equipmentId || "__none__"}
-                disabled={!form.propertyId}
-                onValueChange={(value) => {
-                  setForm((current) => ({
-                    ...current,
-                    equipmentId: value === "__none__" ? "" : value,
-                    vehicleId: value !== "__none__" ? "" : current.vehicleId,
-                  }));
-                }}
-              >
-                <SelectTrigger className={touchSelectClass} data-testid="select-field-job-equipment">
-                  <SelectValue placeholder="Optional equipment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No specific equipment</SelectItem>
-                  {equipment.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {showVehicle && (
               <div className="space-y-2">
                 <Label>Vehicle</Label>
                 <Select
                   value={form.vehicleId || "__none__"}
                   onValueChange={(value) => {
-                    setForm((current) => ({
-                      ...current,
-                      vehicleId: value === "__none__" ? "" : value,
-                      equipmentId: value !== "__none__" ? "" : current.equipmentId,
-                    }));
+                    updateForm("vehicleId", value === "__none__" ? "" : value);
                   }}
                 >
                   <SelectTrigger className={touchSelectClass} data-testid="select-field-job-vehicle">
@@ -448,13 +359,11 @@ export default function TechnicianFieldJob() {
                 <MapPin className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="text-sm min-w-0">
                   <p className="font-medium break-words">{selectedProperty?.name}</p>
-                  <p className="text-muted-foreground break-words">
-                    {selectedSpace?.name || "No specific space"}
-                    {selectedEquipment ? ` - ${selectedEquipment.name}` : ""}
-                    {selectedVehicle
-                      ? ` - ${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.vehicleId})`
-                      : ""}
-                  </p>
+                  {selectedVehicle && (
+                    <p className="text-muted-foreground break-words">
+                      {selectedVehicle.make} {selectedVehicle.model} ({selectedVehicle.vehicleId})
+                    </p>
+                  )}
                   {selectedArea && <p className="text-muted-foreground break-words">{selectedArea.name}</p>}
                 </div>
               </div>
