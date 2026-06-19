@@ -149,23 +149,22 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     startTimerMutation.mutate();
   };
 
-  const handlePauseConfirm = () => {
+  const handlePauseConfirm = async () => {
     if (!activeTimer) {
       setIsPauseDialogOpen(false);
       return;
     }
-    stopTimerMutation.mutate(
-      { timerId: activeTimer },
-      {
-        onSuccess: () => {
-          setIsPaused(true);
-          setIsPauseDialogOpen(false);
-        },
-      },
-    );
+    try {
+      await stopTimerMutation.mutateAsync({ timerId: activeTimer });
+      setIsPaused(true);
+      setIsPauseDialogOpen(false);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to pause timer";
+      toast({ title: "Failed to pause", description: message, variant: "destructive" });
+    }
   };
 
-  const handleMarkComplete = () => {
+  const handleMarkComplete = async () => {
     if (estimateBlocksCompletion) {
       toast({ title: "Cannot complete", description: "Estimates must be approved first.", variant: "destructive" });
       return;
@@ -174,21 +173,21 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       toast({ title: "Photo required", description: "Please take a photo before completing.", variant: "destructive" });
       return;
     }
-    const onCompleteSuccess = () => {
+    try {
+      await stopTimerMutation.mutateAsync({
+        timerId: activeTimer ?? undefined,
+        newStatus: "completed",
+      });
       setIsPauseDialogOpen(false);
       setShowCompletion(true);
-    };
-    const onCompleteError = (error: Error) => {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Please try again.";
       toast({
         title: "Failed to complete task",
-        description: error?.message || "Please try again.",
+        description: message,
         variant: "destructive",
       });
-    };
-    stopTimerMutation.mutate(
-      { timerId: activeTimer ?? undefined, newStatus: "completed" },
-      { onSuccess: onCompleteSuccess, onError: onCompleteError },
-    );
+    }
   };
 
   const [locationExpanded, setLocationExpanded] = useState(false);

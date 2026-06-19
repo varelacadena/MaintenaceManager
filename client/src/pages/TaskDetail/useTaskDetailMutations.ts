@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
 import type {
   Task,
   TimeEntry,
@@ -8,18 +8,23 @@ import type {
   User as UserType,
 } from "@shared/schema";
 
-/** Close any in-progress time entry for a task, refetching from the server if needed. */
+/** Close the current user's in-progress time entry for a task, refetching if needed. */
 async function closeOpenTimeEntry(
   taskId: string,
   cachedEntries: TimeEntry[],
   preferredTimerId?: string | null,
+  userId?: string | null,
 ): Promise<void> {
+  const scopeEntries = (entries: TimeEntry[]) =>
+    userId ? entries.filter((e) => e.userId === userId) : entries;
+
   const findOpen = (entries: TimeEntry[]) => {
+    const scoped = scopeEntries(entries);
     if (preferredTimerId) {
-      const preferred = entries.find((e) => e.id === preferredTimerId);
+      const preferred = scoped.find((e) => e.id === preferredTimerId);
       if (preferred?.startTime && !preferred.endTime) return preferred;
     }
-    return entries.find((e) => e.startTime && !e.endTime);
+    return scoped.find((e) => e.startTime && !e.endTime);
   };
 
   let openEntry = findOpen(cachedEntries);
@@ -228,15 +233,17 @@ export function useTaskDetailMutations(deps: MutationDeps) {
 
       const shouldCloseTimer = !!timerId || newStatus === "completed";
       if (shouldCloseTimer) {
-        await closeOpenTimeEntry(id, timeEntries, timerId);
+        await closeOpenTimeEntry(id, timeEntries, timerId, user?.id);
       }
 
+      let updatedTask: Task | undefined;
       if (newStatus) {
         const statusPayload: { status: string; onHoldReason?: string } = { status: newStatus };
         if (newStatus === "on_hold" && onHoldReason) {
           statusPayload.onHoldReason = onHoldReason;
         }
-        await apiRequest("PATCH", `/api/tasks/${id}/status`, statusPayload);
+        const response = await apiRequest("PATCH", `/api/tasks/${id}/status`, statusPayload);
+        updatedTask = await response.json();
 
         if (newStatus === "on_hold" && onHoldReason) {
           await apiRequest("POST", "/api/task-notes", {
@@ -245,22 +252,35 @@ export function useTaskDetailMutations(deps: MutationDeps) {
           });
         }
       }
-      return { newStatus };
+      return { newStatus, updatedTask };
     },
     onSuccess: (data) => {
       setActiveTimer(null);
       setIsStopTimerDialogOpen(false);
       setIsHoldReasonDialogOpen(false);
       setHoldReason("");
+      if (data?.updatedTask && id) {
+        queryClient.setQueryData(["/api/tasks", id], data.updatedTask);
+        patchTaskInListCaches(id, {
+          status: data.updatedTask.status,
+          actualCompletionDate: data.updatedTask.actualCompletionDate,
+        });
+      }
       toast({ title: data?.newStatus === "completed" ? "Task completed" : "Timer stopped" });
       if (data?.newStatus === "completed" && task?.parentTaskId) {
         setTimeout(() => safeNavigate(`/tasks/${task.parentTaskId}`), 1200);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      invalidateTaskAfterMutation(id);
+      invalidateTaskAfterMutation(id, {
+        broad: variables?.newStatus === "completed",
+        patch:
+          variables?.newStatus === "completed"
+            ? { status: "completed", actualCompletionDate: new Date() }
+            : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", id] });
     },
     onError: (error: any) => {
