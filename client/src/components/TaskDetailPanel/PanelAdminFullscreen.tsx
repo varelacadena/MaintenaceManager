@@ -31,7 +31,7 @@ import {
 import { format } from "date-fns";
 import type { User, TimeEntry } from "@shared/schema";
 import { toDisplayUrl } from "@/lib/imageUtils";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId } from "@/utils/taskUtils";
 import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
@@ -152,6 +152,14 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               >
                 {task.name}
               </h1>
+              <p
+                className="text-xs font-mono mt-2"
+                style={{ color: "#9CA3AF" }}
+                data-testid="text-task-id"
+                title={task.id}
+              >
+                ID {formatTaskReferenceId(task.id)}
+              </p>
               <p className="text-sm mt-3" style={{ color: "#6B7280" }}>
                 {taskTypeLabels[task.taskType] || task.taskType} - {task.executorType === "student" ? "Student Pool" : "Technician Pool"}
               </p>

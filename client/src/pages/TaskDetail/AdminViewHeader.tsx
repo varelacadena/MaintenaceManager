@@ -31,6 +31,7 @@ import {
 import { statusColors, urgencyColors } from "./constants";
 import { MultiPropertyDisplay } from "./helpers";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
+import { formatTaskReferenceId } from "@/utils/taskUtils";
 import type { TaskDetailContext } from "./useTaskDetail";
 
 export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
@@ -69,6 +70,13 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
             <h1 className="text-lg font-semibold leading-tight line-clamp-2" data-testid="text-task-name">
               {task.name}
             </h1>
+            <p
+              className="text-xs font-mono text-muted-foreground mt-0.5"
+              data-testid="text-task-id"
+              title={task.id}
+            >
+              ID {formatTaskReferenceId(task.id)}
+            </p>
           </div>
 
           {isTechnicianOrAdmin && (

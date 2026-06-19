@@ -21,6 +21,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { statusColors } from "./constants";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
+import { formatTaskReferenceId } from "@/utils/taskUtils";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { StudentBottomBar, StudentDialogs } from "./StudentViewSections";
 
@@ -62,6 +63,13 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                   <Badge variant="outline" className="shrink-0" data-testid="badge-helper">Helper</Badge>
                 )}
               </div>
+              <p
+                className="text-xs font-mono text-muted-foreground"
+                data-testid="text-task-id"
+                title={task.id}
+              >
+                ID {formatTaskReferenceId(task.id)}
+              </p>
               {property && (
                 <p className="text-sm sm:text-base text-muted-foreground flex items-center gap-1.5 min-w-0">
                   <MapPin className="w-4 h-4 shrink-0" />

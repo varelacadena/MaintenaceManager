@@ -18,6 +18,7 @@ import type { Task, Quote, InventoryItem } from "@shared/schema";
 export interface TechnicianDialogsProps {
   task: Task;
   isPauseDialogOpen: boolean;
+  pauseDialogMode: "running" | "paused";
   setIsPauseDialogOpen: (v: boolean) => void;
   handlePauseConfirm: () => void;
   handleMarkComplete: () => void;
@@ -49,6 +50,7 @@ export interface TechnicianDialogsProps {
 export function TechnicianDialogs({
   task,
   isPauseDialogOpen,
+  pauseDialogMode,
   setIsPauseDialogOpen,
   handlePauseConfirm,
   handleMarkComplete,
@@ -77,13 +79,15 @@ export function TechnicianDialogs({
   userRole,
 }: TechnicianDialogsProps) {
   const showCost = canSeeInventoryCost(userRole);
+  const isTimerRunning = pauseDialogMode === "running";
+  const isPending = stopTimerMutation.isPending;
 
   return (
     <>
       {isPauseDialogOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
-          onClick={() => setIsPauseDialogOpen(false)}
+          onClick={() => !isPending && setIsPauseDialogOpen(false)}
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
@@ -92,29 +96,33 @@ export function TechnicianDialogs({
             data-testid="dialog-pause-complete"
           >
             <p className="text-sm font-semibold mb-1 text-foreground">
-              Timer running
+              {isTimerRunning ? "Timer running" : "Finish this task?"}
             </p>
             <p className="text-xs mb-4 text-muted-foreground">
-              What would you like to do?
+              {isTimerRunning
+                ? "What would you like to do?"
+                : "Confirm you want to mark this task as completed."}
             </p>
             <div className="space-y-2">
-              <button
-                className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 bg-gray-600 dark:bg-gray-500"
-                onClick={handlePauseConfirm}
-                disabled={stopTimerMutation.isPending}
-                data-testid="button-pause-confirm"
-              >
-                <Pause className="w-4 h-4" />
-                Pause — resume later
-              </button>
+              {isTimerRunning && (
+                <button
+                  className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 bg-gray-600 dark:bg-gray-500"
+                  onClick={handlePauseConfirm}
+                  disabled={isPending}
+                  data-testid="button-pause-confirm"
+                >
+                  <Pause className="w-4 h-4" />
+                  Pause — resume later
+                </button>
+              )}
               <button
                 className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion ? "bg-muted-foreground opacity-70" : "bg-green-700 dark:bg-green-600"}`}
                 onClick={handleMarkComplete}
-                disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
+                disabled={isPending || !!estimateBlocksCompletion}
                 data-testid="button-mark-complete"
               >
                 <Check className="w-4 h-4" />
-                Mark as complete
+                {isPending ? "Completing..." : "Mark as complete"}
               </button>
               {estimateBlocksCompletion && (
                 <p className="text-xs text-center mt-1 text-amber-600 dark:text-amber-400" data-testid="text-estimate-block-reason">
@@ -124,6 +132,7 @@ export function TechnicianDialogs({
               <button
                 className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center bg-muted border border-border text-muted-foreground"
                 onClick={() => setIsPauseDialogOpen(false)}
+                disabled={isPending}
                 data-testid="button-pause-cancel"
               >
                 Cancel

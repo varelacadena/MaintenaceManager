@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
+import { buildStoredImageUrl, mapUploaderResultForRegistration } from "@/lib/uploadUtils";
 import { getUserDisplayName } from "@/utils/taskUtils";
 import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace, User as UserType } from "@shared/schema";
 import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
@@ -262,11 +263,13 @@ export function usePropertyDetail() {
           pendingEquipmentUploads.map((upload) =>
             apiRequest("POST", "/api/uploads", {
               equipmentId: newEquipment.id,
-              fileName: upload.fileName,
-              fileType: upload.fileType,
-              objectUrl: upload.objectUrl,
-              objectPath: upload.objectPath,
               label: upload.label,
+              ...mapUploaderResultForRegistration({
+                fileName: upload.fileName,
+                type: upload.fileType,
+                objectUrl: upload.objectUrl,
+                objectPath: upload.objectPath,
+              }),
             })
           )
         );
@@ -308,11 +311,13 @@ export function usePropertyDetail() {
           pendingEquipmentUploads.map((upload) =>
             apiRequest("POST", "/api/uploads", {
               equipmentId: editingEquipment.id,
-              fileName: upload.fileName,
-              fileType: upload.fileType,
-              objectUrl: upload.objectUrl,
-              objectPath: upload.objectPath,
               label: upload.label,
+              ...mapUploaderResultForRegistration({
+                fileName: upload.fileName,
+                type: upload.fileType,
+                objectUrl: upload.objectUrl,
+                objectPath: upload.objectPath,
+              }),
             })
           )
         );
@@ -374,8 +379,11 @@ export function usePropertyDetail() {
     const submitData = {
       ...data,
       spaceId: data.spaceId || undefined,
-      imageUrl: equipmentImageUrl || undefined,
-      manufacturerImageUrl: manufacturerImageUrl || undefined,
+      imageUrl: buildStoredImageUrl(equipmentImagePathRef.current, equipmentImageUrl),
+      manufacturerImageUrl: buildStoredImageUrl(
+        manufacturerImagePathRef.current,
+        manufacturerImageUrl
+      ),
     };
     if (editingEquipment) {
       updateEquipmentMutation.mutate({ id: editingEquipment.id, data: submitData });

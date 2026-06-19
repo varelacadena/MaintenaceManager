@@ -33,6 +33,7 @@ import {
 import type { Task, User, Property, Area } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
+import { formatTaskReferenceId } from "@/utils/taskUtils";
 
 export const TaskTableRow = memo(function TaskTableRow({
   task,
@@ -149,6 +150,13 @@ export const TaskTableRow = memo(function TaskTableRow({
             onSave={handleInlineEdit}
             linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
           />
+          <span
+            className="shrink-0 text-[10px] font-mono text-muted-foreground"
+            data-testid={`text-task-id-${task.id}`}
+            title={task.id}
+          >
+            {formatTaskReferenceId(task.id)}
+          </span>
           {nameExtra}
           {(() => {
             const ext = task as Task & { isHelper?: boolean; helperCount?: number };

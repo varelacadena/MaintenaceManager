@@ -21,6 +21,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCompletion, setShowCompletion] = useState(false);
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
+  const [pauseDialogMode, setPauseDialogMode] = useState<"running" | "paused">("running");
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
@@ -134,6 +135,12 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   };
 
   const handlePauseTap = () => {
+    setPauseDialogMode("running");
+    setIsPauseDialogOpen(true);
+  };
+
+  const handleFinishTap = () => {
+    setPauseDialogMode("paused");
     setIsPauseDialogOpen(true);
   };
 
@@ -143,11 +150,19 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   };
 
   const handlePauseConfirm = () => {
-    if (activeTimer) {
-      stopTimerMutation.mutate({ timerId: activeTimer });
-      setIsPaused(true);
+    if (!activeTimer) {
+      setIsPauseDialogOpen(false);
+      return;
     }
-    setIsPauseDialogOpen(false);
+    stopTimerMutation.mutate(
+      { timerId: activeTimer },
+      {
+        onSuccess: () => {
+          setIsPaused(true);
+          setIsPauseDialogOpen(false);
+        },
+      },
+    );
   };
 
   const handleMarkComplete = () => {
@@ -159,20 +174,21 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       toast({ title: "Photo required", description: "Please take a photo before completing.", variant: "destructive" });
       return;
     }
-    setIsPauseDialogOpen(false);
-    const onCompleteSuccess = () => setShowCompletion(true);
-    const onCompleteError = () => toast({ title: "Failed to complete task", variant: "destructive" });
-    if (activeTimer) {
-      stopTimerMutation.mutate(
-        { timerId: activeTimer, newStatus: "completed" },
-        { onSuccess: onCompleteSuccess, onError: onCompleteError }
-      );
-    } else {
-      props.updateStatusMutation.mutate("completed", {
-        onSuccess: onCompleteSuccess,
-        onError: onCompleteError,
+    const onCompleteSuccess = () => {
+      setIsPauseDialogOpen(false);
+      setShowCompletion(true);
+    };
+    const onCompleteError = (error: Error) => {
+      toast({
+        title: "Failed to complete task",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
       });
-    }
+    };
+    stopTimerMutation.mutate(
+      { timerId: activeTimer ?? undefined, newStatus: "completed" },
+      { onSuccess: onCompleteSuccess, onError: onCompleteError },
+    );
   };
 
   const [locationExpanded, setLocationExpanded] = useState(false);
@@ -217,6 +233,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     elapsedSeconds,
     showCompletion,
     isPauseDialogOpen, setIsPauseDialogOpen,
+    pauseDialogMode,
     isEstimateSheetOpen, setIsEstimateSheetOpen,
     isPartModalOpen, setIsPartModalOpen,
     previewUpload, setPreviewUpload,
@@ -230,6 +247,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     handleNoteChange,
     handleStartTask,
     handlePauseTap,
+    handleFinishTap,
     handleResume,
     handlePauseConfirm,
     handleMarkComplete,

@@ -5,6 +5,7 @@ import {
   Globe,
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatTaskReferenceId } from "@/utils/taskUtils";
 import { getGradient, getStatusLabel, formatElapsed } from "./types";
 import type { Task, Property } from "@shared/schema";
 
@@ -104,11 +105,18 @@ export function TechnicianHero({
         )}
       </div>
       <h1
-        className="text-sm sm:text-base font-semibold text-white leading-snug mb-1 line-clamp-2 break-words"
+        className="text-sm sm:text-base font-semibold text-white leading-snug mb-0.5 line-clamp-2 break-words"
         data-testid="text-task-name"
       >
         {taskName}
       </h1>
+      <p
+        className="text-[11px] font-mono text-white/60 mb-1"
+        data-testid="text-task-id"
+        title={task.id}
+      >
+        ID {formatTaskReferenceId(task.id)}
+      </p>
       {locationText && (
         <div
           className={`flex items-center gap-1.5 min-w-0 ${multiProperties.length > 2 ? "cursor-pointer" : ""}`}

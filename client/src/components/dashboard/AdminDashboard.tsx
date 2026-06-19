@@ -298,20 +298,28 @@ export default function AdminDashboard({
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
+  const taskMatchesTechnicianWindow = (task: Task, filter: "today" | "weekly") => {
+    if (task.status === "in_progress") return true;
+    const raw = task.initialDate ?? task.estimatedCompletionDate;
+    if (!raw) return true;
+    const taskDate = startOfDay(parseISO(raw as unknown as string));
+    if (filter === "today") {
+      return taskDate.getTime() === today.getTime() || taskDate.getTime() < today.getTime();
+    }
+    return (
+      (taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime()) ||
+      taskDate.getTime() < weekStart.getTime()
+    );
+  };
+
   const technicianStats = useMemo(() => {
     const techs = users.filter(u => u.role === "technician");
     return techs.map(tech => {
-      const allTechTasks = tasks.filter(t => t.assignedToId === tech.id);
-      const techTasks = allTechTasks.filter(t => {
-        if (techFilter === "today") {
-          if (!t.initialDate) return false;
-          const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-          return taskDate.getTime() === today.getTime();
-        }
-        if (!t.initialDate) return true;
-        const taskDate = startOfDay(parseISO(t.initialDate as unknown as string));
-        return taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime();
+      const allTechTasks = tasks.filter((t) => {
+        const helperIds = (t as Task & { helperUserIds?: string[] }).helperUserIds ?? [];
+        return t.assignedToId === tech.id || helperIds.includes(tech.id);
       });
+      const techTasks = allTechTasks.filter((t) => taskMatchesTechnicianWindow(t, techFilter));
       const completed = techTasks.filter(t => t.status === "completed").length;
       const total = techTasks.length;
       const inProgress = techTasks.filter(t => t.status === "in_progress").length;

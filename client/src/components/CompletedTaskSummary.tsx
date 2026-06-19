@@ -50,6 +50,7 @@ import {
   urgencyBadgeStyles as urgencyColors,
   statusBadgeStyles as statusColors,
   statusLabels,
+  formatTaskReferenceId,
 } from "@/utils/taskUtils";
 
 interface CompletedTaskSummaryProps {
@@ -243,8 +244,8 @@ function SummaryContent({
           <h2 className="text-xl font-semibold leading-tight" data-testid="text-task-name">
             {task.name}
           </h2>
-          <p className="text-sm text-muted-foreground" data-testid="text-task-id">
-            Reference: {task.id.slice(0, 8).toUpperCase()}
+          <p className="text-sm text-muted-foreground" data-testid="text-task-id" title={task.id}>
+            ID {formatTaskReferenceId(task.id)}
           </p>
           {task.actualCompletionDate && (
             <p className="text-sm text-muted-foreground" data-testid="text-completion-date">

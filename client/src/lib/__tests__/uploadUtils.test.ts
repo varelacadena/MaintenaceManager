@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildDisplayUrlFromUpload,
+  buildStoredImageUrl,
   mapUploaderResultToPending,
   mapUploaderResultForRegistration,
 } from "../uploadUtils";
@@ -25,6 +26,18 @@ describe("uploadUtils", () => {
     expect(pending.objectPath).toBe("uploads/manual.pdf");
     expect(pending.objectUrl).toBe("https://signed.example/upload");
     expect(pending.label).toBe("manual");
+  });
+
+  it("buildStoredImageUrl uses image proxy when objectPath is present", () => {
+    const url = buildStoredImageUrl("uploads/photo.jpg", "https://old.example/x");
+    expect(url).toContain("/api/objects/image?path=");
+    expect(url).toContain(encodeURIComponent("uploads/photo.jpg"));
+  });
+
+  it("buildStoredImageUrl keeps existing url when objectPath is missing", () => {
+    expect(buildStoredImageUrl("", "/api/objects/image?path=uploads%2Fx")).toBe(
+      "/api/objects/image?path=uploads%2Fx"
+    );
   });
 
   it("mapUploaderResultForRegistration keeps raw storage URL for DB", () => {

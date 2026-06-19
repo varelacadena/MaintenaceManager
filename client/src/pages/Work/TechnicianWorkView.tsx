@@ -11,6 +11,7 @@ import {
   DaySeparator,
   type TaskWithHelperFlag,
 } from "./helpers";
+import { formatTaskReferenceId } from "@/utils/taskUtils";
 import { FieldWorkActiveList } from "./FieldWorkActiveList";
 import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
 
@@ -69,6 +70,13 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
               {task.name}
             </h3>
+            <p
+              className="text-[11px] font-mono text-muted-foreground mt-0.5"
+              data-testid={`text-task-id-${task.id}`}
+              title={task.id}
+            >
+              ID {formatTaskReferenceId(task.id)}
+            </p>
             {property && (
               <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
@@ -116,6 +124,13 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             <h3 className="font-semibold text-base leading-tight truncate text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
               {task.name}
             </h3>
+            <p
+              className="text-[11px] font-mono text-green-700/80 dark:text-green-400/80 mt-0.5"
+              data-testid={`text-task-id-${task.id}`}
+              title={task.id}
+            >
+              ID {formatTaskReferenceId(task.id)}
+            </p>
             {property && (
               <p className="text-sm text-green-700 dark:text-green-400 mt-0.5 truncate flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />

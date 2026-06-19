@@ -19,10 +19,13 @@ export type TaskListSummary = {
   estimateStatus: Task["estimateStatus"] | null;
   taskType: Task["taskType"];
   helperCount?: number;
+  helperUserIds?: string[];
   isHelper?: boolean;
 };
 
-export function toTaskListSummary(task: Task & { helperCount?: number; isHelper?: boolean }): TaskListSummary {
+export function toTaskListSummary(
+  task: Task & { helperCount?: number; helperUserIds?: string[]; isHelper?: boolean },
+): TaskListSummary {
   return {
     id: task.id,
     name: task.name,
@@ -42,6 +45,7 @@ export function toTaskListSummary(task: Task & { helperCount?: number; isHelper?
     estimateStatus: task.estimateStatus,
     taskType: task.taskType,
     helperCount: task.helperCount,
+    helperUserIds: task.helperUserIds,
     isHelper: task.isHelper,
   };
 }

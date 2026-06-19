@@ -36,9 +36,17 @@ async function fetchWorkTasksForAdmin() {
   const recentCompletedAfter = new Date();
   recentCompletedAfter.setDate(recentCompletedAfter.getDate() - 30);
   const tasks = await storage.getTasks({ recentCompletedAfter });
-  const helperCounts = await storage.getHelperCountsByTaskIds(tasks.map((t) => t.id));
+  const taskIds = tasks.map((t) => t.id);
+  const [helperCounts, helperUserIdsByTask] = await Promise.all([
+    storage.getHelperCountsByTaskIds(taskIds),
+    storage.getHelperUserIdsByTaskIds(taskIds),
+  ]);
   return tasks.map((task) =>
-    toTaskListSummary({ ...task, helperCount: helperCounts[task.id] ?? 0 }),
+    toTaskListSummary({
+      ...task,
+      helperCount: helperCounts[task.id] ?? 0,
+      helperUserIds: helperUserIdsByTask[task.id] ?? [],
+    }),
   );
 }
 

@@ -341,7 +341,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                 {equipmentImageUrl ? (
                   <div className="flex items-start gap-3">
                     <img
-                      src={equipmentImageUrl}
+                      src={toDisplayUrl(equipmentImageUrl)}
                       alt="Equipment"
                       className="w-24 h-24 object-cover rounded-md border"
                     />
@@ -390,7 +390,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                 {manufacturerImageUrl ? (
                   <div className="flex items-start gap-3">
                     <img
-                      src={manufacturerImageUrl}
+                      src={toDisplayUrl(manufacturerImageUrl)}
                       alt="Manufacturer"
                       className="w-20 h-20 object-cover rounded-md border"
                     />

@@ -626,6 +626,27 @@ export async function getHelperTaskIds(userId: string): Promise<string[]> {
   return rows.map(r => r.taskId);
 }
 
+/** Helper user IDs per task (admin dashboards, assignment views). */
+export async function getHelperUserIdsByTaskIds(
+  taskIds: string[],
+): Promise<Record<string, string[]>> {
+  if (taskIds.length === 0) return {};
+
+  const rows = await db
+    .select({ taskId: taskHelpers.taskId, userId: taskHelpers.userId })
+    .from(taskHelpers)
+    .where(inArray(taskHelpers.taskId, taskIds));
+
+  const result: Record<string, string[]> = {};
+  for (const id of taskIds) {
+    result[id] = [];
+  }
+  for (const row of rows) {
+    result[row.taskId].push(row.userId);
+  }
+  return result;
+}
+
 export async function isTaskHelper(taskId: string, userId: string): Promise<boolean> {
   const rows = await db.select({ id: taskHelpers.id })
     .from(taskHelpers)

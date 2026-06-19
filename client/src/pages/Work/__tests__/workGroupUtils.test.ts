@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { taskToUnifiedGroupKey } from "../constants";
 import { buildDefaultCollapsedGroups } from "../workGroupPrefs";
-import { filterTasksByDate } from "../helpers";
+import { filterTasksByDate, getTaskScheduleDay } from "../helpers";
 import type { Task } from "@shared/schema";
 
 describe("taskToUnifiedGroupKey", () => {
@@ -38,7 +38,7 @@ describe("filterTasksByDate", () => {
     taskType: "one_time" as const,
   };
 
-  it("excludes undated active tasks from Today filter", () => {
+  it("includes undated active tasks in Today filter", () => {
     const undated = [
       {
         ...base,
@@ -46,6 +46,21 @@ describe("filterTasksByDate", () => {
         initialDate: null as unknown as Date,
       },
     ] as Task[];
-    expect(filterTasksByDate(undated, "today")).toHaveLength(0);
+    expect(filterTasksByDate(undated, "today")).toHaveLength(1);
+  });
+
+  it("includes overdue active tasks in Today filter", () => {
+    const overdue = new Date();
+    overdue.setDate(overdue.getDate() - 3);
+    const tasks = [{ ...base, initialDate: overdue }] as Task[];
+    expect(filterTasksByDate(tasks, "today")).toHaveLength(1);
+  });
+
+  it("uses initialDate before estimatedCompletionDate for schedule", () => {
+    const initialDate = new Date();
+    const estimatedCompletionDate = new Date();
+    estimatedCompletionDate.setDate(estimatedCompletionDate.getDate() + 7);
+    const task = { ...base, initialDate, estimatedCompletionDate } as Task;
+    expect(getTaskScheduleDay(task)?.toDateString()).toBe(initialDate.toDateString());
   });
 });

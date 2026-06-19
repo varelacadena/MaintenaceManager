@@ -28,9 +28,28 @@ export const getTaskDate = (task: Task): Date | null => {
   if (task.status === "completed" && task.actualCompletionDate) {
     return new Date(task.actualCompletionDate);
   }
-  if (task.estimatedCompletionDate) return new Date(task.estimatedCompletionDate);
   if (task.initialDate) return new Date(task.initialDate);
+  if (task.estimatedCompletionDate) return new Date(task.estimatedCompletionDate);
   return null;
+};
+
+const startOfLocalDay = (d: Date) => {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+};
+
+const getWeekStart = (now: Date) => {
+  const start = startOfLocalDay(now);
+  start.setDate(now.getDate() - now.getDay());
+  return start;
+};
+
+/** Schedule day used for Today/Week filters on active tasks. */
+export const getTaskScheduleDay = (task: Task): Date | null => {
+  const raw = task.initialDate ?? task.estimatedCompletionDate;
+  if (!raw) return null;
+  return startOfLocalDay(new Date(raw as unknown as string));
 };
 
 export const isToday = (d: Date) => {
@@ -53,6 +72,9 @@ export const filterTasksByDate = (allTasks: Task[], dateFilter: "today" | "week"
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
+  const todayStart = startOfLocalDay(new Date());
+  const weekStart = getWeekStart(new Date());
+
   return allTasks.filter((t) => {
     if (t.status === "completed") {
       const completedDate = t.actualCompletionDate ? new Date(t.actualCompletionDate) : null;
@@ -61,14 +83,19 @@ export const filterTasksByDate = (allTasks: Task[], dateFilter: "today" | "week"
       if (dateFilter === "week") return isThisWeek(completedDate);
       return true;
     }
-    const taskDate = getTaskDate(t);
+
+    if (dateFilter === "all") return true;
+
+    // Active tasks: always show in-progress and undated assignments.
+    if (t.status === "in_progress") return true;
+    const scheduleDay = getTaskScheduleDay(t);
+    if (!scheduleDay) return true;
+
     if (dateFilter === "today") {
-      if (!taskDate) return false;
-      return isToday(taskDate);
+      return scheduleDay.getTime() === todayStart.getTime() || scheduleDay.getTime() < todayStart.getTime();
     }
     if (dateFilter === "week") {
-      if (!taskDate) return false;
-      return isThisWeek(taskDate);
+      return isThisWeek(scheduleDay) || scheduleDay.getTime() < weekStart.getTime();
     }
     return true;
   });

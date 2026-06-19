@@ -8,6 +8,41 @@ import type {
   User as UserType,
 } from "@shared/schema";
 
+/** Close any in-progress time entry for a task, refetching from the server if needed. */
+async function closeOpenTimeEntry(
+  taskId: string,
+  cachedEntries: TimeEntry[],
+  preferredTimerId?: string | null,
+): Promise<void> {
+  const findOpen = (entries: TimeEntry[]) => {
+    if (preferredTimerId) {
+      const preferred = entries.find((e) => e.id === preferredTimerId);
+      if (preferred?.startTime && !preferred.endTime) return preferred;
+    }
+    return entries.find((e) => e.startTime && !e.endTime);
+  };
+
+  let openEntry = findOpen(cachedEntries);
+  if (!openEntry) {
+    const response = await apiRequest("GET", `/api/time-entries/task/${taskId}`);
+    const freshEntries: TimeEntry[] = await response.json();
+    openEntry = findOpen(freshEntries);
+  }
+
+  if (!openEntry?.startTime || openEntry.endTime) return;
+
+  const endTime = new Date();
+  const durationMinutes = Math.max(
+    0,
+    Math.floor((endTime.getTime() - new Date(openEntry.startTime).getTime()) / (1000 * 60)),
+  );
+
+  await apiRequest("PATCH", `/api/time-entries/${openEntry.id}`, {
+    endTime: endTime.toISOString(),
+    durationMinutes,
+  });
+}
+
 interface MutationDeps {
   id: string | undefined;
   user: UserType | null | undefined;
@@ -180,31 +215,33 @@ export function useTaskDetailMutations(deps: MutationDeps) {
   });
 
   const stopTimerMutation = useMutation({
-    mutationFn: async ({ timerId, newStatus, onHoldReason }: { timerId: string, newStatus?: string, onHoldReason?: string }) => {
-      const entry = timeEntries.find((e) => e.id === timerId);
-      if (!entry?.startTime) return;
+    mutationFn: async ({
+      timerId,
+      newStatus,
+      onHoldReason,
+    }: {
+      timerId?: string;
+      newStatus?: string;
+      onHoldReason?: string;
+    }) => {
+      if (!id) throw new Error("Task not found");
 
-      const endTime = new Date();
-      const durationMinutes = Math.floor(
-        (endTime.getTime() - new Date(entry.startTime).getTime()) / (1000 * 60)
-      );
-
-      await apiRequest("PATCH", `/api/time-entries/${timerId}`, {
-        endTime: endTime.toISOString(),
-        durationMinutes,
-      });
+      const shouldCloseTimer = !!timerId || newStatus === "completed";
+      if (shouldCloseTimer) {
+        await closeOpenTimeEntry(id, timeEntries, timerId);
+      }
 
       if (newStatus) {
-        const payload: any = { status: newStatus };
-        if (newStatus === "completed") {
-          payload.actualCompletionDate = new Date().toISOString();
+        const statusPayload: { status: string; onHoldReason?: string } = { status: newStatus };
+        if (newStatus === "on_hold" && onHoldReason) {
+          statusPayload.onHoldReason = onHoldReason;
         }
-        await apiRequest("PATCH", `/api/tasks/${id}`, payload);
+        await apiRequest("PATCH", `/api/tasks/${id}/status`, statusPayload);
 
         if (newStatus === "on_hold" && onHoldReason) {
           await apiRequest("POST", "/api/task-notes", {
             taskId: id,
-            content: `Task placed on hold: ${onHoldReason}`
+            content: `Task placed on hold: ${onHoldReason}`,
           });
         }
       }

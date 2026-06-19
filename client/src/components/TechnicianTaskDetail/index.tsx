@@ -117,6 +117,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         task={task}
         taskStarted={hook.taskStarted}
         isPaused={hook.isPaused}
+        activeTimer={props.activeTimer}
         isEquipmentLoading={isEquipmentLoading}
         startTimerMutation={startTimerMutation}
         stopTimerMutation={stopTimerMutation}
@@ -125,6 +126,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         handleStartTask={hook.handleStartTask}
         handleResume={hook.handleResume}
         handlePauseTap={hook.handlePauseTap}
+        handleFinishTap={hook.handleFinishTap}
         getUploadParameters={getUploadParameters}
         handleAutoSaveUpload={handleAutoSaveUpload}
         toast={hook.toast}
@@ -133,6 +135,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       <TechnicianDialogs
         task={task}
         isPauseDialogOpen={hook.isPauseDialogOpen}
+        pauseDialogMode={hook.pauseDialogMode}
         setIsPauseDialogOpen={hook.setIsPauseDialogOpen}
         handlePauseConfirm={hook.handlePauseConfirm}
         handleMarkComplete={hook.handleMarkComplete}

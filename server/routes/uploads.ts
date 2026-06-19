@@ -115,7 +115,12 @@ export function registerUploadRoutes(app: Express) {
       } else {
         const isReferencedImage = await isReferencedEntityImage(objectKey);
         if (!isReferencedImage) {
-          return res.status(403).json({ message: "Access denied" });
+          // Allow staff to preview uploads before they are linked to equipment or other records.
+          const user = await storage.getUser(userId);
+          const isStaff = user?.role === "admin" || user?.role === "technician";
+          if (!isStaff) {
+            return res.status(403).json({ message: "Access denied" });
+          }
         }
       }
 

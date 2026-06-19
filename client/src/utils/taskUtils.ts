@@ -204,6 +204,12 @@ export function getUserDisplayName(user: {
   return user.username || user.email || user.role || "Unknown";
 }
 
+/** Short, human-friendly task reference derived from the UUID (first 8 chars). */
+export function formatTaskReferenceId(taskId: string): string {
+  if (!taskId) return "";
+  return taskId.slice(0, 8).toUpperCase();
+}
+
 export function formatTaskDate(date: string | Date | null | undefined, fallback: string = ""): string {
   if (!date) return fallback;
   let d: Date;

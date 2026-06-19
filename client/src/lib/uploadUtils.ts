@@ -28,6 +28,17 @@ export function buildDisplayUrlFromUpload(
   return fallbackUrl || objectPath || "";
 }
 
+/** Persisted image URL for entity fields (equipment photo, vehicle photo, etc.). */
+export function buildStoredImageUrl(
+  objectPath: string | undefined,
+  currentUrl?: string | null
+): string | undefined {
+  if (objectPath) {
+    return `/api/objects/image?path=${encodeURIComponent(objectPath)}`;
+  }
+  return currentUrl || undefined;
+}
+
 export type PendingUploadPayload = {
   fileName: string;
   fileType: string;
