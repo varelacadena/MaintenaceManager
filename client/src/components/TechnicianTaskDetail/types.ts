@@ -45,6 +45,8 @@ export interface TechnicianTaskDetailProps {
   timeEntries: TimeEntry[];
   activeTimer: string | null;
   allTaskResources: any[];
+  equipmentResources: any[];
+  propertyResources: any[];
   previousWork: Task[];
   users: UserType[];
   isParentTask: boolean;
@@ -72,6 +74,7 @@ export interface TechnicianTaskDetailProps {
   getUploadParameters: () => Promise<{ method: "PUT"; url: string }>;
   handleAutoSaveUpload: (result: any) => void;
   handleEquipmentScan: (value: string) => void;
+  handleViewTaskEquipment: (initialTab?: "info" | "history" | "resources") => void;
   handleScanPart: (value: string) => void;
   isScanEquipmentOpen: boolean;
   setIsScanEquipmentOpen: (v: boolean) => void;

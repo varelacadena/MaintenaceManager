@@ -63,6 +63,8 @@ export default function TaskDetail() {
           timeEntries={ctx.timeEntries}
           activeTimer={ctx.activeTimer}
           allTaskResources={ctx.allTaskResources}
+          equipmentResources={ctx.equipmentResources}
+          propertyResources={ctx.propertyResources}
           previousWork={ctx.previousWork}
           users={ctx.users}
           isParentTask={ctx.isParentTask}
@@ -90,6 +92,7 @@ export default function TaskDetail() {
           getUploadParameters={ctx.getUploadParameters}
           handleAutoSaveUpload={ctx.handleAutoSaveUpload}
           handleEquipmentScan={ctx.handleEquipmentScan}
+          handleViewTaskEquipment={ctx.handleViewTaskEquipment}
           handleScanPart={ctx.handleScanPart}
           isScanEquipmentOpen={ctx.isScanEquipmentOpen}
           setIsScanEquipmentOpen={ctx.setIsScanEquipmentOpen}

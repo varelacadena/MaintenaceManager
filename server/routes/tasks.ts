@@ -239,7 +239,7 @@ export function registerTaskRoutes(app: Express) {
         return res.status(404).json({ message: "Task not found" });
       }
 
-      const [helpers, subtasks, taskUploads, parts, timeEntries, notes] = await Promise.all([
+      const [helpers, subtasks, taskUploads, parts, parentTimeEntries, notes] = await Promise.all([
         storage.getTaskHelpers(taskId),
         storage.getSubTasks(taskId),
         storage.getUploadsByTask(taskId),
@@ -248,10 +248,12 @@ export function registerTaskRoutes(app: Express) {
         storage.getNotesByTask(taskId),
       ]);
 
-      const [helperUsers, subtaskUploadArrays] = await Promise.all([
+      const [helperUsers, subtaskUploadArrays, subtaskTimeEntryArrays] = await Promise.all([
         storage.getUsersByIds(helpers.map((h) => h.userId)),
         Promise.all(subtasks.map((subtask) => storage.getUploadsByTask(subtask.id))),
+        Promise.all(subtasks.map((subtask) => storage.getTimeEntriesByTask(subtask.id))),
       ]);
+      const timeEntries = [...parentTimeEntries, ...subtaskTimeEntryArrays.flat()];
       const helperUsersById = new Map(helperUsers.map((user) => [user.id, user]));
       const helpersWithUsers = helpers
         .map((h) => {

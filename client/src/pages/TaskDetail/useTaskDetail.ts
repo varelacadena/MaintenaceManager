@@ -460,10 +460,58 @@ export function useTaskDetail() {
     }
   };
 
+  const openEquipmentInfo = async (
+    equipmentId: string,
+    initialTab: "info" | "history" | "resources" = "info",
+  ) => {
+    setEquipmentInfoTab(initialTab);
+    setIsEquipmentLoading(true);
+    try {
+      const eqPromise =
+        equipment?.id === equipmentId
+          ? Promise.resolve(equipment)
+          : fetch(`/api/equipment/${encodeURIComponent(equipmentId)}`, { credentials: "include" }).then(
+              async (res) => {
+                if (!res.ok) throw new Error("not found");
+                return res.json();
+              },
+            );
+
+      const resourcesPromise =
+        task?.equipmentId === equipmentId && equipmentResources.length > 0
+          ? Promise.resolve(equipmentResources)
+          : fetch(`/api/equipment/${encodeURIComponent(equipmentId)}/resources`, {
+              credentials: "include",
+            }).then((res) => (res.ok ? res.json() : []));
+
+      const tasksPromise = fetch(`/api/tasks?equipmentId=${encodeURIComponent(equipmentId)}`, {
+        credentials: "include",
+      }).then((res) => (res.ok ? res.json() : []));
+
+      const [eq, tasks, resources] = await Promise.all([eqPromise, tasksPromise, resourcesPromise]);
+
+      setScannedEquipment(eq);
+      setScannedEquipmentTasks(tasks);
+      setScannedEquipmentResources(resources);
+      setIsEquipmentInfoOpen(true);
+    } catch {
+      toast({
+        title: "Equipment not found",
+        description: "Could not load equipment details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEquipmentLoading(false);
+    }
+  };
+
+  const handleViewTaskEquipment = (initialTab: "info" | "history" | "resources" = "info") => {
+    if (!task?.equipmentId) return;
+    void openEquipmentInfo(task.equipmentId, initialTab);
+  };
+
   const handleEquipmentScan = async (value: string) => {
     setIsScanEquipmentOpen(false);
-    setIsEquipmentLoading(true);
-    setEquipmentInfoTab("info");
     try {
       const vehicleIdMatch = value.match(/\/vehicles\/([a-f0-9-]{36})/i);
       if (vehicleIdMatch) {
@@ -481,32 +529,9 @@ export function useTaskDetail() {
 
       const equipmentIdMatch = value.match(/\/equipment\/([a-f0-9-]{36})/i) || value.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
       const equipmentId = equipmentIdMatch ? equipmentIdMatch[1] : value.trim();
-
-      const [eqRes, tasksRes, resourcesRes] = await Promise.all([
-        fetch(`/api/equipment/${encodeURIComponent(equipmentId)}`, { credentials: "include" }),
-        fetch(`/api/tasks?equipmentId=${encodeURIComponent(equipmentId)}`, { credentials: "include" }),
-        fetch(`/api/equipment/${encodeURIComponent(equipmentId)}/resources`, { credentials: "include" }),
-      ]);
-
-      if (!eqRes.ok) {
-        toast({ title: "Equipment not found", description: "Could not find equipment for this QR code.", variant: "destructive" });
-        return;
-      }
-
-      const [eq, tasks, resources] = await Promise.all([
-        eqRes.json(),
-        tasksRes.ok ? tasksRes.json() : [],
-        resourcesRes.ok ? resourcesRes.json() : [],
-      ]);
-
-      setScannedEquipment(eq);
-      setScannedEquipmentTasks(tasks);
-      setScannedEquipmentResources(resources);
-      setIsEquipmentInfoOpen(true);
+      await openEquipmentInfo(equipmentId);
     } catch {
       toast({ title: "Scan error", description: "Failed to load equipment data.", variant: "destructive" });
-    } finally {
-      setIsEquipmentLoading(false);
     }
   };
 
@@ -933,6 +958,7 @@ export function useTaskDetail() {
     cancelLeave,
     handleScanPart,
     handleEquipmentScan,
+    handleViewTaskEquipment,
     handleStartOrPause,
     handleComplete,
     handleRunAiSchedule,

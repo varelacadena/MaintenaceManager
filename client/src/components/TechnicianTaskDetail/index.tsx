@@ -12,7 +12,7 @@ import type { TechnicianTaskDetailProps } from "./types";
 export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
     task, multiProperties = [], parts, quotes, vendors, inventoryItems, taskHelpers = [],
-    checklistGroups, subTasks, uploads, notes, allTaskResources, previousWork, users,
+    checklistGroups, subTasks, uploads, notes, allTaskResources, propertyResources, previousWork, users,
     isSubTask, completedSubTasks, subTaskProgress,
     totalChecklistItems, completedChecklistItems, estimateBlocksCompletion,
     startTimerMutation, stopTimerMutation, addPartMutation, addUploadMutation,
@@ -31,6 +31,8 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     newQuoteNotes, setNewQuoteNotes,
     pendingQuoteFiles,
   } = props;
+
+  const resourcesForSheet = props.equipment ? propertyResources : allTaskResources;
 
   const hook = useTechnicianTaskDetail(props);
 
@@ -94,6 +96,8 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
           ) : (
             <TechnicianMoreTab
               task={task}
+              equipment={props.equipment}
+              equipmentResources={props.equipmentResources}
               contactName={hook.contactName}
               contactPhone={hook.contactPhone}
               contactInitials={hook.contactInitials}
@@ -101,12 +105,13 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               parts={parts}
               previousWork={previousWork}
               allTaskResources={allTaskResources}
-              resourceDocs={hook.resourceDocs}
-              resourceVids={hook.resourceVids}
+              propertyResources={propertyResources}
+              isEquipmentLoading={isEquipmentLoading}
               setIsEstimateSheetOpen={hook.setIsEstimateSheetOpen}
               setIsPartModalOpen={hook.setIsPartModalOpen}
               setIsPreviousWorkOpen={hook.setIsPreviousWorkOpen}
               setIsResourcesOpen={hook.setIsResourcesOpen}
+              handleViewTaskEquipment={props.handleViewTaskEquipment}
               userRole={props.user?.role}
             />
           )}
@@ -160,7 +165,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         setIsScanPartOpen={setIsScanPartOpen}
         isResourcesOpen={hook.isResourcesOpen}
         setIsResourcesOpen={hook.setIsResourcesOpen}
-        allTaskResources={allTaskResources}
+        allTaskResources={resourcesForSheet}
         userRole={props.user?.role}
       />
       <TechnicianDialogsExtra

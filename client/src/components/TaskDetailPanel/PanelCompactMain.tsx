@@ -14,7 +14,7 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { EditableDateCell } from "@/components/EditableDateCell";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate } from "@/utils/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelResourcesSection } from "./PanelResourcesSection";
 import { PanelSubtasksSection } from "./PanelSubtasksSection";
@@ -44,6 +44,11 @@ function MetaCell({
       <div className="text-sm font-medium text-foreground min-w-0">{children}</div>
     </div>
   );
+}
+
+function formatLoggedTime(totalMinutes: number): string {
+  if (totalMinutes <= 0) return "Not logged";
+  return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
 }
 
 export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelCompactMainProps) {
@@ -134,51 +139,56 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
             <MetaCell label="Location" icon={<MapPin className="w-3 h-3" />}>
               {property?.name || "\u2014"}
             </MetaCell>
-            <MetaCell label="Start" icon={<Calendar className="w-3 h-3" />}>
-              {isAdmin ? (
-                <EditableDateCell
-                  value={task.initialDate}
-                  taskId={taskId}
-                  field="initialDate"
-                  onSave={handleInlineEdit}
-                />
-              ) : (
-                task.initialDate
-                  ? new Date(task.initialDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  : "Not set"
-              )}
-            </MetaCell>
-            <MetaCell label="Due" icon={<Calendar className="w-3 h-3" />}>
-              {isAdmin ? (
-                <span className={isOverdue ? "text-destructive" : undefined}>
-                  <EditableDateCell
-                    value={task.estimatedCompletionDate}
-                    taskId={taskId}
-                    field="estimatedCompletionDate"
-                    onSave={handleInlineEdit}
-                  />
-                </span>
-              ) : (
-                <span className={isOverdue ? "text-destructive" : undefined}>
-                  {task.estimatedCompletionDate
-                    ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "Not set"}
-                </span>
-              )}
-            </MetaCell>
+            {isCompleted ? (
+              <>
+                <MetaCell label="Started" icon={<Calendar className="w-3 h-3" />}>
+                  {formatTaskDate(task.initialDate, "Not set")}
+                </MetaCell>
+                <MetaCell label="Completed" icon={<CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />}>
+                  <span className="text-green-700 dark:text-green-400">
+                    {formatTaskDate(task.actualCompletionDate, "Not set")}
+                  </span>
+                </MetaCell>
+              </>
+            ) : (
+              <>
+                <MetaCell label="Start" icon={<Calendar className="w-3 h-3" />}>
+                  {isAdmin ? (
+                    <EditableDateCell
+                      value={task.initialDate}
+                      taskId={taskId}
+                      field="initialDate"
+                      onSave={handleInlineEdit}
+                    />
+                  ) : (
+                    formatTaskDate(task.initialDate, "Not set")
+                  )}
+                </MetaCell>
+                <MetaCell label="Due" icon={<Calendar className="w-3 h-3" />}>
+                  {isAdmin ? (
+                    <span className={isOverdue ? "text-destructive" : undefined}>
+                      <EditableDateCell
+                        value={task.estimatedCompletionDate}
+                        taskId={taskId}
+                        field="estimatedCompletionDate"
+                        onSave={handleInlineEdit}
+                      />
+                    </span>
+                  ) : (
+                    <span className={isOverdue ? "text-destructive" : undefined}>
+                      {formatTaskDate(task.estimatedCompletionDate, "Not set")}
+                    </span>
+                  )}
+                </MetaCell>
+              </>
+            )}
             <MetaCell label="Priority" icon={<Flag className="w-3 h-3" style={{ color: urg.color }} />}>
               <span style={{ color: urg.color }}>{urg.label}</span>
             </MetaCell>
             <MetaCell label="Logged" icon={<Clock className="w-3 h-3" />}>
-              {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
+              <span className={totalMinutes <= 0 ? "text-muted-foreground font-normal" : undefined}>
+                {formatLoggedTime(totalMinutes)}
+              </span>
             </MetaCell>
           </div>
         </div>
@@ -234,7 +244,11 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
           </Button>
         </Link>
         <p className="text-[11px] text-center text-muted-foreground leading-snug">
-          Click start or due dates to edit. Open the full page to log time or add parts.
+          {isCompleted
+            ? "Use the completion report for full details, or open the full task page."
+            : isAdmin
+            ? "Click start or due dates to edit. Open the full page to log time or add parts."
+            : "Open the full task page to log time or add parts."}
         </p>
       </div>
     </div>

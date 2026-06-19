@@ -5,12 +5,32 @@ import {
   History,
   FileText,
   ChevronRight,
+  Wrench,
+  ExternalLink,
+  Video,
+  ImageIcon,
+  LinkIcon,
+  Info,
 } from "lucide-react";
-import type { Task, PartUsed, Quote } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { toDisplayUrl } from "@/lib/imageUtils";
+import type { Task, PartUsed, Quote, Equipment } from "@shared/schema";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
+
+const EQUIPMENT_CATEGORY_LABELS: Record<string, string> = {
+  hvac: "HVAC", electrical: "Electrical", plumbing: "Plumbing",
+  mechanical: "Mechanical", appliances: "Appliances", grounds: "Grounds",
+  janitorial: "Janitorial", structural: "Structural", water_treatment: "Water Treatment", general: "General",
+};
+
+const RESOURCE_TYPE_ICONS: Record<string, typeof FileText> = {
+  video: Video, document: FileText, image: ImageIcon, link: LinkIcon,
+};
 
 interface TechnicianMoreTabProps {
   task: Task;
+  equipment?: Equipment;
+  equipmentResources: any[];
   contactName: string;
   contactPhone: string;
   contactInitials: string;
@@ -18,17 +38,21 @@ interface TechnicianMoreTabProps {
   parts: PartUsed[];
   previousWork: Task[];
   allTaskResources: any[];
-  resourceDocs: number;
-  resourceVids: number;
+  propertyResources: any[];
+  isEquipmentLoading: boolean;
   setIsEstimateSheetOpen: (v: boolean) => void;
   setIsPartModalOpen: (v: boolean) => void;
   setIsPreviousWorkOpen: (v: boolean) => void;
   setIsResourcesOpen: (v: boolean) => void;
+  handleViewTaskEquipment: (initialTab?: "info" | "history" | "resources") => void;
   userRole?: string;
 }
 
 export function TechnicianMoreTab({
   task,
+  equipment,
+  equipmentResources,
+  propertyResources,
   contactName,
   contactPhone,
   contactInitials,
@@ -36,17 +60,131 @@ export function TechnicianMoreTab({
   parts,
   previousWork,
   allTaskResources,
-  resourceDocs,
-  resourceVids,
+  isEquipmentLoading,
   setIsEstimateSheetOpen,
   setIsPartModalOpen,
   setIsPreviousWorkOpen,
   setIsResourcesOpen,
+  handleViewTaskEquipment,
   userRole,
 }: TechnicianMoreTabProps) {
   const showCost = canSeeInventoryCost(userRole);
+  const generalResources = equipment ? propertyResources : allTaskResources;
+  const generalResourceDocs = generalResources.filter((r: any) => r.type !== "video").length;
+  const generalResourceVids = generalResources.filter((r: any) => r.type === "video").length;
+  const equipmentDocCount = equipmentResources.filter((r: any) => r.type !== "video").length;
+  const equipmentVidCount = equipmentResources.filter((r: any) => r.type === "video").length;
+  const categoryLabel = equipment
+    ? EQUIPMENT_CATEGORY_LABELS[equipment.category] || equipment.category
+    : "";
+
   return (
     <>
+      {equipment && (
+        <div
+          className="p-3 rounded-xl bg-background border border-border"
+          data-testid="card-equipment"
+        >
+          <button
+            type="button"
+            className="flex items-center gap-3 w-full text-left"
+            onClick={() => handleViewTaskEquipment("info")}
+            disabled={isEquipmentLoading}
+            data-testid="action-equipment-details"
+          >
+            <div
+              className="flex items-center justify-center shrink-0 bg-primary/10 rounded-lg"
+              style={{ width: 32, height: 32 }}
+            >
+              <Wrench className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{equipment.name}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {categoryLabel}
+                {equipment.serialNumber ? ` \u00B7 SN ${equipment.serialNumber}` : ""}
+              </p>
+            </div>
+            {equipment.condition && (
+              <Badge variant="outline" className="text-xs shrink-0 capitalize">
+                {equipment.condition}
+              </Badge>
+            )}
+            <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
+          </button>
+
+          {equipment.description && (
+            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{equipment.description}</p>
+          )}
+
+          {equipmentResources.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p
+                  className="text-xs uppercase font-medium text-muted-foreground"
+                  style={{ letterSpacing: "0.05em" }}
+                >
+                  Equipment Documents
+                </p>
+                <button
+                  type="button"
+                  className="text-xs text-primary"
+                  onClick={() => handleViewTaskEquipment("resources")}
+                  disabled={isEquipmentLoading}
+                  data-testid="action-equipment-all-resources"
+                >
+                  View all
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {equipmentResources.map((resource: any) => {
+                  const ResourceIcon = RESOURCE_TYPE_ICONS[resource.type] || FileText;
+                  return (
+                    <button
+                      key={resource.id}
+                      type="button"
+                      className="w-full flex items-center gap-2.5 p-2 rounded-lg border border-border/70 hover-elevate text-left"
+                      onClick={() => window.open(toDisplayUrl(resource.url), "_blank")}
+                      data-testid={`equipment-resource-${resource.id}`}
+                    >
+                      <div className="p-1 rounded-md bg-muted shrink-0">
+                        <ResourceIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{resource.title}</p>
+                        {resource.description && (
+                          <p className="text-xs text-muted-foreground truncate">{resource.description}</p>
+                        )}
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+              {(equipmentDocCount > 0 || equipmentVidCount > 0) && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {equipmentDocCount > 0 && `${equipmentDocCount} doc${equipmentDocCount !== 1 ? "s" : ""}`}
+                  {equipmentDocCount > 0 && equipmentVidCount > 0 && " \u00B7 "}
+                  {equipmentVidCount > 0 && `${equipmentVidCount} video${equipmentVidCount !== 1 ? "s" : ""}`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {equipmentResources.length === 0 && (
+            <button
+              type="button"
+              className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"
+              onClick={() => handleViewTaskEquipment("info")}
+              disabled={isEquipmentLoading}
+              data-testid="action-equipment-no-resources"
+            >
+              <Info className="w-3.5 h-3.5" />
+              View equipment details and work history
+            </button>
+          )}
+        </div>
+      )}
       {(contactName || contactPhone) && (
         <div
           className="p-3 rounded-xl bg-background border border-border"
@@ -167,7 +305,7 @@ export function TechnicianMoreTab({
           </button>
         )}
 
-        {allTaskResources.length > 0 && (
+        {generalResources.length > 0 && (
           <button
             className="flex items-center gap-3 w-full py-3 text-left"
             onClick={() => setIsResourcesOpen(true)}
@@ -181,13 +319,13 @@ export function TechnicianMoreTab({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
-                Resources
+                {equipment ? "Property Resources" : "Resources"}
               </p>
             </div>
             <span className="text-xs shrink-0 text-muted-foreground">
-              {resourceDocs > 0 && `${resourceDocs} doc${resourceDocs !== 1 ? "s" : ""}`}
-              {resourceDocs > 0 && resourceVids > 0 && " \u00B7 "}
-              {resourceVids > 0 && `${resourceVids} vid`}
+              {generalResourceDocs > 0 && `${generalResourceDocs} doc${generalResourceDocs !== 1 ? "s" : ""}`}
+              {generalResourceDocs > 0 && generalResourceVids > 0 && " \u00B7 "}
+              {generalResourceVids > 0 && `${generalResourceVids} vid`}
             </span>
             <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
           </button>
