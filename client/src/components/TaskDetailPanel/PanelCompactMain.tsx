@@ -15,14 +15,17 @@ import {
 } from "lucide-react";
 import { EditableDateCell } from "@/components/EditableDateCell";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate } from "@/utils/taskUtils";
+import type { User } from "@shared/schema";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelResourcesSection } from "./PanelResourcesSection";
+import { PanelNotesSection } from "./PanelNotesSection";
 import { PanelSubtasksSection } from "./PanelSubtasksSection";
 import { PanelSection } from "./PanelSection";
 
 interface PanelCompactMainProps {
   ctx: TaskDetailPanelContext;
   taskId: string;
+  allUsers?: User[];
   onViewCompletionReport?: () => void;
 }
 
@@ -51,17 +54,27 @@ function formatLoggedTime(totalMinutes: number): string {
   return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
 }
 
-export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelCompactMainProps) {
+export function PanelCompactMain({ ctx, taskId, allUsers, onViewCompletionReport }: PanelCompactMainProps) {
   const {
     task,
     subtasks,
     uploads,
+    taskNotes,
     totalMinutes,
     docCount,
     imgCount,
     vidCount,
     resourcesExpanded,
     setResourcesExpanded,
+    isNotesOpen,
+    setIsNotesOpen,
+    setIsAddNoteDialogOpen,
+    editingNoteId,
+    setEditingNoteId,
+    editNoteContent,
+    setEditNoteContent,
+    setDeleteNoteId,
+    updateNoteMutation,
     expandedSubtasks,
     completedSubtasks,
     totalSubtasks,
@@ -113,6 +126,32 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
             </div>
           )}
         </div>
+
+        <PanelResourcesSection
+          variant="compact"
+          uploads={uploads}
+          resourcesExpanded={resourcesExpanded}
+          setResourcesExpanded={setResourcesExpanded}
+          docCount={docCount}
+          imgCount={imgCount}
+          vidCount={vidCount}
+        />
+
+        <PanelNotesSection
+          variant="compact"
+          isNotesOpen={isNotesOpen}
+          setIsNotesOpen={setIsNotesOpen}
+          taskNotes={taskNotes}
+          allUsers={allUsers}
+          editingNoteId={editingNoteId}
+          setEditingNoteId={setEditingNoteId}
+          editNoteContent={editNoteContent}
+          setEditNoteContent={setEditNoteContent}
+          setDeleteNoteId={setDeleteNoteId}
+          setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
+          updateNoteMutation={updateNoteMutation}
+          isAdmin={isAdmin}
+        />
 
         <div className="px-4 py-3 border-b border-border">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
@@ -192,16 +231,6 @@ export function PanelCompactMain({ ctx, taskId, onViewCompletionReport }: PanelC
             </MetaCell>
           </div>
         </div>
-
-        <PanelResourcesSection
-          variant="compact"
-          uploads={uploads}
-          resourcesExpanded={resourcesExpanded}
-          setResourcesExpanded={setResourcesExpanded}
-          docCount={docCount}
-          imgCount={imgCount}
-          vidCount={vidCount}
-        />
 
         <PanelSection
           title="Subtasks"

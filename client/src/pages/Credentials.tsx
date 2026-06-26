@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
+import { formatUserDisplayName } from "@/lib/displayNames";
 
 export default function Credentials() {
   const { toast } = useToast();
@@ -43,6 +45,7 @@ export default function Credentials() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Create form states
   const [newUsername, setNewUsername] = useState("");
@@ -162,6 +165,7 @@ export default function Credentials() {
     },
     onSuccess: () => {
       invalidateUserDirectoryQueries(queryClient);
+      setUserToDelete(null);
       toast({ title: "User deleted successfully" });
     },
     onError: (error: any) => {
@@ -226,10 +230,8 @@ export default function Credentials() {
     updateRoleMutation.mutate({ userId, role });
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone if the user has associated data.")) {
-      deleteUserMutation.mutate(userId);
-    }
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
   };
 
   const openEditDialog = (user: User) => {
@@ -471,7 +473,7 @@ export default function Credentials() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleDeleteUser(user.id)}
+                        onClick={() => handleDeleteUser(user)}
                         data-testid={`button-delete-${user.id}`}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -669,6 +671,21 @@ export default function Credentials() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DestructiveDeleteDialog
+        open={!!userToDelete}
+        onOpenChange={(open) => { if (!open) setUserToDelete(null); }}
+        entityLabel={userToDelete ? formatUserDisplayName(userToDelete) : ""}
+        entityType="user"
+        requireConfirmationText={userToDelete?.username}
+        warningDetails={[
+          "The user account and fleet reservations will be removed.",
+          "Existing tasks, notes, and time entries will be kept with this person's name preserved.",
+          "This action is logged and cannot be undone.",
+        ]}
+        onConfirm={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
+        isPending={deleteUserMutation.isPending}
+      />
     </div>
   );
 }

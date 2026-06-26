@@ -14,9 +14,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -24,7 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskLists } from "@/lib/taskQueryInvalidation";
 import { invalidateVehicleQueries, invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 import { SecureImage } from "@/components/SecureImage";
-import { useFileDownload } from "@/hooks/use-download";
+import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,9 +34,8 @@ export default function VehicleCheckInVerification() {
   const { checkInLogId } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { openImagePreview } = useImagePreview();
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedUpload, setSelectedUpload] = useState<Upload | null>(null);
-  const { downloadFile } = useFileDownload();
   const [editedData, setEditedData] = useState<{
     endMileage: number;
     fuelLevel: string;
@@ -656,7 +652,7 @@ export default function VehicleCheckInVerification() {
                   <div
                     key={upload.id}
                     className="relative group cursor-pointer"
-                    onClick={() => setSelectedUpload(upload)}
+                    onClick={() => openImagePreview(buildUploadPreviewOptions(upload))}
                     data-testid={`image-${upload.id}`}
                   >
                     <div className="aspect-square rounded-lg overflow-hidden border bg-muted">
@@ -687,33 +683,6 @@ export default function VehicleCheckInVerification() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={!!selectedUpload} onOpenChange={() => setSelectedUpload(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Photo Preview</DialogTitle>
-          </DialogHeader>
-          {selectedUpload && (
-            <div className="w-full">
-              <SecureImage
-                uploadId={selectedUpload.id}
-                objectUrl={selectedUpload.objectUrl}
-                fileName={selectedUpload.fileName}
-                className="w-full h-auto rounded-lg object-contain max-h-[70vh]"
-              />
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => downloadFile(selectedUpload.id, selectedUpload.objectUrl)}
-                  className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                  data-testid="button-open-full"
-                >
-                  Open full size
-                </button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

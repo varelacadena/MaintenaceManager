@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarIcon, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   FormControl,
@@ -9,7 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toCalendarDate } from "@/lib/taskCalendarDates";
 
 interface TaskDateFieldsProps {
   form: any;
@@ -62,10 +63,6 @@ function formatDisplay(hour: string, minute: string, period: string): string {
 
 function toDateInputValue(date: Date): string {
   return format(date, "yyyy-MM-dd");
-}
-
-function fromDateInputValue(value: string | undefined): Date | undefined {
-  return value ? new Date(`${value}T12:00:00`) : undefined;
 }
 
 function setRequiredDate(form: any, field: any, name: string, date: Date | undefined) {
@@ -129,7 +126,7 @@ function TimePopover({ field }: { field: any }) {
   const displayParsed = parseTimeValue(field.value);
 
   return (
-    <Popover open={open} onOpenChange={handleOpen}>
+    <Popover open={open} onOpenChange={handleOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -146,7 +143,12 @@ function TimePopover({ field }: { field: any }) {
             : "Pick time"}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-3" align="start">
+      <PopoverContent
+        className="w-auto p-3"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="flex gap-2 items-center">
           <Select value={hour} onValueChange={handleHour}>
             <SelectTrigger className="w-20">
@@ -198,33 +200,14 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
           render={({ field }: { field: any }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Start Date *</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                      type="button"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(fromDateInputValue(field.value)!, "MMM d, yyyy") : "Pick date"}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={fromDateInputValue(field.value)}
-                    onSelect={(date: Date | undefined) => setRequiredDate(form, field, "initialDate", date)}
-                    className="[--cell-size:2.5rem] p-4"
-                    initialFocus
-                    disabled={disabledDate}
-                  />
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <DatePicker
+                  value={field.value ? toCalendarDate(field.value) ?? undefined : undefined}
+                  onChange={(date) => setRequiredDate(form, field, "initialDate", date)}
+                  disabledDates={disabledDate}
+                  placeholder="Pick date"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -236,33 +219,14 @@ export function TaskDateFields({ form, allowPastDates = false }: TaskDateFieldsP
           render={({ field }: { field: any }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Due Date *</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                      type="button"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(fromDateInputValue(field.value)!, "MMM d, yyyy") : "Pick date"}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={fromDateInputValue(field.value)}
-                    onSelect={(date: Date | undefined) => setRequiredDate(form, field, "estimatedCompletionDate", date)}
-                    className="[--cell-size:2.5rem] p-4"
-                    initialFocus
-                    disabled={disabledDate}
-                  />
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <DatePicker
+                  value={field.value ? toCalendarDate(field.value) ?? undefined : undefined}
+                  onChange={(date) => setRequiredDate(form, field, "estimatedCompletionDate", date)}
+                  disabledDates={disabledDate}
+                  placeholder="Pick date"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

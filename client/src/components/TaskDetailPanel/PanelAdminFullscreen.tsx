@@ -10,7 +10,6 @@ import {
   Clock,
   ChevronRight,
   FileText,
-  Image as ImageIcon,
   Video,
   Package,
   StickyNote,
@@ -31,6 +30,7 @@ import {
 import { format } from "date-fns";
 import type { User, TimeEntry } from "@shared/schema";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { PhotoThumbnailGrid } from "./PanelResourcesSection";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId } from "@/utils/taskUtils";
 import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
@@ -170,6 +170,145 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               )}
             </div>
 
+            {(() => {
+              const images = uploads?.filter((u) => u.fileType.startsWith("image/")) ?? [];
+              const otherFiles = uploads?.filter((u) => !u.fileType.startsWith("image/")) ?? [];
+              return (
+                <>
+                  <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
+                      Photos{images.length > 0 ? ` (${images.length})` : ""}
+                    </p>
+                    {images.length > 0 ? (
+                      <PhotoThumbnailGrid uploads={images} columns={isMobile ? 3 : 4} />
+                    ) : (
+                      <p className="text-sm" style={{ color: "#9CA3AF" }}>No photos yet</p>
+                    )}
+                    {otherFiles.length > 0 && (
+                        <div className="mt-4 pt-4" style={{ borderTop: "1px solid #F3F4F6" }}>
+                          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>
+                            Files ({otherFiles.length})
+                          </p>
+                          <div className="space-y-2">
+                            {otherFiles.map((upload) => {
+                              const isVideo = upload.fileType.startsWith("video/");
+                              const TypeIcon = isVideo ? Video : FileText;
+                              const badgeBg = isVideo ? "#FFF1F2" : "#EDE9FE";
+                              const badgeColor = isVideo ? "#F43F5E" : "#7C3AED";
+                              const ext = upload.fileName.split(".").pop()?.toLowerCase() || "";
+                              const typeLabel = isVideo ? "VID"
+                                : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
+                                : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
+                              return (
+                                <a
+                                  key={upload.id}
+                                  href={toDisplayUrl(upload.objectUrl)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 py-2 px-2 rounded hover-elevate"
+                                  data-testid={`resource-item-${upload.id}`}
+                                >
+                                  <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
+                                  <span
+                                    className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
+                                    style={{ backgroundColor: badgeBg, color: badgeColor }}
+                                  >
+                                    {typeLabel}
+                                  </span>
+                                  <span className="text-sm truncate flex-1" style={{ color: "#374151" }}>{upload.fileName}</span>
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+
+                  <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
+                      Notes ({taskNotes.length})
+                    </p>
+                    {taskNotes.length === 0 ? (
+                      <div className="rounded-xl border border-dashed py-8 px-4 text-center mb-3" style={{ borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" }}>
+                        <StickyNote className="w-5 h-5 mx-auto mb-2" style={{ color: "#F59E0B" }} />
+                        <p className="text-sm font-medium" style={{ color: "#374151" }}>No notes yet</p>
+                        <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Add context, updates, or instructions for the team.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 mb-3">
+                        {taskNotes.map((note) => {
+                          const noteAuthor = allUsers?.find(u => u.id === note.userId);
+                          const isEditing = editingNoteId === note.id;
+                          return (
+                            <div key={note.id} data-testid={`panel-note-${note.id}`}>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <StickyNote className="w-4 h-4" style={{ color: "#F59E0B" }} />
+                                    <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
+                                      {noteAuthor ? `${noteAuthor.firstName || ""} ${noteAuthor.lastName || ""}`.trim() || noteAuthor.username : "Unknown"}
+                                    </span>
+                                    <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                                      {note.createdAt ? format(new Date(note.createdAt), "MMM d, h:mm a") : ""}
+                                    </span>
+                                  </div>
+                                  {isEditing ? (
+                                    <div className="space-y-2 ml-6">
+                                      <Textarea
+                                        value={editNoteContent}
+                                        onChange={(e) => setEditNoteContent(e.target.value)}
+                                        rows={3}
+                                        data-testid="input-edit-note-content"
+                                      />
+                                      <div className="flex gap-2 justify-end">
+                                        <Button variant="ghost" size="sm" onClick={() => { setEditingNoteId(null); setEditNoteContent(""); }} data-testid="button-cancel-edit-note">
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
+                                          disabled={!editNoteContent.trim() || updateNoteMutation.isPending}
+                                          onClick={() => updateNoteMutation.mutate({ noteId: note.id, content: editNoteContent })}
+                                          data-testid="button-save-edit-note"
+                                        >
+                                          {updateNoteMutation.isPending ? "Saving..." : "Save"}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm leading-relaxed ml-6" style={{ color: "#374151" }}>{note.content}</p>
+                                  )}
+                                </div>
+                                {!isEditing && (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button size="icon" variant="ghost" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }} data-testid={`button-edit-note-${note.id}`}>
+                                      <Pencil className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" onClick={() => setDeleteNoteId(note.id)} data-testid={`button-delete-note-${note.id}`}>
+                                      <Trash2 className="w-3.5 h-3.5" style={{ color: "#D94F4F" }} />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <button
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-md text-xs font-medium transition-colors"
+                      style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}
+                      onClick={() => setIsAddNoteDialogOpen(true)}
+                      data-testid="button-panel-add-note-inline"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Note
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+
             <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 gap-4"}`}>
               <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <UserIcon className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
@@ -269,88 +408,6 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                 })}
               </div>
             )}
-          </div>
-
-          <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
-              Notes ({taskNotes.length})
-            </p>
-            {taskNotes.length === 0 ? (
-              <div className="rounded-xl border border-dashed py-8 px-4 text-center mb-3" style={{ borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" }}>
-                <StickyNote className="w-5 h-5 mx-auto mb-2" style={{ color: "#F59E0B" }} />
-                <p className="text-sm font-medium" style={{ color: "#374151" }}>No notes yet</p>
-                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Add context, updates, or instructions for the team.</p>
-              </div>
-            ) : (
-              <div className="space-y-4 mb-3">
-                {taskNotes.map((note) => {
-                  const noteAuthor = allUsers?.find(u => u.id === note.userId);
-                  const isEditing = editingNoteId === note.id;
-                  return (
-                    <div key={note.id} data-testid={`panel-note-${note.id}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <StickyNote className="w-4 h-4" style={{ color: "#F59E0B" }} />
-                            <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                              {noteAuthor ? `${noteAuthor.firstName || ""} ${noteAuthor.lastName || ""}`.trim() || noteAuthor.username : "Unknown"}
-                            </span>
-                            <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                              {note.createdAt ? format(new Date(note.createdAt), "MMM d, h:mm a") : ""}
-                            </span>
-                          </div>
-                          {isEditing ? (
-                            <div className="space-y-2 ml-6">
-                              <Textarea
-                                value={editNoteContent}
-                                onChange={(e) => setEditNoteContent(e.target.value)}
-                                rows={3}
-                                data-testid="input-edit-note-content"
-                              />
-                              <div className="flex gap-2 justify-end">
-                                <Button variant="ghost" size="sm" onClick={() => { setEditingNoteId(null); setEditNoteContent(""); }} data-testid="button-cancel-edit-note">
-                                  Cancel
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                                  disabled={!editNoteContent.trim() || updateNoteMutation.isPending}
-                                  onClick={() => updateNoteMutation.mutate({ noteId: note.id, content: editNoteContent })}
-                                  data-testid="button-save-edit-note"
-                                >
-                                  {updateNoteMutation.isPending ? "Saving..." : "Save"}
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm leading-relaxed ml-6" style={{ color: "#374151" }}>{note.content}</p>
-                          )}
-                        </div>
-                        {!isEditing && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button size="icon" variant="ghost" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }} data-testid={`button-edit-note-${note.id}`}>
-                              <Pencil className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => setDeleteNoteId(note.id)} data-testid={`button-delete-note-${note.id}`}>
-                              <Trash2 className="w-3.5 h-3.5" style={{ color: "#D94F4F" }} />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <button
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-md text-xs font-medium transition-colors"
-              style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}
-              onClick={() => setIsAddNoteDialogOpen(true)}
-              data-testid="button-panel-add-note-inline"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Note
-            </button>
           </div>
           </div>
         </div>
@@ -472,51 +529,6 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               <Plus className="w-3.5 h-3.5" />
               Log Time
             </button>
-          </div>
-
-          <div className={`${isMobile ? "p-4" : "p-6"}`}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
-              Resources ({(uploads?.length || 0)})
-            </p>
-            {(!uploads || uploads.length === 0) ? (
-              <div className="rounded-xl border border-dashed py-6 px-3 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF" }}>
-                <FileText className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
-                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>No resources attached</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {uploads.map((upload) => {
-                  const isImage = upload.fileType.startsWith("image/");
-                  const isVideo = upload.fileType.startsWith("video/");
-                  const TypeIcon = isImage ? ImageIcon : isVideo ? Video : FileText;
-                  const badgeBg = isImage ? "#F3F4F6" : isVideo ? "#FFF1F2" : "#EDE9FE";
-                  const badgeColor = isImage ? "#6B7280" : isVideo ? "#F43F5E" : "#7C3AED";
-                  const ext = upload.fileName.split(".").pop()?.toLowerCase() || "";
-                  const typeLabel = isImage ? "IMG" : isVideo ? "VID"
-                    : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
-                    : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
-                  return (
-                    <a
-                      key={upload.id}
-                      href={toDisplayUrl(upload.objectUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 py-2 px-2 rounded hover-elevate"
-                      data-testid={`resource-item-${upload.id}`}
-                    >
-                      <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
-                      <span
-                        className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
-                        style={{ backgroundColor: badgeBg, color: badgeColor }}
-                      >
-                        {typeLabel}
-                      </span>
-                      <span className="text-sm truncate flex-1" style={{ color: "#374151" }}>{upload.fileName}</span>
-                    </a>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
       </div>

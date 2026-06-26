@@ -44,6 +44,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import PropertyMap from "@/components/PropertyMap";
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
 import type { Property, InsertProperty, Equipment } from "@shared/schema";
 import { insertPropertySchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -88,6 +89,7 @@ export default function PropertyMapPage() {
   const [creationMode, setCreationMode] = useState<PropertyType | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [pendingCoordinates, setPendingCoordinates] = useState<any>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
 
   const canEdit = user?.role === "admin";
 
@@ -184,6 +186,7 @@ export default function PropertyMapPage() {
       return await apiRequest("DELETE", `/api/properties/${id}`, {});
     },
     onSuccess: () => {
+      setPropertyToDelete(null);
       toast({ title: "Success", description: "Property deleted successfully" });
     },
     onSettled: () => {
@@ -498,7 +501,10 @@ export default function PropertyMapPage() {
               properties={properties}
               onPropertySelect={creationMode ? undefined : handlePropertySelect}
               onShapeCreated={creationMode ? handleShapeCreated : undefined}
-              onPropertyDelete={canEdit ? (id: string) => { deletePropertyMutation.mutate(id); } : undefined}
+              onPropertyDelete={canEdit ? (id: string) => {
+                const property = properties.find((p) => p.id === id);
+                if (property) setPropertyToDelete(property);
+              } : undefined}
               editable={!!creationMode}
             />
           </div>
@@ -600,6 +606,21 @@ export default function PropertyMapPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <DestructiveDeleteDialog
+        open={!!propertyToDelete}
+        onOpenChange={(open) => { if (!open) setPropertyToDelete(null); }}
+        entityLabel={propertyToDelete?.name ?? ""}
+        entityType="property"
+        requireConfirmationText={propertyToDelete?.name}
+        warningDetails={[
+          "Spaces and equipment on this property will be removed.",
+          "Existing tasks will be kept with this property name preserved on their records.",
+          "This action is logged and cannot be undone.",
+        ]}
+        onConfirm={() => propertyToDelete && deletePropertyMutation.mutate(propertyToDelete.id)}
+        isPending={deletePropertyMutation.isPending}
+      />
     </>
   );
 }

@@ -10,6 +10,7 @@ import type { Project, ProjectComment, Upload } from "@shared/schema";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { getAvatarColor } from "@/utils/taskUtils";
+import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 
 interface ProjectDetailSidebarProps {
   project: Project;
@@ -44,6 +45,8 @@ export function ProjectDetailSidebar({
   projectUploads, imageUploads, fileUploads,
   setDeleteDialogOpen,
 }: ProjectDetailSidebarProps) {
+  const { openImagePreview } = useImagePreview();
+
   return (
     <div className="w-full lg:w-[340px] xl:w-[380px] shrink-0 space-y-4">
       <Card>
@@ -125,11 +128,13 @@ export function ProjectDetailSidebar({
                             <div className="mt-2 space-y-1.5">
                               {attachments.map((att) => (
                                 att.fileType?.startsWith("image/") ? (
-                                  <a
+                                  <button
                                     key={att.id}
-                                    href={getImageUrl(att)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    type="button"
+                                    onClick={() => openImagePreview({
+                                      ...buildUploadPreviewOptions(att),
+                                      src: getImageUrl(att),
+                                    })}
                                     className="block max-w-[200px] rounded-md overflow-hidden border"
                                     data-testid={`comment-image-${att.id}`}
                                   >
@@ -138,7 +143,7 @@ export function ProjectDetailSidebar({
                                       alt={att.fileName}
                                       className="w-full object-cover"
                                     />
-                                  </a>
+                                  </button>
                                 ) : (
                                   <a
                                     key={att.id}
@@ -216,11 +221,13 @@ export function ProjectDetailSidebar({
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {imageUploads.map((upload) => (
-                    <a
+                    <button
                       key={upload.id}
-                      href={getImageUrl(upload)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      type="button"
+                      onClick={() => openImagePreview({
+                        ...buildUploadPreviewOptions(upload),
+                        src: getImageUrl(upload),
+                      })}
                       className="block aspect-square rounded-md overflow-hidden border hover-elevate"
                       data-testid={`image-upload-${upload.id}`}
                     >
@@ -229,7 +236,7 @@ export function ProjectDetailSidebar({
                         alt={upload.fileName}
                         className="w-full h-full object-cover"
                       />
-                    </a>
+                    </button>
                   ))}
                 </div>
               </div>

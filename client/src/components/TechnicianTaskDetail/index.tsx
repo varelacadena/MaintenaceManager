@@ -87,7 +87,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               noteText={hook.noteText}
               saveIndicator={hook.saveIndicator}
               handleNoteChange={hook.handleNoteChange}
-              setPreviewUpload={hook.setPreviewUpload}
+              deleteUploadMutation={deleteUploadMutation}
               toggleChecklistItemMutation={toggleChecklistItemMutation}
               updateSubtaskStatusMutation={props.updateSubtaskStatusMutation}
               safeNavigate={safeNavigate}
@@ -187,9 +187,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         previousWork={previousWork}
         users={users}
         safeNavigate={safeNavigate}
-        previewUpload={hook.previewUpload}
-        setPreviewUpload={hook.setPreviewUpload}
-        deleteUploadMutation={deleteUploadMutation}
         isScanEquipmentOpen={isScanEquipmentOpen}
         setIsScanEquipmentOpen={setIsScanEquipmentOpen}
         handleEquipmentScan={handleEquipmentScan}

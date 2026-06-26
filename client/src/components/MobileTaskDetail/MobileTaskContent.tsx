@@ -13,6 +13,7 @@ import {
   Square,
 } from "lucide-react";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import type { MobileTaskDetailProps } from "./types";
 
 interface MobileTaskContentProps {
@@ -24,11 +25,13 @@ export function MobileTaskContent({ ctx }: MobileTaskContentProps) {
     task, isAdmin, property, uploads,
     resourcesExpanded, setResourcesExpanded,
     setIsEditMode, setDeleteDialogOpen,
-    setPreviewUpload,
+    deleteUploadMutation,
     activeTimerEntry, startTimerMutation, stopTimerMutation,
     totalTime, docCount, imgCount, vidCount,
     isCompleted,
   } = ctx;
+
+  const { openImagePreview } = useImagePreview();
 
   if (!task) return null;
 
@@ -201,7 +204,12 @@ export function MobileTaskContent({ ctx }: MobileTaskContentProps) {
                     key={upload.id}
                     onClick={() => {
                       if (isImage) {
-                        setPreviewUpload(upload);
+                        openImagePreview({
+                          ...buildUploadPreviewOptions(upload),
+                          onDelete: async () => {
+                            await deleteUploadMutation.mutateAsync(upload.id);
+                          },
+                        });
                       } else {
                         window.open(toDisplayUrl(upload.objectUrl), "_blank");
                       }

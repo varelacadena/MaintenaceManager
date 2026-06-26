@@ -2,8 +2,6 @@ import {
   Check,
   X,
   DollarSign,
-  FileText,
-  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,9 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
-import { toDisplayUrl } from "@/lib/imageUtils";
 import { format } from "date-fns";
-import type { Task, Upload, User as UserType, Vendor } from "@shared/schema";
+import type { Task, User as UserType, Vendor } from "@shared/schema";
 
 export interface TechnicianDialogsExtraProps {
   isAddQuoteDialogOpen: boolean;
@@ -40,9 +37,6 @@ export interface TechnicianDialogsExtraProps {
   previousWork: Task[];
   users: UserType[];
   safeNavigate: (path: string) => void;
-  previewUpload: Upload | null;
-  setPreviewUpload: (v: Upload | null) => void;
-  deleteUploadMutation: any;
   isScanEquipmentOpen: boolean;
   setIsScanEquipmentOpen: (v: boolean) => void;
   handleEquipmentScan: (value: string) => void;
@@ -71,9 +65,6 @@ export function TechnicianDialogsExtra({
   previousWork,
   users,
   safeNavigate,
-  previewUpload,
-  setPreviewUpload,
-  deleteUploadMutation,
   isScanEquipmentOpen,
   setIsScanEquipmentOpen,
   handleEquipmentScan,
@@ -254,70 +245,6 @@ export function TechnicianDialogsExtra({
                 );
               })}
             </div>
-          </div>
-        </div>
-      )}
-
-      {previewUpload && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center"
-          onClick={() => setPreviewUpload(null)}
-        >
-          <div className="absolute inset-0 bg-black/70" />
-          <div
-            className="relative w-full max-w-lg mx-4"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="modal-photo-preview"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-white truncate flex-1 mr-4">
-                {previewUpload.fileName}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  className="flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600"
-                  style={{ width: 32, height: 32 }}
-                  onClick={async () => {
-                    try {
-                      await deleteUploadMutation.mutateAsync(previewUpload.id);
-                      setPreviewUpload(null);
-                    } catch {}
-                  }}
-                  data-testid="button-delete-photo"
-                >
-                  <Trash2 className="w-4 h-4 text-white" />
-                </button>
-                <button
-                  className="flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30"
-                  style={{ width: 32, height: 32 }}
-                  onClick={() => setPreviewUpload(null)}
-                  data-testid="button-close-photo-preview"
-                >
-                  <X className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </div>
-            {previewUpload.fileType?.startsWith("image/") ? (
-              <img
-                src={toDisplayUrl(previewUpload.objectUrl)}
-                alt={previewUpload.fileName}
-                className="w-full max-h-[70vh] object-contain rounded-lg"
-                data-testid="img-photo-preview"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 bg-card rounded-lg">
-                <FileText className="w-12 h-12 text-muted-foreground mb-2" />
-                <p className="text-sm text-foreground">{previewUpload.fileName}</p>
-                <a
-                  href={toDisplayUrl(previewUpload.objectUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 underline"
-                >
-                  Open file
-                </a>
-              </div>
-            )}
           </div>
         </div>
       )}

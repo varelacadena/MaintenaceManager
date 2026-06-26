@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSignedUploadParameters } from "@/lib/uploadUtils";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import type { Upload } from "@shared/schema";
 
 interface SubtaskPhotosProps {
@@ -15,6 +16,7 @@ interface SubtaskPhotosProps {
 
 export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }: SubtaskPhotosProps) {
   const { toast } = useToast();
+  const { openImagePreview } = useImagePreview();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -73,11 +75,10 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
   return (
     <>
       {photos.map(photo => (
-        <a
+        <button
           key={photo.id}
-          href={toDisplayUrl(photo.objectUrl)}
-          target="_blank"
-          rel="noopener noreferrer"
+          type="button"
+          onClick={() => openImagePreview(buildUploadPreviewOptions(photo))}
           data-testid={`${testIdPrefix}-photo-${photo.id}`}
         >
           <img
@@ -86,7 +87,7 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
             className="rounded object-cover"
             style={{ width: "54px", height: "54px", border: "1px solid #EEEEEE" }}
           />
-        </a>
+        </button>
       ))}
       {!disabled && (
         <>

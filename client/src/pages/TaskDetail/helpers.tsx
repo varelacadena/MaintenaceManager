@@ -9,7 +9,7 @@ import {
   Download,
   BookOpen,
 } from "lucide-react";
-import { toDisplayUrl } from "@/lib/imageUtils";
+import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import ResourceCard from "@/components/ResourceCard";
 import type { Property, QuoteAttachment } from "@shared/schema";
 import { isToday, isTomorrow, isPast, format } from "date-fns";
@@ -18,6 +18,7 @@ export function QuoteAttachmentsList({ quoteId }: { quoteId: string }) {
   const { data: attachments = [], isLoading } = useQuery<QuoteAttachment[]>({
     queryKey: ["/api/quotes", quoteId, "attachments"],
   });
+  const { openImagePreview } = useImagePreview();
 
   if (isLoading) {
     return <div className="text-xs text-muted-foreground">Loading attachments...</div>;
@@ -28,7 +29,10 @@ export function QuoteAttachmentsList({ quoteId }: { quoteId: string }) {
   }
 
   const handleDownload = (attachment: QuoteAttachment) => {
-    window.open(toDisplayUrl(attachment.storageUrl), "_blank");
+    openResourceUrl(openImagePreview, attachment.storageUrl, {
+      title: attachment.fileName,
+      fileType: attachment.fileType,
+    });
   };
 
   return (

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import type { Task, PartUsed, Quote, Equipment } from "@shared/schema";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 
@@ -68,6 +69,7 @@ export function TechnicianMoreTab({
   handleViewTaskEquipment,
   userRole,
 }: TechnicianMoreTabProps) {
+  const { openImagePreview } = useImagePreview();
   const showCost = canSeeInventoryCost(userRole);
   const generalResources = equipment ? propertyResources : allTaskResources;
   const generalResourceDocs = generalResources.filter((r: any) => r.type !== "video").length;
@@ -144,7 +146,7 @@ export function TechnicianMoreTab({
                       key={resource.id}
                       type="button"
                       className="w-full flex items-center gap-2.5 p-2 rounded-lg border border-border/70 hover-elevate text-left"
-                      onClick={() => window.open(toDisplayUrl(resource.url), "_blank")}
+                      onClick={() => openResourceUrl(openImagePreview, resource.url, { title: resource.title, type: resource.type })}
                       data-testid={`equipment-resource-${resource.id}`}
                     >
                       <div className="p-1 rounded-md bg-muted shrink-0">

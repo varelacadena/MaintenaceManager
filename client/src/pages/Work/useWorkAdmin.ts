@@ -164,16 +164,19 @@ export function useWorkAdmin() {
       newStatus: StatusType;
       onHoldReason?: string;
     }) => {
-      const updateData: Record<string, unknown> = { status: newStatus };
+      const payload: Record<string, unknown> = { status: newStatus };
       if (newStatus === "on_hold" && onHoldReason) {
-        updateData.onHoldReason = onHoldReason;
+        payload.onHoldReason = onHoldReason;
       }
-      return await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
+      return await apiRequest("PATCH", `/api/tasks/${taskId}/status`, payload);
     },
     onSuccess: (_result, variables) => {
       invalidateTaskAfterMutation(variables.taskId, {
         patch: {
           status: variables.newStatus as Task["status"],
+          ...(variables.newStatus === "completed"
+            ? { actualCompletionDate: new Date() }
+            : {}),
           ...(variables.onHoldReason ? { onHoldReason: variables.onHoldReason } : {}),
         },
       });

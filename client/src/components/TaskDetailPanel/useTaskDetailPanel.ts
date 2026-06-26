@@ -47,7 +47,7 @@ export function useTaskDetailPanel({
   const isMobile = useIsMobile();
 
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
-  const [resourcesExpanded, setResourcesExpanded] = useState(false);
+  const [resourcesExpanded, setResourcesExpanded] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -60,7 +60,7 @@ export function useTaskDetailPanel({
   const [inventorySearchQuery, setInventorySearchQuery] = useState("");
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState("");
 
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(true);
   const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
   const [isLogTimeDialogOpen, setIsLogTimeDialogOpen] = useState(false);
   const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
@@ -145,10 +145,14 @@ export function useTaskDetailPanel({
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      return apiRequest("PATCH", `/api/tasks/${taskId}`, { status: newStatus });
+      const payload: { status: string; onHoldReason?: string } = { status: newStatus };
+      return apiRequest("PATCH", `/api/tasks/${taskId}/status`, payload);
     },
     onSuccess: (_result, newStatus) => {
-      refreshTaskDetail({ status: newStatus as Task["status"] });
+      refreshTaskDetail({
+        status: newStatus as Task["status"],
+        ...(newStatus === "completed" ? { actualCompletionDate: new Date() } : {}),
+      });
       toast({ title: "Task updated", description: "Status changed." });
     },
     onError: () => {
@@ -178,7 +182,7 @@ export function useTaskDetailPanel({
 
   const updateSubtaskStatusMutation = useMutation({
     mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
-      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
+      return apiRequest("PATCH", `/api/tasks/${subtaskId}/status`, { status });
     },
     onSuccess: (_result, variables) => {
       refreshTaskDetail();

@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { RequestDetailHookReturn } from "./useRequestDetail";
 import { getServiceRequestNumber } from "@shared/recordNumbers";
 import { getUserDisplayName } from "@/utils/taskUtils";
+import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 
 type RequestDetailDesktopProps = Pick<
   RequestDetailHookReturn,
@@ -39,6 +40,7 @@ type Attachment = RequestDetailDesktopProps["attachments"][number];
 function RequestImagePreview({ attachment }: { attachment: Attachment }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
+  const { openImagePreview } = useImagePreview();
 
   useEffect(() => {
     let cancelled = false;
@@ -68,7 +70,14 @@ function RequestImagePreview({ attachment }: { attachment: Attachment }) {
     <button
       type="button"
       className="group overflow-hidden rounded-xl border bg-muted/30 text-left hover:border-primary/40 transition-colors"
-      onClick={() => imageUrl && window.open(imageUrl, "_blank", "noopener,noreferrer")}
+      onClick={() => {
+        if (imageUrl) {
+          openImagePreview({
+            ...buildUploadPreviewOptions(attachment),
+            src: imageUrl,
+          });
+        }
+      }}
       data-testid={`attachment-preview-${attachment.id}`}
     >
       <div className="aspect-video bg-muted flex items-center justify-center overflow-hidden">

@@ -155,7 +155,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
 
   const updateSubtaskStatusMutation = useMutation({
     mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
-      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
+      return apiRequest("PATCH", `/api/tasks/${subtaskId}/status`, { status });
     },
     onSuccess: () => {
       invalidateTaskAfterMutation(id);

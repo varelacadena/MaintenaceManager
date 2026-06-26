@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Building2 } from "lucide-react";
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ export default function Vendors() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
 
   // Create form states
   const [newName, setNewName] = useState("");
@@ -106,6 +108,7 @@ export default function Vendors() {
       return response.json();
     },
     onSuccess: () => {
+      setVendorToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       toast({ title: "Vendor deleted successfully" });
     },
@@ -156,10 +159,8 @@ export default function Vendors() {
     }
   };
 
-  const handleDeleteVendor = (vendorId: string) => {
-    if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
-      deleteVendorMutation.mutate(vendorId);
-    }
+  const handleDeleteVendor = (vendor: Vendor) => {
+    setVendorToDelete(vendor);
   };
 
   const openEditDialog = (vendor: Vendor) => {
@@ -340,7 +341,7 @@ export default function Vendors() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDeleteVendor(vendor.id)}
+                          onClick={() => handleDeleteVendor(vendor)}
                           data-testid={`button-delete-${vendor.id}`}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -499,6 +500,16 @@ export default function Vendors() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DestructiveDeleteDialog
+        open={!!vendorToDelete}
+        onOpenChange={(open) => { if (!open) setVendorToDelete(null); }}
+        entityLabel={vendorToDelete?.name ?? ""}
+        entityType="vendor"
+        requireConfirmationText={vendorToDelete?.name}
+        onConfirm={() => vendorToDelete && deleteVendorMutation.mutate(vendorToDelete.id)}
+        isPending={deleteVendorMutation.isPending}
+      />
     </div>
   );
 }

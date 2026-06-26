@@ -13,7 +13,7 @@ interface TaskWithReminder {
   taskType: string;
   status: string;
   assignedToId: string | null;
-  createdById: string;
+  createdById: string | null;
   daysUntilDue: number;
 }
 
@@ -98,7 +98,9 @@ async function processTaskReminders(): Promise<void> {
       if (task.assignedToId) {
         userIds.push(task.assignedToId);
       }
-      userIds.push(task.createdById);
+      if (task.createdById) {
+        userIds.push(task.createdById);
+      }
       
       const uniqueUserIds = Array.from(new Set(userIds));
       
@@ -127,7 +129,9 @@ async function processTaskReminders(): Promise<void> {
       if (task.assignedToId) {
         userIds.push(task.assignedToId);
       }
-      userIds.push(task.createdById);
+      if (task.createdById) {
+        userIds.push(task.createdById);
+      }
       
       const uniqueUserIds = Array.from(new Set(userIds));
       

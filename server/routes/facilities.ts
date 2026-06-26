@@ -18,6 +18,10 @@ import {
   insertLockboxSchema,
   insertLockboxCodeSchema,
 } from "@shared/schema";
+import {
+  deletePropertyWithAudit,
+  deleteEquipmentWithAudit,
+} from "../storage/entityCleanup";
 import { z } from "zod";
 import {
   normalizeEquipmentAssetTag,
@@ -151,9 +155,13 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/properties/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/properties/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
-      await storage.deleteProperty(req.params.id);
+      const property = await storage.getProperty(req.params.id);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      await deletePropertyWithAudit(property, req.userId);
       res.json({ success: true });
     } catch (error) {
       handleRouteError(res, error, "Failed to delete property");
@@ -415,9 +423,13 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/equipment/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/equipment/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
-      await storage.deleteEquipment(req.params.id);
+      const item = await storage.getEquipmentItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Equipment not found" });
+      }
+      await deleteEquipmentWithAudit(item, req.userId);
       res.json({ success: true });
     } catch (error) {
       handleRouteError(res, error, "Failed to delete equipment");

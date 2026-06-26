@@ -71,7 +71,9 @@ export default function Requests() {
     retry: false,
   });
 
-  const requesterIds = Array.from(new Set(requests.map((r) => r.requesterId)));
+  const requesterIds = Array.from(
+    new Set(requests.map((r) => r.requesterId).filter((id): id is string => Boolean(id))),
+  );
   const { data: requesters = {} } = useQuery<Record<string, any>>({
     queryKey: ["/api/users/requesters", requesterIds],
     queryFn: async () => {
@@ -103,27 +105,32 @@ export default function Requests() {
     },
   });
 
-  const getRequesterName = (requesterId: string) => {
+  const getRequesterName = (request: ServiceRequest) => {
+    if (request.requesterName) return request.requesterName;
+    if (!request.requesterId) return "Unknown";
     if (users?.length) {
-      const requester = users.find((u: any) => u.id === requesterId);
+      const requester = users.find((u: any) => u.id === request.requesterId);
       if (requester) return getUserDisplayName(requester);
     }
-    if (requesters[requesterId]) {
-      return getUserDisplayName(requesters[requesterId]);
+    if (requesters[request.requesterId]) {
+      return getUserDisplayName(requesters[request.requesterId]);
     }
     return "Unknown";
   };
 
-  const getPropertyName = (propertyId: string | null) => {
-    if (!propertyId) return "Not specified";
-    const property = properties.find((p: any) => p.id === propertyId);
-    return property?.name || "Unknown";
+  const getPropertyName = (request: ServiceRequest) => {
+    if (request.propertyId) {
+      const property = properties.find((p: any) => p.id === request.propertyId);
+      if (property?.name) return property.name;
+    }
+    if (request.propertyName) return request.propertyName;
+    return "Not specified";
   };
 
   const filteredRequests = requests.filter((request) => {
     const query = searchQuery.toLowerCase();
-    const requesterName = getRequesterName(request.requesterId).toLowerCase();
-    const propertyName = getPropertyName(request.propertyId).toLowerCase();
+    const requesterName = getRequesterName(request).toLowerCase();
+    const propertyName = getPropertyName(request).toLowerCase();
     const requestNumber = getServiceRequestNumber(request).toLowerCase();
     const matchesSearch =
       request.id.toLowerCase().includes(query) ||
@@ -291,7 +298,7 @@ export default function Requests() {
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{request.title}</p>
                     <p className="text-xs text-muted-foreground" data-testid={`text-requester-${request.id}`}>
-                      Request {getServiceRequestNumber(request)} · {getRequesterName(request.requesterId)}
+                      Request {getServiceRequestNumber(request)} · {getRequesterName(request)}
                     </p>
                   </div>
                   <Badge
@@ -302,7 +309,7 @@ export default function Requests() {
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>{getPropertyName(request.propertyId)}</span>
+                  <span>{getPropertyName(request)}</span>
                   <span>·</span>
                   <Badge variant="outline" className={cn("border-0 text-xs", serviceRequestUrgencyBadgeColors[request.urgency])}>
                     {getServiceRequestUrgencyLabel(request.urgency)}
@@ -342,14 +349,14 @@ export default function Requests() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="font-medium text-sm" data-testid={`text-requester-${request.id}`}>
-                          {getRequesterName(request.requesterId)}
+                          {getRequesterName(request)}
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         <div className="max-w-xs truncate text-sm font-medium">{request.title}</div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="text-sm text-muted-foreground">{getPropertyName(request.propertyId)}</div>
+                        <div className="text-sm text-muted-foreground">{getPropertyName(request)}</div>
                       </td>
                       <td className="px-6 py-5">
                         <Badge variant="outline" className={cn("border-0 font-medium", serviceRequestUrgencyBadgeColors[request.urgency])}>

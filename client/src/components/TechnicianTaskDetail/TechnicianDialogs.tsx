@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Badge } from "@/components/ui/badge";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 import type { Task, Quote, InventoryItem } from "@shared/schema";
 
@@ -78,6 +79,7 @@ export function TechnicianDialogs({
   allTaskResources,
   userRole,
 }: TechnicianDialogsProps) {
+  const { openImagePreview } = useImagePreview();
   const showCost = canSeeInventoryCost(userRole);
   const isTimerRunning = pauseDialogMode === "running";
   const isPending = stopTimerMutation.isPending;
@@ -427,7 +429,7 @@ export function TechnicianDialogs({
                     <button
                       key={resource.id}
                       className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
-                      onClick={() => window.open(toDisplayUrl(resource.url), "_blank")}
+                      onClick={() => openResourceUrl(openImagePreview, resource.url, { title: resource.title, type: resource.type })}
                       data-testid={`resource-row-${resource.id}`}
                     >
                       <span

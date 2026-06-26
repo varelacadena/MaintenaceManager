@@ -24,7 +24,6 @@ export function useMobileTaskDetail() {
   const [isNoteSheetOpen, setIsNoteSheetOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
   const [isPartsSheetOpen, setIsPartsSheetOpen] = useState(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
 
@@ -353,7 +352,6 @@ export function useMobileTaskDetail() {
     isNoteSheetOpen, setIsNoteSheetOpen,
     noteText, setNoteText,
     isScannerOpen, setIsScannerOpen,
-    previewUpload, setPreviewUpload,
     isPartsSheetOpen, setIsPartsSheetOpen,
     isHistorySheetOpen, setIsHistorySheetOpen,
     isAddPartFormOpen, setIsAddPartFormOpen,

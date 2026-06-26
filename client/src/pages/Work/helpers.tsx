@@ -25,8 +25,9 @@ export function filterTechnicianWorkTasks(tasks: Task[], userId: string): Task[]
 }
 
 export const getTaskDate = (task: Task): Date | null => {
-  if (task.status === "completed" && task.actualCompletionDate) {
-    return new Date(task.actualCompletionDate);
+  if (task.status === "completed") {
+    if (task.actualCompletionDate) return new Date(task.actualCompletionDate);
+    if (task.updatedAt) return new Date(task.updatedAt as unknown as string);
   }
   if (task.initialDate) return new Date(task.initialDate);
   if (task.estimatedCompletionDate) return new Date(task.estimatedCompletionDate);
@@ -77,7 +78,11 @@ export const filterTasksByDate = (allTasks: Task[], dateFilter: "today" | "week"
 
   return allTasks.filter((t) => {
     if (t.status === "completed") {
-      const completedDate = t.actualCompletionDate ? new Date(t.actualCompletionDate) : null;
+      const completedDate = t.actualCompletionDate
+        ? new Date(t.actualCompletionDate)
+        : t.updatedAt
+          ? new Date(t.updatedAt as unknown as string)
+          : null;
       if (!completedDate || completedDate < sevenDaysAgo) return false;
       if (dateFilter === "today") return isToday(completedDate);
       if (dateFilter === "week") return isThisWeek(completedDate);

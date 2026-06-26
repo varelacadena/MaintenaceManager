@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buildDisplayUrlFromUpload } from "@/lib/uploadUtils";
+import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import { format } from "date-fns";
 import type { Task, TaskNote, Upload } from "@shared/schema";
 import type { ChecklistGroupWithItems, TaskHelperDisplay } from "./types";
@@ -28,7 +29,7 @@ interface TechnicianTaskTabProps {
   noteText: string;
   saveIndicator: "idle" | "saving" | "saved";
   handleNoteChange: (value: string) => void;
-  setPreviewUpload: (upload: Upload | null) => void;
+  deleteUploadMutation: any;
   toggleChecklistItemMutation: any;
   updateSubtaskStatusMutation: any;
   safeNavigate: (path: string) => void;
@@ -52,12 +53,14 @@ export function TechnicianTaskTab({
   noteText,
   saveIndicator,
   handleNoteChange,
-  setPreviewUpload,
+  deleteUploadMutation,
   toggleChecklistItemMutation,
   updateSubtaskStatusMutation,
   safeNavigate,
   currentNoteId,
 }: TechnicianTaskTabProps) {
+  const { openImagePreview } = useImagePreview();
+
   return (
     <>
       {isCompleted && (
@@ -382,7 +385,16 @@ export function TechnicianTaskTab({
                     key={upload.id}
                     className="relative rounded-md overflow-hidden shrink-0 group"
                     style={{ width: 56, height: 56 }}
-                    onClick={() => setPreviewUpload(upload)}
+                    onClick={() => {
+                      if (isImage) {
+                        openImagePreview({
+                          ...buildUploadPreviewOptions(upload),
+                          onDelete: async () => {
+                            await deleteUploadMutation.mutateAsync(upload.id);
+                          },
+                        });
+                      }
+                    }}
                     data-testid={`photo-thumb-${upload.id}`}
                   >
                     {isImage ? (

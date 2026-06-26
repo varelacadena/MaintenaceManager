@@ -276,7 +276,7 @@
   input[type="date"],
   input[type="time"],
   input[type="datetime-local"] {
-    @apply cursor-pointer;
+    @apply cursor-pointer relative;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator,

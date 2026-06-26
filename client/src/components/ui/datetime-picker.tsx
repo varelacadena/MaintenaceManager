@@ -85,7 +85,7 @@ export function DateTimePicker({
   const minutes = ["00", "15", "30", "45"];
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -105,10 +105,12 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-auto p-0 z-[150] max-w-[calc(100vw-2rem)]" 
-        align="center" 
+      <PopoverContent
+        className="w-auto p-0 z-[150] max-w-[calc(100vw-2rem)]"
+        align="center"
         sideOffset={4}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Calendar */}
         <div className="p-2 sm:p-3">

@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Calendar, User as UserIcon, Flag, MapPin, AlertTriangle, ClipboardCheck } from "lucide-react";
+import { resolveTaskAssigneeName } from "@/lib/displayNames";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
@@ -60,12 +61,15 @@ export function ProjectTaskTableRow({
     && task.status !== "completed"
     && new Date(task.estimatedCompletionDate) < new Date();
 
+  const assigneeName = resolveTaskAssigneeName(task, allUsers);
   const assignee = task.assignedToId ? allUsers?.find(u => u.id === task.assignedToId) : null;
   const assigneeInitials = assignee
     ? (assignee.firstName && assignee.lastName
         ? `${assignee.firstName[0]}${assignee.lastName[0]}`
         : (assignee.username?.[0] || "?")).toUpperCase()
-    : null;
+    : assigneeName !== "—"
+      ? assigneeName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
+      : null;
 
   const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
@@ -101,9 +105,9 @@ export function ProjectTaskTableRow({
             data-testid={`select-assignee-${task.id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            {assignee ? (
+            {assigneeInitials ? (
               <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
-                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-xs font-medium`}>
+                <AvatarFallback className={`${getAvatarColor(task.assignedToId || task.id)} text-white text-xs font-medium`}>
                   {assigneeInitials}
                 </AvatarFallback>
               </Avatar>

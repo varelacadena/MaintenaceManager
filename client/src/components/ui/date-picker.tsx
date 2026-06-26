@@ -1,6 +1,7 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import type { Matcher } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,11 +11,36 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+const compactCalendarClassNames = {
+  months: "flex flex-col",
+  month: "space-y-2",
+  caption: "flex justify-center pt-1 relative items-center mb-1",
+  caption_label: "text-xs font-medium",
+  nav: "space-x-1 flex items-center",
+  nav_button: "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100",
+  nav_button_previous: "absolute left-0",
+  nav_button_next: "absolute right-0",
+  table: "w-full border-collapse",
+  head_row: "flex",
+  head_cell: "text-muted-foreground rounded-md w-7 font-medium text-xs",
+  row: "flex w-full mt-1",
+  cell: "h-7 w-7 text-center text-xs p-0 relative",
+  day: "h-7 w-7 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground text-xs",
+  day_range_end: "day-range-end",
+  day_selected:
+    "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+  day_today: "bg-accent text-accent-foreground",
+  day_outside: "text-muted-foreground/40",
+  day_disabled: "text-muted-foreground/30",
+  day_hidden: "invisible",
+} as const;
+
 interface DatePickerProps {
   value: Date | undefined;
   onChange: (date: Date | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
+  disabledDates?: Matcher | Matcher[];
   "data-testid"?: string;
 }
 
@@ -23,6 +49,7 @@ export function DatePicker({
   onChange,
   placeholder = "Select date",
   disabled = false,
+  disabledDates,
   "data-testid": testId,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -33,7 +60,7 @@ export function DatePicker({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -53,35 +80,21 @@ export function DatePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        sideOffset={4}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <Calendar
           mode="single"
           selected={value}
           onSelect={handleSelect}
           initialFocus
+          disabled={disabledDates}
           className="p-2"
-          classNames={{
-            months: "flex flex-col",
-            month: "space-y-2",
-            caption: "flex justify-center pt-1 relative items-center mb-1",
-            caption_label: "text-xs font-medium",
-            nav: "space-x-1 flex items-center",
-            nav_button: "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100",
-            nav_button_previous: "absolute left-0",
-            nav_button_next: "absolute right-0",
-            table: "w-full border-collapse",
-            head_row: "flex",
-            head_cell: "text-muted-foreground rounded-md w-7 font-medium text-xs",
-            row: "flex w-full mt-1",
-            cell: "h-7 w-7 text-center text-xs p-0 relative",
-            day: "h-7 w-7 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground text-xs",
-            day_range_end: "day-range-end",
-            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-            day_today: "bg-accent text-accent-foreground",
-            day_outside: "text-muted-foreground/40",
-            day_disabled: "text-muted-foreground/30",
-            day_hidden: "invisible",
-          }}
+          classNames={compactCalendarClassNames}
         />
       </PopoverContent>
     </Popover>

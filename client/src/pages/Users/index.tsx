@@ -6,6 +6,7 @@ import { useUsers } from './useUsers';
 import { UserDialogs } from './UserDialogs';
 import { UserDialogsExtra } from './UserDialogsExtra';
 import { UsersTabContent, PendingTabContent, CredentialsTabContent } from './UserTable';
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
 
 export default function Users() {
   const ctx = useUsers();
@@ -124,6 +125,21 @@ export default function Users() {
 
       <UserDialogs ctx={ctx} />
       <UserDialogsExtra ctx={ctx} />
+
+      <DestructiveDeleteDialog
+        open={!!ctx.userToDelete}
+        onOpenChange={(open) => { if (!open) ctx.setUserToDelete(null); }}
+        entityLabel={ctx.userToDelete ? ctx.formatUserDisplayName(ctx.userToDelete) : ""}
+        entityType="user"
+        requireConfirmationText={ctx.userToDelete?.username}
+        warningDetails={[
+          "The user account and fleet reservations will be removed.",
+          "Existing tasks, notes, and time entries will be kept with this person's name preserved.",
+          "This action is logged and cannot be undone.",
+        ]}
+        onConfirm={ctx.confirmDeleteUser}
+        isPending={ctx.deleteUserMutation.isPending}
+      />
     </div>
   );
 }

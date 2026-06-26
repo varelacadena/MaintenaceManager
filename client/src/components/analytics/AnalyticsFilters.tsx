@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { parse, format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -285,7 +286,7 @@ export default function AnalyticsFilters({
   return (
     <div className="space-y-2 mb-4">
     <div className="flex flex-wrap items-center gap-2">
-      <Popover>
+      <Popover modal={false}>
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
@@ -299,7 +300,12 @@ export default function AnalyticsFilters({
             <ChevronDown className="w-3 h-3 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3" align="start">
+        <PopoverContent
+          className="w-[min(20rem,calc(100vw-2rem))] p-3"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               {datePresets.map((preset) => (
@@ -320,24 +326,18 @@ export default function AnalyticsFilters({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="startDate" className="text-xs">From</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={filters.startDate}
-                    onChange={e => updateFilter("startDate", e.target.value)}
+                  <DatePicker
+                    value={filters.startDate ? parse(filters.startDate, "yyyy-MM-dd", new Date()) : undefined}
+                    onChange={(date) => updateFilter("startDate", date ? format(date, "yyyy-MM-dd") : "")}
                     data-testid="input-start-date"
-                    className="h-8 text-xs"
                   />
                 </div>
                 <div>
                   <Label htmlFor="endDate" className="text-xs">To</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={filters.endDate}
-                    onChange={e => updateFilter("endDate", e.target.value)}
+                  <DatePicker
+                    value={filters.endDate ? parse(filters.endDate, "yyyy-MM-dd", new Date()) : undefined}
+                    onChange={(date) => updateFilter("endDate", date ? format(date, "yyyy-MM-dd") : "")}
                     data-testid="input-end-date"
-                    className="h-8 text-xs"
                   />
                 </div>
               </div>

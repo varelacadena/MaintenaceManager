@@ -28,7 +28,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelectItems";
-import { dateInputValueToTaskTimestamp, getTaskDateInputValue } from "@/lib/taskCalendarDates";
+import { DatePicker } from "@/components/ui/date-picker";
+import { dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
+import { format } from "date-fns";
 import type { Task, InsertTask, User, Property } from "@shared/schema";
 
 interface Area {
@@ -489,10 +491,9 @@ export function TaskEditMode({
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Due Date
           </Label>
-          <Input
-            type="date"
-            value={estimatedCompletionDate}
-            onChange={(e) => setEstimatedCompletionDate(e.target.value)}
+          <DatePicker
+            value={estimatedCompletionDate ? toCalendarDate(estimatedCompletionDate) ?? undefined : undefined}
+            onChange={(date) => setEstimatedCompletionDate(date ? format(date, "yyyy-MM-dd") : "")}
             data-testid="input-edit-due-date"
           />
         </div>

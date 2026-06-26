@@ -256,7 +256,7 @@ export interface DetailedServiceRequest {
   description: string;
   status: string;
   urgency: string;
-  requesterId: string;
+  requesterId: string | null;
   requesterName: string;
   propertyId: string | null;
   propertyName: string;
@@ -325,7 +325,7 @@ export interface ServiceRequestOverview {
   byProperty: { propertyId: string; propertyName: string; count: number }[];
   byArea: { areaId: string; areaName: string; count: number }[];
   monthlyTrend: { month: string; submitted: number; converted: number }[];
-  topRequesters: { requesterId: string; requesterName: string; count: number }[];
+  topRequesters: { requesterId: string | null; requesterName: string; count: number }[];
   byCategory: { category: string; count: number }[];
   funnel: RequestFunnelStage[];
   detailedRequests: DetailedServiceRequest[];
@@ -1945,9 +1945,9 @@ export class AnalyticsService {
         status: r.status,
         urgency: r.urgency,
         requesterId: r.requesterId,
-        requesterName: userMap.get(r.requesterId) || "Unknown",
+        requesterName: r.requesterName || (r.requesterId ? userMap.get(r.requesterId) || "Unknown" : "Unknown"),
         propertyId: r.propertyId,
-        propertyName: r.propertyId ? propertyMap.get(r.propertyId) || "Unknown" : "N/A",
+        propertyName: r.propertyName || (r.propertyId ? propertyMap.get(r.propertyId) || "Unknown" : "N/A"),
         areaId: r.areaId,
         areaName: r.areaId ? areaMap.get(r.areaId) || "Unknown" : "N/A",
         createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,

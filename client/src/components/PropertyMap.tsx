@@ -197,10 +197,8 @@ function PropertyLayers({
           if (deleteBtn) {
             deleteBtn.addEventListener('click', (e) => {
               e.stopPropagation();
-              if (confirm(`Are you sure you want to delete "${property.name}"?`)) {
-                onPropertyDelete(property.id);
-                map.closePopup();
-              }
+              onPropertyDelete(property.id);
+              map.closePopup();
             });
           }
         }

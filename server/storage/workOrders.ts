@@ -27,6 +27,9 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, or, desc, isNull, sql, inArray, gte, lte, ne } from "drizzle-orm";
+import { enrichTaskWithNameSnapshots } from "../lib/taskNameSnapshots";
+import { formatUserDisplayName } from "@shared/displayNames";
+import { getUser } from "./users";
 
 function normalizeTaskPool(data: any): any {
   const normalized = { ...data };
@@ -63,9 +66,13 @@ export async function getTasks(filters?: {
       id: tasks.id,
       requestId: tasks.requestId,
       propertyId: tasks.propertyId,
+      propertyName: tasks.propertyName,
       spaceId: tasks.spaceId,
+      spaceName: tasks.spaceName,
       equipmentId: tasks.equipmentId,
+      equipmentName: tasks.equipmentName,
       vehicleId: tasks.vehicleId,
+      vehicleName: tasks.vehicleName,
       name: tasks.name,
       description: tasks.description,
       urgency: tasks.urgency,
@@ -75,6 +82,7 @@ export async function getTasks(filters?: {
       estimatedCompletionDate: tasks.estimatedCompletionDate,
       actualCompletionDate: tasks.actualCompletionDate,
       assignedToId: tasks.assignedToId,
+      assignedToName: tasks.assignedToName,
       assignedVendorId: tasks.assignedVendorId,
       taskType: tasks.taskType,
       executorType: tasks.executorType,
@@ -86,6 +94,7 @@ export async function getTasks(filters?: {
       recurringEndDate: tasks.recurringEndDate,
       contactType: tasks.contactType,
       contactStaffId: tasks.contactStaffId,
+      contactStaffName: tasks.contactStaffName,
       contactName: tasks.contactName,
       contactEmail: tasks.contactEmail,
       contactPhone: tasks.contactPhone,
@@ -95,6 +104,7 @@ export async function getTasks(filters?: {
       estimateStatus: tasks.estimateStatus,
       approvedQuoteId: tasks.approvedQuoteId,
       createdById: tasks.createdById,
+      createdByName: tasks.createdByName,
       projectId: tasks.projectId,
       estimatedHours: tasks.estimatedHours,
       scheduledStartTime: tasks.scheduledStartTime,
@@ -140,7 +150,12 @@ export async function getTasks(filters?: {
     conditions.push(
       or(
         ne(tasks.status, "completed"),
-        gte(tasks.actualCompletionDate, filters.recentCompletedAfter)
+        gte(tasks.actualCompletionDate, filters.recentCompletedAfter),
+        and(
+          eq(tasks.status, "completed"),
+          isNull(tasks.actualCompletionDate),
+          gte(tasks.updatedAt, filters.recentCompletedAfter)
+        )
       )
     );
   } else if (filters?.excludeCompleted) {
@@ -198,17 +213,19 @@ export async function getTaskByRequestId(requestId: string): Promise<Task | unde
 
 export async function createTask(taskData: InsertTask): Promise<Task> {
   const normalized = normalizeTaskPool(taskData);
+  const withNames = await enrichTaskWithNameSnapshots(normalized);
   const [task] = await db
     .insert(tasks)
-    .values(normalized)
+    .values(withNames as InsertTask)
     .returning();
   return task;
 }
 
 export async function updateTask(id: string, data: Partial<InsertTask>): Promise<Task | undefined> {
+  const withNames = await enrichTaskWithNameSnapshots(data);
   const [task] = await db
     .update(tasks)
-    .set({ ...data, updatedAt: new Date() })
+    .set({ ...withNames, updatedAt: new Date() })
     .where(eq(tasks.id, id))
     .returning();
   return task;
@@ -330,7 +347,12 @@ export async function getSubTasks(parentTaskId: string): Promise<Task[]> {
 }
 
 export async function createTimeEntry(entryData: InsertTimeEntry): Promise<TimeEntry> {
-  const [entry] = await db.insert(timeEntries).values(entryData).returning();
+  const payload: InsertTimeEntry = { ...entryData };
+  if (payload.userId && !payload.userName) {
+    const user = await getUser(payload.userId);
+    if (user) payload.userName = formatUserDisplayName(user);
+  }
+  const [entry] = await db.insert(timeEntries).values(payload).returning();
   return entry;
 }
 
@@ -367,7 +389,12 @@ export async function getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]>
 }
 
 export async function createTaskNote(noteData: InsertTaskNote): Promise<TaskNote> {
-  const [note] = await db.insert(taskNotes).values(noteData).returning();
+  const payload: InsertTaskNote = { ...noteData };
+  if (payload.userId && !payload.userName) {
+    const user = await getUser(payload.userId);
+    if (user) payload.userName = formatUserDisplayName(user);
+  }
+  const [note] = await db.insert(taskNotes).values(payload).returning();
   return note;
 }
 
@@ -469,8 +496,9 @@ export async function createTaskWithChecklistGroups(
   groups: { name: string; sortOrder?: number; items: { text: string; isCompleted?: boolean; sortOrder?: number }[] }[]
 ): Promise<{ task: Task; groups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] }> {
   const normalizedTaskData = normalizeTaskPool(taskData);
+  const withNames = await enrichTaskWithNameSnapshots(normalizedTaskData);
   return await db.transaction(async (tx) => {
-    const [task] = await tx.insert(tasks).values(normalizedTaskData).returning();
+    const [task] = await tx.insert(tasks).values(withNames as InsertTask).returning();
 
     const createdGroups: (TaskChecklistGroup & { items: TaskChecklistItem[] })[] = [];
     

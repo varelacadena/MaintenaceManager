@@ -21,8 +21,8 @@ import {
 } from "lucide-react";
 import { ObjectUploader } from "../ObjectUploader";
 import { BarcodeScanner } from "../BarcodeScanner";
-import { toDisplayUrl } from "@/lib/imageUtils";
 import { format } from "date-fns";
+import { resolveTimeEntryUserName } from "@/lib/displayNames";
 import type { MobileTaskDetailProps } from "./types";
 
 interface MobileTaskDialogsProps {
@@ -37,10 +37,9 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
     isNoteSheetOpen, setIsNoteSheetOpen,
     noteText, setNoteText,
     isScannerOpen, setIsScannerOpen,
-    previewUpload, setPreviewUpload,
     isHistorySheetOpen, setIsHistorySheetOpen,
     updateStatusMutation,
-    deleteTaskMutation, deleteUploadMutation, addUploadMutation, addNoteMutation,
+    deleteTaskMutation, addUploadMutation, addNoteMutation,
     getUploadParameters, handleAutoSaveUpload, handleEquipmentScan,
     isCompleted, allSubtasksDone,
   } = ctx;
@@ -198,61 +197,6 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
         </div>
       )}
 
-      {previewUpload && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center"
-          onClick={() => setPreviewUpload(null)}
-        >
-          <div className="absolute inset-0 bg-black/70" />
-          <div
-            className="relative w-full max-w-lg mx-4"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="modal-photo-preview"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-white truncate flex-1 mr-4">
-                {previewUpload.fileName}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  className="flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600"
-                  style={{ width: 32, height: 32 }}
-                  onClick={async () => {
-                    try {
-                      await deleteUploadMutation.mutateAsync(previewUpload.id);
-                      setPreviewUpload(null);
-                    } catch {}
-                  }}
-                  data-testid="button-delete-photo"
-                >
-                  <Trash2 className="w-4 h-4 text-white" />
-                </button>
-                <button
-                  className="flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30"
-                  style={{ width: 32, height: 32 }}
-                  onClick={() => setPreviewUpload(null)}
-                  data-testid="button-close-photo-preview"
-                >
-                  <X className="w-5 h-5 text-white" />
-                </button>
-              </div>
-            </div>
-            {previewUpload.fileType?.startsWith("image/") ? (
-              <img
-                src={toDisplayUrl(previewUpload.objectUrl)}
-                alt={previewUpload.fileName}
-                className="w-full max-h-[70vh] object-contain rounded-lg"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 bg-card rounded-lg">
-                <FileText className="w-12 h-12 text-muted-foreground mb-2" />
-                <p className="text-sm text-foreground">{previewUpload.fileName}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       <BarcodeScanner
         open={isScannerOpen}
         onOpenChange={setIsScannerOpen}
@@ -288,7 +232,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
               ) : (
                 <div className="space-y-2">
                   {timeEntries.map((entry: any) => {
-                    const entryUser = allUsers?.find(u => u.id === entry.userId);
+                    const entryUserName = resolveTimeEntryUserName(entry, allUsers);
                     const isRunning = entry.startTime && !entry.endTime;
                     const duration = entry.durationMinutes
                       ? `${Math.floor(entry.durationMinutes / 60)}h ${entry.durationMinutes % 60}m`
@@ -302,7 +246,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
                       >
                         <div>
                           <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                            {entryUser ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username : "Unknown"}
+                            {entryUserName}
                           </p>
                           <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                             {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : "No start time"}

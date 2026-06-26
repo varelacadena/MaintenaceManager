@@ -31,6 +31,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
 import ResourceCard from "@/components/ResourceCard";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import { statusColors, EQUIPMENT_CATEGORY_ICONS, EQUIPMENT_CATEGORY_LABELS, RESOURCE_TYPE_ICONS, CONDITION_COLORS } from "./constants";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
 import type { TaskDetailContext } from "./useTaskDetail";
@@ -178,6 +179,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
 }
 
 export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
+  const { openImagePreview } = useImagePreview();
   const { activeTimer, estimateBlocksCompletion, stopTimerMutation, toast,
     isStopTimerDialogOpen, setIsStopTimerDialogOpen,
     isResourcesSheetOpen, setIsResourcesSheetOpen, allTaskResources,
@@ -307,7 +309,7 @@ export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
                         scannedEquipmentResources.map((r: any) => {
                           const RIcon = RESOURCE_TYPE_ICONS[r.type] || FileText;
                           return (
-                            <button key={r.id} className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left" onClick={() => window.open(toDisplayUrl(r.url), "_blank")}>
+                            <button key={r.id} className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left" onClick={() => openResourceUrl(openImagePreview, r.url, { title: r.title, type: r.type })}>
                               <div className="p-1.5 rounded-md bg-primary/10 shrink-0"><RIcon className="w-4 h-4 text-primary" /></div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium truncate">{r.title}</p>

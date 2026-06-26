@@ -13,7 +13,7 @@ export function PropertyWorkHistoryTab({ ctx }: PropertyWorkHistoryTabProps) {
     taskSearch, setTaskSearch,
     setSummaryTaskId,
     filteredTasks,
-    getAssigneeName,
+    users,
   } = ctx;
 
   return (
@@ -45,7 +45,7 @@ export function PropertyWorkHistoryTab({ ctx }: PropertyWorkHistoryTabProps) {
                   <div key={task.id}>
                     <TaskCard
                       task={task}
-                      getAssigneeName={getAssigneeName}
+                      users={users}
                       onClick={() => setSummaryTaskId(task.id)}
                     />
                   </div>
@@ -55,7 +55,7 @@ export function PropertyWorkHistoryTab({ ctx }: PropertyWorkHistoryTabProps) {
                 <Link key={task.id} href={`/tasks/${task.id}`}>
                   <TaskCard
                     task={task}
-                    getAssigneeName={getAssigneeName}
+                    users={users}
                   />
                 </Link>
               );

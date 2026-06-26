@@ -322,7 +322,7 @@ export function CredentialsTabContent({ ctx }: { ctx: UsersContext }) {
                     <Button
                       size="icon"
                       variant="destructive"
-                      onClick={() => handleDeleteUser(user.id)}
+                      onClick={() => handleDeleteUser(user)}
                       data-testid={`button-delete-${user.id}`}
                     >
                       <Trash2 className="w-4 h-4" />

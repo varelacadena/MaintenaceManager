@@ -543,15 +543,27 @@ export function registerTaskRoutes(app: Express) {
         if (currentUser.role === "student") {
           const isHelper = await storage.isTaskHelper(task.id, userId);
           if (isHelper) {
-            return res.status(403).json({ message: "Forbidden: Helpers cannot modify task details" });
-          }
-          const directlyAssigned = task.assignedToId === userId;
-          const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
-          if (!directlyAssigned && !inPool) {
-            return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
-          }
-          if (req.body.assignedToId !== undefined) {
-            return res.status(403).json({ message: "Forbidden: Students cannot reassign tasks" });
+            const { helperUserIds: _ignored, ...studentPatch } = req.body;
+            const patchKeys = Object.keys(studentPatch).filter((k) => studentPatch[k] !== undefined);
+            const statusOnly =
+              patchKeys.length > 0 &&
+              patchKeys.every(
+                (k) =>
+                  k === "status" ||
+                  (k === "onHoldReason" && studentPatch.status === "on_hold")
+              );
+            if (!statusOnly) {
+              return res.status(403).json({ message: "Forbidden: Helpers can only update task status" });
+            }
+          } else {
+            const directlyAssigned = task.assignedToId === userId;
+            const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
+            if (!directlyAssigned && !inPool) {
+              return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
+            }
+            if (req.body.assignedToId !== undefined) {
+              return res.status(403).json({ message: "Forbidden: Students cannot reassign tasks" });
+            }
           }
         }
       }
@@ -606,6 +618,14 @@ export function registerTaskRoutes(app: Express) {
           if (currentTask.estimateStatus !== "approved") {
             return res.status(400).json({ message: "Estimates must be approved before completing this task" });
           }
+        }
+        if (!updateData.actualCompletionDate) {
+          updateData.actualCompletionDate = new Date();
+        }
+      } else if (updateData.status) {
+        const currentTask = await storage.getTask(req.params.id);
+        if (currentTask?.status === "completed") {
+          updateData.actualCompletionDate = null;
         }
       }
 
@@ -831,12 +851,15 @@ export function registerTaskRoutes(app: Express) {
       if (currentUser.role === "student") {
         const isHelper = await storage.isTaskHelper(taskId, userId);
         if (isHelper) {
-          return res.status(403).json({ message: "Forbidden: Helpers cannot change task status" });
-        }
-        const directlyAssigned = task.assignedToId === userId;
-        const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
-        if (!directlyAssigned && !inPool) {
-          return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
+          if (normalizedStatus !== "completed" && normalizedStatus !== "in_progress") {
+            return res.status(403).json({ message: "Forbidden: Helpers can only start or complete tasks" });
+          }
+        } else {
+          const directlyAssigned = task.assignedToId === userId;
+          const inPool = task.executorType === "student" && task.assignedPool === "student_pool";
+          if (!directlyAssigned && !inPool) {
+            return res.status(403).json({ message: "Forbidden: You can only update tasks assigned to you" });
+          }
         }
       }
       
@@ -880,7 +903,7 @@ export function registerTaskRoutes(app: Express) {
       if (updatedTask.requestId) {
         try {
           const linkedRequest = await storage.getServiceRequest(updatedTask.requestId);
-          if (linkedRequest) {
+          if (linkedRequest?.requesterId) {
             const requester = await storage.getUser(linkedRequest.requesterId);
             if (requester) {
               notifyStatusChange(linkedRequest, requester, task.status, normalizedStatus, notificationService).catch(err =>

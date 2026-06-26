@@ -2,8 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Upload } from "@shared/schema";
-
 import type { TechnicianTaskDetailProps } from "./types";
 
 export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
@@ -24,7 +22,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [pauseDialogMode, setPauseDialogMode] = useState<"running" | "paused">("running");
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
-  const [previewUpload, setPreviewUpload] = useState<Upload | null>(null);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isPreviousWorkOpen, setIsPreviousWorkOpen] = useState(false);
 
@@ -235,7 +232,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     pauseDialogMode,
     isEstimateSheetOpen, setIsEstimateSheetOpen,
     isPartModalOpen, setIsPartModalOpen,
-    previewUpload, setPreviewUpload,
     isResourcesOpen, setIsResourcesOpen,
     isPreviousWorkOpen, setIsPreviousWorkOpen,
     noteText, setNoteText,

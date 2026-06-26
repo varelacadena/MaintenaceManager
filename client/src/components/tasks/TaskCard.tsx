@@ -1,16 +1,23 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, MapPin } from "lucide-react";
+import { Calendar, User as UserIcon, MapPin } from "lucide-react";
 import { statusBadgeStyles, urgencyBadgeStyles, statusLabels, taskTypeLabels, formatTaskDate } from "@/utils/taskUtils";
-import type { Task } from "@shared/schema";
+import { resolveTaskAssigneeName } from "@/lib/displayNames";
+import type { Task, User } from "@shared/schema";
 
 interface TaskCardProps {
   task: Task;
   getAssigneeName?: (userId: string) => string;
+  users?: User[];
   onClick?: () => void;
 }
 
-export function TaskCard({ task, getAssigneeName, onClick }: TaskCardProps) {
+export function TaskCard({ task, getAssigneeName, users, onClick }: TaskCardProps) {
+  const assigneeName = (task.assignedToId || task.assignedToName)
+    ? (getAssigneeName && task.assignedToId
+        ? getAssigneeName(task.assignedToId)
+        : resolveTaskAssigneeName(task, users))
+    : null;
   return (
     <Card
       className={`hover-elevate transition-colors ${onClick ? "cursor-pointer" : ""}`}
@@ -61,10 +68,10 @@ export function TaskCard({ task, getAssigneeName, onClick }: TaskCardProps) {
                   <span>Completed: {formatTaskDate(task.actualCompletionDate)}</span>
                 </div>
               )}
-              {task.assignedToId && getAssigneeName && (
+              {assigneeName && (
                 <div className="flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  <span>{getAssigneeName(task.assignedToId)}</span>
+                  <UserIcon className="w-3 h-3" />
+                  <span>{assigneeName}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">

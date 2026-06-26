@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
 import { buildStoredImageUrl, mapUploaderResultForRegistration } from "@/lib/uploadUtils";
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { formatUserDisplayName, formatEquipmentDisplayName, resolveUserDisplayName } from "@/lib/displayNames";
 import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace, User as UserType } from "@shared/schema";
 import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -87,6 +87,7 @@ export function usePropertyDetail() {
   const [isEditPropertyDialogOpen, setIsEditPropertyDialogOpen] = useState(false);
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
@@ -138,10 +139,8 @@ export function usePropertyDetail() {
     queryKey: ["/api/users"],
   });
 
-  const getAssigneeName = (userId: string) => {
-    const u = users.find((usr) => usr.id === userId);
-    if (!u) return "Unassigned";
-    return getUserDisplayName(u);
+  const getAssigneeName = (userId: string, snapshotName?: string | null) => {
+    return resolveUserDisplayName({ userId, snapshotName, users });
   };
 
   const isBuilding = property?.type === "building";
@@ -391,6 +390,7 @@ export function usePropertyDetail() {
       return await apiRequest("DELETE", `/api/equipment/${equipmentId}`, {});
     },
     onSuccess: () => {
+      setEquipmentToDelete(null);
       invalidateEquipmentQueries();
       toast({ title: "Success", description: "Equipment deleted successfully" });
     },
@@ -529,9 +529,13 @@ export function usePropertyDetail() {
     setIsCreateDialogOpen(true);
   };
 
-  const handleDeleteEquipment = (equipmentId: string) => {
-    if (confirm("Are you sure you want to delete this equipment?")) {
-      deleteEquipmentMutation.mutate(equipmentId);
+  const handleDeleteEquipment = (item: Equipment) => {
+    setEquipmentToDelete(item);
+  };
+
+  const confirmDeleteEquipment = () => {
+    if (equipmentToDelete) {
+      deleteEquipmentMutation.mutate(equipmentToDelete.id);
     }
   };
 
@@ -585,6 +589,7 @@ export function usePropertyDetail() {
     isEditPropertyDialogOpen, setIsEditPropertyDialogOpen,
     isSpaceDialogOpen, setIsSpaceDialogOpen,
     editingEquipment, setEditingEquipment,
+    equipmentToDelete, setEquipmentToDelete,
     editingSpace, setEditingSpace,
     selectedCategory, setSelectedCategory,
     selectedSpaceId, setSelectedSpaceId,
@@ -616,7 +621,8 @@ export function usePropertyDetail() {
     updatePropertyMutation,
     onSubmit, onPropertySubmit, onSpaceSubmit,
     handleEditSpace, handleDeleteSpace, handleEditProperty,
-    openCreateEquipmentDialog, handleEditEquipment, handleDeleteEquipment,
+    openCreateEquipmentDialog, handleEditEquipment, handleDeleteEquipment, confirmDeleteEquipment,
+    formatEquipmentDisplayName,
     categories, spaceFilteredEquipment, categoryFilteredEquipment,
     filteredEquipment, groupedEquipment, filteredSpaces, filteredTasks,
     getAssigneeName,

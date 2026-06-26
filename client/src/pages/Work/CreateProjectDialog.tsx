@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PropertySelectItems, SpaceSelectItems } from "@/components/PropertySelectItems";
 import type { Property, Space } from "@shared/schema";
 import { projectFormSchema, type ProjectFormValues } from "./constants";
+import { parse, format } from "date-fns";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -259,10 +261,9 @@ export function CreateProjectDialog({ open, onOpenChange, properties }: CreatePr
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value || ""}
-                        onChange={field.onChange}
+                      <DatePicker
+                        value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : undefined}
+                        onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                         data-testid="input-project-start-date"
                       />
                     </FormControl>
@@ -277,10 +278,9 @@ export function CreateProjectDialog({ open, onOpenChange, properties }: CreatePr
                   <FormItem>
                     <FormLabel>Target End Date</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value || ""}
-                        onChange={field.onChange}
+                      <DatePicker
+                        value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : undefined}
+                        onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                         data-testid="input-project-end-date"
                       />
                     </FormControl>

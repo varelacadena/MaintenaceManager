@@ -250,7 +250,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleDeleteEquipment(item.id)}
+                          onClick={() => handleDeleteEquipment(item)}
                           data-testid={`button-delete-${item.id}`}
                         >
                           <Trash2 className="w-3 h-3 text-destructive" />

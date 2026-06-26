@@ -25,6 +25,7 @@ import { PropertyResourcesTab } from "./PropertyResourcesTab";
 import { PropertyEquipmentTab } from "./PropertyEquipmentTab";
 import { PropertyWorkHistoryTab } from "./PropertyWorkHistoryTab";
 import { PropertySpacesTab } from "./PropertySpacesTab";
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
 
 const PropertyMap = lazy(() => import("@/components/PropertyMap"));
 
@@ -201,6 +202,21 @@ export default function PropertyDetail() {
       />
 
       <PropertyDialogs ctx={ctx} />
+
+      <DestructiveDeleteDialog
+        open={!!ctx.equipmentToDelete}
+        onOpenChange={(open) => { if (!open) ctx.setEquipmentToDelete(null); }}
+        entityLabel={ctx.equipmentToDelete ? ctx.formatEquipmentDisplayName(ctx.equipmentToDelete) : ""}
+        entityType="equipment"
+        requireConfirmationText={ctx.equipmentToDelete?.name}
+        warningDetails={[
+          "Files attached to this equipment will be removed.",
+          "Linked work tasks will be kept with this equipment name preserved on their records.",
+          "This action is logged and cannot be undone.",
+        ]}
+        onConfirm={ctx.confirmDeleteEquipment}
+        isPending={ctx.deleteEquipmentMutation.isPending}
+      />
     </div>
   );
 }

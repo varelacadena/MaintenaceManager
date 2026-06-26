@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { changePasswordRequestSchema } from "../userValidation";
+import { deleteUserWithAudit, getDeletionAuditLog } from "../storage/entityCleanup";
 
 async function emailBelongsToAnotherUser(email: string | undefined, targetUserId: string) {
   if (!email) return false;
@@ -196,13 +197,10 @@ export function registerUserRoutes(app: Express) {
       if (userToDelete.id === req.userId) {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
-      await storage.deleteUser(req.params.id);
+      await deleteUserWithAudit(userToDelete, req.userId);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      if (error.code === "23503") {
-        return res.status(400).json({ message: "Cannot delete user with associated data. Remove their tasks and assignments first." });
-      }
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
@@ -269,20 +267,20 @@ export function registerUserRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/credentials/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/credentials/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteUser(id);
+      if (id === req.userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      const userToDelete = await storage.getUser(id);
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      await deleteUserWithAudit(userToDelete, req.userId);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting user:", error);
-
-      if (error.code === '23503') {
-        return res.status(409).json({
-          message: "Cannot delete user because they have associated data (service requests, messages, or time entries). You can change their role or password instead."
-        });
-      }
-
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
@@ -357,6 +355,15 @@ export function registerUserRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid password data", errors: error.errors });
       }
       handleRouteError(res, error, "Failed to change password");
+    }
+  });
+
+  app.get("/api/admin/deletion-audit", isAuthenticated, requireAdmin, async (_req, res) => {
+    try {
+      const entries = await getDeletionAuditLog(200);
+      res.json(entries);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch deletion audit log");
     }
   });
 }

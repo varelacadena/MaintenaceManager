@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
-import { toDisplayUrl } from "@/lib/imageUtils";
+import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import {
   Check,
   X,
@@ -25,6 +25,7 @@ function QuoteAttachments({ quoteId }: { quoteId: string }) {
   const { data: attachments = [] } = useQuery<QuoteAttachment[]>({
     queryKey: ["/api/quotes", quoteId, "attachments"],
   });
+  const { openImagePreview } = useImagePreview();
 
   if (attachments.length === 0) return null;
 
@@ -35,7 +36,10 @@ function QuoteAttachments({ quoteId }: { quoteId: string }) {
           key={attachment.id}
           variant="outline"
           size="sm"
-          onClick={() => window.open(toDisplayUrl(attachment.storageUrl), "_blank")}
+          onClick={() => openResourceUrl(openImagePreview, attachment.storageUrl, {
+            title: attachment.fileName,
+            fileType: attachment.fileType,
+          })}
           data-testid={`button-download-attachment-${attachment.id}`}
         >
           <Download className="w-3 h-3 mr-1" />

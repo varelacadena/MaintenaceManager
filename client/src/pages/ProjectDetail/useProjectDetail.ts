@@ -259,11 +259,11 @@ export function useProjectDetail() {
     }: {
       taskId: string; newStatus: StatusType; onHoldReason?: string;
     }) => {
-      const updateData: any = { status: newStatus };
+      const payload: Record<string, unknown> = { status: newStatus };
       if (newStatus === "on_hold" && onHoldReason) {
-        updateData.onHoldReason = onHoldReason;
+        payload.onHoldReason = onHoldReason;
       }
-      return await apiRequest("PATCH", `/api/tasks/${taskId}`, updateData);
+      return await apiRequest("PATCH", `/api/tasks/${taskId}/status`, payload);
     },
     onSuccess: () => {
       setIsHoldReasonDialogOpen(false);

@@ -52,6 +52,7 @@ export function PanelMainContent({
       <PanelCompactMain
         ctx={ctx}
         taskId={taskId}
+        allUsers={allUsers}
         onViewCompletionReport={onViewCompletionReport}
       />
     );
@@ -76,6 +77,30 @@ export function PanelMainContent({
           </p>
         )}
       </div>
+
+      <PanelResourcesSection
+        uploads={uploads}
+        resourcesExpanded={resourcesExpanded}
+        setResourcesExpanded={setResourcesExpanded}
+        docCount={docCount}
+        imgCount={imgCount}
+        vidCount={vidCount}
+      />
+
+      <PanelNotesSection
+        isNotesOpen={isNotesOpen}
+        setIsNotesOpen={setIsNotesOpen}
+        taskNotes={taskNotes}
+        allUsers={allUsers}
+        editingNoteId={editingNoteId}
+        setEditingNoteId={setEditingNoteId}
+        editNoteContent={editNoteContent}
+        setEditNoteContent={setEditNoteContent}
+        setDeleteNoteId={setDeleteNoteId}
+        setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
+        updateNoteMutation={updateNoteMutation}
+        isAdmin={isAdmin}
+      />
 
       <div
         className={`grid px-5 py-4 ${isFullscreen ? (isMobile ? "grid-cols-2 gap-4" : "grid-cols-4 gap-4") : "grid-cols-1 gap-3"}`}
@@ -140,15 +165,6 @@ export function PanelMainContent({
         </div>
       </div>
 
-      <PanelResourcesSection
-        uploads={uploads}
-        resourcesExpanded={resourcesExpanded}
-        setResourcesExpanded={setResourcesExpanded}
-        docCount={docCount}
-        imgCount={imgCount}
-        vidCount={vidCount}
-      />
-
       <PanelSubtasksSection
         subtasks={subtasks}
         expandedSubtasks={expandedSubtasks}
@@ -190,21 +206,6 @@ export function PanelMainContent({
         addPartMutation={addPartMutation}
         userRole={user?.role}
         taskId={taskId}
-      />
-
-      <PanelNotesSection
-        isNotesOpen={isNotesOpen}
-        setIsNotesOpen={setIsNotesOpen}
-        taskNotes={taskNotes}
-        allUsers={allUsers}
-        editingNoteId={editingNoteId}
-        setEditingNoteId={setEditingNoteId}
-        editNoteContent={editNoteContent}
-        setEditNoteContent={setEditNoteContent}
-        setDeleteNoteId={setDeleteNoteId}
-        setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
-        updateNoteMutation={updateNoteMutation}
-        isAdmin={isAdmin}
       />
 
       <PanelHistorySection

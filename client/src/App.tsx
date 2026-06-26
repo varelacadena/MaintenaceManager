@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ImagePreviewProvider } from "@/components/ImagePreviewProvider";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -203,7 +204,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthenticatedApp />
+        <ImagePreviewProvider>
+          <AuthenticatedApp />
+        </ImagePreviewProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

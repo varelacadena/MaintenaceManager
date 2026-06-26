@@ -100,6 +100,7 @@ async function main() {
   let testTaskId: string | null = null;
   let parentTaskId: string | null = null;
   let subtaskId: string | null = null;
+  let multiAssigneeTaskId: string | null = null;
 
   try {
     console.log("\n--- Section 1: Task Completion Flow (Task #34) ---");
@@ -341,6 +342,62 @@ async function main() {
       assert.strictEqual(res.data.assignedToId, techUser.id);
     });
 
+    console.log("\n--- Section 4: Multi-assignee completion & admin status patch ---");
+
+    await test("Admin PATCH to completed sets actualCompletionDate", async () => {
+      const createRes = await apiPost("/api/tasks", {
+        name: "E2E Admin PATCH Complete",
+        description: "Verify admin status patch sets completion date",
+        urgency: "low",
+        initialDate: new Date().toISOString(),
+        assignedToId: techUser.id,
+        executorType: "technician",
+        status: "in_progress",
+      }, adminCookie);
+      assert.ok(createRes.status === 200 || createRes.status === 201);
+      multiAssigneeTaskId = createRes.data.id;
+
+      const patchRes = await apiPatch(`/api/tasks/${multiAssigneeTaskId}`, {
+        status: "completed",
+      }, adminCookie);
+      assert.strictEqual(patchRes.status, 200);
+      assert.strictEqual(patchRes.data.status, "completed");
+      assert.ok(patchRes.data.actualCompletionDate, "PATCH complete should set actualCompletionDate");
+
+      const workRes = await apiGet("/api/tasks?view=work&summary=true", adminCookie);
+      assert.strictEqual(workRes.status, 200);
+      const inWorkList = workRes.data.some((t: any) => t.id === multiAssigneeTaskId);
+      assert.ok(inWorkList, "Completed task should appear in admin work list");
+    });
+
+    await test("Additional technician can complete multi-assignee task", async () => {
+      const usersRes = await apiGet("/api/users/directory", adminCookie);
+      const technicians = usersRes.data.filter((u: any) => u.role === "technician" && u.id !== techUser.id);
+      assert.ok(technicians.length > 0, "Need a second technician for multi-assignee test");
+      const secondTech = technicians[0];
+      const secondTechSession = await login(secondTech.username, "123456");
+
+      const createRes = await apiPost("/api/tasks", {
+        name: "E2E Multi-assignee Complete",
+        description: "Additional technician completes shared task",
+        urgency: "medium",
+        initialDate: new Date().toISOString(),
+        assignedToId: techUser.id,
+        executorType: "technician",
+        helperUserIds: [secondTech.id],
+        status: "in_progress",
+      }, adminCookie);
+      assert.ok(createRes.status === 200 || createRes.status === 201);
+      multiAssigneeTaskId = createRes.data.id;
+
+      const completeRes = await apiPatch(`/api/tasks/${multiAssigneeTaskId}/status`, {
+        status: "completed",
+      }, secondTechSession.cookie);
+      assert.strictEqual(completeRes.status, 200);
+      assert.strictEqual(completeRes.data.status, "completed");
+      assert.ok(completeRes.data.actualCompletionDate);
+    });
+
     await test("All roles can access task list without errors", async () => {
       const [adminRes, techRes, studentRes] = await Promise.all([
         apiGet("/api/tasks", adminCookie),
@@ -369,6 +426,7 @@ async function main() {
       if (subtaskId) await apiDelete(`/api/tasks/${subtaskId}`, adminCookie);
       if (parentTaskId) await apiDelete(`/api/tasks/${parentTaskId}`, adminCookie);
       if (testTaskId) await apiDelete(`/api/tasks/${testTaskId}`, adminCookie);
+      if (multiAssigneeTaskId) await apiDelete(`/api/tasks/${multiAssigneeTaskId}`, adminCookie);
       console.log("  Test tasks cleaned up.");
     } catch (e: any) {
       console.error("  Cleanup error (non-fatal):", e.message);

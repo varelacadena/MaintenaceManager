@@ -20,6 +20,8 @@ import { toDisplayUrl } from "@/lib/imageUtils";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { invalidateVehicleQueries, invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
+import { formatVehicleDisplayName } from "@/lib/displayNames";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,12 +49,14 @@ export default function VehicleDetail() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const deleteVehicleMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest("DELETE", `/api/vehicles/${id}`);
     },
     onSuccess: () => {
+      setDeleteDialogOpen(false);
       invalidateVehicleQueries(queryClient);
       invalidateVehicleReservationQueries(queryClient);
       toast({ title: "Vehicle deleted successfully" });
@@ -245,35 +249,33 @@ export default function VehicleDetail() {
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" data-testid="button-delete-vehicle" className="w-full sm:w-auto">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Vehicle?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete this vehicle and all associated data. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                  <AlertDialogCancel className="w-full sm:w-auto mt-0">Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteVehicleMutation.mutate()}
-                    className="bg-destructive text-destructive-foreground w-full sm:w-auto"
-                    data-testid="button-confirm-delete-vehicle"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="destructive"
+              data-testid="button-delete-vehicle"
+              className="w-full sm:w-auto"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
           </div>
         )}
       </div>
+
+      <DestructiveDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        entityLabel={vehicle ? formatVehicleDisplayName(vehicle) : "this vehicle"}
+        entityType="vehicle"
+        requireConfirmationText={vehicle?.vehicleId}
+        warningDetails={[
+          "Reservations, logbook entries, maintenance logs, and documents for this vehicle will be removed.",
+          "Linked work tasks will be kept with this vehicle name preserved on their records.",
+          "This action is logged and cannot be undone.",
+        ]}
+        onConfirm={() => deleteVehicleMutation.mutate()}
+        isPending={deleteVehicleMutation.isPending}
+      />
 
       {vehicle.imageUrl ? (
         <div className="h-48 sm:h-56 w-full overflow-hidden rounded-lg border bg-muted/20">

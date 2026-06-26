@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import {
   statusColors,
   EQUIPMENT_CATEGORY_ICONS,
@@ -32,6 +33,7 @@ import { taskStatusLabels as statusLabels } from "@/lib/constants";
 import type { TaskDetailContext } from "./useTaskDetail";
 
 export function AdminDialogsB({ ctx }: { ctx: TaskDetailContext }) {
+  const { openImagePreview } = useImagePreview();
   const {
     task, navigate,
     allEquipment, allVehicles,
@@ -178,7 +180,7 @@ export function AdminDialogsB({ ctx }: { ctx: TaskDetailContext }) {
                             <button
                               key={r.id}
                               className="w-full flex items-start gap-3 p-3 rounded-md border hover-elevate active-elevate-2 text-left"
-                              onClick={() => window.open(toDisplayUrl(r.url), "_blank")}
+                              onClick={() => openResourceUrl(openImagePreview, r.url, { title: r.title, type: r.type })}
                               data-testid={`resource-item-${r.id}`}
                             >
                               <div className="p-1.5 rounded-md bg-primary/10 shrink-0">

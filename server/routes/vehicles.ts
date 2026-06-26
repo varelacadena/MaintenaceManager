@@ -16,6 +16,7 @@ import {
   canAccessFleetVehicle,
   canAccessVehicleDocument,
 } from "../routeUtils";
+import { deleteVehicleWithAudit } from "../storage/entityCleanup";
 import {
   validateReservationStatusTransition,
   normalizePrivilegedCreateStatus,
@@ -162,9 +163,13 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
-      await storage.deleteVehicle(req.params.id);
+      const vehicle = await storage.getVehicle(req.params.id);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      await deleteVehicleWithAudit(vehicle, req.userId);
       res.json({ success: true });
     } catch (error) {
       handleRouteError(res, error, "Failed to delete vehicle");

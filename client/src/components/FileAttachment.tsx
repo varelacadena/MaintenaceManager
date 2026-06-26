@@ -3,6 +3,7 @@ import { Paperclip, ExternalLink, AlertCircle, Loader2, Download } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { buildUploadPreviewOptions, isImageFileType, useImagePreview } from "@/components/ImagePreviewProvider";
 
 interface FileAttachmentProps {
   attachment: {
@@ -20,6 +21,7 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { openImagePreview } = useImagePreview();
 
   const isMockFile = attachment.objectUrl.includes("mock-storage.local");
 
@@ -44,9 +46,15 @@ export function FileAttachment({ attachment }: FileAttachmentProps) {
       const data = await response.json();
 
       if (data.downloadUrl) {
-        const isViewable = attachment.fileType.startsWith('image/') || attachment.fileType === 'application/pdf';
-        
-        if (isMobile) {
+        const isImage = isImageFileType(attachment.fileType);
+        const isViewable = isImage || attachment.fileType === "application/pdf";
+
+        if (isImage) {
+          openImagePreview({
+            ...buildUploadPreviewOptions(attachment),
+            src: data.downloadUrl,
+          });
+        } else if (isMobile) {
           // On mobile, use window.location for more reliable file opening
           // This bypasses popup blockers that block window.open after async operations
           window.location.href = data.downloadUrl;

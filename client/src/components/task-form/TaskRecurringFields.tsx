@@ -1,10 +1,6 @@
-import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   FormControl,
   FormField,
@@ -20,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toCalendarDate } from "@/lib/taskCalendarDates";
 
 interface TaskRecurringFieldsProps {
   form: any;
@@ -89,41 +86,13 @@ export function TaskRecurringFields({ form, taskType }: TaskRecurringFieldsProps
         render={({ field }: { field: any }) => (
           <FormItem className="flex flex-col">
             <FormLabel>End Date (Optional)</FormLabel>
-            <Popover>
-              <PopoverTrigger asChild>
-                <FormControl>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !field.value && "text-muted-foreground"
-                    )}
-                    type="button"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value ? format(new Date(field.value + 'T12:00:00'), "MMM d, yyyy") : "No end date"}
-                  </Button>
-                </FormControl>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      const year = date.getFullYear();
-                      const month = String(date.getMonth() + 1).padStart(2, '0');
-                      const day = String(date.getDate()).padStart(2, '0');
-                      field.onChange(`${year}-${month}-${day}`);
-                    } else {
-                      field.onChange(undefined);
-                    }
-                  }}
-                  className="[--cell-size:2.5rem] p-4"
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <FormControl>
+              <DatePicker
+                value={field.value ? toCalendarDate(field.value) ?? undefined : undefined}
+                onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : undefined)}
+                placeholder="No end date"
+              />
+            </FormControl>
             <FormDescription>
               Leave empty for tasks that never end
             </FormDescription>

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateUserDirectoryQueries, upsertUserInDirectoryCaches } from "@/lib/userQueryInvalidation";
 import type { User, PendingUser } from "@shared/schema";
+import { formatUserDisplayName } from "@/lib/displayNames";
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -81,6 +82,7 @@ export function useUsers() {
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isAiProfileDialogOpen, setIsAiProfileDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillCategory, setNewSkillCategory] = useState<string>("general");
@@ -291,6 +293,7 @@ export function useUsers() {
     },
     onSuccess: () => {
       invalidateUserDirectoryQueries(queryClient);
+      setUserToDelete(null);
       toast({ title: "User deleted successfully" });
     },
     onError: (error: any) => {
@@ -447,9 +450,13 @@ export function useUsers() {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone if the user has associated data.")) {
-      deleteUserMutation.mutate(userId);
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
+  };
+
+  const confirmDeleteUser = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
     }
   };
 
@@ -487,6 +494,7 @@ export function useUsers() {
     isProfileDialogOpen, setIsProfileDialogOpen,
     isAiProfileDialogOpen, setIsAiProfileDialogOpen,
     selectedUser, setSelectedUser,
+    userToDelete, setUserToDelete,
     newSkillName, setNewSkillName,
     newSkillCategory, setNewSkillCategory,
     newSkillLevel, setNewSkillLevel,
@@ -532,6 +540,8 @@ export function useUsers() {
     handleUpdateUser,
     handleUpdatePassword,
     handleDeleteUser,
+    confirmDeleteUser,
+    formatUserDisplayName,
     openEditDialog,
     openPasswordDialog,
     openProfileDialog,
