@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getParentRoute, hasPageBackControl } from "../navigation";
+import { getParentRoute, hasPageBackControl, isNavItemActive } from "../navigation";
 
 describe("getParentRoute", () => {
   it("returns fleet admin destinations for verification and check-in flows", () => {
@@ -35,5 +35,15 @@ describe("getParentRoute", () => {
     expect(hasPageBackControl("/requests/request-1", "staff")).toBe(true);
     expect(hasPageBackControl("/requests/request-1", "admin")).toBe(false);
     expect(hasPageBackControl("/vehicles/vehicle-1", "admin")).toBe(false);
+  });
+});
+
+describe("isNavItemActive", () => {
+  it("matches exact routes and sub-routes", () => {
+    expect(isNavItemActive("/work", "/work")).toBe(true);
+    expect(isNavItemActive("/tasks/task-1", "/work")).toBe(true);
+    expect(isNavItemActive("/requests/req-1", "/requests")).toBe(true);
+    expect(isNavItemActive("/resources", "/work")).toBe(false);
+    expect(isNavItemActive("/vehicles/v-1", "/vehicles")).toBe(true);
   });
 });

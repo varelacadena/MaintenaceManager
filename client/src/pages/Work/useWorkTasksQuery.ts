@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Task } from "@shared/schema";
+import { parseApiError } from "@/lib/queryClient";
 import { WORK_TASKS_STALE_MS } from "./workConstants";
 
 export function useWorkTasksQuery(enabled: boolean) {
@@ -13,7 +14,9 @@ export function useWorkTasksQuery(enabled: boolean) {
     queryKey: ["/api/tasks", { view: "work", summary: true }],
     queryFn: async () => {
       const res = await fetch("/api/tasks?view=work&summary=true", { credentials: "include" });
-      if (!res.ok) throw new Error("Could not load tasks.");
+      if (!res.ok) {
+        throw new Error(await parseApiError(res, "Could not load tasks."));
+      }
       return res.json();
     },
     staleTime: WORK_TASKS_STALE_MS,

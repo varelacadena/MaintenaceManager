@@ -31,7 +31,8 @@ export const uploads = pgTable("uploads", {
   objectUrl: varchar("object_url", { length: 1000 }).notNull(),
   objectPath: varchar("object_path", { length: 1000 }),
   label: varchar("label", { length: 500 }),
-  uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
+  uploadedById: varchar("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+  uploadedByName: varchar("uploaded_by_name", { length: 200 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -51,7 +52,8 @@ export const emergencyContacts = pgTable("emergency_contacts", {
   isActive: boolean("is_active").notNull().default(true),
   validFrom: timestamp("valid_from"),
   validUntil: timestamp("valid_until"),
-  assignedById: varchar("assigned_by_id").notNull().references(() => users.id),
+  assignedById: varchar("assigned_by_id").references(() => users.id, { onDelete: "set null" }),
+  assignedByName: varchar("assigned_by_name", { length: 200 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -46,7 +46,8 @@ export const projects = pgTable("projects", {
   actualEndDate: timestamp("actual_end_date"),
   budgetAmount: doublePrecision("budget_amount").default(0),
   notes: text("notes"),
-  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdByName: varchar("created_by_name", { length: 200 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -120,7 +121,8 @@ export const quotes = pgTable("quotes", {
   estimatedCost: doublePrecision("estimated_cost").notNull().default(0),
   status: quoteStatusEnum("status").notNull().default("draft"),
   notes: text("notes"),
-  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdByName: varchar("created_by_name", { length: 200 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -153,7 +155,8 @@ export type QuoteAttachment = typeof quoteAttachments.$inferSelect;
 export const projectComments = pgTable("project_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
+  senderId: varchar("sender_id").references(() => users.id, { onDelete: "set null" }),
+  senderName: varchar("sender_name", { length: 200 }),
   content: text("content").notNull(),
   isSystem: boolean("is_system").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),

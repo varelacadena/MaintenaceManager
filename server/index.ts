@@ -13,6 +13,7 @@ import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
 import { startDocumentExpirationScheduler } from "./documentExpirationScheduler";
 import { startTaskReminderScheduler } from "./taskReminderScheduler";
 import { startPendingUserExpirationScheduler } from "./pendingUserExpirationScheduler";
+import { applyMigrations } from "./applyMigrations";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 
@@ -146,7 +147,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Schema is applied via drizzle-kit push (e.g. npm start); SQL migrations / applyInventoryTriggers are not run here.
+  try {
+    await applyMigrations();
+  } catch (err) {
+    console.error("Failed to apply database migrations:", err);
+    process.exit(1);
+  }
 
   if (process.env.SKIP_TASK_POOL_BACKFILL !== "true") {
     try {

@@ -1,3 +1,32 @@
+/** Whether a sidebar nav item should appear active for the current route. */
+export function isNavItemActive(location: string, itemUrl: string): boolean {
+  if (location === itemUrl) return true;
+
+  if (itemUrl === "/work") {
+    return (
+      location.startsWith("/work") ||
+      location.startsWith("/tasks") ||
+      location.startsWith("/projects")
+    );
+  }
+
+  const prefixRoutes = [
+    "/calendar",
+    "/vehicles",
+    "/tools-equipment",
+    "/requests",
+    "/resources",
+    "/properties",
+    "/analytics",
+    "/inventory",
+    "/vendors",
+  ];
+
+  return prefixRoutes.some(
+    (prefix) => itemUrl.startsWith(prefix) && location.startsWith(prefix),
+  );
+}
+
 /** Wouter location setter (second tuple item from useLocation). */
 export type SetLocationFn = (
   to: string,

@@ -32,6 +32,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { Badge } from "@/components/ui/badge";
+import { isNavItemActive } from "@/lib/navigation";
 
 interface AppSidebarProps {
   userRole: "admin" | "staff" | "student" | "technician";
@@ -137,12 +138,7 @@ export default function AppSidebar({ userRole, userName, userInitials }: AppSide
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
-                      isActive={
-                        location === item.url ||
-                        (item.url.startsWith("/calendar") && location.startsWith("/calendar")) ||
-                        (item.url.startsWith("/vehicles") && location.startsWith("/vehicles")) ||
-                        (item.url.startsWith("/tools-equipment") && location.startsWith("/tools-equipment"))
-                      }
+                      isActive={isNavItemActive(location, item.url)}
                       tooltip={item.title}
                     >
                       <Link 
