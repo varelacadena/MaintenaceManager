@@ -236,9 +236,9 @@ export default function VehicleDetail() {
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight truncate" data-testid="text-vehicle-name">
-              {vehicle.make} {vehicle.model}
+              {vehicle.vehicleId}
             </h2>
-            <p className="text-sm text-muted-foreground truncate">{vehicle.year} • {vehicle.vehicleId}</p>
+            <p className="text-sm text-muted-foreground truncate">{vehicle.make} {vehicle.model} • {vehicle.year}</p>
           </div>
         </div>
 
@@ -281,7 +281,7 @@ export default function VehicleDetail() {
         <div className="h-48 sm:h-56 w-full overflow-hidden rounded-lg border bg-muted/20">
           <img
             src={toDisplayUrl(vehicle.imageUrl)}
-            alt={`${vehicle.make} ${vehicle.model}`}
+            alt={`${vehicle.vehicleId} - ${vehicle.make} ${vehicle.model}`}
             className="h-full w-full object-cover"
           />
         </div>
@@ -1016,7 +1016,7 @@ export default function VehicleDetail() {
                 />
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground mt-4 text-center break-words">
-                {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
+                {vehicle.vehicleId} ({vehicle.make} {vehicle.model})
               </p>
               <Button variant="outline" onClick={() => window.print()} data-testid="button-print-qr" className="mt-4">
                 <QrCode className="h-4 w-4 mr-2" />

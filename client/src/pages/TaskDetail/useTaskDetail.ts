@@ -62,7 +62,7 @@ export function useTaskDetail() {
   const [equipmentInfoTab, setEquipmentInfoTab] = useState<"info" | "history" | "resources">("info");
   const [isQuickAddInventoryOpen, setIsQuickAddInventoryOpen] = useState(false);
   const [quickInventoryName, setQuickInventoryName] = useState("");
-  const [quickInventoryQuantity, setQuickInventoryQuantity] = useState(0);
+  const [quickInventoryQuantity, setQuickInventoryQuantity] = useState("");
   const [quickInventoryUnit, setQuickInventoryUnit] = useState("");
   const [isStopTimerDialogOpen, setIsStopTimerDialogOpen] = useState(false);
   const [isResourcesSheetOpen, setIsResourcesSheetOpen] = useState(false);

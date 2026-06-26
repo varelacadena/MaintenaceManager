@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { parseIntInput } from "@/lib/formInputUtils";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -37,7 +38,7 @@ export default function VehicleCheckInVerification() {
   const { openImagePreview } = useImagePreview();
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<{
-    endMileage: number;
+    endMileage: number | undefined;
     fuelLevel: string;
     cleanlinessStatus: string;
     issues: string;
@@ -133,7 +134,7 @@ export default function VehicleCheckInVerification() {
   };
 
   const handleSave = () => {
-    if (editedData) updateMutation.mutate(editedData);
+    if (editedData?.endMileage != null) updateMutation.mutate(editedData as Partial<VehicleCheckInLog>);
   };
 
   const handleCancel = () => {
@@ -322,8 +323,8 @@ export default function VehicleCheckInVerification() {
                   <Input
                     id="endMileage"
                     type="number"
-                    value={editedData.endMileage}
-                    onChange={(e) => setEditedData({ ...editedData, endMileage: parseInt(e.target.value) || 0 })}
+                    value={editedData.endMileage ?? ""}
+                    onChange={(e) => setEditedData({ ...editedData, endMileage: parseIntInput(e.target.value) })}
                     data-testid="input-edit-mileage"
                   />
                 </div>

@@ -23,6 +23,14 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, ne, desc, lte, gte, sql, inArray, count, or, ilike } from "drizzle-orm";
+import { sortVehiclesByVehicleId } from "@shared/vehicleSort";
+
+/** Natural order for fleet IDs (V-2 before V-10). */
+const vehicleIdOrderBy = [
+  sql`regexp_replace(${vehicles.vehicleId}, '[0-9]+', '', 'g')`,
+  sql`COALESCE(NULLIF(substring(${vehicles.vehicleId} from '[0-9]+'), '')::int, 0)`,
+  sql`lower(${vehicles.vehicleId})`,
+] as const;
 
 export type VehicleReservationFilters = {
   vehicleId?: string;
@@ -85,9 +93,9 @@ export async function getVehicles(filters?: { status?: string; search?: string }
   const conditions = buildVehicleConditions(filters);
   const query = db.select().from(vehicles);
   if (conditions.length > 0) {
-    return await query.where(and(...conditions)).orderBy(vehicles.vehicleId);
+    return await query.where(and(...conditions)).orderBy(...vehicleIdOrderBy);
   }
-  return await query.orderBy(vehicles.vehicleId);
+  return await query.orderBy(...vehicleIdOrderBy);
 }
 
 export async function getVehiclesPage(
@@ -97,7 +105,7 @@ export async function getVehiclesPage(
   const conditions = buildVehicleConditions(filters);
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const itemsQuery = db.select().from(vehicles).orderBy(vehicles.vehicleId);
+  const itemsQuery = db.select().from(vehicles).orderBy(...vehicleIdOrderBy);
   const countQuery = db.select({ value: count() }).from(vehicles);
 
   const [items, countRows] = await Promise.all([
@@ -118,7 +126,8 @@ export async function getVehicle(id: string): Promise<Vehicle | undefined> {
 export async function getVehiclesByIds(ids: string[]): Promise<Vehicle[]> {
   const unique = Array.from(new Set(ids.filter(Boolean)));
   if (unique.length === 0) return [];
-  return db.select().from(vehicles).where(inArray(vehicles.id, unique));
+  const results = await db.select().from(vehicles).where(inArray(vehicles.id, unique));
+  return sortVehiclesByVehicleId(results);
 }
 
 export async function getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined> {

@@ -90,6 +90,9 @@ export function PanelCompactMain({ ctx, taskId, allUsers, onViewCompletionReport
     toggleSubtaskExpanded,
     isAdmin,
     handleInlineEdit,
+    fileInputRef,
+    handleFileUpload,
+    isFileUploading,
   } = ctx;
 
   const [subtasksOpen, setSubtasksOpen] = useState(() => (subtasks?.length ?? 0) > 0);
@@ -135,6 +138,8 @@ export function PanelCompactMain({ ctx, taskId, allUsers, onViewCompletionReport
           docCount={docCount}
           imgCount={imgCount}
           vidCount={vidCount}
+          onAddPhoto={() => fileInputRef.current?.click()}
+          isPhotoUploading={isFileUploading}
         />
 
         <PanelNotesSection

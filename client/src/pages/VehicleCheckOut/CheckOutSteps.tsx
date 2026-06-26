@@ -16,6 +16,7 @@ import {
   type VehicleCheckOutContext,
 } from "./useVehicleCheckOut";
 import { exitTo } from "@/lib/navigation";
+import { parseIntInput } from "@/lib/formInputUtils";
 import { FuelLevelSelector, SubStepDots } from "./CheckOutComponents";
 
 export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
@@ -52,8 +53,8 @@ export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
                 <div className="space-y-1">
                   <Input
                     type="number"
-                    value={coMileage || ""}
-                    onChange={(e) => setCoMileage(parseInt(e.target.value) || 0)}
+                    value={coMileage ?? ""}
+                    onChange={(e) => setCoMileage(parseIntInput(e.target.value))}
                     className="text-center text-2xl font-bold h-14"
                     placeholder="0"
                     data-testid="input-start-mileage"
@@ -359,7 +360,7 @@ export function CompleteStep({ ctx }: { ctx: VehicleCheckOutContext }) {
             <span className="text-muted-foreground">Start Time</span>
             <span className="font-medium">{format(new Date(reservation.startDate), "MMM d 'at' h:mm a")}</span>
             <span className="text-muted-foreground">Starting Mileage</span>
-            <span className="font-medium">{coMileage.toLocaleString()} mi</span>
+            <span className="font-medium">{coMileage?.toLocaleString() ?? "—"} mi</span>
           </div>
         </div>
         {reservation.keyPickupMethod && (

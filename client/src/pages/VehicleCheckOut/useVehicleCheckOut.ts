@@ -65,7 +65,7 @@ export function useVehicleCheckOut() {
   const [subSlideDir, setSubSlideDir] = useState<"left" | "right">("left");
   const [subIsAnimating, setSubIsAnimating] = useState(false);
 
-  const [coMileage, setCoMileage] = useState<number>(0);
+  const [coMileage, setCoMileage] = useState<number | undefined>(undefined);
   const [coFuelLevel, setCoFuelLevel] = useState<string>("");
   const [coIsClean, setCoIsClean] = useState<boolean | null>(null);
   const [coHasDamage, setCoHasDamage] = useState<boolean | null>(null);
@@ -294,7 +294,7 @@ export function useVehicleCheckOut() {
   };
 
   const handleCheckoutSubmit = () => {
-    if (!dashPhoto) return;
+    if (!dashPhoto || coMileage == null) return;
     checkOutMutation.mutate({
       startMileage: coMileage,
       fuelLevel: coFuelLevel,

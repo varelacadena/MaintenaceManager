@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
@@ -12,7 +11,6 @@ import {
   FileText,
   Video,
   Package,
-  StickyNote,
   CheckCircle2,
   Plus,
   MoreVertical,
@@ -31,6 +29,9 @@ import { format } from "date-fns";
 import type { User, TimeEntry } from "@shared/schema";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { PhotoThumbnailGrid } from "./PanelResourcesSection";
+import { PanelNoteList } from "./PanelNotesSection";
+import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
+import { PanelFileInput } from "./PanelFileInput";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId } from "@/utils/taskUtils";
 import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
@@ -54,6 +55,8 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
     setEditingTimeEntryId, setEditTimeDuration, setDeleteTimeEntryId,
     setIsLogTimeDialogOpen,
     isNotStarted, isStarted, handleStartTask, handleMarkComplete, updateStatusMutation,
+    isAdmin,
+    fileInputRef, handleFileUpload, isFileUploading,
   } = ctx;
 
   if (!task) return null;
@@ -179,11 +182,17 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
                       Photos{images.length > 0 ? ` (${images.length})` : ""}
                     </p>
-                    {images.length > 0 ? (
-                      <PhotoThumbnailGrid uploads={images} columns={isMobile ? 3 : 4} />
-                    ) : (
-                      <p className="text-sm" style={{ color: "#9CA3AF" }}>No photos yet</p>
-                    )}
+                    <PhotoThumbnailGrid
+                      uploads={images}
+                      columns={isMobile ? 3 : 4}
+                      trailing={
+                        <PanelPhotoUploadTrigger
+                          onClick={() => fileInputRef.current?.click()}
+                          isUploading={isFileUploading}
+                          testId="button-admin-fullscreen-add-photo"
+                        />
+                      }
+                    />
                     {otherFiles.length > 0 && (
                         <div className="mt-4 pt-4" style={{ borderTop: "1px solid #F3F4F6" }}>
                           <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>
@@ -225,85 +234,22 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                   </div>
 
                   <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "#9CA3AF" }}>
                       Notes ({taskNotes.length})
                     </p>
-                    {taskNotes.length === 0 ? (
-                      <div className="rounded-xl border border-dashed py-8 px-4 text-center mb-3" style={{ borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" }}>
-                        <StickyNote className="w-5 h-5 mx-auto mb-2" style={{ color: "#F59E0B" }} />
-                        <p className="text-sm font-medium" style={{ color: "#374151" }}>No notes yet</p>
-                        <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Add context, updates, or instructions for the team.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4 mb-3">
-                        {taskNotes.map((note) => {
-                          const noteAuthor = allUsers?.find(u => u.id === note.userId);
-                          const isEditing = editingNoteId === note.id;
-                          return (
-                            <div key={note.id} data-testid={`panel-note-${note.id}`}>
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <StickyNote className="w-4 h-4" style={{ color: "#F59E0B" }} />
-                                    <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                                      {noteAuthor ? `${noteAuthor.firstName || ""} ${noteAuthor.lastName || ""}`.trim() || noteAuthor.username : "Unknown"}
-                                    </span>
-                                    <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                                      {note.createdAt ? format(new Date(note.createdAt), "MMM d, h:mm a") : ""}
-                                    </span>
-                                  </div>
-                                  {isEditing ? (
-                                    <div className="space-y-2 ml-6">
-                                      <Textarea
-                                        value={editNoteContent}
-                                        onChange={(e) => setEditNoteContent(e.target.value)}
-                                        rows={3}
-                                        data-testid="input-edit-note-content"
-                                      />
-                                      <div className="flex gap-2 justify-end">
-                                        <Button variant="ghost" size="sm" onClick={() => { setEditingNoteId(null); setEditNoteContent(""); }} data-testid="button-cancel-edit-note">
-                                          Cancel
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                                          disabled={!editNoteContent.trim() || updateNoteMutation.isPending}
-                                          onClick={() => updateNoteMutation.mutate({ noteId: note.id, content: editNoteContent })}
-                                          data-testid="button-save-edit-note"
-                                        >
-                                          {updateNoteMutation.isPending ? "Saving..." : "Save"}
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm leading-relaxed ml-6" style={{ color: "#374151" }}>{note.content}</p>
-                                  )}
-                                </div>
-                                {!isEditing && (
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <Button size="icon" variant="ghost" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }} data-testid={`button-edit-note-${note.id}`}>
-                                      <Pencil className="w-3.5 h-3.5" style={{ color: "#6B7280" }} />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" onClick={() => setDeleteNoteId(note.id)} data-testid={`button-delete-note-${note.id}`}>
-                                      <Trash2 className="w-3.5 h-3.5" style={{ color: "#D94F4F" }} />
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <button
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-md text-xs font-medium transition-colors"
-                      style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}
-                      onClick={() => setIsAddNoteDialogOpen(true)}
-                      data-testid="button-panel-add-note-inline"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add Note
-                    </button>
+                    <PanelNoteList
+                      embedded
+                      taskNotes={taskNotes}
+                      allUsers={allUsers}
+                      editingNoteId={editingNoteId}
+                      setEditingNoteId={setEditingNoteId}
+                      editNoteContent={editNoteContent}
+                      setEditNoteContent={setEditNoteContent}
+                      setDeleteNoteId={setDeleteNoteId}
+                      setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
+                      updateNoteMutation={updateNoteMutation}
+                      isAdmin={isAdmin}
+                    />
                   </div>
                 </>
               );
@@ -532,6 +478,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
           </div>
         </div>
       </div>
+      <PanelFileInput fileInputRef={fileInputRef} onChange={handleFileUpload} />
       <TaskDetailPanelDialogs ctx={ctx} />
     </div>
   );

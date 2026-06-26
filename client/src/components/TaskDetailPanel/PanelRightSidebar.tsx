@@ -27,7 +27,7 @@ export function PanelRightSidebar({ ctx }: PanelRightSidebarProps) {
     handleStartTask, handleMarkComplete, updateStatusMutation,
     totalSubtasks, allSubtasksComplete,
     statusDot, urg, isOverdue, assignee, assigneeInitials,
-    isFileUploading, fileInputRef, handleFileUpload,
+    isFileUploading, fileInputRef,
     setIsScanDialogOpen, setIsAddNoteDialogOpen, setIsLogTimeDialogOpen,
     setIsEditMode, setDeleteDialogOpen, property,
   } = ctx;
@@ -100,13 +100,6 @@ export function PanelRightSidebar({ ctx }: PanelRightSidebarProps) {
               )}
             </button>
           ))}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={handleFileUpload}
-            data-testid="input-file-upload"
-          />
         </div>
       </div>
 

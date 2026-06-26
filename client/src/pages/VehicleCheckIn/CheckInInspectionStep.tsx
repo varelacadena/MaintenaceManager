@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { parseIntInput } from "@/lib/formInputUtils";
 import { FuelLevelSelector, SubStepDots } from "./CheckInComponents";
 import { InspectionStepExtra } from "./CheckInInspectionStepExtra";
 import type { VehicleCheckInContext } from "./useVehicleCheckIn";
@@ -18,7 +19,7 @@ export interface InspectionStepProps {
   inspSubStepIndex: number;
   inspAnimClass: string;
   inspSubStep: VehicleCheckInContext["inspSubStep"];
-  ciMileage: number;
+  ciMileage: number | undefined;
   setCiMileage: VehicleCheckInContext["setCiMileage"];
   checkOutLog: NonNullable<VehicleCheckInContext["checkOutLog"]>;
   milesDrivenPreview: number;
@@ -92,15 +93,15 @@ export function InspectionStep(props: InspectionStepProps) {
                 <div className="space-y-1">
                   <Input
                     type="number"
-                    value={ciMileage || ""}
-                    onChange={(e) => setCiMileage(parseInt(e.target.value) || 0)}
+                    value={ciMileage ?? ""}
+                    onChange={(e) => setCiMileage(parseIntInput(e.target.value))}
                     className="text-center text-2xl font-bold h-14"
                     placeholder="0"
                     data-testid="input-end-mileage"
                   />
                   <p className="text-xs text-muted-foreground text-center">miles</p>
                 </div>
-                {ciMileage > 0 && milesDrivenPreview >= 0 && (
+                {ciMileage != null && ciMileage > 0 && milesDrivenPreview >= 0 && (
                   <div className="text-center p-3 bg-muted/50 rounded-md">
                     <p className="text-xs text-muted-foreground">Miles driven this trip</p>
                     <p className="text-xl font-bold">{milesDrivenPreview.toLocaleString()} mi</p>
@@ -109,7 +110,7 @@ export function InspectionStep(props: InspectionStepProps) {
                 <div className="flex flex-col gap-2">
                   <Button
                     onClick={() => advanceInspSubStep("fuel")}
-                    disabled={!ciMileage || ciMileage < (checkOutLog.startMileage || 0)}
+                    disabled={ciMileage == null || ciMileage < (checkOutLog.startMileage || 0)}
                     className="w-full"
                     data-testid="button-mileage-next"
                   >

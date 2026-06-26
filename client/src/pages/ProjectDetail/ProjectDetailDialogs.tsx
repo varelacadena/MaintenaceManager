@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseFloatInput } from "@/lib/formInputUtils";
 import {
   Dialog,
   DialogContent,
@@ -162,7 +163,14 @@ export function ProjectDetailDialogs({
                   <FormItem>
                     <FormLabel>Budget Amount</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" step="0.01" data-testid="input-edit-project-budget" />
+                      <Input
+                        {...field}
+                        type="number"
+                        step="0.01"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(parseFloatInput(e.target.value))}
+                        data-testid="input-edit-project-budget"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

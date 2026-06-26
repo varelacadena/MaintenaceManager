@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { parseIntInput } from "@/lib/formInputUtils";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   FormControl,
@@ -66,7 +67,7 @@ export function TaskRecurringFields({ form, taskType }: TaskRecurringFieldsProps
                   min="1"
                   placeholder="e.g., 1"
                   {...field}
-                  onChange={(e: any) => field.onChange(parseInt(e.target.value) || undefined)}
+                  onChange={(e: any) => field.onChange(parseIntInput(e.target.value))}
                   value={field.value || ""}
                   data-testid="input-recurring-interval"
                 />

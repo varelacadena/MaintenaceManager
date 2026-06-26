@@ -23,6 +23,7 @@ import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import { PanelMainContent } from "./PanelMainContent";
 import { PanelRightSidebar } from "./PanelRightSidebar";
 import { PanelAdminFullscreen } from "./PanelAdminFullscreen";
+import { PanelFileInput } from "./PanelFileInput";
 
 interface TaskDetailPanelProps {
   taskId: string;
@@ -243,6 +244,7 @@ export function TaskDetailPanel({
         />
         {isFullscreen && <PanelRightSidebar ctx={ctx} />}
       </div>
+      <PanelFileInput fileInputRef={ctx.fileInputRef} onChange={ctx.handleFileUpload} />
       <TaskDetailPanelDialogs ctx={ctx} />
     </div>
   );

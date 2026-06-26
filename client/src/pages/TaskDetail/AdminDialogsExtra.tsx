@@ -79,7 +79,7 @@ export function AdminDialogsExtra({ ctx }: { ctx: TaskDetailContext }) {
                 type="number"
                 min="1"
                 value={quickInventoryQuantity}
-                onChange={(e) => setQuickInventoryQuantity(parseInt(e.target.value) || 0)}
+                onChange={(e) => setQuickInventoryQuantity(e.target.value)}
                 placeholder="Enter quantity"
               />
             </div>
@@ -93,12 +93,12 @@ export function AdminDialogsExtra({ ctx }: { ctx: TaskDetailContext }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsQuickAddInventoryOpen(false); setQuickInventoryName(""); setQuickInventoryQuantity(0); setQuickInventoryUnit(""); }}>
+            <Button variant="outline" onClick={() => { setIsQuickAddInventoryOpen(false); setQuickInventoryName(""); setQuickInventoryQuantity(""); setQuickInventoryUnit(""); }}>
               Cancel
             </Button>
             <Button
               onClick={() => quickAddInventoryMutation.mutate()}
-              disabled={!quickInventoryName || quickInventoryQuantity <= 0 || quickAddInventoryMutation.isPending}
+              disabled={!quickInventoryName || !quickInventoryQuantity || parseInt(quickInventoryQuantity, 10) <= 0 || quickAddInventoryMutation.isPending}
             >
               Create Item
             </Button>

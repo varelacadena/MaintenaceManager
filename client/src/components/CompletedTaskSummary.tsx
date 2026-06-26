@@ -30,6 +30,7 @@ import {
   Car,
   Flag,
   ChevronRight,
+  StickyNote,
 } from "lucide-react";
 import { format } from "date-fns";
 import type {
@@ -42,6 +43,7 @@ import type {
   Property,
   User as UserType,
   Vehicle,
+  TaskNote,
 } from "@shared/schema";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -198,6 +200,11 @@ function SummaryContent({
 
   const { data: subTasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks", taskId, "subtasks"],
+    enabled: !!taskId,
+  });
+
+  const { data: taskNotes = [] } = useQuery<TaskNote[]>({
+    queryKey: ["/api/task-notes/task", taskId],
     enabled: !!taskId,
   });
 
@@ -393,6 +400,47 @@ function SummaryContent({
             <p className="text-sm whitespace-pre-wrap" data-testid="text-description">
               {task.description}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {taskNotes.length > 0 && (
+        <Card data-testid="section-notes">
+          <CardContent className="p-4 space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <StickyNote className="w-4 h-4 text-muted-foreground" />
+              Notes
+            </h3>
+            <div className="space-y-4">
+              {taskNotes.map((note) => {
+                const noteAuthor = users.find((u) => u.id === note.userId);
+                const authorName = noteAuthor
+                  ? (noteAuthor.firstName && noteAuthor.lastName
+                      ? `${noteAuthor.firstName} ${noteAuthor.lastName}`
+                      : noteAuthor.username)
+                  : "Unknown";
+                return (
+                  <div
+                    key={note.id}
+                    className="rounded-lg border bg-muted/30 p-4 space-y-2"
+                    data-testid={`summary-note-${note.id}`}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                      <span className="text-sm font-medium text-foreground">{authorName}</span>
+                      <Badge variant="secondary" className="text-[10px] font-normal no-default-hover-elevate">
+                        {note.noteType === "recommendation" ? "Recommendation" : "Job Note"}
+                      </Badge>
+                      {note.createdAt && (
+                        <span>{format(new Date(note.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                      )}
+                    </div>
+                    <p className="text-sm leading-[1.65] whitespace-pre-wrap break-words" data-testid={`summary-note-content-${note.id}`}>
+                      {note.content}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
       )}

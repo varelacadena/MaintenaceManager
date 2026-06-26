@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseFloatInput } from "@/lib/formInputUtils";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -244,8 +245,8 @@ export function CreateProjectDialog({ open, onOpenChange, properties }: CreatePr
                       type="number"
                       step="0.01"
                       placeholder="0.00"
-                      value={field.value ?? 0}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(parseFloatInput(e.target.value))}
                       data-testid="input-project-budget"
                     />
                   </FormControl>

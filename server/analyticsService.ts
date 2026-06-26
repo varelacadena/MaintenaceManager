@@ -15,6 +15,7 @@ import {
   spaces,
   projects,
 } from "@shared/schema";
+import { compareVehicleIds } from "@shared/vehicleSort";
 import { eq, and, gte, lte, sql, count, desc } from "drizzle-orm";
 import {
   buildTaskWhere,
@@ -1730,7 +1731,7 @@ export class AnalyticsService {
         }));
 
       detailedVehicles = allVehicles
-        .sort((a, b) => a.vehicleId.localeCompare(b.vehicleId))
+        .sort((a, b) => compareVehicleIds(a.vehicleId, b.vehicleId))
         .map((v) => ({
           id: v.id,
           vehicleId: v.vehicleId,

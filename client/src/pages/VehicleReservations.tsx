@@ -89,7 +89,7 @@ export function VehicleReservationsContent() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReservationForEdit, setSelectedReservationForEdit] = useState<VehicleReservation | null>(null);
   const [editPurpose, setEditPurpose] = useState<string>("");
-  const [editPassengerCount, setEditPassengerCount] = useState<number>(1);
+  const [editPassengerCount, setEditPassengerCount] = useState("");
   const [editNotes, setEditNotes] = useState<string>("");
   const [editVehicleId, setEditVehicleId] = useState<string>("");
   const [editStartDate, setEditStartDate] = useState<string>("");
@@ -264,7 +264,7 @@ export function VehicleReservationsContent() {
 
       return await apiRequest("PATCH", `/api/vehicle-reservations/${selectedReservationForEdit.id}`, {
         purpose: editPurpose,
-        passengerCount: editPassengerCount,
+        passengerCount: parseInt(editPassengerCount, 10),
         notes: editNotes,
         vehicleId: editVehicleId && editVehicleId !== "unassigned" ? editVehicleId : null,
         startDate: startDateTime.toISOString(),
@@ -282,7 +282,7 @@ export function VehicleReservationsContent() {
       setEditDialogOpen(false);
       setSelectedReservationForEdit(null);
       setEditPurpose("");
-      setEditPassengerCount(1);
+      setEditPassengerCount("1");
       setEditNotes("");
       setEditVehicleId("");
       setEditStartDate("");
@@ -571,7 +571,7 @@ export function VehicleReservationsContent() {
                     onClick={() => {
                       setSelectedReservationForEdit(reservation);
                       setEditPurpose(reservation.purpose);
-                      setEditPassengerCount(reservation.passengerCount);
+                      setEditPassengerCount(String(reservation.passengerCount));
                       setEditNotes(reservation.notes || "");
                       setEditVehicleId(reservation.vehicleId || "");
                       
@@ -768,7 +768,7 @@ export function VehicleReservationsContent() {
                   {vehicles
                     ?.filter((vehicle) =>
                       vehicle.passengerCapacity &&
-                      vehicle.passengerCapacity >= editPassengerCount
+                      vehicle.passengerCapacity >= parseInt(editPassengerCount, 10)
                     )
                     .map((vehicle) => (
                       <SelectItem key={vehicle.id} value={vehicle.id}>
@@ -842,7 +842,7 @@ export function VehicleReservationsContent() {
                 type="number"
                 min={1}
                 value={editPassengerCount}
-                onChange={(e) => setEditPassengerCount(parseInt(e.target.value))}
+                onChange={(e) => setEditPassengerCount(e.target.value)}
               />
             </div>
 

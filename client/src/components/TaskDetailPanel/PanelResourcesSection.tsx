@@ -1,7 +1,9 @@
 import { ChevronRight, ChevronDown, FileText, Image as ImageIcon, Video } from "lucide-react";
+import type { ReactNode } from "react";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { buildUploadPreviewOptions, isImageFileType, useImagePreview } from "@/components/ImagePreviewProvider";
 import { PanelSection } from "./PanelSection";
+import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
 
 interface Upload {
   id: string;
@@ -19,6 +21,8 @@ interface PanelResourcesSectionProps {
   imgCount: number;
   vidCount: number;
   variant?: "compact" | "full";
+  onAddPhoto?: () => void;
+  isPhotoUploading?: boolean;
 }
 
 function getImageUploads(uploads: Upload[] | undefined): Upload[] {
@@ -33,14 +37,16 @@ export function PhotoThumbnailGrid({
   uploads,
   columns = 3,
   size = "md",
+  trailing,
 }: {
   uploads: Upload[];
   columns?: 2 | 3 | 4;
   size?: "sm" | "md";
+  trailing?: ReactNode;
 }) {
   const { openImagePreview } = useImagePreview();
 
-  if (uploads.length === 0) return null;
+  if (uploads.length === 0 && !trailing) return null;
 
   const gridCols = columns === 2 ? "grid-cols-2" : columns === 4 ? "grid-cols-4" : "grid-cols-3";
   const thumbSize = size === "sm" ? "aspect-square" : "aspect-square";
@@ -62,6 +68,7 @@ export function PhotoThumbnailGrid({
           />
         </button>
       ))}
+      {trailing}
     </div>
   );
 }
@@ -150,19 +157,40 @@ function ResourceList({ uploads, emptyMessage = "No files attached" }: { uploads
 function PhotosBlock({
   images,
   variant,
+  onAddPhoto,
+  isPhotoUploading,
 }: {
   images: Upload[];
   variant: "compact" | "full";
+  onAddPhoto?: () => void;
+  isPhotoUploading?: boolean;
 }) {
-  if (images.length === 0) return null;
+  const showUpload = !!onAddPhoto;
+
+  if (images.length === 0 && !showUpload) return null;
+
+  const uploadTrigger = showUpload ? (
+    <PanelPhotoUploadTrigger
+      onClick={onAddPhoto}
+      isUploading={!!isPhotoUploading}
+      size={variant === "compact" ? "sm" : "md"}
+      testId="button-panel-add-photo"
+    />
+  ) : null;
 
   if (variant === "compact") {
     return (
       <div className="px-4 py-3 border-b border-border">
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
-          Photos ({images.length})
+          Photos{images.length > 0 ? ` (${images.length})` : ""}
         </p>
-        <PhotoThumbnailGrid uploads={images} columns={3} />
+        {images.length > 0 || showUpload ? (
+          <PhotoThumbnailGrid
+            uploads={images}
+            columns={3}
+            trailing={uploadTrigger}
+          />
+        ) : null}
       </div>
     );
   }
@@ -170,9 +198,15 @@ function PhotosBlock({
   return (
     <div className="px-5 pt-3 pb-1">
       <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: "#9CA3AF" }}>
-        Photos ({images.length})
+        Photos{images.length > 0 ? ` (${images.length})` : ""}
       </p>
-      <PhotoThumbnailGrid uploads={images} columns={4} />
+      {images.length > 0 || showUpload ? (
+        <PhotoThumbnailGrid
+          uploads={images}
+          columns={4}
+          trailing={uploadTrigger}
+        />
+      ) : null}
     </div>
   );
 }
@@ -185,15 +219,23 @@ export function PanelResourcesSection({
   imgCount,
   vidCount,
   variant = "full",
+  onAddPhoto,
+  isPhotoUploading,
 }: PanelResourcesSectionProps) {
   const images = getImageUploads(uploads);
   const otherFiles = getNonImageUploads(uploads);
   const hasOtherFiles = otherFiles.length > 0;
+  const showUpload = !!onAddPhoto;
 
   if (variant === "compact") {
     return (
       <>
-        <PhotosBlock images={images} variant="compact" />
+        <PhotosBlock
+          images={images}
+          variant="compact"
+          onAddPhoto={onAddPhoto}
+          isPhotoUploading={isPhotoUploading}
+        />
         {hasOtherFiles && (
           <PanelSection
             title="Files"
@@ -206,7 +248,7 @@ export function PanelResourcesSection({
             <ResourceList uploads={otherFiles} />
           </PanelSection>
         )}
-        {images.length === 0 && !hasOtherFiles && (
+        {images.length === 0 && !hasOtherFiles && !showUpload && (
           <div className="px-4 py-3 border-b border-border">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-1">
               Photos
@@ -222,8 +264,15 @@ export function PanelResourcesSection({
 
   return (
     <div style={{ borderBottom: "1px solid #EEEEEE" }}>
-      {images.length > 0 && <PhotosBlock images={images} variant="full" />}
-      {(hasOtherFiles || images.length === 0) && (
+      {(images.length > 0 || showUpload) && (
+        <PhotosBlock
+          images={images}
+          variant="full"
+          onAddPhoto={onAddPhoto}
+          isPhotoUploading={isPhotoUploading}
+        />
+      )}
+      {(hasOtherFiles || (images.length === 0 && !showUpload)) && (
         <div
           className="px-5 py-3 cursor-pointer"
           onClick={() => setResourcesExpanded(!resourcesExpanded)}

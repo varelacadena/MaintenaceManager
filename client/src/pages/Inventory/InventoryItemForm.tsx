@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseFloatInput } from "@/lib/formInputUtils";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FormControl,
@@ -122,7 +123,8 @@ export function InventoryItemForm({
                   type="number"
                   step="0.01"
                   min="0"
-                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(parseFloatInput(e.target.value))}
                   data-testid={testId("input-quantity")}
                 />
               </FormControl>
@@ -201,11 +203,11 @@ export function InventoryItemForm({
             <FormControl>
               <Input
                 {...field}
-                value={field.value ?? 0}
+                value={field.value ?? ""}
                 type="number"
                 step="0.01"
                 min="0"
-                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) => field.onChange(parseFloatInput(e.target.value))}
                 data-testid={testId("input-min-quantity")}
               />
             </FormControl>

@@ -42,12 +42,12 @@ import {
   FLEET_PAGE_SIZE,
   isPaginatedResponse,
   type PaginatedResponse,
-  parseOptionalInt,
   parseFleetUrlState,
   buildFleetLocationSearch,
   vehiclesListUrl,
   clampPageIndex,
 } from "@/lib/fleetUtils";
+import { parseIntInput } from "@/lib/formInputUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { invalidateVehicleQueries } from "@/lib/fleetQueryInvalidation";
@@ -268,11 +268,12 @@ function FleetContent() {
                         <FormItem>
                           <FormLabel>Year</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseOptionalInt(e.target.value, new Date().getFullYear()))}
-                              data-testid="input-year" 
+                            <Input
+                              type="number"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(parseIntInput(e.target.value))}
+                              data-testid="input-year"
                             />
                           </FormControl>
                           <FormMessage />
@@ -346,12 +347,12 @@ function FleetContent() {
                         <FormItem>
                           <FormLabel>Current Mileage</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               {...field}
-                              value={field.value ?? ""} 
-                              onChange={(e) => field.onChange(parseOptionalInt(e.target.value, 0))}
-                              data-testid="input-mileage" 
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(parseIntInput(e.target.value))}
+                              data-testid="input-mileage"
                             />
                           </FormControl>
                           <FormMessage />
@@ -365,12 +366,12 @@ function FleetContent() {
                         <FormItem>
                           <FormLabel>Passenger Capacity</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               {...field}
-                              value={field.value ?? ""} 
-                              onChange={(e) => field.onChange(parseOptionalInt(e.target.value, 5))}
-                              data-testid="input-passenger-capacity" 
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(parseIntInput(e.target.value))}
+                              data-testid="input-passenger-capacity"
                             />
                           </FormControl>
                           <FormMessage />
@@ -542,14 +543,14 @@ function FleetContent() {
               key={vehicle.id}
               href={`/vehicles/${vehicle.id}`}
               className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${vehicle.make} ${vehicle.model}, ${vehicle.vehicleId}`}
+              aria-label={`${vehicle.vehicleId}, ${vehicle.make} ${vehicle.model}`}
             >
               <Card className="hover-elevate cursor-pointer overflow-hidden h-full" data-testid={`card-vehicle-${vehicle.id}`}>
                 <div className="h-24 w-full bg-muted/20">
                   {vehicle.imageUrl ? (
                     <img
                       src={toDisplayUrl(vehicle.imageUrl)}
-                      alt={`${vehicle.make} ${vehicle.model}`}
+                      alt={`${vehicle.vehicleId} - ${vehicle.make} ${vehicle.model}`}
                       className="h-full w-full object-cover"
                       loading="lazy"
                     />
@@ -562,18 +563,19 @@ function FleetContent() {
                     </div>
                   )}
                 </div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5">
-                  <CardTitle className="text-sm font-semibold leading-tight">
-                    {vehicle.make} {vehicle.model}
-                  </CardTitle>
-                  <Car className="h-3.5 w-3.5 text-muted-foreground" />
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-1 pt-2.5">
+                  <div className="min-w-0">
+                    <CardTitle className="text-sm font-semibold leading-tight truncate" data-testid={`text-vehicle-id-${vehicle.id}`}>
+                      {vehicle.vehicleId}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {vehicle.make} {vehicle.model}
+                    </p>
+                  </div>
+                  <Car className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 </CardHeader>
                 <CardContent className="pb-2.5">
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">ID:</span>
-                      <span className="text-[11px] font-medium" data-testid={`text-vehicle-id-${vehicle.id}`}>{vehicle.vehicleId}</span>
-                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground">Year:</span>
                       <span className="text-[11px]">{vehicle.year}</span>

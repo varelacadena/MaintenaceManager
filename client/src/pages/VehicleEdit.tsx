@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { toDisplayUrl } from "@/lib/imageUtils";
-import { parseOptionalInt } from "@/lib/fleetUtils";
+import { parseIntInput } from "@/lib/formInputUtils";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { invalidateVehicleQueries } from "@/lib/fleetQueryInvalidation";
 
@@ -111,7 +111,7 @@ export default function VehicleEdit() {
       <div className="flex items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Edit Vehicle</h2>
-          <p className="text-muted-foreground mt-0.5">{vehicle.make} {vehicle.model}</p>
+          <p className="text-muted-foreground mt-0.5">{vehicle.vehicleId} · {vehicle.make} {vehicle.model}</p>
         </div>
       </div>
 
@@ -182,10 +182,11 @@ export default function VehicleEdit() {
                     <FormItem>
                       <FormLabel>Year</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseOptionalInt(e.target.value, field.value))}
+                        <Input
+                          type="number"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(parseIntInput(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -284,11 +285,11 @@ export default function VehicleEdit() {
                     <FormItem>
                       <FormLabel>Current Mileage</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           {...field}
                           value={field.value ?? ""}
-                          onChange={(e) => field.onChange(parseOptionalInt(e.target.value, field.value ?? 0))}
+                          onChange={(e) => field.onChange(parseIntInput(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -302,11 +303,11 @@ export default function VehicleEdit() {
                     <FormItem>
                       <FormLabel>Passenger Capacity</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           {...field}
                           value={field.value ?? ""}
-                          onChange={(e) => field.onChange(parseOptionalInt(e.target.value, field.value ?? 5))}
+                          onChange={(e) => field.onChange(parseIntInput(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />

@@ -54,7 +54,7 @@ export function useVehicleCheckIn() {
   const [inspSlideDir, setInspSlideDir] = useState<"left" | "right">("left");
   const [inspIsAnimating, setInspIsAnimating] = useState(false);
 
-  const [ciMileage, setCiMileage] = useState<number>(0);
+  const [ciMileage, setCiMileage] = useState<number | undefined>(undefined);
   const [ciFuelLevel, setCiFuelLevel] = useState<string>("");
   const [ciIsClean, setCiIsClean] = useState<boolean | null>(null);
   const [ciHasIssues, setCiHasIssues] = useState<boolean | null>(null);
@@ -233,7 +233,7 @@ export function useVehicleCheckIn() {
         hasLowFuel: ciFuelLevel === "empty" || ciFuelLevel === "1/4",
         fuelViolationAcknowledged: fuelViolationAck,
         cleanlinessViolationAcknowledged: cleanlinessViolationAck,
-        endMileage: ciMileage,
+        endMileage: ciMileage ?? 0,
         startMileage: checkOutLog?.startMileage || 0,
       });
       advanceStep("complete");
@@ -244,6 +244,7 @@ export function useVehicleCheckIn() {
   });
 
   const handleCheckInSubmit = (notes = ciReturnNotes) => {
+    if (ciMileage == null) return;
     const issueText = ciHasIssues
       ? `${ciIssueCategory ? `[${ciIssueCategory}] ` : ""}${ciIssues}`.trim()
       : "";
@@ -259,7 +260,7 @@ export function useVehicleCheckIn() {
   const milesDriven = outcome ? outcome.endMileage - outcome.startMileage : 0;
   const isLowFuel = ciFuelLevel === "empty" || ciFuelLevel === "1/4";
   const isDirty = ciIsClean === false;
-  const milesDrivenPreview = ciMileage - (checkOutLog?.startMileage || 0);
+  const milesDrivenPreview = (ciMileage ?? 0) - (checkOutLog?.startMileage || 0);
 
   const animationClass = isAnimating
     ? slideDirection === "left" ? "opacity-0 -translate-x-4" : "opacity-0 translate-x-4"

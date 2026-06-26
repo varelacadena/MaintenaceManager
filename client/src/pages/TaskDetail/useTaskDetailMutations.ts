@@ -59,7 +59,7 @@ interface MutationDeps {
   safeNavigate: (path: string) => void;
 
   quickInventoryName: string;
-  quickInventoryQuantity: number;
+  quickInventoryQuantity: string;
   quickInventoryUnit: string;
   selectedInventoryItemId: string;
   partQuantity: string;
@@ -75,7 +75,7 @@ interface MutationDeps {
   setIsQuickAddInventoryOpen: (v: boolean) => void;
   setSelectedInventoryItemId: (v: string) => void;
   setQuickInventoryName: (v: string) => void;
-  setQuickInventoryQuantity: (v: number) => void;
+  setQuickInventoryQuantity: (v: string) => void;
   setQuickInventoryUnit: (v: string) => void;
   setIsAddPartDialogOpen: (v: boolean) => void;
   setPartNotes: (v: string) => void;
@@ -290,12 +290,13 @@ export function useTaskDetailMutations(deps: MutationDeps) {
 
   const quickAddInventoryMutation = useMutation({
     mutationFn: async () => {
-      if (!quickInventoryName || quickInventoryQuantity <= 0) {
+      const qty = parseInt(quickInventoryQuantity, 10);
+      if (!quickInventoryName || !Number.isFinite(qty) || qty <= 0) {
         throw new Error("Please enter item name and quantity");
       }
       const itemData = {
         name: quickInventoryName,
-        quantity: quickInventoryQuantity,
+        quantity: qty,
         unit: quickInventoryUnit || undefined,
       };
       const response = await apiRequest("POST", "/api/inventory", itemData);
@@ -305,7 +306,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       setIsQuickAddInventoryOpen(false);
       setSelectedInventoryItemId(newItem.id);
       setQuickInventoryName("");
-      setQuickInventoryQuantity(0);
+      setQuickInventoryQuantity("");
       setQuickInventoryUnit("");
       toast({ title: "Item created" });
     },
