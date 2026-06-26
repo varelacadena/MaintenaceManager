@@ -32,6 +32,8 @@ import { getCategoryStyle, CATEGORY_COLORS } from "@/lib/categoryColors";
 import { EQUIPMENT_CATEGORIES } from "@shared/equipmentCategories";
 import type { ResourceLibraryContext } from "./useResourceLibrary";
 import { buildFolderPathLabel } from "./resourceUtils";
+import { sortByName } from "@/lib/propertyDisplayUtils";
+import { PropertySelectLabel } from "@/components/PropertySelectItems";
 
 type ResourceFormBottomSectionProps = Pick<
   ResourceLibraryContext,
@@ -306,7 +308,7 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
           <p className="text-xs text-muted-foreground italic">No properties found</p>
         ) : (
           <div className="max-h-44 overflow-y-auto border rounded-md divide-y">
-            {properties.map(p => (
+            {sortByName(properties).map(p => (
               <label key={p.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover-elevate" data-testid={`checkbox-property-${p.id}`}>
                 <input
                   type="checkbox"
@@ -314,7 +316,9 @@ export function ResourceFormBottomSection(props: ResourceFormBottomSectionProps)
                   onChange={() => toggleProperty(p.id)}
                   className="rounded"
                 />
-                <span className="text-sm">{p.name}</span>
+                <span className="text-sm">
+                  <PropertySelectLabel property={p} />
+                </span>
               </label>
             ))}
           </div>

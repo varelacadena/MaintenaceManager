@@ -40,6 +40,7 @@ import { WorkLoadError } from "./WorkLoadError";
 import { WorkTasksEmptyState } from "./WorkTasksEmptyState";
 import { WorkStatusGroupHeader, workStatusGroupPanelId } from "./WorkStatusGroupHeader";
 import type { WorkContext } from "./useWorkAdmin";
+import { NameSelectItems } from "@/components/PropertySelectItems";
 
 export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
   const {
@@ -179,11 +180,7 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All departments</SelectItem>
-                    {areas.map((area) => (
-                      <SelectItem key={area.id} value={area.id}>
-                        {area.name}
-                      </SelectItem>
-                    ))}
+                    <NameSelectItems items={areas} noneValue={false} />
                     <SelectItem value={UNASSIGNED_DEPARTMENT_ID}>Unassigned Department</SelectItem>
                   </SelectContent>
                 </Select>

@@ -25,6 +25,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Property, Space, Equipment, Vehicle } from "@shared/schema";
 import { sortByName, propertyMatchesSearch } from "@/lib/propertyDisplayUtils";
+import { PropertySelectLabel, SpaceSelectItems } from "@/components/PropertySelectItems";
 
 export type SelectedAsset = {
   type: "equipment" | "vehicle";
@@ -292,12 +293,7 @@ export function TaskLocationFields({
                           className="shrink-0"
                         />
                         <span className="text-sm truncate flex-1">
-                          {building.name}
-                          {building.address && (
-                            <span className="text-muted-foreground ml-1">
-                              ({building.address})
-                            </span>
-                          )}
+                          <PropertySelectLabel property={building} />
                         </span>
                         {isSelected && (
                           <Check className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -407,10 +403,7 @@ export function TaskLocationFields({
                   <SelectContent>
                     {buildings.map((property) => (
                       <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                        {property.address && (
-                          <span className="text-muted-foreground ml-1">({property.address})</span>
-                        )}
+                        <PropertySelectLabel property={property} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -443,12 +436,7 @@ export function TaskLocationFields({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__none__">All Spaces</SelectItem>
-                        {spaces.map((space) => (
-                          <SelectItem key={space.id} value={space.id}>
-                            {space.name}{space.floor ? ` (${space.floor})` : ""}
-                          </SelectItem>
-                        ))}
+                        <SpaceSelectItems spaces={spaces} noneLabel="All Spaces" />
                       </SelectContent>
                     </Select>
                   ) : (

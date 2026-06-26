@@ -31,6 +31,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { PropertySelectItems, SpaceSelectItems } from "@/components/PropertySelectItems";
 import type { Property, Space } from "@shared/schema";
 import { z } from "zod";
 import { X, Check, Paperclip, ChevronDown, AlertTriangle } from "lucide-react";
@@ -280,11 +281,10 @@ export default function NewRequest() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {properties.map((property) => (
-                          <SelectItem key={property.id} value={property.id}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
+                        <PropertySelectItems
+                          properties={properties}
+                          noneValue={false}
+                        />
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -313,13 +313,10 @@ export default function NewRequest() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="__none__">Not sure / whole building</SelectItem>
-                          {spaces.map((space) => (
-                            <SelectItem key={space.id} value={space.id}>
-                              {space.name}
-                              {space.floor ? ` (Floor ${space.floor})` : ""}
-                            </SelectItem>
-                          ))}
+                          <SpaceSelectItems
+                            spaces={spaces}
+                            noneLabel="Not sure / whole building"
+                          />
                         </SelectContent>
                       </Select>
                       <FormMessage />

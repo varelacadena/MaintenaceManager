@@ -33,6 +33,7 @@ export const formSchema = insertEquipmentSchema.extend({
   name: z.string().min(1, "Name is required"),
   category: z.string().min(1, "Category is required"),
   manufacturerImageUrl: z.string().optional(),
+  assetTag: z.string().trim().max(100, "Asset tag must be 100 characters or less").optional(),
 });
 
 export type FormData = z.infer<typeof formSchema>;
@@ -176,6 +177,7 @@ export function usePropertyDetail() {
       propertyId: id || "",
       name: "",
       category: "general",
+      assetTag: "",
       description: "",
       serialNumber: "",
       condition: "",
@@ -184,6 +186,43 @@ export function usePropertyDetail() {
       spaceId: undefined,
     },
   });
+
+  const watchedCategory = form.watch("category");
+  const watchedSpaceId = form.watch("spaceId");
+
+  useEffect(() => {
+    if (!isCreateDialogOpen || editingEquipment || !id || !property) return;
+
+    let cancelled = false;
+    const loadSuggestedTag = async () => {
+      const params = new URLSearchParams({
+        propertyId: id,
+        category: watchedCategory || "general",
+      });
+      if (watchedSpaceId) {
+        params.set("spaceId", watchedSpaceId);
+      }
+      const res = await fetch(`/api/equipment/suggest-tag?${params.toString()}`, {
+        credentials: "include",
+      });
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      form.setValue("assetTag", data.assetTag, { shouldDirty: false });
+    };
+
+    void loadSuggestedTag();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isCreateDialogOpen,
+    editingEquipment,
+    id,
+    property?.id,
+    watchedCategory,
+    watchedSpaceId,
+    form,
+  ]);
 
   const propertyForm = useForm<PropertyFormData>({
     resolver: zodResolver(propertyFormSchema),
@@ -378,6 +417,7 @@ export function usePropertyDetail() {
   const onSubmit = (data: FormData) => {
     const submitData = {
       ...data,
+      assetTag: data.assetTag?.trim() || undefined,
       spaceId: data.spaceId || undefined,
       imageUrl: buildStoredImageUrl(equipmentImagePathRef.current, equipmentImageUrl),
       manufacturerImageUrl: buildStoredImageUrl(
@@ -453,6 +493,7 @@ export function usePropertyDetail() {
       propertyId: id || "",
       name: "",
       category: "general",
+      assetTag: "",
       description: "",
       serialNumber: "",
       condition: "",
@@ -476,6 +517,7 @@ export function usePropertyDetail() {
       propertyId: item.propertyId,
       name: item.name,
       category: item.category,
+      assetTag: item.assetTag || "",
       description: item.description || "",
       serialNumber: item.serialNumber || "",
       condition: item.condition || "",
@@ -506,6 +548,7 @@ export function usePropertyDetail() {
   const filteredEquipment = equipmentSearch.trim()
     ? categoryFilteredEquipment.filter(e =>
         e.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+        (e.assetTag && e.assetTag.toLowerCase().includes(equipmentSearch.toLowerCase())) ||
         (e.serialNumber && e.serialNumber.toLowerCase().includes(equipmentSearch.toLowerCase())) ||
         (e.description && e.description.toLowerCase().includes(equipmentSearch.toLowerCase()))
       )

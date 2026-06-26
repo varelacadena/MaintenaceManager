@@ -20,6 +20,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { isAutoShopName } from "@/lib/autoShopUtils";
 import { sortByName } from "@/lib/propertyDisplayUtils";
+import { PropertySelectLabel, NameSelectItems } from "@/components/PropertySelectItems";
 
 type FieldJobForm = {
   name: string;
@@ -278,10 +279,7 @@ export default function TechnicianFieldJob() {
                 <SelectContent>
                   {sortedProperties.map((property) => (
                     <SelectItem key={property.id} value={property.id}>
-                      {property.name}
-                      {property.address && (
-                        <span className="text-muted-foreground ml-1">({property.address})</span>
-                      )}
+                      <PropertySelectLabel property={property} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -333,12 +331,7 @@ export default function TechnicianFieldJob() {
                   <SelectValue placeholder="Optional department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">No department</SelectItem>
-                  {areas.map((area) => (
-                    <SelectItem key={area.id} value={area.id}>
-                      {area.name}
-                    </SelectItem>
-                  ))}
+                  <NameSelectItems items={areas} noneLabel="No department" />
                 </SelectContent>
               </Select>
             </div>

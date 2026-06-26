@@ -27,6 +27,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { PropertySelectItems, SpaceSelectItems } from "@/components/PropertySelectItems";
 import type { Property, Space } from "@shared/schema";
 import { projectFormSchema, type ProjectFormValues } from "./constants";
 
@@ -197,12 +198,7 @@ export function CreateProjectDialog({ open, onOpenChange, properties }: CreatePr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
-                        {properties?.map((property) => (
-                          <SelectItem key={property.id} value={property.id}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
+                        <PropertySelectItems properties={properties ?? []} />
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -226,12 +222,7 @@ export function CreateProjectDialog({ open, onOpenChange, properties }: CreatePr
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="__none__">None</SelectItem>
-                          {spaces.map((space) => (
-                            <SelectItem key={space.id} value={space.id}>
-                              {space.name}
-                            </SelectItem>
-                          ))}
+                          <SpaceSelectItems spaces={spaces} />
                         </SelectContent>
                       </Select>
                       <FormMessage />

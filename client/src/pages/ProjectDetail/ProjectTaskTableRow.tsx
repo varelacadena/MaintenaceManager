@@ -18,6 +18,7 @@ import {
 import { Calendar, User as UserIcon, Flag, MapPin, AlertTriangle, ClipboardCheck } from "lucide-react";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
+import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./useProjectDetail";
 import {
@@ -254,12 +255,10 @@ export function ProjectTaskTableRow({
             </span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">No property</SelectItem>
-            {properties?.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
+            <PropertySelectItems
+              properties={properties ?? []}
+              noneLabel="No property"
+            />
           </SelectContent>
         </Select>
       </TableCell>

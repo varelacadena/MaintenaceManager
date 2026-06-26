@@ -194,6 +194,9 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">{item.name}</span>
+                        {item.assetTag && (
+                          <span className="text-xs font-mono text-muted-foreground">{item.assetTag}</span>
+                        )}
                         <Badge variant="secondary">{EQUIPMENT_CATEGORIES.find(c => c.slug === item.category.toLowerCase())?.label ?? item.category}</Badge>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">

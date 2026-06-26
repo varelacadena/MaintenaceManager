@@ -64,6 +64,7 @@ export const equipment = pgTable("equipment", {
   spaceId: varchar("space_id").references(() => spaces.id, { onDelete: "set null" }),
   category: varchar("category", { length: 50 }).notNull().default("general"),
   name: varchar("name", { length: 200 }).notNull(),
+  assetTag: varchar("asset_tag", { length: 100 }),
   description: text("description"),
   serialNumber: varchar("serial_number", { length: 200 }),
   condition: varchar("condition", { length: 100 }),

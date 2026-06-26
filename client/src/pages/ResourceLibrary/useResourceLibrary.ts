@@ -53,13 +53,33 @@ type Equipment = {
 
 export { EQUIPMENT_CATEGORIES as EQUIPMENT_CATEGORIES_RESOURCE } from "@shared/equipmentCategories";
 
-async function invalidateResourceQueries(propertyIds: string[] = []) {
-  await queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-  await Promise.all(
-    propertyIds.map((propertyId) =>
-      queryClient.invalidateQueries({ queryKey: ["/api/properties", propertyId, "resources"] })
-    )
-  );
+async function invalidateResourceQueries(
+  propertyIds: string[] = [],
+  equipmentId?: string | null,
+) {
+  await queryClient.refetchQueries({ queryKey: ["/api/resources"] });
+  await queryClient.invalidateQueries({
+    predicate: (query) =>
+      Array.isArray(query.queryKey) &&
+      query.queryKey[0] === "/api/properties" &&
+      query.queryKey[2] === "resources",
+  });
+  if (propertyIds.length > 0) {
+    await Promise.all(
+      propertyIds.map((propertyId) =>
+        queryClient.refetchQueries({ queryKey: ["/api/properties", propertyId, "resources"] })
+      )
+    );
+  }
+  await queryClient.invalidateQueries({
+    predicate: (query) =>
+      Array.isArray(query.queryKey) &&
+      query.queryKey[0] === "/api/equipment" &&
+      query.queryKey[2] === "resources",
+  });
+  if (equipmentId) {
+    await queryClient.refetchQueries({ queryKey: ["/api/equipment", equipmentId, "resources"] });
+  }
 }
 
 export function useResourceLibrary() {
@@ -195,10 +215,17 @@ export function useResourceLibrary() {
   const createMutation = useMutation({
     mutationFn: (data: ResourceFormState) => apiRequest("POST", "/api/resources", data),
     onSuccess: async (_response, variables) => {
+      const targetFolderId = variables.folderId || null;
+      if (targetFolderId !== currentFolderId) {
+        navigateToFolder(targetFolderId);
+      }
+      setTypeFilter("all");
+      setCategoryFilter("all");
+      setSearch("");
       setDialogOpen(false);
       resetForm();
       toast({ title: "Resource created" });
-      await invalidateResourceQueries(variables.propertyIds);
+      await invalidateResourceQueries(variables.propertyIds, variables.equipmentId || null);
     },
     onError: () => toast({ title: "Failed to create resource", variant: "destructive" }),
   });
@@ -211,7 +238,7 @@ export function useResourceLibrary() {
       setEditResource(null);
       resetForm();
       toast({ title: "Resource updated" });
-      await invalidateResourceQueries(variables.propertyIds);
+      await invalidateResourceQueries(variables.propertyIds, variables.equipmentId || null);
     },
     onError: () => toast({ title: "Failed to update resource", variant: "destructive" }),
   });

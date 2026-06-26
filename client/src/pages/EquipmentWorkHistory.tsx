@@ -115,6 +115,9 @@ export default function EquipmentWorkHistory() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Work History: {equipment.name}</h1>
           <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+            {equipment.assetTag && (
+              <span className="text-sm font-mono font-medium text-foreground">{equipment.assetTag}</span>
+            )}
             {equipment.category && <Badge variant="secondary" className="capitalize">{equipment.category}</Badge>}
             {equipment.serialNumber && <span className="text-sm">Serial: {equipment.serialNumber}</span>}
             {equipment.condition && <span className="text-sm">Condition: {equipment.condition}</span>}

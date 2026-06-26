@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useFileDownload } from "@/hooks/use-download";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { canReadInventory } from "@/lib/inventoryAccess";
+import { parseVehicleIdFromScan, resolveEquipmentIdFromScan } from "@/lib/equipmentScan";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type {
   Task,
@@ -294,15 +295,47 @@ export function useTaskDetail() {
     enabled: dependencyTaskIds.length > 0 && user?.role === "admin",
   });
 
-  const { data: propertyResources = [] } = useQuery<any[]>({
-    queryKey: ["/api/properties", task?.propertyId, "resources"],
-    queryFn: () => fetch(`/api/properties/${task?.propertyId}/resources`).then(r => r.json()),
-    enabled: !!task?.propertyId,
+  const resourcePropertyIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (task?.propertyId) ids.add(task.propertyId);
+    (task?.propertyIds ?? []).forEach((id) => ids.add(id));
+    if (equipment?.propertyId) ids.add(equipment.propertyId);
+    return Array.from(ids);
+  }, [task?.propertyId, task?.propertyIds, equipment?.propertyId]);
+
+  const propertyResourceQueries = useQueries({
+    queries: resourcePropertyIds.map((propertyId) => ({
+      queryKey: ["/api/properties", propertyId, "resources"],
+      queryFn: async () => {
+        const res = await apiRequest("GET", `/api/properties/${propertyId}/resources`);
+        return res.json() as Promise<any[]>;
+      },
+      enabled: !!propertyId,
+    })),
   });
+
+  const propertyResources = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: any[] = [];
+    for (const query of propertyResourceQueries) {
+      const rows = Array.isArray(query.data) ? query.data : [];
+      for (const resource of rows) {
+        if (!seen.has(resource.id)) {
+          seen.add(resource.id);
+          merged.push(resource);
+        }
+      }
+    }
+    return merged;
+  }, [propertyResourceQueries]);
 
   const { data: equipmentResources = [] } = useQuery<any[]>({
     queryKey: ["/api/equipment", task?.equipmentId, "resources"],
-    queryFn: () => fetch(`/api/equipment/${task?.equipmentId}/resources`).then(r => r.json()),
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/equipment/${task?.equipmentId}/resources`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!task?.equipmentId,
   });
 
@@ -513,10 +546,9 @@ export function useTaskDetail() {
   const handleEquipmentScan = async (value: string) => {
     setIsScanEquipmentOpen(false);
     try {
-      const vehicleIdMatch = value.match(/\/vehicles\/([a-f0-9-]{36})/i);
-      if (vehicleIdMatch) {
-        const vId = vehicleIdMatch[1];
-        const vRes = await fetch(`/api/vehicles/${encodeURIComponent(vId)}`, { credentials: "include" });
+      const vehicleId = parseVehicleIdFromScan(value);
+      if (vehicleId) {
+        const vRes = await fetch(`/api/vehicles/${encodeURIComponent(vehicleId)}`, { credentials: "include" });
         if (!vRes.ok) {
           toast({ title: "Vehicle not found", description: "Could not find vehicle for this QR code.", variant: "destructive" });
           return;
@@ -527,8 +559,15 @@ export function useTaskDetail() {
         return;
       }
 
-      const equipmentIdMatch = value.match(/\/equipment\/([a-f0-9-]{36})/i) || value.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
-      const equipmentId = equipmentIdMatch ? equipmentIdMatch[1] : value.trim();
+      const equipmentId = await resolveEquipmentIdFromScan(value);
+      if (!equipmentId) {
+        toast({
+          title: "Equipment not found",
+          description: "No equipment matched that QR code or asset tag.",
+          variant: "destructive",
+        });
+        return;
+      }
       await openEquipmentInfo(equipmentId);
     } catch {
       toast({ title: "Scan error", description: "Failed to load equipment data.", variant: "destructive" });

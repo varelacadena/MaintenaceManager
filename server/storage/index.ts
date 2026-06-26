@@ -269,6 +269,8 @@ export interface IStorage {
 
   getEquipment(): Promise<Equipment[]>;
   getEquipmentItem(id: string): Promise<Equipment | undefined>;
+  getEquipmentByAssetTag(assetTag: string): Promise<Equipment | undefined>;
+  getEquipmentAssetTagsByProperty(propertyId: string): Promise<string[]>;
   getEquipmentByProperty(propertyId: string): Promise<Equipment[]>;
   getEquipmentBySpace(spaceId: string): Promise<Equipment[]>;
   getEquipmentByPropertyAndSpace(propertyId: string, spaceId: string): Promise<Equipment[]>;
@@ -573,6 +575,8 @@ export class DatabaseStorage implements IStorage {
   countEquipmentInSpace = facilityStorage.countEquipmentInSpace;
   getEquipment = facilityStorage.getEquipment;
   getEquipmentItem = facilityStorage.getEquipmentItem;
+  getEquipmentByAssetTag = facilityStorage.getEquipmentByAssetTag;
+  getEquipmentAssetTagsByProperty = facilityStorage.getEquipmentAssetTagsByProperty;
   getEquipmentByProperty = facilityStorage.getEquipmentByProperty;
   getEquipmentBySpace = facilityStorage.getEquipmentBySpace;
   getEquipmentByPropertyAndSpace = facilityStorage.getEquipmentByPropertyAndSpace;

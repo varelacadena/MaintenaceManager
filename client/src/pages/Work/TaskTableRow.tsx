@@ -30,6 +30,7 @@ import {
   taskStatusConfig,
   getAvatarColor,
 } from "@/utils/taskUtils";
+import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Task, User, Property, Area } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
@@ -365,12 +366,10 @@ export const TaskTableRow = memo(function TaskTableRow({
             </span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">No property</SelectItem>
-            {properties?.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
+            <PropertySelectItems
+              properties={properties ?? []}
+              noneLabel="No property"
+            />
           </SelectContent>
         </Select>
       </TableCell>

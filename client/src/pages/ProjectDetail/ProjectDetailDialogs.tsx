@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelectItems";
 import type { Property, Area } from "@shared/schema";
 import { format, parse } from "date-fns";
 import type { UseFormReturn } from "react-hook-form";
@@ -184,10 +185,7 @@ export function ProjectDetailDialogs({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="__none__">None</SelectItem>
-                          {properties?.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
+                          <PropertySelectItems properties={properties ?? []} />
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -210,10 +208,7 @@ export function ProjectDetailDialogs({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="__none__">None</SelectItem>
-                          {areas?.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                          ))}
+                          <NameSelectItems items={areas ?? []} noneLabel="None" />
                         </SelectContent>
                       </Select>
                       <FormMessage />

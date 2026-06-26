@@ -58,7 +58,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             : "border-border"
         }`}
       >
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
           <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0 ${
             isInProgress
               ? "bg-primary text-primary-foreground"
@@ -66,39 +66,43 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
           }`}>
             {index + 1}
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="font-semibold text-base leading-snug break-words [overflow-wrap:anywhere]" data-testid={`text-task-name-${task.id}`}>
               {task.name}
             </h3>
+            {(isInProgress || isHelper || (isHighUrgency && !isInProgress)) && (
+              <div className="flex flex-wrap gap-1.5">
+                {isInProgress && (
+                  <Badge variant="default" className="text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
+                    In Progress
+                  </Badge>
+                )}
+                {isHelper && !isInProgress && (
+                  <Badge variant="outline" className="text-[10px] sm:text-xs" data-testid={`badge-helper-${task.id}`}>
+                    Team
+                  </Badge>
+                )}
+                {isHighUrgency && !isInProgress && (
+                  <Badge variant="destructive" className="text-[10px] sm:text-xs" data-testid={`badge-urgency-${task.id}`}>
+                    Urgent
+                  </Badge>
+                )}
+              </div>
+            )}
             <p
-              className="text-[11px] font-mono text-muted-foreground mt-0.5"
+              className="text-[11px] font-mono text-muted-foreground"
               data-testid={`text-task-id-${task.id}`}
               title={task.id}
             >
               ID {formatTaskReferenceId(task.id)}
             </p>
             {property && (
-              <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+              <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
                 {property.name}
               </p>
             )}
           </div>
-          {isInProgress && (
-            <Badge variant="default" className="shrink-0 max-w-[5.75rem] justify-center truncate text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
-              In Progress
-            </Badge>
-          )}
-          {isHelper && !isInProgress && (
-            <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs" data-testid={`badge-helper-${task.id}`}>
-              Team
-            </Badge>
-          )}
-          {isHighUrgency && !isInProgress && (
-            <Badge variant="destructive" className="shrink-0 text-[10px] sm:text-xs" data-testid={`badge-urgency-${task.id}`}>
-              Urgent
-            </Badge>
-          )}
         </div>
       </FieldWorkTaskCard>
     );
@@ -116,31 +120,31 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         onOpen={() => navigate(`/tasks/${task.id}`)}
         className="rounded-lg border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-3.5 sm:p-4 cursor-pointer active-elevate-2 transition-colors"
       >
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/50">
             <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base leading-tight truncate text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="font-semibold text-base leading-snug break-words [overflow-wrap:anywhere] text-green-900 dark:text-green-100" data-testid={`text-task-name-${task.id}`}>
               {task.name}
             </h3>
+            <Badge variant="outline" className="w-fit border-green-400 dark:border-green-700 text-green-700 dark:text-green-400 text-[10px] sm:text-xs" data-testid={`badge-completed-${task.id}`}>
+              Done
+            </Badge>
             <p
-              className="text-[11px] font-mono text-green-700/80 dark:text-green-400/80 mt-0.5"
+              className="text-[11px] font-mono text-green-700/80 dark:text-green-400/80"
               data-testid={`text-task-id-${task.id}`}
               title={task.id}
             >
               ID {formatTaskReferenceId(task.id)}
             </p>
             {property && (
-              <p className="text-sm text-green-700 dark:text-green-400 mt-0.5 truncate flex items-center gap-1">
+              <p className="text-sm text-green-700 dark:text-green-400 truncate flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
                 {property.name}
               </p>
             )}
           </div>
-          <Badge variant="outline" className="shrink-0 border-green-400 dark:border-green-700 text-green-700 dark:text-green-400 text-[10px] sm:text-xs" data-testid={`badge-completed-${task.id}`}>
-            Done
-          </Badge>
         </div>
       </FieldWorkTaskCard>
     );

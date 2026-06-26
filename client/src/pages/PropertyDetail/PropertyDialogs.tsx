@@ -10,6 +10,7 @@ import { FileAttachment } from "@/components/FileAttachment";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { equipmentKeys } from "@/lib/equipmentQueries";
 import { equipmentQrUrl } from "@/lib/propertyLinks";
+import { getEquipmentQrLabelLines } from "@/lib/equipmentQrLabel";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   getSignedUploadParameters,
@@ -193,6 +194,28 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="assetTag"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Asset Tag</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value || ""}
+                        placeholder="LIB-R2-HVAC-01"
+                        className="font-mono uppercase"
+                        data-testid="input-equipment-asset-tag"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Short code printed on QR labels. Auto-suggested for new equipment; editable before save.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"
@@ -546,7 +569,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     manufacturerImagePathRef.current = "";
                     setPendingEquipmentUploads([]);
                     form.reset({
-                      propertyId: id || "", name: "", category: "general",
+                      propertyId: id || "", name: "", category: "general", assetTag: "",
                       description: "", serialNumber: "", condition: "", notes: "", imageUrl: "",
                       manufacturerImageUrl: "", spaceId: undefined,
                     });
@@ -576,11 +599,13 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
               Equipment QR Code
             </DialogTitle>
             <DialogDescription>
-              {qrEquipment?.name}
+              {qrEquipment ? getEquipmentQrLabelLines(qrEquipment, spaces).primary : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-2">
-            {qrEquipment && (
+            {qrEquipment && (() => {
+              const label = getEquipmentQrLabelLines(qrEquipment, spaces);
+              return (
               <>
                 <div className="bg-white p-4 rounded-md border" id="qr-print-area">
                   <QRCode
@@ -588,13 +613,18 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                     size={200}
                   />
                   <div className="mt-2 text-center">
-                    <p className="text-xs font-medium text-black">{qrEquipment.name}</p>
-                    {qrEquipment.serialNumber && (
-                      <p className="text-xs text-gray-500">SN: {qrEquipment.serialNumber}</p>
+                    <p className="text-sm font-semibold font-mono text-black tracking-wide">{label.primary}</p>
+                    {label.secondary && (
+                      <p className="text-xs text-gray-600 mt-1">{label.secondary}</p>
+                    )}
+                    {label.serialNumber && (
+                      <p className="text-xs text-gray-500 mt-1">SN: {label.serialNumber}</p>
                     )}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground px-2">
+                  {qrEquipment.name}
+                  {" · "}
                   Scan to view equipment info, work history, and linked manuals.
                 </p>
                 <div className="flex gap-2">
@@ -606,7 +636,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                       if (printContent) {
                         const w = window.open("", "_blank");
                         if (w) {
-                          w.document.write(`<html><head><title>${qrEquipment.name} QR</title><style>body{display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:sans-serif;}@media print{body{margin:0;}}</style></head><body>${printContent.outerHTML}</body></html>`);
+                          w.document.write(`<html><head><title>${label.primary} QR</title><style>body{display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:sans-serif;}@media print{body{margin:0;}}</style></head><body>${printContent.outerHTML}</body></html>`);
                           w.document.close();
                           w.focus();
                           w.print();
@@ -629,7 +659,8 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                   </Button>
                 </div>
               </>
-            )}
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>

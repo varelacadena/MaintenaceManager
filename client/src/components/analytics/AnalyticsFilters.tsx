@@ -16,12 +16,14 @@ import {
 } from "@/components/ui/popover";
 import { Download, Filter, X, Calendar, ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PropertySelectItems, NameSelectItems, SpaceSelectItems } from "@/components/PropertySelectItems";
 import { serviceRequestStatusFilterOptions } from "@/lib/serviceRequestLabels";
 
 interface Property {
   id: string;
   name: string;
   type: string;
+  address?: string | null;
 }
 
 interface Area {
@@ -382,11 +384,10 @@ export default function AnalyticsFilters({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Properties</SelectItem>
-                    {properties.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    <PropertySelectItems
+                      properties={properties}
+                      noneValue={false}
+                    />
                   </SelectContent>
                 </Select>
               </div>
@@ -400,11 +401,7 @@ export default function AnalyticsFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Spaces</SelectItem>
-                      {filteredSpaces.map(s => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}{s.floor ? ` (Floor ${s.floor})` : ""}
-                        </SelectItem>
-                      ))}
+                      <SpaceSelectItems spaces={filteredSpaces} noneValue={false} />
                     </SelectContent>
                   </Select>
                 </div>
@@ -418,11 +415,7 @@ export default function AnalyticsFilters({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All departments</SelectItem>
-                    {areas.map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
-                      </SelectItem>
-                    ))}
+                    <NameSelectItems items={areas} noneValue={false} />
                   </SelectContent>
                 </Select>
               </div>

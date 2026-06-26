@@ -187,6 +187,26 @@ export async function getEquipmentItem(id: string): Promise<Equipment | undefine
   return item;
 }
 
+export async function getEquipmentByAssetTag(assetTag: string): Promise<Equipment | undefined> {
+  const normalized = assetTag.trim().toUpperCase();
+  if (!normalized) return undefined;
+  const [item] = await db
+    .select()
+    .from(equipment)
+    .where(eq(equipment.assetTag, normalized));
+  return item;
+}
+
+export async function getEquipmentAssetTagsByProperty(propertyId: string): Promise<string[]> {
+  const rows = await db
+    .select({ assetTag: equipment.assetTag })
+    .from(equipment)
+    .where(eq(equipment.propertyId, propertyId));
+  return rows
+    .map((row) => row.assetTag)
+    .filter((tag): tag is string => !!tag && tag.trim().length > 0);
+}
+
 export async function getEquipmentByProperty(propertyId: string): Promise<Equipment[]> {
   return await db
     .select()

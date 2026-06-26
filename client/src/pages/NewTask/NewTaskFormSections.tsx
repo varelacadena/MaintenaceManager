@@ -21,6 +21,7 @@ import { FileText, MapPin, Calendar, Building2 } from "lucide-react";
 import { TaskLocationFields } from "@/components/task-form/TaskLocationFields";
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
+import { NameSelectItems } from "@/components/PropertySelectItems";
 import type { NewTaskContext } from "./useNewTask";
 
 export interface NewTaskFormSectionsProps {
@@ -107,12 +108,10 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="__none__">Unassigned Department</SelectItem>
-                    {areas.map((area) => (
-                      <SelectItem key={area.id} value={area.id}>
-                        {area.name}
-                      </SelectItem>
-                    ))}
+                    <NameSelectItems
+                      items={areas}
+                      noneLabel="Unassigned Department"
+                    />
                   </SelectContent>
                 </Select>
                 <FormMessage />

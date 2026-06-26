@@ -336,7 +336,7 @@ export default function ResourceLibrary() {
           {[...filtered]
             .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }))
             .map(resource => {
-              const linkedProps = properties.filter(p => resource.propertyIds.includes(p.id));
+              const linkedProps = properties.filter(p => (resource.propertyIds ?? []).includes(p.id));
               return (
                 <DraggableResource key={resource.id} resource={resource}>
                   <ResourceCard

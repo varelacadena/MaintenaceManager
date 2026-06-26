@@ -57,7 +57,7 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
             : "border-border"
         }`}
       >
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
           <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0 ${
             isInProgress
               ? "bg-primary text-primary-foreground"
@@ -65,32 +65,34 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
           }`}>
             {index + 1}
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base leading-tight truncate" data-testid={`text-task-name-${task.id}`}>
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="font-semibold text-base leading-snug break-words [overflow-wrap:anywhere]" data-testid={`text-task-name-${task.id}`}>
               {task.name}
             </h3>
+            {(isHelper || isInProgress || (isHighUrgency && !isInProgress)) && (
+              <div className="flex flex-wrap gap-1.5">
+                {isHelper && (
+                  <Badge variant="outline" className="text-[10px] sm:text-xs" data-testid={`badge-helper-${task.id}`}>
+                    Helper
+                  </Badge>
+                )}
+                {isInProgress && (
+                  <Badge variant="default" className="text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
+                    In Progress
+                  </Badge>
+                )}
+                {isHighUrgency && !isInProgress && (
+                  <Badge variant="destructive" className="text-[10px] sm:text-xs" data-testid={`badge-urgency-${task.id}`}>
+                    Urgent
+                  </Badge>
+                )}
+              </div>
+            )}
             {property && (
-              <p className="text-sm text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+              <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
                 {property.name}
               </p>
-            )}
-          </div>
-          <div className="shrink-0 flex flex-col items-end gap-1">
-            {isHelper && (
-              <Badge variant="outline" className="text-[10px] sm:text-xs" data-testid={`badge-helper-${task.id}`}>
-                Helper
-              </Badge>
-            )}
-            {isInProgress && (
-              <Badge variant="default" className="max-w-[5.75rem] justify-center truncate text-[10px] sm:text-xs" data-testid={`badge-status-${task.id}`}>
-                In Progress
-              </Badge>
-            )}
-            {isHighUrgency && !isInProgress && (
-              <Badge variant="destructive" className="text-[10px] sm:text-xs" data-testid={`badge-urgency-${task.id}`}>
-                Urgent
-              </Badge>
             )}
           </div>
         </div>
@@ -110,10 +112,10 @@ export function StudentWorkView({ user, tasks, properties, navigate }: StudentWo
         onOpen={() => navigate(`/tasks/${task.id}`)}
         className="rounded-lg border border-border/50 p-3 cursor-pointer opacity-60"
       >
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm line-through truncate" data-testid={`text-task-name-${task.id}`}>
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="font-medium text-sm line-through break-words leading-snug [overflow-wrap:anywhere]" data-testid={`text-task-name-${task.id}`}>
               {task.name}
             </h3>
             {property && (

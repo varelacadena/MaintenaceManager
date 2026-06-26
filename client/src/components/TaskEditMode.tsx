@@ -27,6 +27,7 @@ import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelectItems";
 import { dateInputValueToTaskTimestamp, getTaskDateInputValue } from "@/lib/taskCalendarDates";
 import type { Task, InsertTask, User, Property } from "@shared/schema";
 
@@ -431,12 +432,10 @@ export function TaskEditMode({
               <SelectValue placeholder="Select property" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">No property</SelectItem>
-              {(properties || []).map((property) => (
-                <SelectItem key={property.id} value={property.id}>
-                  {property.name}
-                </SelectItem>
-              ))}
+              <PropertySelectItems
+                properties={properties || []}
+                noneLabel="No property"
+              />
             </SelectContent>
           </Select>
         </div>
@@ -456,10 +455,10 @@ export function TaskEditMode({
               <SelectValue placeholder="Select department" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">Unassigned Department</SelectItem>
-              {(areas || []).map((a) => (
-                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-              ))}
+              <NameSelectItems
+                items={areas || []}
+                noneLabel="Unassigned Department"
+              />
             </SelectContent>
           </Select>
         </div>

@@ -305,7 +305,7 @@ export function TechnicianMoreTab({
           </button>
         )}
 
-        {generalResources.length > 0 && (
+        {((equipment && propertyResources.length > 0) || (!equipment && allTaskResources.length > 0)) && (
           <button
             className="flex items-center gap-3 w-full py-3 text-left"
             onClick={() => setIsResourcesOpen(true)}

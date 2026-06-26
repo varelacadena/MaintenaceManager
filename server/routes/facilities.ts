@@ -19,6 +19,10 @@ import {
   insertLockboxCodeSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import {
+  normalizeEquipmentAssetTag,
+  suggestEquipmentAssetTag,
+} from "@shared/equipmentAssetTag";
 
 const areaUpdateSchema = z.object({
   name: z.string().trim().min(1).optional(),
@@ -286,6 +290,48 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
+  app.get("/api/equipment/by-tag/:tag", isAuthenticated, async (req, res) => {
+    try {
+      const item = await storage.getEquipmentByAssetTag(req.params.tag);
+      if (!item) {
+        return res.status(404).json({ message: "Equipment not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch equipment by asset tag");
+    }
+  });
+
+  app.get("/api/equipment/suggest-tag", isAuthenticated, async (req, res) => {
+    try {
+      const propertyId = req.query.propertyId as string;
+      const category = (req.query.category as string) || "general";
+      const spaceId = req.query.spaceId as string | undefined;
+
+      if (!propertyId) {
+        return res.status(400).json({ message: "propertyId is required" });
+      }
+
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const space = spaceId ? await storage.getSpace(spaceId) : undefined;
+      const existingTags = await storage.getEquipmentAssetTagsByProperty(propertyId);
+      const assetTag = suggestEquipmentAssetTag({
+        propertyName: property.name,
+        spaceName: space?.name ?? null,
+        category,
+        existingTags,
+      });
+
+      res.json({ assetTag });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to suggest equipment asset tag");
+    }
+  });
+
   app.get("/api/equipment/:id", isAuthenticated, async (req, res) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(req.params.id)) {
@@ -306,7 +352,29 @@ export function registerFacilityRoutes(app: Express) {
     try {
       const equipmentData = insertEquipmentSchema.parse(req.body);
       await validateEquipmentLocation(equipmentData.propertyId, equipmentData.spaceId);
-      const item = await storage.createEquipment(equipmentData);
+
+      let assetTag = normalizeEquipmentAssetTag(equipmentData.assetTag);
+      if (!assetTag) {
+        const property = await storage.getProperty(equipmentData.propertyId);
+        if (!property) {
+          return res.status(404).json({ message: "Property not found" });
+        }
+        const space = equipmentData.spaceId
+          ? await storage.getSpace(equipmentData.spaceId)
+          : undefined;
+        const existingTags = await storage.getEquipmentAssetTagsByProperty(equipmentData.propertyId);
+        assetTag = suggestEquipmentAssetTag({
+          propertyName: property.name,
+          spaceName: space?.name ?? null,
+          category: equipmentData.category ?? "general",
+          existingTags,
+        });
+      }
+
+      const item = await storage.createEquipment({
+        ...equipmentData,
+        assetTag,
+      });
       res.json(item);
     } catch (error) {
       handleFacilityRouteError(res, error, "Failed to create equipment");
@@ -324,7 +392,17 @@ export function registerFacilityRoutes(app: Express) {
       const spaceId =
         validated.spaceId !== undefined ? validated.spaceId : existing.spaceId;
       await validateEquipmentLocation(propertyId, spaceId);
-      const item = await storage.updateEquipment(req.params.id, validated);
+
+      const patchData = { ...validated };
+      if (validated.assetTag !== undefined) {
+        const normalized = normalizeEquipmentAssetTag(validated.assetTag);
+        if (!normalized) {
+          return res.status(400).json({ message: "Asset tag cannot be empty" });
+        }
+        patchData.assetTag = normalized;
+      }
+
+      const item = await storage.updateEquipment(req.params.id, patchData);
       if (!item) {
         return res.status(404).json({ message: "Equipment not found" });
       }
