@@ -1,14 +1,16 @@
 import { memo } from "react";
-import { Badge } from "@/components/ui/badge";
 import type { Task, User, Property, Area } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { TaskTableRow } from "./TaskTableRow";
+import { SubtaskProgressIndicator } from "./SubtaskProgressIndicator";
+import { WorkSubtaskList } from "./WorkSubtaskList";
 
 type ParentTaskRowGroupProps = {
   task: Task;
   childSubTasks: Task[];
   isExpanded: boolean;
   onToggleExpand: () => void;
+  parentIndentLevel?: number;
   userGroups: { label: string; items: User[] }[];
   allUsers: User[] | undefined;
   properties: Property[] | undefined;
@@ -30,6 +32,10 @@ export const ParentTaskRowGroup = memo(function ParentTaskRowGroup({
   childSubTasks,
   isExpanded,
   onToggleExpand,
+  parentIndentLevel = 0,
+  allUsers,
+  handleStatusChange,
+  onSelectTask,
   ...rowProps
 }: ParentTaskRowGroupProps) {
   const completedSubTasks = childSubTasks.filter((t) => t.status === "completed").length;
@@ -38,29 +44,33 @@ export const ParentTaskRowGroup = memo(function ParentTaskRowGroup({
     <>
       <TaskTableRow
         task={task}
-        expandControl={{ isExpanded, onToggle: onToggleExpand }}
+        isParentWithSubtasks
+        indentLevel={parentIndentLevel}
         nameExtra={
-          <Badge
-            variant="outline"
-            className="text-xs shrink-0 no-default-hover-elevate no-default-active-elevate"
-            data-testid={`badge-subtask-count-${task.id}`}
-          >
-            {completedSubTasks}/{childSubTasks.length} complete
-          </Badge>
-        }
-        rowClassName={isExpanded ? "bg-muted/20" : undefined}
-        {...rowProps}
-      />
-      {isExpanded &&
-        childSubTasks.map((subTask, idx) => (
-          <TaskTableRow
-            key={subTask.id}
-            task={subTask}
-            isChildTask
-            rowIndex={idx}
-            {...rowProps}
+          <SubtaskProgressIndicator
+            completed={completedSubTasks}
+            total={childSubTasks.length}
+            taskId={task.id}
+            isExpanded={isExpanded}
+            onToggle={onToggleExpand}
           />
-        ))}
+        }
+        rowClassName={isExpanded ? "bg-muted/15" : undefined}
+        {...rowProps}
+        allUsers={allUsers}
+        handleStatusChange={handleStatusChange}
+        onSelectTask={onSelectTask}
+      />
+      {isExpanded && (
+        <WorkSubtaskList
+          subtasks={childSubTasks}
+          parentTaskId={task.id}
+          indentLevel={parentIndentLevel}
+          allUsers={allUsers}
+          handleStatusChange={handleStatusChange}
+          onSelectTask={onSelectTask}
+        />
+      )}
     </>
   );
 });

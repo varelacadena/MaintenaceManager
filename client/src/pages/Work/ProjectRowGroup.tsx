@@ -134,9 +134,6 @@ export function ProjectRowGroup({
           <span className="text-sm text-muted-foreground">-</span>
         </TableCell>
         <TableCell className="py-2.5">
-          <span className="text-sm text-muted-foreground">-</span>
-        </TableCell>
-        <TableCell className="py-2.5">
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <span className="text-sm">
@@ -202,6 +199,7 @@ export function ProjectRowGroup({
                 childSubTasks={childSubTasks}
                 isExpanded={expandedParentTasks.has(task.id)}
                 onToggleExpand={() => onToggleParentTaskExpanded(task.id)}
+                parentIndentLevel={1}
                 userGroups={userGroups}
                 allUsers={allUsers}
                 properties={properties}
@@ -233,7 +231,7 @@ export function ProjectRowGroup({
               handlePropertyChange={handlePropertyChange}
               handleDepartmentChange={handleDepartmentChange}
               handleInlineEdit={handleInlineEdit}
-              isChildTask
+              indentLevel={1}
               rowIndex={idx}
               isAdmin={isAdmin}
               onReviewEstimates={onReviewEstimates}

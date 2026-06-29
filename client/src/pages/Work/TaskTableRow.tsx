@@ -18,8 +18,6 @@ import {
   AlertTriangle,
   Flag,
   MapPin,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
@@ -36,6 +34,12 @@ import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
 
+function indentPadding(level: number): string {
+  if (level <= 0) return "";
+  if (level === 1) return "pl-5";
+  return "pl-10";
+}
+
 export const TaskTableRow = memo(function TaskTableRow({
   task,
   userGroups,
@@ -49,12 +53,12 @@ export const TaskTableRow = memo(function TaskTableRow({
   areas,
   handleInlineEdit,
   isChildTask,
-  rowIndex,
+  isParentWithSubtasks,
+  indentLevel,
   onReviewEstimates,
   isAdmin,
   onSelectTask,
   selectedTaskId,
-  expandControl,
   nameExtra,
   rowClassName,
 }: {
@@ -70,12 +74,12 @@ export const TaskTableRow = memo(function TaskTableRow({
   areas: Area[];
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isChildTask?: boolean;
-  rowIndex?: number;
+  isParentWithSubtasks?: boolean;
+  indentLevel?: number;
   onReviewEstimates?: (taskId: string) => void;
   isAdmin?: boolean;
   onSelectTask?: (taskId: string) => void;
   selectedTaskId?: string | null;
-  expandControl?: { isExpanded: boolean; onToggle: () => void };
   nameExtra?: ReactNode;
   rowClassName?: string;
 }) {
@@ -93,6 +97,7 @@ export const TaskTableRow = memo(function TaskTableRow({
   const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
   const openTask = () => onSelectTask?.(task.id);
+  const resolvedIndentLevel = indentLevel ?? (isChildTask ? 1 : 0);
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
     return !!target.closest(
@@ -106,7 +111,9 @@ export const TaskTableRow = memo(function TaskTableRow({
       data-testid={`row-task-${task.id}`}
       aria-selected={onSelectTask ? selectedTaskId === task.id : undefined}
       aria-label={onSelectTask ? buildTaskRowAriaLabel(task) : undefined}
-      className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""} ${rowClassName ?? ""}`}
+      className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
+        selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""
+      } ${rowClassName ?? ""}`}
       onClick={(e) => {
         if (isInteractiveTarget(e.target)) return;
         openTask();
@@ -118,39 +125,17 @@ export const TaskTableRow = memo(function TaskTableRow({
       } : undefined}
     >
       <TableCell className="py-2.5">
-        <div className={`flex items-center gap-2 ${isChildTask ? "pl-8" : ""}`}>
-          {expandControl && (
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-expanded={expandControl.isExpanded}
-              aria-label={
-                expandControl.isExpanded
-                  ? `Collapse subtasks for ${task.name}`
-                  : `Expand subtasks for ${task.name}`
-              }
-              onClick={(e) => {
-                e.stopPropagation();
-                expandControl.onToggle();
-              }}
-              data-testid={`button-expand-subtasks-${task.id}`}
-              className="shrink-0"
-            >
-              {expandControl.isExpanded ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-            </Button>
-          )}
+        <div className={`flex items-center gap-2 min-w-0 flex-wrap ${indentPadding(resolvedIndentLevel)}`}>
           <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColors[task.status] || "bg-gray-400"}`} />
-          <EditableTextCell
-            value={task.name}
-            taskId={task.id}
-            field="name"
-            onSave={handleInlineEdit}
-            linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
-          />
+          <span className={isParentWithSubtasks ? "font-medium min-w-0" : "min-w-0"}>
+            <EditableTextCell
+              value={task.name}
+              taskId={task.id}
+              field="name"
+              onSave={handleInlineEdit}
+              linkTo={onSelectTask ? undefined : `/tasks/${task.id}`}
+            />
+          </span>
           <span
             className="shrink-0 text-[10px] font-mono text-muted-foreground"
             data-testid={`text-task-id-${task.id}`}
@@ -223,17 +208,6 @@ export const TaskTableRow = memo(function TaskTableRow({
             ))}
           </SelectContent>
         </Select>
-      </TableCell>
-      <TableCell className="py-2.5">
-        <div className="flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <EditableDateCell
-            value={task.initialDate}
-            taskId={task.id}
-            field="initialDate"
-            onSave={handleInlineEdit}
-          />
-        </div>
       </TableCell>
       <TableCell className="py-2.5">
         <div className="flex items-center gap-1.5">

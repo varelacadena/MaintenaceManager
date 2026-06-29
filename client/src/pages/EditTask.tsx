@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -31,9 +31,15 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { insertTaskSchema } from "@shared/schema";
-import type { Property, Equipment, User, Vendor, Task, Space } from "@shared/schema";
+import type { Property, Equipment, User, Vendor, Task, Space, Vehicle, Area } from "@shared/schema";
 import { z } from "zod";
-import { TaskLocationFields } from "@/components/task-form/TaskLocationFields";
+import { TaskLocationFields, type SelectedAsset } from "@/components/task-form/TaskLocationFields";
+import { isAutoShopName } from "@/lib/autoShopUtils";
+import {
+  buildAssetsFromTask,
+  syncTaskAssets,
+  type AssetWithSubtaskId,
+} from "@/lib/taskAssetSubtasks";
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
 import { SpaceDialog } from "@/components/task-form/SpaceDialog";
@@ -44,6 +50,7 @@ const formSchema = insertTaskSchema.extend({
   propertyId: z.string().optional(),
   spaceId: z.string().optional(),
   equipmentId: z.string().optional(),
+  vehicleId: z.string().optional(),
   taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
   scheduledStartTime: z.string().optional(),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
@@ -72,9 +79,21 @@ export default function EditTask() {
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
   const [selectedHelperIds, setSelectedHelperIds] = useState<string[]>([]);
+  const [selectedAssets, setSelectedAssets] = useState<SelectedAsset[]>([]);
+  const initialAssetsRef = useRef<AssetWithSubtaskId[]>([]);
+  const multiAssetMode = selectedAssets.length > 0;
 
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", id],
+  });
+
+  const { data: subtasks = [], isLoading: subtasksLoading } = useQuery<Task[]>({
+    queryKey: ["/api/tasks", id, "subtasks"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/tasks/${id}/subtasks`);
+      return response.json();
+    },
+    enabled: !!id && !!task,
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
@@ -100,6 +119,18 @@ export default function EditTask() {
     enabled: !!selectedPropertyId,
     queryFn: () => fetchEquipmentList({ propertyId: selectedPropertyId, spaceId: selectedSpaceId }),
   });
+
+  const { data: allVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  const { data: areas = [] } = useQuery<Area[]>({
+    queryKey: ["/api/areas"],
+  });
+
+  const selectedArea = areas.find((area) => area.id === task?.areaId);
+  const showVehicle =
+    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -133,6 +164,7 @@ export default function EditTask() {
       propertyId: "",
       spaceId: "",
       equipmentId: "",
+      vehicleId: "",
       assignedToId: undefined,
       assignedVendorId: undefined,
       taskType: "one_time",
@@ -155,7 +187,7 @@ export default function EditTask() {
 
 
   useEffect(() => {
-    if (task && !isTaskLoaded) {
+    if (task && !isTaskLoaded && !subtasksLoading) {
       form.setValue("requestId", task.requestId || undefined);
       form.setValue("name", task.name);
       form.setValue("description", task.description);
@@ -199,8 +231,19 @@ export default function EditTask() {
         form.setValue("spaceId", task.spaceId);
         setSelectedSpaceId(task.spaceId);
       }
-      if (task.equipmentId) {
-        form.setValue("equipmentId", task.equipmentId);
+      const loadedAssets = buildAssetsFromTask(task, subtasks);
+      if (loadedAssets.length > 0) {
+        setSelectedAssets(loadedAssets);
+        initialAssetsRef.current = loadedAssets;
+        form.setValue("equipmentId", undefined);
+        form.setValue("vehicleId", undefined);
+      } else {
+        if (task.equipmentId) {
+          form.setValue("equipmentId", task.equipmentId);
+        }
+        if (task.vehicleId) {
+          form.setValue("vehicleId", task.vehicleId);
+        }
       }
 
       // Set assignment type based on what's assigned
@@ -240,7 +283,14 @@ export default function EditTask() {
 
       setIsTaskLoaded(true);
     }
-  }, [task, form, isTaskLoaded]);
+  }, [task, subtasks, subtasksLoading, form, isTaskLoaded]);
+
+  useEffect(() => {
+    if (!showVehicle) {
+      form.setValue("vehicleId", undefined);
+      setSelectedAssets((prev) => prev.filter((asset) => asset.type !== "vehicle"));
+    }
+  }, [showVehicle, form]);
 
   // Auto-populate contact info when vendor is selected
   useEffect(() => {
@@ -258,6 +308,10 @@ export default function EditTask() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      const isSingleScope = !data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0);
+      const usesAssetSelection =
+        isSingleScope && (selectedAssets.length > 0 || initialAssetsRef.current.length > 0);
+
       const taskData = {
         name: data.name,
         description: data.description,
@@ -270,7 +324,14 @@ export default function EditTask() {
         propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : [],
         propertyId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.propertyId || undefined) : undefined,
         spaceId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.spaceId || undefined) : undefined,
-        equipmentId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.equipmentId || undefined) : undefined,
+        equipmentId:
+          !usesAssetSelection && isSingleScope
+            ? (data.equipmentId || undefined)
+            : undefined,
+        vehicleId:
+          !usesAssetSelection && isSingleScope
+            ? (data.vehicleId || undefined)
+            : undefined,
         assignedToId: data.assignedToId || null,
         assignedVendorId: data.assignedVendorId || null,
         taskType: data.taskType,
@@ -288,7 +349,14 @@ export default function EditTask() {
         helperUserIds: selectedHelperIds,
       };
       const response = await apiRequest("PATCH", `/api/tasks/${id}`, taskData);
-      return response.json();
+      const updatedTask = await response.json();
+
+      if (usesAssetSelection) {
+        await syncTaskAssets(id!, initialAssetsRef.current, selectedAssets);
+        initialAssetsRef.current = selectedAssets.map((asset) => ({ ...asset }));
+      }
+
+      return updatedTask;
     },
     onSuccess: async () => {
       invalidateTaskAfterMutation(id, { broad: true });
@@ -308,6 +376,19 @@ export default function EditTask() {
       });
     },
   });
+
+  const handleAddAsset = (asset: SelectedAsset) => {
+    if (selectedAssets.some((a) => a.type === asset.type && a.id === asset.id)) {
+      return;
+    }
+    setSelectedAssets((prev) => [...prev, asset]);
+    form.setValue("equipmentId", undefined);
+    form.setValue("vehicleId", undefined);
+  };
+
+  const handleRemoveAsset = (index: number) => {
+    setSelectedAssets((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = (data: FormData) => {
     // Include contact information in the update
@@ -464,6 +545,7 @@ export default function EditTask() {
               properties={properties}
               spaces={spaces}
               equipment={equipment}
+              vehicles={allVehicles}
               selectedPropertyId={selectedPropertyId}
               setSelectedPropertyId={setSelectedPropertyId}
               selectedSpaceId={selectedSpaceId}
@@ -471,10 +553,20 @@ export default function EditTask() {
               isBuilding={isBuilding}
               selectedProperty={selectedProperty}
               onAddSpace={() => setIsSpaceDialogOpen(true)}
+              selectedAssets={selectedAssets}
+              onAddAsset={handleAddAsset}
+              onRemoveAsset={handleRemoveAsset}
+              multiAssetMode={multiAssetMode}
               locationScope={locationScope}
-              onLocationScopeChange={setLocationScope}
+              onLocationScopeChange={(scope) => {
+                setLocationScope(scope);
+                if (scope !== "single") {
+                  setSelectedAssets([]);
+                }
+              }}
               selectedPropertyIds={selectedPropertyIds}
               onSelectedPropertyIdsChange={setSelectedPropertyIds}
+              showVehicle={showVehicle}
             />
 
             <TaskDateFields form={form} allowPastDates={true} />

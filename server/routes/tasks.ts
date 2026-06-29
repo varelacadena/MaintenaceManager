@@ -17,8 +17,15 @@ import { toTaskListSummary } from "../taskDto";
 
 export function registerTaskRoutes(app: Express) {
   const fieldJobSchema = z.object({
-    name: z.string().trim().min(1, "Job name is required").max(200, "Job name is too long"),
-    description: z.string().trim().min(1, "Description is required"),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Short summary is required")
+      .max(80, "Keep the summary under 80 characters — save details for the next field"),
+    description: z
+      .string()
+      .trim()
+      .min(20, "Please add more detail about the problem (at least 20 characters)"),
     urgency: z.enum(["low", "medium", "high"]).default("medium"),
     propertyId: z.string().trim().min(1, "Property is required"),
     spaceId: z.string().trim().optional().or(z.literal("")),

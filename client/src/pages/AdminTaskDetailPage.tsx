@@ -18,7 +18,10 @@ export default function AdminTaskDetailPage() {
   });
 
   return (
-    <div className="h-full flex flex-col" data-testid="admin-task-detail-page">
+    <div
+      className="h-full flex flex-col -mx-3 -my-4 sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-6 min-h-0"
+      data-testid="admin-task-detail-page"
+    >
       <TaskDetailPanel
         taskId={taskId}
         isFullscreen={true}

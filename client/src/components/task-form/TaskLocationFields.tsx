@@ -25,7 +25,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Property, Space, Equipment, Vehicle } from "@shared/schema";
 import { sortByName, propertyMatchesSearch } from "@/lib/propertyDisplayUtils";
-import { PropertySelectLabel, SpaceSelectItems } from "@/components/PropertySelectItems";
+import { PropertySelectItems, PropertySelectLabel, SpaceSelectItems } from "@/components/PropertySelectItems";
 
 export type SelectedAsset = {
   type: "equipment" | "vehicle";
@@ -89,7 +89,7 @@ export function TaskLocationFields({
   hideSpaceAndEquipment = false,
 }: TaskLocationFieldsProps) {
   const [multiSelectOpen, setMultiSelectOpen] = useState(false);
-  const [buildingSearch, setBuildingSearch] = useState("");
+  const [propertySearch, setPropertySearch] = useState("");
 
   const alreadySelectedEquipmentIds = selectedAssets
     .filter((a) => a.type === "equipment")
@@ -99,10 +99,9 @@ export function TaskLocationFields({
     .map((a) => a.id);
 
   const sortedProperties = sortByName(properties);
-  const buildings = sortedProperties.filter((p) => p.type === "building");
-  const filteredBuildings = buildingSearch.trim()
-    ? buildings.filter((b) => propertyMatchesSearch(b, buildingSearch))
-    : buildings;
+  const filteredProperties = propertySearch.trim()
+    ? sortedProperties.filter((p) => propertyMatchesSearch(p, propertySearch))
+    : sortedProperties;
 
   const handleScopeChange = (scope: "single" | "multiple" | "campus") => {
     onLocationScopeChange(scope);
@@ -129,7 +128,7 @@ export function TaskLocationFields({
     }
   };
 
-  const toggleBuilding = (id: string) => {
+  const toggleProperty = (id: string) => {
     const next = selectedPropertyIds.includes(id)
       ? selectedPropertyIds.filter((pid) => pid !== id)
       : [...selectedPropertyIds, id];
@@ -137,7 +136,7 @@ export function TaskLocationFields({
     form.setValue("propertyIds", next);
   };
 
-  const removeBuilding = (id: string) => {
+  const removeProperty = (id: string) => {
     const next = selectedPropertyIds.filter((pid) => pid !== id);
     onSelectedPropertyIdsChange(next);
     form.setValue("propertyIds", next);
@@ -200,7 +199,7 @@ export function TaskLocationFields({
             data-testid="button-scope-single"
           >
             <Building2 className="w-4 h-4 mr-1.5 shrink-0" />
-            <span className="hidden sm:inline">Single Building</span>
+            <span className="hidden sm:inline">Single Property</span>
             <span className="sm:hidden">Single</span>
           </Button>
           <Button
@@ -210,7 +209,7 @@ export function TaskLocationFields({
             data-testid="button-scope-multiple"
           >
             <Building2 className="w-4 h-4 mr-1.5 shrink-0" />
-            <span className="hidden sm:inline">Multiple Buildings</span>
+            <span className="hidden sm:inline">Multiple Properties</span>
             <span className="sm:hidden">Multiple</span>
           </Button>
           <Button
@@ -233,14 +232,14 @@ export function TaskLocationFields({
         >
           <Globe className="w-5 h-5 text-primary shrink-0" />
           <span className="text-sm font-medium">
-            This task applies to all campus buildings
+            This task applies to all campus properties
           </span>
         </div>
       )}
 
       {locationScope === "multiple" && (
         <div className="space-y-2">
-          <FormLabel>Select Buildings *</FormLabel>
+          <FormLabel>Select Properties *</FormLabel>
           <Popover open={multiSelectOpen} onOpenChange={setMultiSelectOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -251,8 +250,8 @@ export function TaskLocationFields({
               >
                 <span className="text-muted-foreground truncate">
                   {selectedPropertyIds.length === 0
-                    ? "Select buildings..."
-                    : `${selectedPropertyIds.length} building${selectedPropertyIds.length > 1 ? "s" : ""} selected`}
+                    ? "Select properties..."
+                    : `${selectedPropertyIds.length} propert${selectedPropertyIds.length > 1 ? "ies" : "y"} selected`}
                 </span>
                 <Building2 className="w-4 h-4 shrink-0 ml-2 text-muted-foreground" />
               </Button>
@@ -265,35 +264,35 @@ export function TaskLocationFields({
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Search buildings..."
-                    value={buildingSearch}
-                    onChange={(e) => setBuildingSearch(e.target.value)}
+                    placeholder="Search properties..."
+                    value={propertySearch}
+                    onChange={(e) => setPropertySearch(e.target.value)}
                     className="pl-8 h-8 text-sm"
                     data-testid="input-building-search"
                   />
                 </div>
               </div>
               <div className="max-h-[200px] overflow-y-auto p-1">
-                {filteredBuildings.length === 0 ? (
+                {filteredProperties.length === 0 ? (
                   <div className="text-center py-3 text-sm text-muted-foreground">
-                    No buildings found
+                    No properties found
                   </div>
                 ) : (
-                  filteredBuildings.map((building) => {
-                    const isSelected = selectedPropertyIds.includes(building.id);
+                  filteredProperties.map((property) => {
+                    const isSelected = selectedPropertyIds.includes(property.id);
                     return (
                       <div
-                        key={building.id}
+                        key={property.id}
                         className="flex items-center gap-2 px-2 py-2 min-h-[44px] rounded-md cursor-pointer hover-elevate"
-                        onClick={() => toggleBuilding(building.id)}
-                        data-testid={`checkbox-building-${building.id}`}
+                        onClick={() => toggleProperty(property.id)}
+                        data-testid={`checkbox-building-${property.id}`}
                       >
                         <Checkbox
                           checked={isSelected}
                           className="shrink-0"
                         />
                         <span className="text-sm truncate flex-1">
-                          <PropertySelectLabel property={building} />
+                          <PropertySelectLabel property={property} />
                         </span>
                         {isSelected && (
                           <Check className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -303,28 +302,28 @@ export function TaskLocationFields({
                   })
                 )}
               </div>
-              {buildings.length > 5 && (
+              {sortedProperties.length > 5 && (
                 <div className="border-t p-2 flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">
-                    {selectedPropertyIds.length} of {buildings.length} selected
+                    {selectedPropertyIds.length} of {sortedProperties.length} selected
                   </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      if (selectedPropertyIds.length === buildings.length) {
+                      if (selectedPropertyIds.length === sortedProperties.length) {
                         onSelectedPropertyIdsChange([]);
                         form.setValue("propertyIds", []);
                       } else {
-                        const allIds = buildings.map((b) => b.id);
+                        const allIds = sortedProperties.map((p) => p.id);
                         onSelectedPropertyIdsChange(allIds);
                         form.setValue("propertyIds", allIds);
                       }
                     }}
                     data-testid="button-toggle-all-buildings"
                   >
-                    {selectedPropertyIds.length === buildings.length
+                    {selectedPropertyIds.length === sortedProperties.length
                       ? "Deselect All"
                       : "Select All"}
                   </Button>
@@ -335,7 +334,7 @@ export function TaskLocationFields({
 
           {selectedPropertyIds.length === 0 && form.formState.isSubmitted && (
             <p className="text-sm text-destructive" data-testid="error-no-buildings">
-              Please select at least one building
+              Please select at least one property
             </p>
           )}
 
@@ -358,7 +357,7 @@ export function TaskLocationFields({
                       variant="ghost"
                       size="icon"
                       className="h-4 w-4 ml-0.5 no-default-hover-elevate no-default-active-elevate"
-                      onClick={() => removeBuilding(pid)}
+                      onClick={() => removeProperty(pid)}
                       data-testid={`button-remove-building-${pid}`}
                     >
                       <X className="w-3 h-3" />
@@ -383,7 +382,7 @@ export function TaskLocationFields({
             name="propertyId"
             render={({ field }: { field: any }) => (
               <FormItem>
-                <FormLabel>Building *</FormLabel>
+                <FormLabel>Property *</FormLabel>
                 <Select
                   onValueChange={(value: string) => {
                     field.onChange(value);
@@ -397,15 +396,14 @@ export function TaskLocationFields({
                 >
                   <FormControl>
                     <SelectTrigger data-testid="select-property">
-                      <SelectValue placeholder="Select a building" />
+                      <SelectValue placeholder="Select building or property" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {buildings.map((property) => (
-                      <SelectItem key={property.id} value={property.id}>
-                        <PropertySelectLabel property={property} />
-                      </SelectItem>
-                    ))}
+                    <PropertySelectItems
+                      properties={properties}
+                      noneValue={false}
+                    />
                   </SelectContent>
                 </Select>
                 <FormMessage />

@@ -25,7 +25,7 @@ import {
   saveCollapsedGroupsToStorage,
 } from "./workGroupPrefs";
 
-/** Full Work board state for admins (tasks tab, projects tab, slide panel). */
+/** Full Work board state for admins (tasks tab, projects tab). */
 export function useWorkAdmin() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -64,12 +64,6 @@ export function useWorkAdmin() {
   } | null>(null);
   const [reviewEstimatesTaskId, setReviewEstimatesTaskId] = useState<string | null>(null);
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
-  const [panelMounted, setPanelMounted] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(false);
-
-  const panelOpen = !!selectedTaskId && !isMobile;
 
   const tasksQuery = useWorkTasksQuery(isAdmin);
   const { tasks, tasksLoading } = tasksQuery;
@@ -82,46 +76,15 @@ export function useWorkAdmin() {
   }, [search]);
 
   useEffect(() => {
-    if (!isMobile) return;
     const fromUrl = getTaskIdFromWorkSearch(search);
-    if (!fromUrl && !selectedTaskId && !panelMounted) return;
-    setSelectedTaskId(null);
-    setIsPanelFullscreen(false);
-    setPanelVisible(false);
-    setPanelMounted(false);
-    if (fromUrl) {
-      exitTo(setLocation, buildWorkPath(null, search));
-    }
-  }, [isMobile, panelMounted, search, selectedTaskId, setLocation]);
-
-  useEffect(() => {
-    if (isMobile) return;
-    const fromUrl = getTaskIdFromWorkSearch(search);
-    if (!fromUrl) {
-      setSelectedTaskId(null);
-      return;
-    }
+    if (!fromUrl) return;
     if (tasksLoading) return;
     if (tasks && !tasks.some((t) => t.id === fromUrl)) {
-      setSelectedTaskId(null);
       exitTo(setLocation, buildWorkPath(null, search));
       return;
     }
-    setSelectedTaskId((prev) => (prev === fromUrl ? prev : fromUrl));
-  }, [search, isMobile, tasks, tasksLoading, setLocation]);
-
-  useEffect(() => {
-    if (panelOpen) {
-      setPanelMounted(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setPanelVisible(true));
-      });
-    } else {
-      setPanelVisible(false);
-      const timer = setTimeout(() => setPanelMounted(false), 280);
-      return () => clearTimeout(timer);
-    }
-  }, [panelOpen]);
+    exitTo(setLocation, `/tasks/${fromUrl}`);
+  }, [search, tasks, tasksLoading, setLocation]);
 
   const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -263,21 +226,7 @@ export function useWorkAdmin() {
   };
 
   const handleSelectTask = (taskId: string) => {
-    if (isMobile) {
-      setLocation(`/tasks/${taskId}`);
-      return;
-    }
-    setSelectedTaskId((prev) => {
-      const next = prev === taskId ? null : taskId;
-      setLocation(buildWorkPath(next, search), { replace: true });
-      return next;
-    });
-  };
-
-  const closeTaskPanel = () => {
-    setSelectedTaskId(null);
-    setIsPanelFullscreen(false);
-    exitTo(setLocation, buildWorkPath(null, search));
+    setLocation(`/tasks/${taskId}`);
   };
 
   const handleUrgencyChange = (taskId: string, urgency: string) => {
@@ -287,10 +236,6 @@ export function useWorkAdmin() {
   const handleAssigneeChange = (taskId: string, assignedToId: string) => {
     const data: Record<string, unknown> =
       assignedToId === "__none__" ? { assignedToId: null } : { assignedToId };
-    if (isMobile) {
-      setSelectedTaskId(null);
-      setIsPanelFullscreen(false);
-    }
     updateTaskMutation.mutate({ taskId, data });
   };
 
@@ -512,12 +457,6 @@ export function useWorkAdmin() {
     setReviewEstimatesTaskId,
     summaryTaskId,
     setSummaryTaskId,
-    selectedTaskId,
-    setSelectedTaskId,
-    isPanelFullscreen,
-    setIsPanelFullscreen,
-    panelMounted,
-    panelVisible,
     isHoldReasonDialogOpen,
     setIsHoldReasonDialogOpen,
     holdReason,
@@ -528,7 +467,6 @@ export function useWorkAdmin() {
     handleHoldReasonSubmit,
     handleInlineEdit,
     handleSelectTask,
-    closeTaskPanel,
     handleUrgencyChange,
     handleAssigneeChange,
     handlePropertyChange,

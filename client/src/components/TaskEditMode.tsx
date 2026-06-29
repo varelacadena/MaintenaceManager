@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,17 @@ import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelec
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
 import { format } from "date-fns";
-import type { Task, InsertTask, User, Property } from "@shared/schema";
+import type { Task, InsertTask, User, Property, Equipment, Vehicle } from "@shared/schema";
+import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";
+import type { SelectedAsset } from "@/components/task-form/TaskLocationFields";
+import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
+import { isAutoShopName } from "@/lib/autoShopUtils";
+import {
+  buildAssetsFromTask,
+  isAssetSubtask,
+  syncTaskAssets,
+  type AssetWithSubtaskId,
+} from "@/lib/taskAssetSubtasks";
 
 interface Area {
   id: string;
@@ -98,7 +108,7 @@ export function TaskEditMode({
   );
 
   const [editSubtasks, setEditSubtasks] = useState<SubtaskEdit[]>(
-    subtasks.map((s) => ({
+    subtasks.filter((s) => !isAssetSubtask(s)).map((s) => ({
       id: s.id,
       name: s.name,
       description: s.description || "",
@@ -106,6 +116,10 @@ export function TaskEditMode({
       isRemoved: false,
     }))
   );
+
+  const [selectedAssets, setSelectedAssets] = useState<SelectedAsset[]>([]);
+  const initialAssetsRef = useRef<AssetWithSubtaskId[]>([]);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -121,6 +135,26 @@ export function TaskEditMode({
   const { data: properties } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
+
+  const { data: allVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  const { data: equipment = [] } = useQuery<Equipment[]>({
+    queryKey: equipmentKeys.list({ propertyId }),
+    enabled: !!propertyId,
+    queryFn: () => fetchEquipmentList({ propertyId }),
+  });
+
+  const selectedProperty = properties?.find((p) => p.id === propertyId);
+  const selectedArea = areas?.find((a) => a.id === areaId);
+  const showVehicle =
+    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
+  const showAssetEditor =
+    selectedAssets.length > 0 ||
+    initialAssetsRef.current.length > 0 ||
+    showVehicle ||
+    !!propertyId;
 
   const { data: subdivisions } = useQuery<Subdivision[]>({
     queryKey: ["/api/subdivisions", areaId],
@@ -147,7 +181,7 @@ export function TaskEditMode({
 
   useEffect(() => {
     setEditSubtasks(
-      subtasks.map((s) => ({
+      subtasks.filter((s) => !isAssetSubtask(s)).map((s) => ({
         id: s.id,
         name: s.name,
         description: s.description || "",
@@ -156,6 +190,19 @@ export function TaskEditMode({
       }))
     );
   }, [subtasks.length, task.id]);
+
+  useEffect(() => {
+    const loadedAssets = buildAssetsFromTask(task, subtasks);
+    setSelectedAssets(loadedAssets);
+    initialAssetsRef.current = loadedAssets;
+    setAssetsLoaded(true);
+  }, [task.id, subtasks]);
+
+  useEffect(() => {
+    if (!showVehicle) {
+      setSelectedAssets((prev) => prev.filter((asset) => asset.type !== "vehicle"));
+    }
+  }, [showVehicle]);
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
@@ -195,6 +242,17 @@ export function TaskEditMode({
     setEditSubtasks((prev) =>
       prev.map((s, i) => (i === index ? { ...s, description: newDesc } : s))
     );
+  };
+
+  const handleAddAsset = (asset: SelectedAsset) => {
+    if (selectedAssets.some((a) => a.type === asset.type && a.id === asset.id)) {
+      return;
+    }
+    setSelectedAssets((prev) => [...prev, asset]);
+  };
+
+  const handleRemoveAsset = (index: number) => {
+    setSelectedAssets((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
@@ -256,6 +314,14 @@ export function TaskEditMode({
             await apiRequest("PATCH", `/api/tasks/${sub.id}`, { name: sub.name.trim() });
           }
         }
+      }
+
+      const usesAssetSelection =
+        assetsLoaded &&
+        (selectedAssets.length > 0 || initialAssetsRef.current.length > 0);
+      if (usesAssetSelection) {
+        await syncTaskAssets(taskId, initialAssetsRef.current, selectedAssets);
+        initialAssetsRef.current = selectedAssets.map((asset) => ({ ...asset }));
       }
 
       invalidateTaskAfterMutation(taskId, { broad: true });
@@ -511,6 +577,19 @@ export function TaskEditMode({
             data-testid="input-edit-description"
           />
         </div>
+
+        {showAssetEditor && (
+          <TaskAssetListEditor
+            selectedAssets={selectedAssets}
+            onAddAsset={handleAddAsset}
+            onRemoveAsset={handleRemoveAsset}
+            equipment={equipment}
+            vehicles={allVehicles}
+            showVehicle={showVehicle}
+            showEquipment={!!propertyId}
+            equipmentDisabled={!propertyId}
+          />
+        )}
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">

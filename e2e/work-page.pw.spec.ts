@@ -37,7 +37,7 @@ test.describe("Work page – admin", () => {
     await expect(toggle).toHaveAttribute("aria-expanded");
   });
 
-  test("task query param opens detail panel when task exists", async ({ page }) => {
+  test("task query param navigates to task detail page when task exists", async ({ page }) => {
     const firstRow = page.locator("[data-testid^='row-task-']").first();
     if (!(await firstRow.isVisible())) {
       test.skip();
@@ -47,8 +47,8 @@ test.describe("Work page – admin", () => {
     if (!taskId) test.skip();
 
     await page.goto(`/work?task=${taskId}`);
-    await page.waitForLoadState("networkidle");
-    await expect(page.getByTestId("task-detail-slide-panel")).toBeVisible();
+    await page.waitForURL(`**/tasks/${taskId}`, { timeout: 15000 });
+    await expect(page.getByTestId("admin-task-detail-page")).toBeVisible();
     await expect(page.getByTestId("task-detail-panel")).toBeVisible();
     await expect(page.getByTestId("text-panel-task-title")).toBeVisible();
   });

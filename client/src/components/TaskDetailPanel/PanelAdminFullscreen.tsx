@@ -1,4 +1,6 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
@@ -14,10 +16,15 @@ import {
   CheckCircle2,
   Plus,
   MoreVertical,
-  Building2,
+  MapPin,
   User as UserIcon,
   Play,
   Loader2,
+  Image as ImageIcon,
+  Wrench,
+  Copy,
+  ListChecks,
+  Map,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,8 +33,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import type { User, TimeEntry } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import type { User, TimeEntry, Property } from "@shared/schema";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { cn } from "@/lib/utils";
 import { PhotoThumbnailGrid } from "./PanelResourcesSection";
 import { PanelNoteList } from "./PanelNotesSection";
 import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
@@ -35,6 +44,9 @@ import { PanelFileInput } from "./PanelFileInput";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId } from "@/utils/taskUtils";
 import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
+import { Link } from "wouter";
+
+const PropertyMap = lazy(() => import("@/components/PropertyMap"));
 
 interface PanelAdminFullscreenProps {
   ctx: TaskDetailPanelContext;
@@ -43,7 +55,84 @@ interface PanelAdminFullscreenProps {
   taskId: string;
 }
 
+function DossierCard({
+  title,
+  icon,
+  badge,
+  action,
+  children,
+  className,
+  testId,
+  contentClassName,
+}: {
+  title: string;
+  icon?: ReactNode;
+  badge?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  testId?: string;
+  contentClassName?: string;
+}) {
+  return (
+    <section
+      className={cn("rounded-xl border border-border bg-card shadow-sm flex flex-col min-h-0", className)}
+      data-testid={testId}
+    >
+      <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {icon && <span className="text-primary shrink-0">{icon}</span>}
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
+          {badge}
+        </div>
+        {action}
+      </div>
+      <div className={cn("p-5 flex-1 min-h-0", contentClassName)}>{children}</div>
+    </section>
+  );
+}
+
+function MetaStripItem({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 px-4 py-4 min-w-0 sm:px-5 border-b sm:border-b-0 sm:border-r border-border last:border-r-0 last:border-b-0">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function formatLoggedTime(totalMinutes: number): string {
+  if (totalMinutes <= 0) return "Not logged";
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
+function getPropertyCoordinates(property?: Property | null): { lat: number; lng: number } | null {
+  if (!property?.coordinates) return null;
+  const coords = property.coordinates as { type?: string; coordinates?: number[] };
+  if (coords.type === "Point" && Array.isArray(coords.coordinates) && coords.coordinates.length >= 2) {
+    const [lng, lat] = coords.coordinates;
+    if (typeof lat === "number" && typeof lng === "number") return { lat, lng };
+  }
+  return null;
+}
+
 export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAdminFullscreenProps) {
+  const { toast } = useToast();
   const {
     isMobile, task, subtasks, uploads, taskParts, taskNotes,
     timeEntries, totalMinutes, statusPill, statusDot, statusLabel,
@@ -61,423 +150,505 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
 
   if (!task) return null;
 
+  const images = uploads?.filter((u) => u.fileType.startsWith("image/")) ?? [];
+  const otherFiles = uploads?.filter((u) => !u.fileType.startsWith("image/")) ?? [];
+  const coords = getPropertyCoordinates(property);
+  const siteLabel = property?.name || "No site assigned";
+  const siteDetail = property?.address || (coords
+    ? `${Math.abs(coords.lat).toFixed(6)}° ${coords.lat >= 0 ? "N" : "S"}, ${Math.abs(coords.lng).toFixed(6)}° ${coords.lng >= 0 ? "E" : "W"}`
+    : null);
+
+  const copySite = async () => {
+    const text = [siteLabel, property?.address].filter(Boolean).join(" — ");
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied", description: "Site location copied to clipboard." });
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: "#F8FAFC" }} data-testid="task-detail-panel">
-      <div
-        className={`flex items-center shrink-0 ${isMobile ? "gap-2 px-4 py-3" : "gap-3 px-8 py-4"}`}
-        style={{ borderBottom: "1px solid #E5E7EB", backgroundColor: "#FFFFFF" }}
-      >
-        <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-panel-close">
-          <ArrowLeft className={isMobile ? "w-4 h-4" : "w-5 h-5"} style={{ color: "#1A1A1A" }} />
-        </Button>
-        <span className={`${isMobile ? "w-2 h-2" : "w-2.5 h-2.5"} rounded-full shrink-0`} style={{ backgroundColor: statusDot }} />
-        <span
-          className={`${isMobile ? "text-xs" : "text-xs"} font-semibold uppercase tracking-wider px-2.5 py-1 rounded`}
-          style={{ backgroundColor: statusPill.bg, color: statusPill.text }}
-        >
-          {statusLabel}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Flag className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: urg.color }} />
-          <span className={`${isMobile ? "text-xs" : "text-sm"} font-medium`} style={{ color: urg.color }}>{urg.label}</span>
-        </div>
-        {task.estimatedCompletionDate && (
-          <span className={`${isMobile ? "text-xs" : "text-sm"} font-medium`} style={{ color: isOverdue ? "#D94F4F" : "#6B7280" }}>
-            Due {new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-          </span>
-        )}
-        <div className="flex-1" />
-        {!isMobile && isNotStarted && (
-          <Button
-            className="gap-2"
-            style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-            onClick={handleStartTask}
-            disabled={updateStatusMutation.isPending}
-            data-testid="button-admin-start-task"
-          >
-            {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Start Task
+    <div className="h-full flex flex-col bg-muted/30" data-testid="task-detail-panel">
+      <header className="shrink-0 border-b border-border bg-card px-4 sm:px-6 py-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-panel-close">
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
-        )}
-        {!isMobile && isStarted && (
-          <Button
-            className="gap-2"
-            style={{ backgroundColor: "#15803D", color: "#FFFFFF" }}
-            onClick={handleMarkComplete}
-            disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
-            data-testid="button-admin-mark-complete"
-          >
-            {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            Complete Task
-          </Button>
-        )}
-        {!isMobile && (
-          <Button variant="outline" className="gap-2" style={{ borderColor: "#E5E7EB" }} onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
-            <Pencil className="w-4 h-4" />
-            Edit
-          </Button>
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" data-testid="button-admin-more-menu">
-              <MoreVertical className={isMobile ? "w-4 h-4" : "w-5 h-5"} style={{ color: "#6B7280" }} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {isMobile && (
-              <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
-                <Pencil className="w-4 h-4" />
-                Edit Task
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">
-              <Trash2 className="w-4 h-4" />
-              Delete Task
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className={isMobile ? "flex flex-col flex-1 overflow-y-auto" : "flex flex-1 overflow-hidden"}>
-        <div className={isMobile ? "flex-1" : "flex-1 overflow-y-auto"}>
-          <div className={isMobile ? "p-4 space-y-4" : "p-8 space-y-6"}>
-            <div
-              className={isMobile ? "rounded-2xl p-5" : "rounded-2xl p-7"}
-              style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 10px 25px rgba(15, 23, 42, 0.05)" }}
+          <span className="text-sm text-muted-foreground hidden sm:inline">Return to Work</span>
+          <div className="flex-1" />
+          {!isMobile && isNotStarted && (
+            <Button
+              className="gap-2"
+              onClick={handleStartTask}
+              disabled={updateStatusMutation.isPending}
+              data-testid="button-admin-start-task"
             >
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#6366F1" }}>
-                Work order
-              </p>
-              <h1
-                className={`${isMobile ? "text-2xl" : "text-3xl"} font-semibold leading-tight`}
-                style={{ color: "#111827" }}
-                data-testid="text-panel-task-title"
-              >
-                {task.name}
-              </h1>
-              <p
-                className="text-xs font-mono mt-2"
-                style={{ color: "#9CA3AF" }}
-                data-testid="text-task-id"
-                title={task.id}
-              >
-                ID {formatTaskReferenceId(task.id)}
-              </p>
-              <p className="text-sm mt-3" style={{ color: "#6B7280" }}>
-                {taskTypeLabels[task.taskType] || task.taskType} - {task.executorType === "student" ? "Student Pool" : "Technician Pool"}
-              </p>
-              {task.description && (
-                <p className={`${isMobile ? "text-sm" : "text-base"} leading-relaxed mt-5`} style={{ color: "#374151" }}>
-                  {task.description}
-                </p>
+              {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Start Task
+            </Button>
+          )}
+          {!isMobile && isStarted && (
+            <Button
+              className="gap-2 bg-green-700 hover:bg-green-800 text-white"
+              onClick={handleMarkComplete}
+              disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
+              data-testid="button-admin-mark-complete"
+            >
+              {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Complete Task
+            </Button>
+          )}
+          {!isMobile && (
+            <Button variant="outline" className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
+              <Pencil className="w-4 h-4" />
+              Edit
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" data-testid="button-admin-more-menu">
+                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isMobile && (
+                <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
+                  <Pencil className="w-4 h-4" />
+                  Edit Task
+                </DropdownMenuItem>
               )}
+              <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">
+                <Trash2 className="w-4 h-4" />
+                Delete Task
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className={cn("mx-auto w-full space-y-5", isMobile ? "px-4 py-5" : "max-w-6xl px-6 py-6")}>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="font-mono text-xs" data-testid="text-task-id">
+                {formatTaskReferenceId(task.id)}
+              </Badge>
+              <Badge
+                className="gap-1.5 uppercase text-[10px] tracking-wider font-semibold border-0"
+                style={{ backgroundColor: statusPill.bg, color: statusPill.text }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: statusDot }} />
+                {statusLabel}
+              </Badge>
+              <Badge variant="outline" className="gap-1.5 text-xs" style={{ color: urg.color, borderColor: `${urg.color}40` }}>
+                <Flag className="w-3 h-3" style={{ color: urg.color }} />
+                {urg.label} priority
+              </Badge>
             </div>
+            <h1
+              className={cn("font-semibold leading-tight text-foreground", isMobile ? "text-2xl" : "text-3xl")}
+              data-testid="text-panel-task-title"
+            >
+              {task.name}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {taskTypeLabels[task.taskType] || task.taskType}
+              {" · "}
+              {task.executorType === "student" ? "Student pool" : "Technician pool"}
+            </p>
+          </div>
 
-            {(() => {
-              const images = uploads?.filter((u) => u.fileType.startsWith("image/")) ?? [];
-              const otherFiles = uploads?.filter((u) => !u.fileType.startsWith("image/")) ?? [];
-              return (
-                <>
-                  <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
-                      Photos{images.length > 0 ? ` (${images.length})` : ""}
-                    </p>
-                    <PhotoThumbnailGrid
-                      uploads={images}
-                      columns={isMobile ? 3 : 4}
-                      trailing={
-                        <PanelPhotoUploadTrigger
-                          onClick={() => fileInputRef.current?.click()}
-                          isUploading={isFileUploading}
-                          testId="button-admin-fullscreen-add-photo"
-                        />
-                      }
-                    />
-                    {otherFiles.length > 0 && (
-                        <div className="mt-4 pt-4" style={{ borderTop: "1px solid #F3F4F6" }}>
-                          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>
-                            Files ({otherFiles.length})
-                          </p>
-                          <div className="space-y-2">
-                            {otherFiles.map((upload) => {
-                              const isVideo = upload.fileType.startsWith("video/");
-                              const TypeIcon = isVideo ? Video : FileText;
-                              const badgeBg = isVideo ? "#FFF1F2" : "#EDE9FE";
-                              const badgeColor = isVideo ? "#F43F5E" : "#7C3AED";
-                              const ext = upload.fileName.split(".").pop()?.toLowerCase() || "";
-                              const typeLabel = isVideo ? "VID"
-                                : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
-                                : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
-                              return (
-                                <a
-                                  key={upload.id}
-                                  href={toDisplayUrl(upload.objectUrl)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 py-2 px-2 rounded hover-elevate"
-                                  data-testid={`resource-item-${upload.id}`}
-                                >
-                                  <TypeIcon className="w-4 h-4 shrink-0" style={{ color: badgeColor }} />
-                                  <span
-                                    className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
-                                    style={{ backgroundColor: badgeBg, color: badgeColor }}
-                                  >
-                                    {typeLabel}
-                                  </span>
-                                  <span className="text-sm truncate flex-1" style={{ color: "#374151" }}>{upload.fileName}</span>
-                                </a>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                  </div>
-
-                  <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "#9CA3AF" }}>
-                      Notes ({taskNotes.length})
-                    </p>
-                    <PanelNoteList
-                      embedded
-                      taskNotes={taskNotes}
-                      allUsers={allUsers}
-                      editingNoteId={editingNoteId}
-                      setEditingNoteId={setEditingNoteId}
-                      editNoteContent={editNoteContent}
-                      setEditNoteContent={setEditNoteContent}
-                      setDeleteNoteId={setDeleteNoteId}
-                      setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
-                      updateNoteMutation={updateNoteMutation}
-                      isAdmin={isAdmin}
-                    />
-                  </div>
-                </>
-              );
-            })()}
-
-            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 gap-4"}`}>
-              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <UserIcon className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <div className="min-w-0">
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Assigned to</p>
-                  <div className="flex items-center gap-2 mt-1">
-                  {assignee && (
-                    <Avatar className="w-6 h-6">
-                      <AvatarFallback style={{ backgroundColor: getAvatarColorForId(assignee.id), color: "#FFFFFF", fontSize: "10px" }}>
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+              <MetaStripItem icon={<UserIcon className="w-3.5 h-3.5" />} label="Lead technician">
+                {assignee ? (
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Avatar className="w-8 h-8 shrink-0">
+                      <AvatarFallback
+                        className="text-xs text-white"
+                        style={{ backgroundColor: getAvatarColorForId(assignee.id) }}
+                      >
                         {assigneeInitials}
                       </AvatarFallback>
                     </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{assigneeName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{assignee.role || "Technician"}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Unassigned</p>
+                )}
+              </MetaStripItem>
+              <MetaStripItem icon={<Calendar className="w-3.5 h-3.5" />} label="Scheduled target">
+                <p className={cn("text-sm font-medium", isOverdue && "text-destructive")}>
+                  {task.estimatedCompletionDate
+                    ? format(new Date(task.estimatedCompletionDate), "MMM d, yyyy")
+                    : "Not set"}
+                </p>
+              </MetaStripItem>
+              <MetaStripItem icon={<Clock className="w-3.5 h-3.5" />} label="Time logged">
+                <p className="text-sm font-medium">{formatLoggedTime(totalMinutes)}</p>
+              </MetaStripItem>
+              <MetaStripItem icon={<MapPin className="w-3.5 h-3.5" />} label="Assigned site">
+                <div className="flex items-start gap-2 min-w-0">
+                  <p className="text-sm font-medium truncate flex-1">{siteLabel}</p>
+                  {property && (
+                    <button
+                      type="button"
+                      onClick={copySite}
+                      className="shrink-0 text-xs text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      Copy
+                    </button>
                   )}
-                    <span className="text-sm font-medium truncate" style={{ color: "#1A1A1A" }}>{assigneeName}</span>
+                </div>
+                {siteDetail && (
+                  <p className="text-xs text-muted-foreground mt-1 truncate">{siteDetail}</p>
+                )}
+              </MetaStripItem>
+            </div>
+          </div>
+
+          <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2")}>
+            <DossierCard
+              title="Service log & scope"
+              icon={<FileText className="w-4 h-4" />}
+              className="lg:row-span-1"
+            >
+              {task.description ? (
+                <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{task.description}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No description provided.</p>
+              )}
+              {taskNotes.length > 0 && (
+                <div className="mt-5 pt-5 border-t border-border">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
+                    Field notes ({taskNotes.length})
+                  </p>
+                  <PanelNoteList
+                    embedded
+                    taskNotes={taskNotes}
+                    allUsers={allUsers}
+                    editingNoteId={editingNoteId}
+                    setEditingNoteId={setEditingNoteId}
+                    editNoteContent={editNoteContent}
+                    setEditNoteContent={setEditNoteContent}
+                    setDeleteNoteId={setDeleteNoteId}
+                    setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
+                    updateNoteMutation={updateNoteMutation}
+                    isAdmin={isAdmin}
+                  />
+                </div>
+              )}
+              {taskNotes.length === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 gap-2"
+                  onClick={() => setIsAddNoteDialogOpen(true)}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add note
+                </Button>
+              )}
+            </DossierCard>
+
+            <DossierCard
+              title="Equipment & spare parts"
+              icon={<Wrench className="w-4 h-4" />}
+              badge={
+                taskParts.length > 0 ? (
+                  <Badge variant="secondary" className="text-[10px] font-normal">
+                    {taskParts.length} allocated
+                  </Badge>
+                ) : null
+              }
+            >
+              {taskParts.length === 0 ? (
+                <div className="rounded-lg border border-dashed py-8 px-4 text-center">
+                  <Package className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium text-muted-foreground">No parts recorded</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {taskParts.map((part) => (
+                    <li
+                      key={part.id}
+                      className="flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2.5"
+                      data-testid={`panel-part-${part.id}`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{part.partName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Qty {part.quantity}
+                          {part.cost != null && Number(part.cost) > 0 && ` · $${Number(part.cost).toFixed(2)}`}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </DossierCard>
+
+            <DossierCard
+              title="Photographic evidence"
+              icon={<ImageIcon className="w-4 h-4" />}
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isFileUploading}
+                  data-testid="button-admin-fullscreen-add-photo"
+                >
+                  {isFileUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  Attach photo
+                </Button>
+              }
+            >
+              <PhotoThumbnailGrid
+                uploads={images}
+                columns={isMobile ? 3 : 4}
+                trailing={
+                  <PanelPhotoUploadTrigger
+                    onClick={() => fileInputRef.current?.click()}
+                    isUploading={isFileUploading}
+                    testId="button-admin-fullscreen-add-photo-grid"
+                  />
+                }
+              />
+              {otherFiles.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                    Documents ({otherFiles.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {otherFiles.map((upload) => {
+                      const isVideo = upload.fileType.startsWith("video/");
+                      const TypeIcon = isVideo ? Video : FileText;
+                      const ext = upload.fileName.split(".").pop()?.toLowerCase() || "";
+                      const typeLabel = isVideo ? "VID"
+                        : ext === "pdf" ? "PDF" : ext === "xls" || ext === "xlsx" ? "XLS"
+                        : ext === "doc" || ext === "docx" ? "DOC" : "FILE";
+                      return (
+                        <a
+                          key={upload.id}
+                          href={toDisplayUrl(upload.objectUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                          data-testid={`resource-item-${upload.id}`}
+                        >
+                          <TypeIcon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                          <Badge variant="outline" className="text-[10px] shrink-0">{typeLabel}</Badge>
+                          <span className="text-sm truncate flex-1">{upload.fileName}</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <Building2 className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <div className="min-w-0">
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Location</p>
-                  <p className="text-sm font-medium truncate mt-1" style={{ color: "#1A1A1A" }}>
-                    {property?.name || "No location"}
-                    {property?.address ? ` - ${property.address}` : ""}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <Calendar className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <div>
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Due date</p>
-                  <p className="text-sm font-medium mt-1" style={{ color: isOverdue ? "#D94F4F" : "#1A1A1A" }}>
-                    {task.estimatedCompletionDate
-                      ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                      : "Not set"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <Clock className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                <div>
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Time logged</p>
-                  <p className="text-sm font-medium mt-1" style={{ color: "#1A1A1A" }}>
-                    {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
-                  </p>
-                </div>
-              </div>
-            </div>
+              )}
+            </DossierCard>
 
-          <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Subtasks</p>
-              <span className="text-sm font-medium" style={{ color: "#4338CA" }}>
-                {completedSubtasks}/{totalSubtasks}
-              </span>
-            </div>
-            {totalSubtasks > 0 && (
-              <div className="w-full rounded-full overflow-hidden mb-4" style={{ height: 6, backgroundColor: "#EEEEEE" }}>
+            <DossierCard
+              title="Site location"
+              icon={<MapPin className="w-4 h-4" />}
+              contentClassName="p-0 flex flex-col"
+              testId="task-site-location-card"
+            >
+              {property?.coordinates ? (
+                <Suspense
+                  fallback={
+                    <div
+                      className="flex items-center justify-center text-sm text-muted-foreground"
+                      style={{ minHeight: isMobile ? 280 : 400 }}
+                    >
+                      Loading map...
+                    </div>
+                  }
+                >
+                  <div className="relative z-0 w-full" style={{ minHeight: isMobile ? 280 : 400 }}>
+                    <PropertyMap
+                      properties={[property]}
+                      selectedPropertyId={property.id}
+                      editable={false}
+                    />
+                  </div>
+                </Suspense>
+              ) : (
                 <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${(completedSubtasks / totalSubtasks) * 100}%`,
-                    backgroundColor: "#4338CA",
-                  }}
+                  className="flex items-center justify-center text-center text-muted-foreground p-6"
+                  style={{ minHeight: isMobile ? 200 : 280 }}
+                >
+                  <div>
+                    <Map className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                    <p className="font-medium text-sm">
+                      {property ? "No map location set" : "No site assigned"}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {property
+                        ? "Use the Properties map to draw this property location."
+                        : "Assign a property to show site details."}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="px-5 py-4 border-t border-border space-y-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{siteLabel}</p>
+                    {property?.address && (
+                      <p className="text-xs text-muted-foreground mt-1">{property.address}</p>
+                    )}
+                    {coords && !property?.address && (
+                      <p className="text-xs text-muted-foreground mt-1 font-mono">
+                        {Math.abs(coords.lat).toFixed(4)}° {coords.lat >= 0 ? "N" : "S"} · {Math.abs(coords.lng).toFixed(4)}° {coords.lng >= 0 ? "E" : "W"}
+                      </p>
+                    )}
+                  </div>
+                  {property && (
+                    <Link href={`/properties/${property.id}`}>
+                      <Button variant="outline" size="sm" className="shrink-0 h-8 text-xs gap-1.5">
+                        View property
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </DossierCard>
+          </div>
+
+          {totalSubtasks > 0 && (
+            <DossierCard
+              title="Subtasks"
+              icon={<ListChecks className="w-4 h-4" />}
+              badge={
+                <Badge variant="secondary" className="text-[10px] font-normal tabular-nums">
+                  {completedSubtasks}/{totalSubtasks}
+                </Badge>
+              }
+            >
+              <div className="w-full rounded-full overflow-hidden mb-4 h-1.5 bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
                 />
               </div>
-            )}
-            {totalSubtasks === 0 ? (
-              <div className="rounded-xl border border-dashed py-8 px-4 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" }}>
-                <CheckCircle2 className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
-                <p className="text-sm font-medium" style={{ color: "#374151" }}>No subtasks yet</p>
-                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Break this work into steps when it needs tracking.</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
+              <ul className="space-y-1">
                 {subtasks?.map((subtask) => {
                   const isSubCompleted = subtask.status === "completed";
                   return (
-                    <div key={subtask.id} className="flex items-center gap-3 py-2 px-2" data-testid={`panel-subtask-${subtask.id}`}>
+                    <li key={subtask.id} className="flex items-center gap-3 py-2 px-1" data-testid={`panel-subtask-${subtask.id}`}>
                       <span
-                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
-                        style={{
-                          borderColor: isSubCompleted ? "#4338CA" : "#D1D5DB",
-                          backgroundColor: isSubCompleted ? "#4338CA" : "transparent",
-                        }}
+                        className={cn(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
+                          isSubCompleted ? "border-primary bg-primary" : "border-muted-foreground/40",
+                        )}
                       >
-                        {isSubCompleted && <CheckCircle2 className="w-3 h-3" style={{ color: "#FFFFFF" }} />}
+                        {isSubCompleted && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
                       </span>
-                      <span
-                        className={`text-sm flex-1 ${isSubCompleted ? "line-through" : ""}`}
-                        style={{ color: isSubCompleted ? "#9CA3AF" : "#1A1A1A" }}
-                      >
+                      <span className={cn("text-sm flex-1", isSubCompleted && "line-through text-muted-foreground")}>
                         {subtask.name}
                       </span>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
-            )}
-          </div>
-          </div>
-        </div>
+              </ul>
+            </DossierCard>
+          )}
 
-        <div
-          className={isMobile ? "w-full shrink-0" : "w-80 shrink-0 overflow-y-auto"}
-          style={{
-            borderLeft: isMobile ? "none" : "1px solid #EEEEEE",
-            borderTop: isMobile ? "1px solid #EEEEEE" : "none",
-            backgroundColor: "#F8FAFC",
-          }}
-          data-testid="panel-right-sidebar"
-        >
-          <div className={`${isMobile ? "p-4" : "p-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
-              Parts ({taskParts.length})
-            </p>
-            {taskParts.length === 0 ? (
-              <div className="rounded-xl border border-dashed py-6 px-3 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF" }}>
-                <Package className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
-                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>No parts used</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {taskParts.map((part) => (
-                  <div key={part.id} data-testid={`panel-part-${part.id}`}>
-                    <div className="flex items-center gap-2">
-                      <Package className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
-                      <span className="text-sm" style={{ color: "#1A1A1A" }}>{part.partName}</span>
-                    </div>
-                    <div className="flex items-center gap-2 ml-6 mt-1">
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>Qty: {part.quantity}</span>
-                      {part.cost !== null && part.cost !== undefined && Number(part.cost) > 0 && (
-                        <span className="text-xs font-medium" style={{ color: "#15803D" }}>${Number(part.cost).toFixed(2)}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className={`${isMobile ? "p-4" : "p-6"}`} style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Time Log</p>
-              <span className="text-sm font-medium" style={{ color: "#6B7280" }}>
-                {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
-              </span>
-            </div>
+          <DossierCard
+            title="Time log"
+            icon={<Clock className="w-4 h-4" />}
+            badge={
+              <Badge variant="secondary" className="text-[10px] font-normal">
+                {formatLoggedTime(totalMinutes)}
+              </Badge>
+            }
+            testId="panel-right-sidebar"
+          >
             {timeEntries.length === 0 ? (
-              <div className="rounded-xl border border-dashed py-6 px-3 text-center" style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF" }}>
-                <Clock className="w-5 h-5 mx-auto mb-2" style={{ color: "#9CA3AF" }} />
-                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>No time logged yet</p>
+              <div className="rounded-lg border border-dashed py-8 px-4 text-center">
+                <Clock className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">No time logged yet</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <ul className="space-y-3">
                 {timeEntries.map((entry: TimeEntry) => {
-                  const entryUser = allUsers?.find(u => u.id === entry.userId);
+                  const entryUser = allUsers?.find((u) => u.id === entry.userId);
                   const isRunning = entry.startTime && !entry.endTime;
                   const duration = entry.durationMinutes
                     ? `${Math.floor(entry.durationMinutes / 60)}h ${entry.durationMinutes % 60}m`
                     : isRunning ? "Running" : "—";
                   return (
-                    <div key={entry.id} className="flex items-center justify-between gap-2 py-1.5" data-testid={`panel-history-${entry.id}`}>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                          {entryUser ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username : "Unknown"}
+                    <li key={entry.id} className="flex items-center justify-between gap-3" data-testid={`panel-history-${entry.id}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {entryUser
+                            ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username
+                            : "Unknown"}
                         </p>
-                        <p className="text-xs" style={{ color: "#9CA3AF" }}>
+                        <p className="text-xs text-muted-foreground">
                           {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : ""}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span
-                          className="text-xs font-medium px-2 py-1 rounded"
-                          style={{
-                            backgroundColor: isRunning ? "#EEF2FF" : "#FFFFFF",
-                            color: isRunning ? "#4338CA" : "#374151",
-                            border: isRunning ? "none" : "1px solid #E5E7EB",
-                          }}
-                        >
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant={isRunning ? "default" : "outline"} className="text-xs font-medium">
                           {duration}
-                        </span>
+                        </Badge>
                         {!isRunning && (
                           <>
                             <Button
                               size="icon"
                               variant="ghost"
+                              className="h-8 w-8"
                               onClick={() => {
                                 setEditingTimeEntryId(entry.id);
                                 setEditTimeDuration(String(entry.durationMinutes || 0));
                               }}
                               data-testid={`button-edit-time-${entry.id}`}
                             >
-                              <Pencil className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
+                              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                             <Button
                               size="icon"
                               variant="ghost"
+                              className="h-8 w-8"
                               onClick={() => setDeleteTimeEntryId(entry.id)}
                               data-testid={`button-delete-time-${entry.id}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" style={{ color: "#D94F4F" }} />
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
                             </Button>
                           </>
                         )}
                       </div>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
-            <button
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 mt-3 rounded-md text-xs font-medium transition-colors"
-              style={{ border: "1px dashed #D1D5DB", color: "#6B7280" }}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-4 gap-2 border-dashed"
               onClick={() => setIsLogTimeDialogOpen(true)}
               data-testid="button-panel-log-time-inline"
             >
               <Plus className="w-3.5 h-3.5" />
-              Log Time
-            </button>
-          </div>
+              Log time
+            </Button>
+          </DossierCard>
         </div>
       </div>
+
       <PanelFileInput fileInputRef={fileInputRef} onChange={handleFileUpload} />
       <TaskDetailPanelDialogs ctx={ctx} />
     </div>

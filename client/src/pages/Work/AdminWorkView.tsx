@@ -28,7 +28,6 @@ import { Plus, FolderKanban, Search } from "lucide-react";
 import { Link } from "wouter";
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
-import { TaskDetailPanel } from "@/components/TaskDetailPanel";
 import type { Task, Project } from "@shared/schema";
 import { TaskTableRow } from "./TaskTableRow";
 import { ParentTaskRowGroup } from "./ParentTaskRowGroup";
@@ -53,9 +52,6 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
     projectDialogOpen, setProjectDialogOpen,
     reviewEstimatesTaskId, setReviewEstimatesTaskId,
     summaryTaskId, setSummaryTaskId,
-    selectedTaskId, closeTaskPanel,
-    isPanelFullscreen, setIsPanelFullscreen,
-    panelMounted, panelVisible,
     isHoldReasonDialogOpen, setIsHoldReasonDialogOpen,
     holdReason, setHoldReason, closeHoldReasonDialog,
     updateTaskStatusMutation,
@@ -79,12 +75,7 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
 
   return (
     <>
-      <div className={`flex ${panelMounted ? "-mx-3 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 overflow-hidden min-h-0" : ""}`} style={panelMounted ? { height: "calc(100svh - 49px)" } : undefined}>
-        <div
-          className={`flex-1 min-w-0 overflow-y-auto ${panelMounted && isPanelFullscreen ? "hidden" : ""}`}
-          style={{ transition: "all 280ms cubic-bezier(0.4, 0, 0.2, 1)" }}
-        >
-          <div className="p-4 md:p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <div>
                 <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">
@@ -231,12 +222,11 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                         aria-labelledby={`work-group-header-${status.key}`}
                         className="border-t overflow-x-auto"
                       >
-                        <Table className="min-w-[720px]">
+                        <Table className="min-w-[600px]">
                           <TableHeader>
                             <TableRow className="hover:bg-transparent">
                               <TableHead className="min-w-[220px] text-xs font-medium text-muted-foreground">Name</TableHead>
                               <TableHead className="w-[60px] text-xs font-medium text-muted-foreground">Assignee</TableHead>
-                              <TableHead className="w-[120px] text-xs font-medium text-muted-foreground">Start Date</TableHead>
                               <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Due Date</TableHead>
                               <TableHead className="w-[130px] text-xs font-medium text-muted-foreground">Status</TableHead>
                               <TableHead className="w-[100px] text-xs font-medium text-muted-foreground">Priority</TableHead>
@@ -270,7 +260,6 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                       isAdmin={isAdmin}
                                       onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
                                       onSelectTask={handleSelectTask}
-                                      selectedTaskId={selectedTaskId}
                                     />
                                   );
                                 }
@@ -292,7 +281,6 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                     isAdmin={isAdmin}
                                     onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
                                     onSelectTask={handleSelectTask}
-                                    selectedTaskId={selectedTaskId}
                                   />
                                 );
                               }
@@ -331,7 +319,6 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                                   isAdmin={isAdmin}
                                   onReviewEstimates={(taskId) => setReviewEstimatesTaskId(taskId)}
                                   onSelectTask={handleSelectTask}
-                                  selectedTaskId={selectedTaskId}
                                 />
                               );
                             })}
@@ -344,32 +331,6 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
               })}
             </div>
             )}
-          </div>
-        </div>
-
-        {panelMounted && (
-          <div
-            className="shrink-0 overflow-hidden border-l"
-            style={{
-              width: isPanelFullscreen ? "100%" : panelVisible ? "400px" : "0px",
-              borderColor: "#EEEEEE",
-              transition: "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
-            data-testid="task-detail-slide-panel"
-          >
-            <div style={{ width: isPanelFullscreen ? "100%" : "400px", height: "100%" }}>
-              <TaskDetailPanel
-                taskId={selectedTaskId!}
-                isFullscreen={isPanelFullscreen}
-                onClose={closeTaskPanel}
-                onToggleFullscreen={() => setIsPanelFullscreen((prev) => !prev)}
-                onViewCompletionReport={() => setSummaryTaskId(selectedTaskId!)}
-                allUsers={allUsers}
-                properties={properties}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       <Dialog
