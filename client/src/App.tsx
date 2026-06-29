@@ -106,6 +106,7 @@ function AuthenticatedApp() {
   const showGlobalBack = user?.role !== "student" &&
     user?.role !== "technician" &&
     !hasPageBackControl(currentPath, user?.role);
+  const isAdminTaskDetail = user?.role === "admin" && /^\/tasks\/[^/]+$/.test(currentPath);
 
   if (isMobileTaskDetail) {
     if (user?.role === "technician") {
@@ -150,7 +151,7 @@ function AuthenticatedApp() {
                     >
                       <path d="m15 18-6-6 6-6" />
                     </svg>
-                    <span className="hidden sm:inline">Back</span>
+                    <span className="hidden sm:inline">{isAdminTaskDetail ? "Return to Work" : "Back"}</span>
                   </button>
                 )}
                 {(user?.role === "student" || user?.role === "technician") && (

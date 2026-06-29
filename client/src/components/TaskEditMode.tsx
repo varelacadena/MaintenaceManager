@@ -42,6 +42,7 @@ import {
   syncTaskAssets,
   type AssetWithSubtaskId,
 } from "@/lib/taskAssetSubtasks";
+import { cn } from "@/lib/utils";
 
 interface Area {
   id: string;
@@ -335,61 +336,75 @@ export function TaskEditMode({
   };
 
   const isMobile = variant === "mobile";
-  const containerClass = isMobile
-    ? "min-h-screen flex flex-col"
-    : "flex flex-col h-full";
-  const bgColor = isMobile ? "#F8F8F8" : "#FFFFFF";
 
   const activeSubtasks = editSubtasks.filter((s) => !s.isRemoved);
 
-  return (
-    <div className={containerClass} style={{ backgroundColor: bgColor }} data-testid="task-edit-mode">
-      <div
-        className="flex items-center justify-between px-4 py-3 shrink-0"
-        style={{ borderBottom: "1px solid #EEEEEE", backgroundColor: "#FFFFFF" }}
-      >
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCancel}
-            className="p-1 rounded"
-            data-testid="button-edit-cancel"
-            aria-label="Cancel editing"
-          >
-            <ArrowLeft className="w-5 h-5" style={{ color: "#6B7280" }} />
-          </button>
-          <span className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>
-            Edit Task
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            data-testid="button-edit-discard"
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving}
-            style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-            data-testid="button-edit-save"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
-        </div>
-      </div>
+  const saveButton = (
+    <Button
+      size="sm"
+      onClick={handleSave}
+      disabled={isSaving}
+      className={isMobile ? undefined : "gap-2"}
+      style={isMobile ? { backgroundColor: "#4338CA", color: "#FFFFFF" } : undefined}
+      data-testid="button-edit-save"
+    >
+      {isSaving ? (
+        <>
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Saving...
+        </>
+      ) : (
+        "Save Changes"
+      )}
+    </Button>
+  );
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+  return (
+    <div
+      className={cn(
+        "flex flex-col h-full",
+        isMobile ? "min-h-screen bg-[#F8F8F8]" : "bg-muted/30",
+      )}
+      data-testid="task-edit-mode"
+    >
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto space-y-5",
+          isMobile ? "px-4 py-5" : "max-w-6xl mx-auto w-full px-6 py-6",
+        )}
+      >
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="button-edit-cancel"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Cancel editing
+          </button>
+        )}
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <h1 className={cn("font-semibold text-foreground", isMobile ? "text-xl" : "text-2xl")}>
+              Edit Task
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Update task details and assignments
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 flex-wrap sm:justify-end">
+            {!isMobile && (
+              <Button variant="outline" size="sm" onClick={onCancel} data-testid="button-edit-discard">
+                Cancel
+              </Button>
+            )}
+            {saveButton}
+          </div>
+        </div>
+
+        <div className="space-y-5">
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Title
@@ -669,6 +684,7 @@ export function TaskEditMode({
           >
             Delete Task
           </Button>
+        </div>
         </div>
       </div>
 

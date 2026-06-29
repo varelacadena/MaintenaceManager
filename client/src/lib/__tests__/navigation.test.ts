@@ -29,7 +29,7 @@ describe("getParentRoute", () => {
   });
 
   it("identifies routes that already render their own back control", () => {
-    expect(hasPageBackControl("/tasks/task-1", "admin")).toBe(true);
+    expect(hasPageBackControl("/tasks/task-1", "admin")).toBe(false);
     expect(hasPageBackControl("/work/add-job", "technician")).toBe(true);
     expect(hasPageBackControl("/vehicle-checkin-verify/checkin-1", "admin")).toBe(true);
     expect(hasPageBackControl("/requests/request-1", "staff")).toBe(true);

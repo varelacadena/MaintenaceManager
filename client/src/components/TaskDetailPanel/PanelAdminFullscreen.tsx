@@ -171,93 +171,125 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
 
   return (
     <div className="h-full flex flex-col bg-muted/30" data-testid="task-detail-panel">
-      <header className="shrink-0 border-b border-border bg-card px-4 sm:px-6 py-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-panel-close">
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
-          <span className="text-sm text-muted-foreground hidden sm:inline">Return to Work</span>
-          <div className="flex-1" />
-          {!isMobile && isNotStarted && (
-            <Button
-              className="gap-2"
-              onClick={handleStartTask}
-              disabled={updateStatusMutation.isPending}
-              data-testid="button-admin-start-task"
-            >
-              {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              Start Task
-            </Button>
-          )}
-          {!isMobile && isStarted && (
-            <Button
-              className="gap-2 bg-green-700 hover:bg-green-800 text-white"
-              onClick={handleMarkComplete}
-              disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
-              data-testid="button-admin-mark-complete"
-            >
-              {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Complete Task
-            </Button>
-          )}
-          {!isMobile && (
-            <Button variant="outline" className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
-              <Pencil className="w-4 h-4" />
-              Edit
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" data-testid="button-admin-more-menu">
-                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isMobile && (
-                <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
-                  <Pencil className="w-4 h-4" />
-                  Edit Task
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">
-                <Trash2 className="w-4 h-4" />
-                Delete Task
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-
       <div className="flex-1 overflow-y-auto">
         <div className={cn("mx-auto w-full space-y-5", isMobile ? "px-4 py-5" : "max-w-6xl px-6 py-6")}>
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs" data-testid="text-task-id">
-                {formatTaskReferenceId(task.id)}
-              </Badge>
-              <Badge
-                className="gap-1.5 uppercase text-[10px] tracking-wider font-semibold border-0"
-                style={{ backgroundColor: statusPill.bg, color: statusPill.text }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: statusDot }} />
-                {statusLabel}
-              </Badge>
-              <Badge variant="outline" className="gap-1.5 text-xs" style={{ color: urg.color, borderColor: `${urg.color}40` }}>
-                <Flag className="w-3 h-3" style={{ color: urg.color }} />
-                {urg.label} priority
-              </Badge>
-            </div>
-            <h1
-              className={cn("font-semibold leading-tight text-foreground", isMobile ? "text-2xl" : "text-3xl")}
-              data-testid="text-panel-task-title"
+          {isMobile && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-panel-close"
             >
-              {task.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {taskTypeLabels[task.taskType] || task.taskType}
-              {" · "}
-              {task.executorType === "student" ? "Student pool" : "Technician pool"}
-            </p>
+              <ArrowLeft className="w-4 h-4" />
+              Return to Work
+            </button>
+          )}
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="space-y-3 min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="font-mono text-xs" data-testid="text-task-id">
+                  {formatTaskReferenceId(task.id)}
+                </Badge>
+                <Badge
+                  className="gap-1.5 uppercase text-[10px] tracking-wider font-semibold border-0"
+                  style={{ backgroundColor: statusPill.bg, color: statusPill.text }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: statusDot }} />
+                  {statusLabel}
+                </Badge>
+                <Badge variant="outline" className="gap-1.5 text-xs" style={{ color: urg.color, borderColor: `${urg.color}40` }}>
+                  <Flag className="w-3 h-3" style={{ color: urg.color }} />
+                  {urg.label} priority
+                </Badge>
+              </div>
+              <h1
+                className={cn("font-semibold leading-tight text-foreground", isMobile ? "text-2xl" : "text-3xl")}
+                data-testid="text-panel-task-title"
+              >
+                {task.name}
+              </h1>
+              {task.description ? (
+                <p
+                  className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap max-w-3xl"
+                  data-testid="text-panel-task-description"
+                >
+                  {task.description}
+                </p>
+              ) : null}
+              <p className="text-sm text-muted-foreground">
+                {taskTypeLabels[task.taskType] || task.taskType}
+                {" · "}
+                {task.executorType === "student" ? "Student pool" : "Technician pool"}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 flex-wrap sm:justify-end">
+              {!isMobile && isNotStarted && (
+                <Button
+                  className="gap-2"
+                  onClick={handleStartTask}
+                  disabled={updateStatusMutation.isPending}
+                  data-testid="button-admin-start-task"
+                >
+                  {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  Start Task
+                </Button>
+              )}
+              {!isMobile && isStarted && (
+                <Button
+                  className="gap-2 bg-green-700 hover:bg-green-800 text-white"
+                  onClick={handleMarkComplete}
+                  disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
+                  data-testid="button-admin-mark-complete"
+                >
+                  {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Complete Task
+                </Button>
+              )}
+              {!isMobile && (
+                <Button variant="outline" className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost" data-testid="button-admin-more-menu">
+                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isMobile && isNotStarted && (
+                    <DropdownMenuItem className="gap-2" onClick={handleStartTask} disabled={updateStatusMutation.isPending} data-testid="button-admin-start-task-mobile">
+                      <Play className="w-4 h-4" />
+                      Start Task
+                    </DropdownMenuItem>
+                  )}
+                  {isMobile && isStarted && (
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={handleMarkComplete}
+                      disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
+                      data-testid="button-admin-mark-complete-mobile"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Complete Task
+                    </DropdownMenuItem>
+                  )}
+                  {isMobile && (
+                    <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
+                      <Pencil className="w-4 h-4" />
+                      Edit Task
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">
+                    <Trash2 className="w-4 h-4" />
+                    Delete Task
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -315,45 +347,38 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
 
           <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2")}>
             <DossierCard
-              title="Service log & scope"
+              title="Field notes"
               icon={<FileText className="w-4 h-4" />}
               className="lg:row-span-1"
+              testId="panel-field-notes"
             >
-              {task.description ? (
-                <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{task.description}</p>
+              {taskNotes.length > 0 ? (
+                <PanelNoteList
+                  embedded
+                  taskNotes={taskNotes}
+                  allUsers={allUsers}
+                  editingNoteId={editingNoteId}
+                  setEditingNoteId={setEditingNoteId}
+                  editNoteContent={editNoteContent}
+                  setEditNoteContent={setEditNoteContent}
+                  setDeleteNoteId={setDeleteNoteId}
+                  setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
+                  updateNoteMutation={updateNoteMutation}
+                  isAdmin={isAdmin}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground italic">No description provided.</p>
-              )}
-              {taskNotes.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-border">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
-                    Field notes ({taskNotes.length})
-                  </p>
-                  <PanelNoteList
-                    embedded
-                    taskNotes={taskNotes}
-                    allUsers={allUsers}
-                    editingNoteId={editingNoteId}
-                    setEditingNoteId={setEditingNoteId}
-                    editNoteContent={editNoteContent}
-                    setEditNoteContent={setEditNoteContent}
-                    setDeleteNoteId={setDeleteNoteId}
-                    setIsAddNoteDialogOpen={setIsAddNoteDialogOpen}
-                    updateNoteMutation={updateNoteMutation}
-                    isAdmin={isAdmin}
-                  />
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">No notes yet</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setIsAddNoteDialogOpen(true)}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add note
+                  </Button>
                 </div>
-              )}
-              {taskNotes.length === 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 gap-2"
-                  onClick={() => setIsAddNoteDialogOpen(true)}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add note
-                </Button>
               )}
             </DossierCard>
 

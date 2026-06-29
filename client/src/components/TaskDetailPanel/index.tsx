@@ -90,11 +90,7 @@ export function TaskDetailPanel({
 
   if (isEditMode && task) {
     return (
-      <div
-        className="h-full flex flex-col"
-        style={{ backgroundColor: "#FFFFFF" }}
-        data-testid="task-detail-panel"
-      >
+      <div className="h-full flex flex-col min-h-0" data-testid="task-detail-panel">
         <TaskEditMode
           taskId={taskId}
           task={task}

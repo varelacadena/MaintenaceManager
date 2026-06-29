@@ -132,6 +132,8 @@ export function hasPageBackControl(pathname: string, role?: string): boolean {
   const path = pathname.split("?")[0].replace(/\/$/, "") || "/";
 
   if (/^\/tasks\/[^/]+$/.test(path)) {
+    // Admin desktop task detail uses the global header back control.
+    if (role === "admin") return false;
     return true;
   }
 
