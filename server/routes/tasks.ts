@@ -22,10 +22,7 @@ export function registerTaskRoutes(app: Express) {
       .trim()
       .min(1, "Short summary is required")
       .max(80, "Keep the summary under 80 characters — save details for the next field"),
-    description: z
-      .string()
-      .trim()
-      .min(20, "Please add more detail about the problem (at least 20 characters)"),
+    description: z.string().trim().default(""),
     urgency: z.enum(["low", "medium", "high"]).default("medium"),
     propertyId: z.string().trim().min(1, "Property is required"),
     spaceId: z.string().trim().optional().or(z.literal("")),
@@ -344,20 +341,6 @@ export function registerTaskRoutes(app: Express) {
       });
 
       const task = await storage.createTask(taskData);
-      const displayName = currentUser.firstName && currentUser.lastName
-        ? `${currentUser.firstName} ${currentUser.lastName}`
-        : currentUser.username;
-
-      try {
-        await storage.createTaskNote({
-          taskId: task.id,
-          userId,
-          content: `Field job added by ${displayName}`,
-          noteType: "job_note",
-        });
-      } catch (noteError) {
-        console.error("Failed to create field job note:", noteError);
-      }
 
       res.status(201).json(task);
     } catch (error) {

@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ImagePreviewProvider } from "@/components/ImagePreviewProvider";
+import { PwaInstallProvider } from "@/contexts/PwaInstallProvider";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -204,11 +205,13 @@ function AuthenticatedApp() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <ImagePreviewProvider>
-          <AuthenticatedApp />
-        </ImagePreviewProvider>
-      </TooltipProvider>
+      <PwaInstallProvider>
+        <TooltipProvider>
+          <ImagePreviewProvider>
+            <AuthenticatedApp />
+          </ImagePreviewProvider>
+        </TooltipProvider>
+      </PwaInstallProvider>
     </QueryClientProvider>
   );
 }

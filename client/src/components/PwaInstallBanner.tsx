@@ -1,13 +1,21 @@
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, X, Share, Plus } from "lucide-react";
+import { Download, X, Share, Plus, MoreVertical } from "lucide-react";
 import { useState } from "react";
 
+type ManualInstallMode = "ios" | "android" | null;
+
 export default function PwaInstallBanner() {
-  const { canPrompt, showNativePrompt, showIosInstructions, install, dismiss } =
-    usePwaInstall();
-  const [showIosSteps, setShowIosSteps] = useState(false);
+  const {
+    canPrompt,
+    showNativePrompt,
+    showIosInstructions,
+    showAndroidInstructions,
+    install,
+    dismiss,
+  } = usePwaInstall();
+  const [manualInstallMode, setManualInstallMode] = useState<ManualInstallMode>(null);
 
   if (!canPrompt) return null;
 
@@ -15,11 +23,13 @@ export default function PwaInstallBanner() {
     if (showNativePrompt) {
       await install();
     } else if (showIosInstructions) {
-      setShowIosSteps(true);
+      setManualInstallMode("ios");
+    } else if (showAndroidInstructions) {
+      setManualInstallMode("android");
     }
   };
 
-  if (showIosSteps) {
+  if (manualInstallMode === "ios") {
     return (
       <div className="px-3 pt-3" data-testid="pwa-ios-instructions">
         <Card>
@@ -29,7 +39,7 @@ export default function PwaInstallBanner() {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setShowIosSteps(false)}
+                onClick={() => setManualInstallMode(null)}
                 data-testid="button-close-ios-steps"
               >
                 <X className="w-4 h-4" />
@@ -66,10 +76,69 @@ export default function PwaInstallBanner() {
               size="sm"
               className="w-full"
               onClick={() => {
-                setShowIosSteps(false);
+                setManualInstallMode(null);
                 dismiss();
               }}
               data-testid="button-dismiss-ios-steps"
+            >
+              Got it, don't show again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (manualInstallMode === "android") {
+    return (
+      <div className="px-3 pt-3" data-testid="pwa-android-instructions">
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium">Install Hartland App</p>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setManualInstallMode(null)}
+                data-testid="button-close-android-steps"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">
+                  1
+                </span>
+                <span className="flex items-center gap-1">
+                  Open this page in Chrome if you are not already
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">
+                  2
+                </span>
+                <span className="flex items-center gap-1">
+                  Tap the menu button
+                  <MoreVertical className="w-3.5 h-3.5 inline shrink-0" />
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">
+                  3
+                </span>
+                <span>Tap "Install app" or "Add to Home screen"</span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                setManualInstallMode(null);
+                dismiss();
+              }}
+              data-testid="button-dismiss-android-steps"
             >
               Got it, don't show again
             </Button>

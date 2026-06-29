@@ -30,7 +30,6 @@ import {
 import { toDisplayUrl } from "@/lib/imageUtils";
 
 const MAX_SUMMARY_LENGTH = 80;
-const MIN_DETAIL_LENGTH = 20;
 
 type FieldJobForm = {
   name: string;
@@ -222,7 +221,6 @@ export default function TechnicianFieldJob() {
 
   const validateDetails = () => {
     const summary = form.name.trim();
-    const details = form.description.trim();
 
     if (!summary) {
       toast({
@@ -236,22 +234,6 @@ export default function TechnicianFieldJob() {
       toast({
         title: "Summary is too long",
         description: `Keep it under ${MAX_SUMMARY_LENGTH} characters. Put extra details in the description field.`,
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (!details) {
-      toast({
-        title: "Details required",
-        description: "Describe what you saw, where exactly, and when you noticed it.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (details.length < MIN_DETAIL_LENGTH) {
-      toast({
-        title: "Add more detail",
-        description: `Tell us more about the problem (at least ${MIN_DETAIL_LENGTH} characters).`,
         variant: "destructive",
       });
       return false;
