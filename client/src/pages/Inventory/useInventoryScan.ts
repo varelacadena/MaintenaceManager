@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import type { InventoryItem } from "@shared/schema";
-import { escapeHtml } from "@/lib/inventoryUtils";
-
+import { resolveInventoryItemFromScan } from "@/lib/inventoryLinks";
 type ToastFn = (opts: {
   title: string;
   description?: string;
@@ -45,21 +44,16 @@ export function useInventoryScanHelpers({
   setQuantityChange: (v: string) => void;
   setIsQuantityDialogOpen: (v: boolean) => void;
 }) {
-  const lookupScannedCode = useCallback(async (code: string): Promise<InventoryItem | null> => {
-    try {
-      const byBarcode = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(code)}`, {
-        credentials: "include",
-      });
-      if (byBarcode.ok) return byBarcode.json();
-      const byId = await fetch(`/api/inventory/${encodeURIComponent(code)}`, {
-        credentials: "include",
-      });
-      if (byId.ok) return byId.json();
-    } catch {
-      /* ignore */
-    }
-    return null;
-  }, []);
+  const lookupScannedCode = useCallback(
+    async (code: string): Promise<InventoryItem | null> => {
+      try {
+        return await resolveInventoryItemFromScan<InventoryItem>(code);
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
 
   const handleScanFind = useCallback(
     async (barcode: string) => {
@@ -144,50 +138,10 @@ export function useInventoryScanHelpers({
     ],
   );
 
-  const handlePrintLabel = useCallback(
-    (selectedItem: InventoryItem | null, qrCodeDataUrl: string) => {
-      if (!selectedItem || !qrCodeDataUrl) return false;
-      const w = window.open("", "_blank");
-      if (!w) {
-        toast({
-          title: "Popup blocked",
-          description: "Allow popups to print labels.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      const name = escapeHtml(selectedItem.name);
-      const category = escapeHtml(selectedItem.category || "general");
-      const unit = escapeHtml(selectedItem.unit || "unit");
-      const packageInfo = selectedItem.packageInfo
-        ? `<p>${escapeHtml(selectedItem.packageInfo)}</p>`
-        : "";
-      const location = selectedItem.location
-        ? `<p>Location: ${escapeHtml(selectedItem.location)}</p>`
-        : "";
-      const code = escapeHtml(selectedItem.barcode || selectedItem.id);
-      w.document.write(`<html><head><title>Label - ${name}</title>
-      <style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-      .l{border:2px solid #333;padding:16px;border-radius:8px;text-align:center;max-width:280px}
-      h2{margin:0 0 4px;font-size:16px}p{margin:2px 0;font-size:12px;color:#555}img{margin:12px 0}</style>
-      </head><body><div class="l"><h2>${name}</h2>
-      <p>${category} &bull; ${unit}</p>
-      ${packageInfo}
-      ${location}
-      <img src="${qrCodeDataUrl}" width="160" height="160" alt="QR" />
-      <p style="font-size:10px;color:#999;">${code}</p>
-      </div><script>window.onload=()=>{window.print();window.close();}</script></body></html>`);
-      w.document.close();
-      return true;
-    },
-    [toast],
-  );
-
   return {
     lookupScannedCode,
     handleScanFind,
     handleScanReceive,
-    handlePrintLabel,
     confirmScanCreate,
   };
 }

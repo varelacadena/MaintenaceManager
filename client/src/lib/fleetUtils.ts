@@ -1,6 +1,9 @@
+import type { TechPermissionUser } from "@shared/techPermissions";
+import { canManageFleet } from "@shared/techPermissions";
+
 /** Roles that can manage fleet reservations and see org-wide trip logs. */
-export function isFleetPrivilegedRole(role: string | undefined): boolean {
-  return role === "admin";
+export function isFleetPrivilegedRole(user: TechPermissionUser | null | undefined): boolean {
+  return canManageFleet(user);
 }
 
 export const FLEET_PAGE_SIZE = 24;

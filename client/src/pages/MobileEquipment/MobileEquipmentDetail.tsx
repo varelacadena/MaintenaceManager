@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, Trash2, Wrench } from "lucide-react";
+import { ArrowLeft, Plus, QrCode, Trash2, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +20,14 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { canEditEquipment } from "@/lib/equipmentAccess";
 import type { MobileEquipment, MobileEquipmentMaintenanceLogWithParts } from "@shared/schema";
 import { categoryLabel, statusLabel } from "@/lib/mobileEquipmentConstants";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { exitTo } from "@/lib/navigation";
+import { QrLabelDialog } from "@/components/QrLabelDialog";
+import { getMobileEquipmentQrLabelLines } from "@/lib/mobileEquipmentQrLabel";
+import { mobileEquipmentQrUrl } from "@/lib/mobileEquipmentLinks";
 
 type PartRow = {
   partName: string;
@@ -45,7 +49,7 @@ export default function MobileEquipmentDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const canManage = canEditEquipment(user);
   const { toast } = useToast();
 
   const [maintType, setMaintType] = useState("");
@@ -55,6 +59,7 @@ export default function MobileEquipmentDetail() {
   const [maintHours, setMaintHours] = useState("");
   const [maintNotes, setMaintNotes] = useState("");
   const [parts, setParts] = useState<PartRow[]>([]);
+  const [isQrOpen, setIsQrOpen] = useState(false);
 
   const { data: equipment, isLoading, isError, error, refetch } = useQuery<MobileEquipment>({
     queryKey: [`/api/mobile-equipment/${id}`],
@@ -154,7 +159,28 @@ export default function MobileEquipmentDetail() {
           </p>
         </div>
         <Badge variant="secondary">{statusLabel(equipment.status)}</Badge>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setIsQrOpen(true)}
+          data-testid="button-qr-mobile-equipment-detail"
+        >
+          <QrCode className="h-4 w-4 mr-1.5" />
+          QR Label
+        </Button>
       </div>
+
+      <QrLabelDialog
+        open={isQrOpen}
+        onOpenChange={setIsQrOpen}
+        title="Tools & Equipment QR Code"
+        qrValue={mobileEquipmentQrUrl(window.location.origin, equipment.id)}
+        label={getMobileEquipmentQrLabelLines(equipment)}
+        caption={equipment.name}
+        scanHint="Scan to open this tool or equipment."
+        testIdPrefix="mobile-equipment-detail-qr"
+      />
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -211,7 +237,7 @@ export default function MobileEquipmentDetail() {
             />
           ) : null}
 
-          {isAdmin && (
+          {canManage && (
             <Card>
               <CardHeader className="p-3 pb-2">
                 <CardTitle className="text-base">Add Maintenance Record</CardTitle>
@@ -392,7 +418,7 @@ export default function MobileEquipmentDetail() {
                             ${log.cost.toFixed(2)}
                           </Badge>
                         )}
-                        {isAdmin && (
+                        {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"

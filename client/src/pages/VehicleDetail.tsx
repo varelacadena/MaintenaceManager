@@ -1,19 +1,22 @@
 import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Car, Calendar, ClipboardList, QrCode, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon, LogIn, LogOut, Eye } from "lucide-react";
+import { Car, Calendar, ClipboardList, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon, LogIn, LogOut, Eye, Printer } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isFleetPrivilegedRole } from "@/lib/fleetUtils";
 import { useAuth } from "@/hooks/useAuth";
 import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, User, VehicleMaintenanceLog, VehicleDocument } from "@shared/schema";
 import { format } from "date-fns";
 import { AlertTriangle, User as UserIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
+import { QrPrintSizeSelector } from "@/components/QrPrintSizeSelector";
 import { useToast } from "@/hooks/use-toast";
+import { printQrLabelFromArea, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { toDisplayUrl } from "@/lib/imageUtils";
@@ -50,6 +53,7 @@ export default function VehicleDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [qrPrintSize, setQrPrintSize] = useState<QrPrintSize>("medium");
 
   const deleteVehicleMutation = useMutation({
     mutationFn: async () => {
@@ -120,7 +124,7 @@ export default function VehicleDetail() {
     queryKey: ['/api/users'],
   });
 
-  const canManageVehicles = user?.role === "admin";
+  const canManageVehicles = isFleetPrivilegedRole(user);
 
   const [addDocumentDate, setAddDocumentDate] = useState<Date | undefined>(undefined);
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
@@ -1008,20 +1012,45 @@ export default function VehicleDetail() {
               </p>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 px-4">
-              <div className="bg-white p-4 rounded-lg">
+              <div className="bg-white p-4 rounded-lg" id="vehicle-qr-print-area">
                 <QRCode
                   value={qrCodeUrl}
-                  size={Math.min(200, window.innerWidth - 100)}
+                  size={QR_PRINT_SIZE_PX[qrPrintSize]}
                   data-testid="qr-code"
                 />
+                <p className="text-xs sm:text-sm text-muted-foreground mt-4 text-center break-words">
+                  {vehicle.vehicleId} ({vehicle.make} {vehicle.model})
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-4 text-center break-words">
-                {vehicle.vehicleId} ({vehicle.make} {vehicle.model})
-              </p>
-              <Button variant="outline" onClick={() => window.print()} data-testid="button-print-qr" className="mt-4">
-                <QrCode className="h-4 w-4 mr-2" />
-                Print QR Code
-              </Button>
+              <div className="flex flex-col items-center gap-3 mt-4 w-full max-w-xs">
+                <div className="space-y-1.5 w-full">
+                  <p className="text-xs text-muted-foreground text-center">Print size</p>
+                  <QrPrintSizeSelector value={qrPrintSize} onChange={setQrPrintSize} />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const printArea = document.getElementById("vehicle-qr-print-area");
+                    if (!printArea) return;
+                    const printed = printQrLabelFromArea(printArea, {
+                      title: `${vehicle.vehicleId} QR`,
+                      size: qrPrintSize,
+                    });
+                    if (!printed) {
+                      toast({
+                        title: "Popup blocked",
+                        description: "Allow popups to print QR codes.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-print-qr"
+                  className="w-full sm:w-auto"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print QR Code
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

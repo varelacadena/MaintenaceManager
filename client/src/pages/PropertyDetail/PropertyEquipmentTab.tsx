@@ -62,7 +62,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
     selectedSpaceId, setSelectedSpaceId,
     setQrEquipment, setIsQrDialogOpen,
     setFileViewerEquipment, setIsEquipmentFilesDialogOpen,
-    isBuilding, canEdit,
+    isBuilding, canEditEquipment,
     equipment, spaces,
     navigate, spaceFilteredEquipment,
     categories, filteredEquipment, groupedEquipment,
@@ -107,7 +107,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                 </SelectContent>
               </Select>
             )}
-            {canEdit && (
+            {canEditEquipment && (
               <Button
                 size="sm"
                 onClick={() => openCreateEquipmentDialog()}
@@ -154,7 +154,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
           <div className="text-center py-8 text-muted-foreground">
             <Wrench className="w-10 h-10 mx-auto mb-2 opacity-50" />
             <p className="text-sm">{emptyMessage}</p>
-            {canEdit && !equipmentSearch && (
+            {canEditEquipment && !equipmentSearch && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -237,7 +237,7 @@ export function PropertyEquipmentTab({ ctx }: PropertyEquipmentTabProps) {
                     >
                       <Calendar className="w-3 h-3" />
                     </Button>
-                    {canEdit && (
+                    {canEditEquipment && (
                       <>
                         <Button
                           size="icon"

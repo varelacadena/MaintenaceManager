@@ -125,6 +125,9 @@ export interface IStorage {
     phoneNumber?: string;
     firstName?: string;
     lastName?: string;
+    canManageEquipment?: boolean;
+    canManageFleet?: boolean;
+    canManageInventory?: boolean;
   }): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;

@@ -8,7 +8,18 @@ import { getSignedUploadParameters } from "@/lib/uploadUtils";
 import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
-import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote, TimeEntry } from "@shared/schema";
+import type {
+  Task,
+  User,
+  Property,
+  Upload,
+  PartUsed,
+  InventoryItem,
+  TaskNote,
+  TimeEntry,
+  TaskChecklistGroup,
+  TaskChecklistItem,
+} from "@shared/schema";
 import {
   panelStatusDotStyle,
   panelStatusPillStyle,
@@ -106,6 +117,25 @@ export function useTaskDetailPanel({
   const timeEntries = detail?.timeEntries ?? [];
   const taskNotes = detail?.notes ?? [];
 
+  type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
+
+  const { data: checklistGroups = [] } = useQuery<ChecklistGroupWithItems[]>({
+    queryKey: ["/api/tasks", taskId, "checklist-groups"],
+    enabled: !!taskId,
+  });
+
+  const totalChecklistItems = useMemo(
+    () => checklistGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [checklistGroups],
+  );
+  const completedChecklistItems = useMemo(
+    () => checklistGroups.reduce(
+      (sum, group) => sum + group.items.filter((item) => item.isCompleted).length,
+      0,
+    ),
+    [checklistGroups],
+  );
+
   const refreshTaskDetail = (patch?: Partial<Task>) => {
     invalidateTaskAfterMutation(taskId, patch ? { patch } : undefined);
   };
@@ -188,6 +218,18 @@ export function useTaskDetailPanel({
       refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "subtasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", variables.subtaskId] });
+    },
+  });
+
+  const toggleChecklistItemMutation = useMutation({
+    mutationFn: async ({ itemId, isCompleted }: { itemId: string; isCompleted: boolean }) => {
+      return apiRequest("PATCH", `/api/checklist-items/${itemId}`, { isCompleted });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "checklist-groups"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update checklist item.", variant: "destructive" });
     },
   });
 
@@ -542,6 +584,10 @@ export function useTaskDetailPanel({
     completedSubtasks,
     totalSubtasks,
     allSubtasksComplete,
+    checklistGroups,
+    totalChecklistItems,
+    completedChecklistItems,
+    toggleChecklistItemMutation,
     isStarted,
     isCompleted,
     isNotStarted,

@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
-import { requireAdmin, requireInventoryOperator, requireInventoryReader } from "../middleware";
+import { requireInventoryOperator, requireInventoryReader } from "../middleware";
 import { handleRouteError } from "../routeUtils";
 import { insertInventoryItemSchema } from "@shared/schema";
 import {
@@ -152,7 +152,7 @@ export function registerInventoryRoutes(app: Express) {
     }
   });
 
-  app.post("/api/inventory/import", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/inventory/import", isAuthenticated, requireInventoryOperator, async (req, res) => {
     try {
       const importSchema = z.object({
         items: z.array(insertInventoryItemSchema).min(1).max(500),
@@ -193,7 +193,7 @@ export function registerInventoryRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/inventory/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/inventory/:id", isAuthenticated, requireInventoryOperator, async (req, res) => {
     try {
       const cleaned = normalizeInventoryBody(req.body);
       const itemData = insertInventoryItemSchema.partial().parse(cleaned);
@@ -232,7 +232,7 @@ export function registerInventoryRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/inventory/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/inventory/:id", isAuthenticated, requireInventoryOperator, async (req, res) => {
     try {
       const existing = await storage.getInventoryItem(req.params.id);
       if (!existing) {

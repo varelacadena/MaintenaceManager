@@ -1,5 +1,6 @@
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { Route, Switch } from "wouter";
+import { canManageFleet } from "@shared/techPermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import RoleGuard from "@/components/RoleGuard";
@@ -256,7 +257,7 @@ function VendorsRoute() {
 function InventoryRoute() {
   return (
     <DomainErrorBoundary domain="Inventory">
-      <RoleGuard allowedRoles={["admin"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]} permission="inventory">
         <Inventory />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -286,7 +287,7 @@ function MobileEquipmentDetailRoute() {
 function VehiclesRoute() {
   return (
     <DomainErrorBoundary domain="Vehicle Fleet">
-      <RoleGuard allowedRoles={["admin"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]} permission="fleet">
         <Vehicles />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -297,7 +298,7 @@ function VehicleDetailRoute() {
   const { user } = useAuth();
   return (
     <DomainErrorBoundary domain="Vehicle Fleet">
-      {user?.role === "admin" ? <VehicleDetail /> : <VehicleQRRedirect />}
+      {user && canManageFleet(user) ? <VehicleDetail /> : <VehicleQRRedirect />}
     </DomainErrorBoundary>
   );
 }
@@ -305,7 +306,7 @@ function VehicleDetailRoute() {
 function VehicleEditRoute() {
   return (
     <DomainErrorBoundary domain="Vehicle Fleet">
-      <RoleGuard allowedRoles={["admin"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]} permission="fleet">
         <VehicleEdit />
       </RoleGuard>
     </DomainErrorBoundary>

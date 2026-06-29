@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
@@ -24,6 +25,7 @@ import {
   Wrench,
   Copy,
   ListChecks,
+  ClipboardList,
   Map,
 } from "lucide-react";
 import {
@@ -138,6 +140,8 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
     timeEntries, totalMinutes, statusPill, statusDot, statusLabel,
     urg, isOverdue, property, assignee, assigneeInitials, assigneeName,
     completedSubtasks, totalSubtasks, allSubtasksComplete,
+    checklistGroups, totalChecklistItems, completedChecklistItems,
+    toggleChecklistItemMutation,
     editingNoteId, setEditingNoteId, editNoteContent, setEditNoteContent,
     updateNoteMutation, setDeleteNoteId, setIsAddNoteDialogOpen,
     setIsEditMode, setDeleteDialogOpen,
@@ -169,20 +173,67 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
     }
   };
 
+  const adminActionsMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={isMobile ? "h-9 w-9 shrink-0" : undefined}
+          data-testid="button-admin-more-menu"
+        >
+          <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {isMobile && isNotStarted && (
+          <DropdownMenuItem className="gap-2" onClick={handleStartTask} disabled={updateStatusMutation.isPending} data-testid="button-admin-start-task-mobile">
+            <Play className="w-4 h-4" />
+            Start Task
+          </DropdownMenuItem>
+        )}
+        {isMobile && isStarted && (
+          <DropdownMenuItem
+            className="gap-2"
+            onClick={handleMarkComplete}
+            disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
+            data-testid="button-admin-mark-complete-mobile"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Complete Task
+          </DropdownMenuItem>
+        )}
+        {isMobile && (
+          <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
+            <Pencil className="w-4 h-4" />
+            Edit Task
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">
+          <Trash2 className="w-4 h-4" />
+          Delete Task
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div className="h-full flex flex-col bg-muted/30" data-testid="task-detail-panel">
       <div className="flex-1 overflow-y-auto">
         <div className={cn("mx-auto w-full space-y-5", isMobile ? "px-4 py-5" : "max-w-6xl px-6 py-6")}>
           {isMobile && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-panel-close"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Return to Work
-            </button>
+            <div className="sticky top-0 z-10 -mx-4 px-4 py-2 flex items-center justify-between gap-3 bg-muted/30 backdrop-blur-sm border-b border-border/60">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-w-0"
+                data-testid="button-panel-close"
+              >
+                <ArrowLeft className="w-4 h-4 shrink-0" />
+                <span className="truncate">Return to Work</span>
+              </button>
+              {adminActionsMenu}
+            </div>
           )}
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -224,72 +275,37 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 flex-wrap sm:justify-end">
-              {!isMobile && isNotStarted && (
-                <Button
-                  className="gap-2"
-                  onClick={handleStartTask}
-                  disabled={updateStatusMutation.isPending}
-                  data-testid="button-admin-start-task"
-                >
-                  {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  Start Task
-                </Button>
-              )}
-              {!isMobile && isStarted && (
-                <Button
-                  className="gap-2 bg-green-700 hover:bg-green-800 text-white"
-                  onClick={handleMarkComplete}
-                  disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
-                  data-testid="button-admin-mark-complete"
-                >
-                  {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  Complete Task
-                </Button>
-              )}
-              {!isMobile && (
+            {!isMobile && (
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                {isNotStarted && (
+                  <Button
+                    className="gap-2"
+                    onClick={handleStartTask}
+                    disabled={updateStatusMutation.isPending}
+                    data-testid="button-admin-start-task"
+                  >
+                    {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    Start Task
+                  </Button>
+                )}
+                {isStarted && (
+                  <Button
+                    className="gap-2 bg-green-700 hover:bg-green-800 text-white"
+                    onClick={handleMarkComplete}
+                    disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
+                    data-testid="button-admin-mark-complete"
+                  >
+                    {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Complete Task
+                  </Button>
+                )}
                 <Button variant="outline" className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
                   <Pencil className="w-4 h-4" />
                   Edit
                 </Button>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="ghost" data-testid="button-admin-more-menu">
-                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {isMobile && isNotStarted && (
-                    <DropdownMenuItem className="gap-2" onClick={handleStartTask} disabled={updateStatusMutation.isPending} data-testid="button-admin-start-task-mobile">
-                      <Play className="w-4 h-4" />
-                      Start Task
-                    </DropdownMenuItem>
-                  )}
-                  {isMobile && isStarted && (
-                    <DropdownMenuItem
-                      className="gap-2"
-                      onClick={handleMarkComplete}
-                      disabled={updateStatusMutation.isPending || (totalSubtasks > 0 && !allSubtasksComplete)}
-                      data-testid="button-admin-mark-complete-mobile"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Complete Task
-                    </DropdownMenuItem>
-                  )}
-                  {isMobile && (
-                    <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
-                      <Pencil className="w-4 h-4" />
-                      Edit Task
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">
-                    <Trash2 className="w-4 h-4" />
-                    Delete Task
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                {adminActionsMenu}
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -587,6 +603,65 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                   );
                 })}
               </ul>
+            </DossierCard>
+          )}
+
+          {totalChecklistItems > 0 && (
+            <DossierCard
+              title="Checklists"
+              icon={<ClipboardList className="w-4 h-4" />}
+              badge={
+                <Badge variant="secondary" className="text-[10px] font-normal tabular-nums">
+                  {completedChecklistItems}/{totalChecklistItems}
+                </Badge>
+              }
+              testId="panel-checklists"
+            >
+              <div className="w-full rounded-full overflow-hidden mb-4 h-1.5 bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${(completedChecklistItems / totalChecklistItems) * 100}%` }}
+                />
+              </div>
+              <div className="space-y-4">
+                {checklistGroups.map((group) => (
+                  <div key={group.id} className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.name}
+                    </p>
+                    <ul className="space-y-1">
+                      {group.items.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className="flex items-center gap-3 w-full py-2 px-1 text-left rounded-md hover-elevate"
+                            onClick={() =>
+                              toggleChecklistItemMutation.mutate({
+                                itemId: item.id,
+                                isCompleted: !item.isCompleted,
+                              })
+                            }
+                            data-testid={`checklist-item-${item.id}`}
+                          >
+                            <Checkbox
+                              checked={item.isCompleted}
+                              className="w-5 h-5 shrink-0 pointer-events-none"
+                            />
+                            <span
+                              className={cn(
+                                "text-sm flex-1",
+                                item.isCompleted && "line-through text-muted-foreground",
+                              )}
+                            >
+                              {item.text}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </DossierCard>
           )}
 

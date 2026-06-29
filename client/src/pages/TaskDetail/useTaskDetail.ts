@@ -6,6 +6,7 @@ import { useFileDownload } from "@/hooks/use-download";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { canReadInventory } from "@/lib/inventoryAccess";
+import { resolveInventoryItemFromScan } from "@/lib/inventoryLinks";
 import { parseVehicleIdFromScan, resolveEquipmentIdFromScan } from "@/lib/equipmentScan";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type {
@@ -463,20 +464,7 @@ export function useTaskDetail() {
   };
 
   const handleScanPart = async (barcodeValue: string) => {
-    const byBarcode = await fetch(`/api/inventory/by-barcode/${encodeURIComponent(barcodeValue)}`, {
-      credentials: "include",
-    });
-    let item: InventoryItem | null = null;
-    if (byBarcode.ok) {
-      item = await byBarcode.json();
-    } else {
-      const byId = await fetch(`/api/inventory/${encodeURIComponent(barcodeValue)}`, {
-        credentials: "include",
-      });
-      if (byId.ok) {
-        item = await byId.json();
-      }
-    }
+    const item = await resolveInventoryItemFromScan<InventoryItem>(barcodeValue);
     if (item) {
       setSelectedInventoryItemId(item.id);
       setInventorySearchQuery(item.name);

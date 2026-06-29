@@ -2,6 +2,8 @@ import type { Response } from "express";
 import { z } from "zod";
 import { computeSyncedVehicleStatus } from "@shared/fleetStatus";
 import { VEHICLE_ACCESS_RESERVATION_STATUSES } from "@shared/fleetReservationPolicy";
+import { canManageFleet } from "@shared/techPermissions";
+import type { TechPermissionUser } from "@shared/techPermissions";
 import { storage } from "./storage";
 
 interface DatabaseError {
@@ -78,13 +80,18 @@ export function isFleetPrivilegedRole(role: string | undefined): boolean {
   return role === "admin";
 }
 
+/** Prefer canManageFleet(user) when the full user record is available. */
+export function isFleetPrivilegedUser(user: TechPermissionUser | null | undefined): boolean {
+  return canManageFleet(user);
+}
+
 /** Non-privileged users may only read vehicles tied to their own non-cancelled reservations. */
 export async function canAccessFleetVehicle(
   userId: string,
-  role: string | undefined,
+  user: TechPermissionUser,
   vehicleId: string,
 ): Promise<boolean> {
-  if (isFleetPrivilegedRole(role)) return true;
+  if (canManageFleet(user)) return true;
   const reservations = await storage.getVehicleReservations({ userId });
   return reservations.some(
     (r) =>
@@ -95,13 +102,13 @@ export async function canAccessFleetVehicle(
 
 export async function canAccessVehicleDocument(
   userId: string,
-  role: string | undefined,
+  user: TechPermissionUser,
   documentId: string,
 ): Promise<boolean> {
-  if (!isFleetPrivilegedRole(role)) return false;
+  if (!canManageFleet(user)) return false;
   const document = await storage.getVehicleDocument(documentId);
   if (!document) return false;
-  return canAccessFleetVehicle(userId, role, document.vehicleId);
+  return canAccessFleetVehicle(userId, user, document.vehicleId);
 }
 
 const DEFAULT_PAGE_LIMIT = 50;

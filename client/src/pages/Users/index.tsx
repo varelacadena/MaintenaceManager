@@ -6,6 +6,7 @@ import { useUsers } from './useUsers';
 import { UserDialogs } from './UserDialogs';
 import { UserDialogsExtra } from './UserDialogsExtra';
 import { UsersTabContent, PendingTabContent, CredentialsTabContent } from './UserTable';
+import { PermissionsTabContent } from './UserPermissionsTab';
 import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
 
 export default function Users() {
@@ -107,6 +108,7 @@ export default function Users() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="permissions" data-testid="tab-permissions">Permissions</TabsTrigger>
           <TabsTrigger value="credentials" data-testid="tab-credentials">Credentials</TabsTrigger>
         </TabsList>
 
@@ -116,6 +118,10 @@ export default function Users() {
 
         <TabsContent value="pending">
           <PendingTabContent ctx={ctx} />
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <PermissionsTabContent ctx={ctx} />
         </TabsContent>
 
         <TabsContent value="credentials">

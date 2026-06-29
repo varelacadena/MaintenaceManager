@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
-import { requireAdmin, requireTechnicianOrAdmin } from "../middleware";
+import { requireEquipmentManager, requireTechnicianOrAdmin } from "../middleware";
 import { handleRouteError } from "../routeUtils";
 import {
   insertMobileEquipmentSchema,
@@ -43,7 +43,7 @@ export function registerMobileEquipmentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/mobile-equipment", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/mobile-equipment", isAuthenticated, requireEquipmentManager, async (req, res) => {
     try {
       const data = insertMobileEquipmentSchema.parse(req.body);
       const item = await storage.createMobileEquipment(data);
@@ -53,7 +53,7 @@ export function registerMobileEquipmentRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/mobile-equipment/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/mobile-equipment/:id", isAuthenticated, requireEquipmentManager, async (req, res) => {
     try {
       const data = insertMobileEquipmentSchema.partial().parse(req.body);
       const item = await storage.updateMobileEquipment(req.params.id, data);
@@ -66,7 +66,7 @@ export function registerMobileEquipmentRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/mobile-equipment/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/mobile-equipment/:id", isAuthenticated, requireEquipmentManager, async (req, res) => {
     try {
       await storage.deleteMobileEquipment(req.params.id);
       res.json({ success: true });
@@ -96,7 +96,7 @@ export function registerMobileEquipmentRoutes(app: Express) {
   app.post(
     "/api/mobile-equipment/:id/maintenance-logs",
     isAuthenticated,
-    requireAdmin,
+    requireEquipmentManager,
     async (req, res) => {
       try {
         const equipment = await storage.getMobileEquipment(req.params.id);
@@ -138,7 +138,7 @@ export function registerMobileEquipmentRoutes(app: Express) {
   app.delete(
     "/api/mobile-equipment-maintenance-logs/:id",
     isAuthenticated,
-    requireAdmin,
+    requireEquipmentManager,
     async (req, res) => {
       try {
         await storage.deleteMobileEquipmentMaintenanceLog(req.params.id);

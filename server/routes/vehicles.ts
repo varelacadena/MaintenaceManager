@@ -11,7 +11,7 @@ import {
 import {
   handleRouteError,
   syncVehicleStatus,
-  isFleetPrivilegedRole,
+  isFleetPrivilegedUser,
   parsePaginationQuery,
   canAccessFleetVehicle,
   canAccessVehicleDocument,
@@ -115,7 +115,7 @@ export function registerVehicleRoutes(app: Express) {
       }
       const allowed = await canAccessFleetVehicle(
         req.userId,
-        currentUser.role,
+        currentUser,
         vehicle.id,
       );
       if (!allowed) {
@@ -127,7 +127,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicles", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/vehicles", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const vehicleData = insertVehicleSchema.parse(req.body);
       const vehicle = await storage.createVehicle(vehicleData);
@@ -137,7 +137,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/vehicles/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const validated = insertVehicleSchema.partial().parse(req.body);
       const vehicle = await storage.updateVehicle(req.params.id, validated);
@@ -150,7 +150,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/vehicles/:id/status", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/vehicles/:id/status", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const { status } = z.object({ status: vehicleStatusSchema }).parse(req.body);
       const vehicle = await storage.updateVehicleStatus(req.params.id, status);
@@ -163,7 +163,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/vehicles/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
+  app.delete("/api/vehicles/:id", isAuthenticated, requireFleetPrivileged, async (req: any, res) => {
     try {
       const vehicle = await storage.getVehicle(req.params.id);
       if (!vehicle) {
@@ -235,7 +235,7 @@ export function registerVehicleRoutes(app: Express) {
       const statusParam = req.query.status as string | undefined;
       let userId = req.query.userId as string | undefined;
 
-      if (!isFleetPrivilegedRole(currentUser.role)) {
+      if (!isFleetPrivilegedUser(currentUser)) {
         if (userId && userId !== req.userId) {
           return res.status(403).json({ message: "Forbidden" });
         }
@@ -262,7 +262,7 @@ export function registerVehicleRoutes(app: Express) {
 
       const resolvedPagination =
         pagination ??
-        (isFleetPrivilegedRole(currentUser.role)
+        (isFleetPrivilegedUser(currentUser)
           ? { limit: 100, offset: 0 }
           : null);
 
@@ -288,7 +288,7 @@ export function registerVehicleRoutes(app: Express) {
       }
 
       const currentUser = await storage.getUser(req.userId);
-      const isPrivileged = isFleetPrivilegedRole(currentUser?.role);
+      const isPrivileged = isFleetPrivilegedUser(currentUser);
 
       if (reservation.userId !== req.userId && !isPrivileged) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -313,7 +313,7 @@ export function registerVehicleRoutes(app: Express) {
 
       const currentUser = await storage.getUser(userId);
       const reservationData = insertVehicleReservationSchema.parse(bodyWithDates);
-      const isPrivileged = isFleetPrivilegedRole(currentUser?.role);
+      const isPrivileged = isFleetPrivilegedUser(currentUser);
       if (!isPrivileged) {
         reservationData.status = "pending";
       } else {
@@ -443,7 +443,7 @@ export function registerVehicleRoutes(app: Express) {
         updates.lockboxId = null;
       }
 
-      const isPrivileged = isFleetPrivilegedRole(currentUser.role);
+      const isPrivileged = isFleetPrivilegedUser(currentUser);
 
       if (!isPrivileged) {
         delete updates.lockboxId;
@@ -596,7 +596,7 @@ export function registerVehicleRoutes(app: Express) {
       }
       if (
         reservation.userId !== req.userId &&
-        !isFleetPrivilegedRole(currentUser.role)
+        !isFleetPrivilegedUser(currentUser)
       ) {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -636,7 +636,7 @@ export function registerVehicleRoutes(app: Express) {
       }
 
       const currentUser = await storage.getUser(userId);
-      const isPrivileged = isFleetPrivilegedRole(currentUser?.role);
+      const isPrivileged = isFleetPrivilegedUser(currentUser);
       if (reservation.userId !== userId && !isPrivileged) {
         return res.status(403).json({ message: "Unauthorized" });
       }
@@ -687,7 +687,7 @@ export function registerVehicleRoutes(app: Express) {
       const vehicleId = req.query.vehicleId as string | undefined;
       const openOnly = req.query.openOnly === "true";
       let userId = req.query.userId as string | undefined;
-      if (!isFleetPrivilegedRole(currentUser.role)) {
+      if (!isFleetPrivilegedUser(currentUser)) {
         if (userId && userId !== req.userId) {
           return res.status(403).json({ message: "Forbidden" });
         }
@@ -696,7 +696,7 @@ export function registerVehicleRoutes(app: Express) {
 
       if (openOnly) {
         const targetUserId = userId ?? req.userId;
-        if (targetUserId !== req.userId && !isFleetPrivilegedRole(currentUser.role)) {
+        if (targetUserId !== req.userId && !isFleetPrivilegedUser(currentUser)) {
           return res.status(403).json({ message: "Forbidden" });
         }
         const openLogs = await storage.getOpenVehicleCheckOutLogs(targetUserId);
@@ -720,7 +720,7 @@ export function registerVehicleRoutes(app: Express) {
       if (!currentUser) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      if (log.userId !== req.userId && !isFleetPrivilegedRole(currentUser.role)) {
+      if (log.userId !== req.userId && !isFleetPrivilegedUser(currentUser)) {
         return res.status(403).json({ message: "Forbidden" });
       }
       res.json(log);
@@ -732,7 +732,7 @@ export function registerVehicleRoutes(app: Express) {
   app.post("/api/vehicle-checkout-logs", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
       const checkoutUser = await storage.getUser(req.userId);
-      const isCheckoutPrivileged = isFleetPrivilegedRole(checkoutUser?.role);
+      const isCheckoutPrivileged = isFleetPrivilegedUser(checkoutUser);
       const adminOverride = isCheckoutPrivileged && req.body.adminOverride === true;
 
       if (req.body.startMileage === undefined || req.body.startMileage === null || req.body.startMileage === "") {
@@ -851,7 +851,7 @@ export function registerVehicleRoutes(app: Express) {
 
       const vehicleId = req.query.vehicleId as string | undefined;
       let userId = req.query.userId as string | undefined;
-      if (!isFleetPrivilegedRole(currentUser.role)) {
+      if (!isFleetPrivilegedUser(currentUser)) {
         if (userId && userId !== req.userId) {
           return res.status(403).json({ message: "Forbidden" });
         }
@@ -875,7 +875,7 @@ export function registerVehicleRoutes(app: Express) {
       if (!currentUser) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      if (log.userId !== req.userId && !isFleetPrivilegedRole(currentUser.role)) {
+      if (log.userId !== req.userId && !isFleetPrivilegedUser(currentUser)) {
         return res.status(403).json({ message: "Forbidden" });
       }
       res.json(log);
@@ -903,7 +903,7 @@ export function registerVehicleRoutes(app: Express) {
         return res.status(404).json({ message: "Check-out log not found" });
       }
       const checkInUser = await storage.getUser(req.userId);
-      const isCheckInPrivileged = isFleetPrivilegedRole(checkInUser?.role);
+      const isCheckInPrivileged = isFleetPrivilegedUser(checkInUser);
       if (checkOutLog.userId !== req.userId && !isCheckInPrivileged) {
         return res.status(403).json({ message: "Unauthorized: This check-out log belongs to another user" });
       }
@@ -1122,7 +1122,7 @@ export function registerVehicleRoutes(app: Express) {
   });
 
   // Sync vehicle statuses (admin only) - fixes vehicles stuck in incorrect state
-  app.post("/api/vehicles/sync-statuses", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/vehicles/sync-statuses", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const allVehicles = await storage.getVehicles();
       let updatedCount = 0;
@@ -1167,7 +1167,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicles/:id/maintenance-logs", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/vehicles/:id/maintenance-logs", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const logData = insertVehicleMaintenanceLogSchema.parse({
         ...req.body,
@@ -1185,7 +1185,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/vehicle-maintenance-logs/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/vehicle-maintenance-logs/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       await storage.deleteVehicleMaintenanceLog(req.params.id);
       res.json({ success: true });
@@ -1206,7 +1206,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicle-maintenance-schedules", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/vehicle-maintenance-schedules", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const scheduleData = insertVehicleMaintenanceScheduleSchema.parse(req.body);
       const schedule = await storage.createVehicleMaintenanceSchedule(scheduleData);
@@ -1216,7 +1216,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const validated = insertVehicleMaintenanceScheduleSchema.partial().parse(req.body);
       const schedule = await storage.updateVehicleMaintenanceSchedule(req.params.id, validated);
@@ -1229,7 +1229,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/vehicle-maintenance-schedules/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       await storage.deleteVehicleMaintenanceSchedule(req.params.id);
       res.json({ success: true });
@@ -1260,7 +1260,7 @@ export function registerVehicleRoutes(app: Express) {
       }
       const allowed = await canAccessVehicleDocument(
         req.userId,
-        currentUser.role,
+        currentUser,
         document.id,
       );
       if (!allowed) {
@@ -1272,7 +1272,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.post("/api/vehicles/:id/documents", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/vehicles/:id/documents", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const documentData = insertVehicleDocumentSchema.parse({
         ...req.body,
@@ -1286,7 +1286,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/vehicle-documents/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/vehicle-documents/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const validated = insertVehicleDocumentSchema.partial().parse(req.body);
       const updateData: any = { ...validated };
@@ -1303,7 +1303,7 @@ export function registerVehicleRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/vehicle-documents/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/vehicle-documents/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       await storage.deleteVehicleDocument(req.params.id);
       res.json({ success: true });

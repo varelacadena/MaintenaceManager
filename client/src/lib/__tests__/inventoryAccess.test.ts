@@ -14,10 +14,11 @@ describe("inventoryAccess", () => {
     expect(canReadInventory("staff")).toBe(false);
   });
 
-  it("canOperateInventory allows admin only", () => {
-    expect(canOperateInventory("admin")).toBe(true);
-    expect(canOperateInventory("technician")).toBe(false);
-    expect(canOperateInventory("student")).toBe(false);
+  it("canOperateInventory allows admin and permitted technicians", () => {
+    expect(canOperateInventory({ role: "admin" })).toBe(true);
+    expect(canOperateInventory({ role: "technician" })).toBe(false);
+    expect(canOperateInventory({ role: "technician", canManageInventory: true })).toBe(true);
+    expect(canOperateInventory({ role: "student" })).toBe(false);
   });
 
   it("canSeeInventoryCost is admin-only", () => {
@@ -26,7 +27,8 @@ describe("inventoryAccess", () => {
   });
 
   it("isInventoryAdmin", () => {
-    expect(isInventoryAdmin("admin")).toBe(true);
-    expect(isInventoryAdmin("technician")).toBe(false);
+    expect(isInventoryAdmin({ role: "admin" })).toBe(true);
+    expect(isInventoryAdmin({ role: "technician", canManageInventory: true })).toBe(true);
+    expect(isInventoryAdmin({ role: "technician" })).toBe(false);
   });
 });

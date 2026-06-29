@@ -105,7 +105,7 @@ export function VehicleReservationsContent() {
     queryKey: ["/api/auth/user"],
   });
 
-  const isFleetStaff = isFleetPrivilegedRole(currentUser?.role);
+  const isFleetStaff = isFleetPrivilegedRole(currentUser);
 
   const patchResUrl = (patch: Partial<typeof urlState>) => {
     setLocation(`/vehicles${buildFleetLocationSearch({ ...urlState, tab: "reservations", ...patch })}`);

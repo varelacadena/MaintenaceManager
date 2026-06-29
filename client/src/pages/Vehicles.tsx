@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useSearch } from "wouter";
+import { isFleetPrivilegedRole } from "@/lib/fleetUtils";
 import { useAuth } from "@/hooks/useAuth";
 import type { Vehicle } from "@shared/schema";
 import {
@@ -176,7 +177,7 @@ function FleetContent() {
     },
   });
 
-  const canManageVehicles = user?.role === "admin";
+  const canManageVehicles = isFleetPrivilegedRole(user);
 
   return (
     <div className="space-y-4">

@@ -1,5 +1,10 @@
 import type { RequestHandler } from "express";
 import type { User } from "@shared/schema";
+import {
+  canManageEquipment,
+  canManageFleet,
+  canManageInventory,
+} from "@shared/techPermissions";
 
 // Middleware to check if user has specific role
 export function requireRole(...allowedRoles: string[]): RequestHandler {
@@ -53,11 +58,27 @@ export const getCurrentUser = async (req: any): Promise<User | null> => {
 // Specific role middleware wrappers
 export const requireAdmin = requireRole("admin");
 export const requireTechnicianOrAdmin = requireRole("technician", "admin");
-export const requireFleetPrivileged = requireRole("admin");
+
+function requireUserPermission(check: (user: User) => boolean): RequestHandler {
+  return async (req: any, res, next) => {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!check(user)) {
+      return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
+    }
+    req.currentUser = user;
+    next();
+  };
+}
+
+export const requireEquipmentManager = requireUserPermission(canManageEquipment);
+export const requireFleetPrivileged = requireUserPermission(canManageFleet);
+/** Create items and adjust stock (search, add, use on inventory page). */
+export const requireInventoryOperator = requireUserPermission(canManageInventory);
 /** Read inventory when picking parts on tasks (staff excluded). */
 export const requireInventoryReader = requireRole("admin", "technician", "student");
-/** Create items and adjust stock (search, add, use on inventory page). */
-export const requireInventoryOperator = requireRole("admin");
 export const requireStaffOrHigher = requireRole("staff", "technician", "admin");
 // Role middleware for student/technician model
 export const requireStudentOrAdmin = requireRole("student", "admin");

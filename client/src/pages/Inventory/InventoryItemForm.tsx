@@ -221,12 +221,15 @@ export function InventoryItemForm({
           <FormLabel>Barcode / QR Code (Optional)</FormLabel>
           <div className="flex gap-2">
             <FormControl>
-              <Input {...field} value={field.value || ""} placeholder="Scan or enter barcode" data-testid={testId("input-barcode")} />
+              <Input {...field} value={field.value || ""} placeholder="Scan or enter barcode" className="font-mono" data-testid={testId("input-barcode")} />
             </FormControl>
             <Button type="button" variant="outline" size="icon" onClick={() => setIsScanBarcodeOpen(true)} data-testid={testId("button-scan-barcode-field")}>
               <ScanLine className="h-4 w-4" />
             </Button>
           </div>
+          <FormDescription className="text-xs">
+            Short code printed on QR labels. Scannable barcodes from the product work too.
+          </FormDescription>
           <BarcodeScanner
             open={isScanBarcodeOpen}
             onOpenChange={setIsScanBarcodeOpen}

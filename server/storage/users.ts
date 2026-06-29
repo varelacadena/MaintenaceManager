@@ -67,6 +67,9 @@ export async function updateUser(id: string, userData: {
   phoneNumber?: string;
   firstName?: string;
   lastName?: string;
+  canManageEquipment?: boolean;
+  canManageFleet?: boolean;
+  canManageInventory?: boolean;
 }): Promise<User | undefined> {
   const [user] = await db
     .update(users)

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
-import { requireAdmin, requireTechnicianOrAdmin } from "../middleware";
+import { requireAdmin, requireEquipmentManager, requireTechnicianOrAdmin } from "../middleware";
 import { handleRouteError, getAuthUser } from "../routeUtils";
 import { handleFacilityRouteError } from "../routeFacilityError";
 import {
@@ -356,7 +356,7 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.post("/api/equipment", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/equipment", isAuthenticated, requireEquipmentManager, async (req, res) => {
     try {
       const equipmentData = insertEquipmentSchema.parse(req.body);
       await validateEquipmentLocation(equipmentData.propertyId, equipmentData.spaceId);
@@ -389,7 +389,7 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/equipment/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/equipment/:id", isAuthenticated, requireEquipmentManager, async (req, res) => {
     try {
       const validated = insertEquipmentSchema.partial().parse(req.body);
       const existing = await storage.getEquipmentItem(req.params.id);
@@ -423,7 +423,7 @@ export function registerFacilityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/equipment/:id", isAuthenticated, requireAdmin, async (req: any, res) => {
+  app.delete("/api/equipment/:id", isAuthenticated, requireEquipmentManager, async (req: any, res) => {
     try {
       const item = await storage.getEquipmentItem(req.params.id);
       if (!item) {

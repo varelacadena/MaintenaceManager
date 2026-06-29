@@ -32,6 +32,9 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   role: varchar("role", { length: 20 }).notNull().default("staff"),
+  canManageEquipment: boolean("can_manage_equipment").notNull().default(false),
+  canManageFleet: boolean("can_manage_fleet").notNull().default(false),
+  canManageInventory: boolean("can_manage_inventory").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

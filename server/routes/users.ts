@@ -152,6 +152,39 @@ export function registerUserRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/users/:id/permissions", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const permissionsSchema = z.object({
+        canManageEquipment: z.boolean().optional(),
+        canManageFleet: z.boolean().optional(),
+        canManageInventory: z.boolean().optional(),
+      });
+      const validated = permissionsSchema.parse(req.body);
+
+      const targetUser = await storage.getUser(id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (targetUser.role !== "technician") {
+        return res.status(400).json({ message: "Permissions can only be set for technician accounts" });
+      }
+
+      const user = await storage.updateUser(id, validated);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid permissions data", errors: error.errors });
+      }
+      handleRouteError(res, error, "Failed to update user permissions");
+    }
+  });
+
   app.patch("/api/users/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;

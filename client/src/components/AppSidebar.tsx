@@ -33,9 +33,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { Badge } from "@/components/ui/badge";
 import { isNavItemActive } from "@/lib/navigation";
+import type { User } from "@shared/schema";
+import {
+  canManageFleet,
+  canManageInventory,
+  canManageEquipment,
+} from "@shared/techPermissions";
 
 interface AppSidebarProps {
-  userRole: "admin" | "staff" | "student" | "technician";
+  user: User | null | undefined;
   userName: string;
   userInitials: string;
 }
@@ -80,9 +86,30 @@ const roleMenus = {
   ],
 };
 
-export default function AppSidebar({ userRole, userName, userInitials }: AppSidebarProps) {
+export default function AppSidebar({ user, userName, userInitials }: AppSidebarProps) {
   const [location] = useLocation();
-  const menuItems = roleMenus[userRole];
+  const userRole = user?.role as "admin" | "staff" | "student" | "technician" | undefined;
+  const menuItems = (() => {
+    if (!userRole) return [];
+    const base = roleMenus[userRole];
+    if (userRole !== "technician") return base;
+
+    const extra: typeof base = [];
+    if (canManageEquipment(user)) {
+      extra.push({ title: "Properties", url: "/properties", icon: Map });
+    }
+    if (canManageFleet(user)) {
+      extra.push({ title: "Vehicles", url: "/vehicles", icon: Car });
+    }
+    if (canManageInventory(user)) {
+      extra.push({ title: "Inventory", url: "/inventory", icon: Package });
+    }
+    if (extra.length === 0) return base;
+
+    const settingsIndex = base.findIndex((item) => item.url === "/settings");
+    if (settingsIndex === -1) return [...base, ...extra];
+    return [...base.slice(0, settingsIndex), ...extra, ...base.slice(settingsIndex)];
+  })();
   const notificationCounts = useNotificationCounts();
   const { setOpenMobile, isMobile, setOpen } = useSidebar();
 

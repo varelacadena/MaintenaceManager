@@ -31,8 +31,9 @@ import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelec
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
 import { format } from "date-fns";
-import type { Task, InsertTask, User, Property, Equipment, Vehicle } from "@shared/schema";
+import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem } from "@shared/schema";
 import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";
+import { TaskChecklistEditor } from "@/components/task-form/TaskChecklistEditor";
 import type { SelectedAsset } from "@/components/task-form/TaskLocationFields";
 import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { isAutoShopName } from "@/lib/autoShopUtils";
@@ -43,6 +44,11 @@ import {
   type AssetWithSubtaskId,
 } from "@/lib/taskAssetSubtasks";
 import { cn } from "@/lib/utils";
+import {
+  syncTaskChecklists,
+  toEditableChecklistGroups,
+  type EditableChecklistGroup,
+} from "@/lib/syncTaskChecklists";
 
 interface Area {
   id: string;
@@ -72,6 +78,8 @@ type TaskHelperAssignment = {
     role: string;
   };
 };
+
+type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
 
 interface TaskEditModeProps {
   taskId: string;
@@ -124,6 +132,9 @@ export function TaskEditMode({
 
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [checklistGroups, setChecklistGroups] = useState<EditableChecklistGroup[]>([]);
+  const [checklistsLoaded, setChecklistsLoaded] = useState(false);
+  const initialChecklistsRef = useRef<ChecklistGroupWithItems[]>([]);
 
   const { data: allUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -168,6 +179,11 @@ export function TaskEditMode({
     enabled: !!areaId,
   });
 
+  const { data: originalChecklistGroups = [], isSuccess: checklistsFetched } = useQuery<ChecklistGroupWithItems[]>({
+    queryKey: ["/api/tasks", taskId, "checklist-groups"],
+    enabled: !!taskId,
+  });
+
   useEffect(() => {
     setName(task.name);
     setDescription(task.description || "");
@@ -204,6 +220,19 @@ export function TaskEditMode({
       setSelectedAssets((prev) => prev.filter((asset) => asset.type !== "vehicle"));
     }
   }, [showVehicle]);
+
+  useEffect(() => {
+    setChecklistsLoaded(false);
+    setChecklistGroups([]);
+    initialChecklistsRef.current = [];
+  }, [task.id]);
+
+  useEffect(() => {
+    if (!checklistsFetched || checklistsLoaded) return;
+    setChecklistGroups(toEditableChecklistGroups(originalChecklistGroups));
+    initialChecklistsRef.current = originalChecklistGroups;
+    setChecklistsLoaded(true);
+  }, [task.id, originalChecklistGroups, checklistsFetched, checklistsLoaded]);
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
@@ -323,6 +352,10 @@ export function TaskEditMode({
       if (usesAssetSelection) {
         await syncTaskAssets(taskId, initialAssetsRef.current, selectedAssets);
         initialAssetsRef.current = selectedAssets.map((asset) => ({ ...asset }));
+      }
+
+      if (checklistsLoaded) {
+        await syncTaskChecklists(taskId, initialChecklistsRef.current, checklistGroups);
       }
 
       invalidateTaskAfterMutation(taskId, { broad: true });
@@ -670,6 +703,12 @@ export function TaskEditMode({
             </div>
           )}
         </div>
+
+        <TaskChecklistEditor
+          groups={checklistGroups}
+          onChange={setChecklistGroups}
+          showOptionalBadge={false}
+        />
 
         <div
           className="pt-4 mt-4"

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { canEditEquipment } from "@/lib/equipmentAccess";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
@@ -581,6 +582,7 @@ export function usePropertyDetail() {
     : tasks;
 
   const canEdit = user?.role === "admin";
+  const canEditEquipmentOnProperty = canEditEquipment(user);
   const openTaskCount = tasks.filter((t) => t.status !== "completed").length;
 
   return {
@@ -614,7 +616,7 @@ export function usePropertyDetail() {
     isTasksError, refetchTasks,
     isSpacesError, refetchSpaces,
     equipment, tasks, users, spaces,
-    isBuilding, canEdit, openTaskCount,
+    isBuilding, canEdit, canEditEquipment: canEditEquipmentOnProperty, openTaskCount,
     form, propertyForm, spaceForm,
     createSpaceMutation, updateSpaceMutation, deleteSpaceMutation,
     createEquipmentMutation, updateEquipmentMutation, deleteEquipmentMutation,

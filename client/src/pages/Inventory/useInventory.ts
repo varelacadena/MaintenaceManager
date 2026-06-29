@@ -3,7 +3,7 @@ import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
-import { canOperateInventory, isInventoryAdmin } from "@/lib/inventoryAccess";
+import { canOperateInventory } from "@/lib/inventoryAccess";
 import { isLowStock, type InventorySortKey } from "@/lib/inventoryUtils";
 import type { InventoryItem, InsertInventoryItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -32,8 +32,8 @@ export function useInventory() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const isAdmin = isInventoryAdmin(user?.role);
-  const canOperate = canOperateInventory(user?.role);
+  const isAdmin = user?.role === "admin";
+  const canOperate = canOperateInventory(user);
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [stockFilter, setStockFilter] = useState<"all" | "low">("all");
@@ -61,8 +61,8 @@ export function useInventory() {
   const [detailItem, setDetailItem] = useState<InventoryItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const itemDeepLinkHandled = useRef(false);
 
   const urlInitialized = useRef(false);
   useEffect(() => {
@@ -78,6 +78,33 @@ export function useInventory() {
       if (q) setSearch(q);
       urlInitialized.current = true;
     }
+  }, [urlSearch]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(urlSearch);
+    const itemId = params.get("item");
+    if (!itemId || itemDeepLinkHandled.current) return;
+    itemDeepLinkHandled.current = true;
+
+    fetch(`/api/inventory/${encodeURIComponent(itemId)}`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((item: InventoryItem | null) => {
+        if (!item) return;
+        setActiveCategory("all");
+        setStockFilter("all");
+        setSearch(item.name);
+        setPage(0);
+        setDetailItem(item);
+        setIsDetailOpen(true);
+        setHighlightedId(item.id);
+        setTimeout(() => {
+          rowRefs.current[item.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 300);
+        setTimeout(() => setHighlightedId(null), 3000);
+      })
+      .catch(() => {
+        itemDeepLinkHandled.current = false;
+      });
   }, [urlSearch]);
 
   useEffect(() => {
@@ -223,19 +250,9 @@ export function useInventory() {
     setIsEditDialogOpen(true);
   };
 
-  const handleShowQr = async (item: InventoryItem) => {
+  const handleShowQr = (item: InventoryItem) => {
     setSelectedItem(item);
-    try {
-      const QRCode = (await import("qrcode")).default;
-      setQrCodeDataUrl(await QRCode.toDataURL(item.barcode || item.id, { width: 200, margin: 2 }));
-    } catch {
-      setQrCodeDataUrl("");
-    }
     setIsQrDialogOpen(true);
-  };
-
-  const handlePrintLabel = () => {
-    scan.handlePrintLabel(selectedItem, qrCodeDataUrl);
   };
 
   const announceStatusChange = (label: string) => {
@@ -316,8 +333,6 @@ export function useInventory() {
     setReceiveItem,
     highlightedId,
     setHighlightedId,
-    qrCodeDataUrl,
-    setQrCodeDataUrl,
     rowRefs,
     statusAnnouncement,
     announceStatusChange,
@@ -353,7 +368,6 @@ export function useInventory() {
     handleEditSubmit,
     handleEdit,
     handleShowQr,
-    handlePrintLabel,
     handleScanFind: scan.handleScanFind,
     handleScanReceive: scan.handleScanReceive,
     isLowStock,

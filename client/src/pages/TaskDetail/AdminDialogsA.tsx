@@ -20,7 +20,7 @@ export function AdminDialogsA({ ctx }: { ctx: TaskDetailContext }) {
     setQuickInventoryName,
   } = ctx;
 
-  const canCreateInventory = canOperateInventory(user?.role);
+  const canCreateInventory = canOperateInventory(user);
 
   if (!task) return null;
 

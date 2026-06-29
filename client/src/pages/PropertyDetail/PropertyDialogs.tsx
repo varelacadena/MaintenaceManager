@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import QRCode from "react-qr-code";
+import { QrLabelDialog } from "@/components/QrLabelDialog";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { FileAttachment } from "@/components/FileAttachment";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,7 +40,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Plus, Printer, Trash2, Upload, X, QrCode } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { EQUIPMENT_CATEGORIES, type PropertyDetailContext } from "./usePropertyDetail";
 import type { Upload as UploadType } from "@shared/schema";
 
@@ -67,7 +67,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
     onPropertySubmit, onSubmit, onSpaceSubmit,
     updatePropertyMutation, createEquipmentMutation, updateEquipmentMutation,
     createSpaceMutation, updateSpaceMutation,
-    isBuilding, spaces, canEdit, handleEditEquipment,
+    isBuilding, spaces, canEdit, canEditEquipment, handleEditEquipment,
   } = ctx;
   const equipmentIdForUploads = editingEquipment?.id ?? "";
   const { data: equipmentUploads = [], isLoading: isLoadingEquipmentUploads } = useQuery<UploadType[]>({
@@ -591,79 +591,18 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-        <DialogContent className="max-w-sm text-center">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-center gap-2">
-              <QrCode className="w-5 h-5 text-primary" />
-              Equipment QR Code
-            </DialogTitle>
-            <DialogDescription>
-              {qrEquipment ? getEquipmentQrLabelLines(qrEquipment, spaces).primary : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-2">
-            {qrEquipment && (() => {
-              const label = getEquipmentQrLabelLines(qrEquipment, spaces);
-              return (
-              <>
-                <div className="bg-white p-4 rounded-md border" id="qr-print-area">
-                  <QRCode
-                    value={equipmentQrUrl(window.location.origin, qrEquipment.id)}
-                    size={200}
-                  />
-                  <div className="mt-2 text-center">
-                    <p className="text-sm font-semibold font-mono text-black tracking-wide">{label.primary}</p>
-                    {label.secondary && (
-                      <p className="text-xs text-gray-600 mt-1">{label.secondary}</p>
-                    )}
-                    {label.serialNumber && (
-                      <p className="text-xs text-gray-500 mt-1">SN: {label.serialNumber}</p>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground px-2">
-                  {qrEquipment.name}
-                  {" · "}
-                  Scan to view equipment info, work history, and linked manuals.
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const printContent = document.getElementById("qr-print-area");
-                      if (printContent) {
-                        const w = window.open("", "_blank");
-                        if (w) {
-                          w.document.write(`<html><head><title>${label.primary} QR</title><style>body{display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:sans-serif;}@media print{body{margin:0;}}</style></head><body>${printContent.outerHTML}</body></html>`);
-                          w.document.close();
-                          w.focus();
-                          w.print();
-                          w.close();
-                        }
-                      }
-                    }}
-                    data-testid="button-print-qr"
-                  >
-                    <Printer className="w-3.5 h-3.5 mr-1.5" />
-                    Print Label
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsQrDialogOpen(false)}
-                    data-testid="button-close-qr"
-                  >
-                    Close
-                  </Button>
-                </div>
-              </>
-              );
-            })()}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {qrEquipment && (
+        <QrLabelDialog
+          open={isQrDialogOpen}
+          onOpenChange={setIsQrDialogOpen}
+          title="Equipment QR Code"
+          qrValue={equipmentQrUrl(window.location.origin, qrEquipment.id)}
+          label={getEquipmentQrLabelLines(qrEquipment, spaces)}
+          caption={qrEquipment.name}
+          scanHint="Scan to view equipment info, work history, and linked manuals."
+          testIdPrefix="equipment-qr"
+        />
+      )}
 
       <Dialog open={isEquipmentFilesDialogOpen} onOpenChange={setIsEquipmentFilesDialogOpen}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
@@ -736,7 +675,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
             </div>
           </div>
           <DialogFooter>
-            {canEdit && fileViewerEquipment && (
+            {canEditEquipment && fileViewerEquipment && (
               <Button
                 variant="outline"
                 onClick={() => {

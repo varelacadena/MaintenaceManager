@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Search, Wrench } from "lucide-react";
+import { Plus, QrCode, Search, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { canEditEquipment } from "@/lib/equipmentAccess";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   MOBILE_EQUIPMENT_CATEGORIES,
@@ -36,6 +37,9 @@ import {
   statusLabel,
 } from "@/lib/mobileEquipmentConstants";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
+import { QrLabelDialog } from "@/components/QrLabelDialog";
+import { getMobileEquipmentQrLabelLines } from "@/lib/mobileEquipmentQrLabel";
+import { mobileEquipmentQrUrl } from "@/lib/mobileEquipmentLinks";
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
   available: "default",
@@ -56,13 +60,15 @@ function buildListUrl(search: string, partNumber: string, category: string, stat
 
 export default function MobileEquipmentPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const canManage = canEditEquipment(user);
   const { toast } = useToast();
   const [searchInput, setSearchInput] = useState("");
   const [partNumberInput, setPartNumberInput] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [qrItem, setQrItem] = useState<MobileEquipment | null>(null);
+  const [isQrOpen, setIsQrOpen] = useState(false);
 
   const debouncedSearch = useDebouncedValue(searchInput);
   const debouncedPartNumber = useDebouncedValue(partNumberInput);
@@ -111,7 +117,7 @@ export default function MobileEquipmentPage() {
             Portable assets — mowers, tractors, pumps, and more
           </p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button data-testid="button-add-mobile-equipment">
@@ -198,8 +204,11 @@ export default function MobileEquipmentPage() {
                       <FormItem>
                         <FormLabel>Asset Tag</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value ?? ""} />
+                          <Input {...field} value={field.value ?? ""} className="font-mono uppercase" />
                         </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Short code printed on QR labels.
+                        </p>
                       </FormItem>
                     )}
                   />
@@ -279,31 +288,62 @@ export default function MobileEquipmentPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {items.map((item) => (
-            <Link key={item.id} href={`/tools-equipment/${item.id}`}>
-              <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-mobile-equipment-${item.id}`}>
-                <CardHeader className="pb-2 p-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-base leading-tight">{item.name}</CardTitle>
-                    <Badge variant={statusVariant[item.status] ?? "secondary"} className="text-xs shrink-0">
+            <Card key={item.id} className="hover-elevate h-full" data-testid={`card-mobile-equipment-${item.id}`}>
+              <CardHeader className="pb-2 p-3">
+                <div className="flex justify-between items-start gap-2">
+                  <Link href={`/tools-equipment/${item.id}`} className="flex-1 min-w-0">
+                    <CardTitle className="text-base leading-tight hover:underline">{item.name}</CardTitle>
+                  </Link>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      title="Show QR Code"
+                      data-testid={`button-qr-mobile-equipment-${item.id}`}
+                      onClick={() => {
+                        setQrItem(item);
+                        setIsQrOpen(true);
+                      }}
+                    >
+                      <QrCode className="h-4 w-4 text-primary" />
+                    </Button>
+                    <Badge variant={statusVariant[item.status] ?? "secondary"} className="text-xs">
                       {statusLabel(item.status)}
                     </Badge>
                   </div>
+                </div>
+                <Link href={`/tools-equipment/${item.id}`}>
                   <p className="text-xs text-muted-foreground">
                     {categoryLabel(item.category)}
                     {item.make || item.model
                       ? ` · ${[item.make, item.model].filter(Boolean).join(" ")}`
                       : ""}
                   </p>
-                </CardHeader>
-                {item.assetTag && (
-                  <CardContent className="pt-0 p-3">
-                    <p className="text-xs font-mono text-muted-foreground">Tag: {item.assetTag}</p>
-                  </CardContent>
-                )}
-              </Card>
-            </Link>
+                </Link>
+              </CardHeader>
+              {item.assetTag && (
+                <CardContent className="pt-0 p-3">
+                  <p className="text-xs font-mono text-muted-foreground">{item.assetTag}</p>
+                </CardContent>
+              )}
+            </Card>
           ))}
         </div>
+      )}
+
+      {qrItem && (
+        <QrLabelDialog
+          open={isQrOpen}
+          onOpenChange={setIsQrOpen}
+          title="Tools & Equipment QR Code"
+          qrValue={mobileEquipmentQrUrl(window.location.origin, qrItem.id)}
+          label={getMobileEquipmentQrLabelLines(qrItem)}
+          caption={qrItem.name}
+          scanHint="Scan to open this tool or equipment."
+          testIdPrefix="mobile-equipment-qr"
+        />
       )}
     </div>
   );

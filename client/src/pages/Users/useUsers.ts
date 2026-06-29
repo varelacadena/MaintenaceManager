@@ -219,6 +219,35 @@ export function useUsers() {
     },
   });
 
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      permissions,
+    }: {
+      userId: string;
+      permissions: {
+        canManageEquipment?: boolean;
+        canManageFleet?: boolean;
+        canManageInventory?: boolean;
+      };
+    }) => {
+      const response = await apiRequest("PATCH", `/api/users/${userId}/permissions`, permissions);
+      return response.json();
+    },
+    onSuccess: (updatedUser: User) => {
+      upsertUserInDirectoryCaches(queryClient, updatedUser);
+      invalidateUserDirectoryQueries(queryClient);
+      toast({ title: "Permissions updated" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update permissions",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       return await apiRequest("PATCH", `/api/users/${userId}/role`, { role });
@@ -526,6 +555,7 @@ export function useUsers() {
     deletePendingMutation,
     createUserMutation,
     updateRoleMutation,
+    updatePermissionsMutation,
     updateUserMutation,
     updatePasswordMutation,
     deleteUserMutation,
