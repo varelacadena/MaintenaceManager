@@ -62,8 +62,13 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
     handleProjectStatusChange,
     departmentFilter,
     setDepartmentFilterAndUrl,
+    techFilter,
+    setTechFilterAndUrl,
+    technicianUsers,
     areas,
     UNASSIGNED_DEPARTMENT_ID,
+    UNASSIGNED_TECH_ID,
+    getTechName,
     getPropertyName,
     getDepartmentName,
     allUsers, properties,
@@ -150,8 +155,8 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
             )}
 
             {user?.role === "admin" && activeTab === "tasks" && (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search tasks..."
@@ -175,6 +180,25 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                     <SelectItem value={UNASSIGNED_DEPARTMENT_ID}>Unassigned Department</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select
+                  value={techFilter || "all"}
+                  onValueChange={(v) => setTechFilterAndUrl(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="w-full sm:w-[220px]" data-testid="select-tech-filter">
+                    <SelectValue placeholder="All technicians" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All technicians</SelectItem>
+                    {technicianUsers.map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.firstName && tech.lastName
+                          ? `${tech.firstName} ${tech.lastName}`
+                          : tech.username}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={UNASSIGNED_TECH_ID}>Unassigned</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -191,8 +215,15 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                     ? "Unassigned Department"
                     : getDepartmentName(departmentFilter) || null
                 }
+                hasTechFilter={!!techFilter}
+                techFilterName={
+                  techFilter === UNASSIGNED_TECH_ID
+                    ? "Unassigned"
+                    : getTechName(techFilter) || null
+                }
                 onClearSearch={() => setSearchQuery("")}
                 onClearDepartmentFilter={() => setDepartmentFilterAndUrl("")}
+                onClearTechFilter={() => setTechFilterAndUrl("")}
                 onOpenProjectsTab={() => setActiveTab("projects")}
               />
             )}

@@ -10,6 +10,7 @@ import { exitTo } from "@/lib/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Task, User, Property, Project, Area } from "@shared/schema";
 import { matchesDepartmentFilter, UNASSIGNED_DEPARTMENT_ID } from "@/lib/departmentHealth";
+import { matchesTechFilter, UNASSIGNED_TECH_ID } from "./workFilters";
 import {
   unifiedStatusConfig,
   projectStatusMapping,
@@ -51,6 +52,9 @@ export function useWorkAdmin() {
   const [departmentFilter, setDepartmentFilter] = useState(() =>
     new URLSearchParams(window.location.search).get("departmentId") || ""
   );
+  const [techFilter, setTechFilter] = useState(() =>
+    new URLSearchParams(window.location.search).get("techId") || ""
+  );
   const [activeTab, setActiveTab] = useState<"tasks" | "projects">(() =>
     new URLSearchParams(window.location.search).get("tab") === "projects" ? "projects" : "tasks"
   );
@@ -73,6 +77,7 @@ export function useWorkAdmin() {
       setActiveTab("projects");
     }
     setDepartmentFilter(new URLSearchParams(search).get("departmentId") || "");
+    setTechFilter(new URLSearchParams(search).get("techId") || "");
   }, [search]);
 
   useEffect(() => {
@@ -263,6 +268,27 @@ export function useWorkAdmin() {
     navigate(`/work${qs ? `?${qs}` : ""}`, { replace: true });
   };
 
+  const setTechFilterAndUrl = (techId: string) => {
+    setTechFilter(techId);
+    const params = new URLSearchParams(search);
+    if (techId) {
+      params.set("techId", techId);
+    } else {
+      params.delete("techId");
+    }
+    const qs = params.toString();
+    navigate(`/work${qs ? `?${qs}` : ""}`, { replace: true });
+  };
+
+  const getTechName = (userId: string | null) => {
+    if (!userId) return null;
+    const tech = allUsers?.find((u) => u.id === userId);
+    if (!tech) return null;
+    return tech.firstName && tech.lastName
+      ? `${tech.firstName} ${tech.lastName}`
+      : tech.username;
+  };
+
   const toggleGroup = (statusKey: string) => {
     setCollapsedGroups((prev) => {
       const next = { ...prev, [statusKey]: !prev[statusKey] };
@@ -332,6 +358,9 @@ export function useWorkAdmin() {
     if (departmentFilter) {
       filtered = filtered.filter((t) => matchesDepartmentFilter(t.areaId, departmentFilter));
     }
+    if (techFilter) {
+      filtered = filtered.filter((t) => matchesTechFilter(t.assignedToId, techFilter));
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -339,12 +368,18 @@ export function useWorkAdmin() {
       );
     }
     return filtered;
-  }, [standaloneTasks, searchQuery, departmentFilter]);
+  }, [standaloneTasks, searchQuery, departmentFilter, techFilter]);
 
   const filteredProjects = useMemo(() => {
     let filtered = projects || [];
     if (departmentFilter) {
       filtered = filtered.filter((p) => matchesDepartmentFilter(p.areaId, departmentFilter));
+    }
+    if (techFilter) {
+      filtered = filtered.filter((p) => {
+        const childTasks = allProjectTasksMap[p.id] || [];
+        return childTasks.some((t) => matchesTechFilter(t.assignedToId, techFilter));
+      });
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -361,7 +396,7 @@ export function useWorkAdmin() {
       });
     }
     return filtered;
-  }, [projects, searchQuery, allProjectTasksMap]);
+  }, [projects, searchQuery, allProjectTasksMap, departmentFilter, techFilter]);
 
   const projectsTabFiltered = useMemo(() => {
     let filtered = projects || [];
@@ -474,8 +509,13 @@ export function useWorkAdmin() {
     handleProjectStatusChange,
     departmentFilter,
     setDepartmentFilterAndUrl,
+    techFilter,
+    setTechFilterAndUrl,
+    technicianUsers,
     areas,
     UNASSIGNED_DEPARTMENT_ID,
+    UNASSIGNED_TECH_ID,
+    getTechName,
     getPropertyName,
     getDepartmentName,
     getPropertyById,

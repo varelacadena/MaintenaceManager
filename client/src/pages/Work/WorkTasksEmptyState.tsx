@@ -6,8 +6,11 @@ interface WorkTasksEmptyStateProps {
   hasSearchQuery: boolean;
   hasDepartmentFilter?: boolean;
   departmentFilterName?: string | null;
+  hasTechFilter?: boolean;
+  techFilterName?: string | null;
   onClearSearch: () => void;
   onClearDepartmentFilter?: () => void;
+  onClearTechFilter?: () => void;
   onOpenProjectsTab: () => void;
 }
 
@@ -15,8 +18,11 @@ export function WorkTasksEmptyState({
   hasSearchQuery,
   hasDepartmentFilter = false,
   departmentFilterName,
+  hasTechFilter = false,
+  techFilterName,
   onClearSearch,
   onClearDepartmentFilter,
+  onClearTechFilter,
   onOpenProjectsTab,
 }: WorkTasksEmptyStateProps) {
   if (hasDepartmentFilter) {
@@ -36,6 +42,28 @@ export function WorkTasksEmptyState({
           data-testid="button-clear-department-filter"
         >
           View all departments
+        </Button>
+      </div>
+    );
+  }
+
+  if (hasTechFilter) {
+    return (
+      <div className="text-center py-16 px-4" data-testid="work-tasks-empty-tech">
+        <ClipboardList className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
+        <p className="text-sm font-medium">
+          No tasks assigned to {techFilterName || "this technician"}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1 mb-4">
+          Try another technician or view all work.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClearTechFilter}
+          data-testid="button-clear-tech-filter"
+        >
+          View all technicians
         </Button>
       </div>
     );

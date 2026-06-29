@@ -63,6 +63,24 @@ describe("WorkTasksEmptyState", () => {
     expect(onClearDepartmentFilter).toHaveBeenCalledTimes(1);
   });
 
+  it("shows tech filter empty state and clears filter", () => {
+    const onClearTechFilter = vi.fn();
+    render(
+      <WorkTasksEmptyState
+        hasSearchQuery={false}
+        hasTechFilter
+        techFilterName="Jane Tech"
+        onClearSearch={vi.fn()}
+        onClearTechFilter={onClearTechFilter}
+        onOpenProjectsTab={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("work-tasks-empty-tech")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-clear-tech-filter"));
+    expect(onClearTechFilter).toHaveBeenCalledTimes(1);
+  });
+
   it("shows search empty state and clears search", () => {
     const onClearSearch = vi.fn();
     render(
