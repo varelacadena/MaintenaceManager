@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { User, TimeEntry, Property } from "@shared/schema";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { cn } from "@/lib/utils";
+import { minutesToHoursInputValue } from "@/lib/timeEntryUtils";
 import { PhotoThumbnailGrid } from "./PanelResourcesSection";
 import { PanelNoteList } from "./PanelNotesSection";
 import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
@@ -712,7 +713,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                               className="h-8 w-8"
                               onClick={() => {
                                 setEditingTimeEntryId(entry.id);
-                                setEditTimeDuration(String(entry.durationMinutes || 0));
+                                setEditTimeDuration(minutesToHoursInputValue(entry.durationMinutes || 0));
                               }}
                               data-testid={`button-edit-time-${entry.id}`}
                             >

@@ -7,6 +7,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { minutesToHoursInputValue } from "@/lib/timeEntryUtils";
 import type { User, TimeEntry } from "@shared/schema";
 
 interface PanelHistorySectionProps {
@@ -97,7 +98,7 @@ export function PanelHistorySection({
                             variant="ghost"
                             onClick={() => {
                               setEditingTimeEntryId(entry.id);
-                              setEditTimeDuration(String(entry.durationMinutes || 0));
+                              setEditTimeDuration(minutesToHoursInputValue(entry.durationMinutes || 0));
                             }}
                             data-testid={`button-edit-time-${entry.id}`}
                           >

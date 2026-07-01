@@ -12,6 +12,7 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { memo, type ReactNode } from "react";
+import { useScrollAwareClick } from "@/hooks/useScrollAwareClick";
 import {
   User as UserIcon,
   Calendar,
@@ -97,6 +98,7 @@ export const TaskTableRow = memo(function TaskTableRow({
   const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
   const openTask = () => onSelectTask?.(task.id);
+  const { onPointerDown, handleClick } = useScrollAwareClick(openTask);
   const resolvedIndentLevel = indentLevel ?? (isChildTask ? 1 : 0);
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
@@ -111,13 +113,13 @@ export const TaskTableRow = memo(function TaskTableRow({
       data-testid={`row-task-${task.id}`}
       aria-selected={onSelectTask ? selectedTaskId === task.id : undefined}
       aria-label={onSelectTask ? buildTaskRowAriaLabel(task) : undefined}
-      className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
+      className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
         selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""
       } ${rowClassName ?? ""}`}
-      onClick={(e) => {
-        if (isInteractiveTarget(e.target)) return;
-        openTask();
-      }}
+      onPointerDown={onSelectTask ? onPointerDown : undefined}
+      onClick={onSelectTask ? (e) => {
+        handleClick(e, () => !isInteractiveTarget(e.target));
+      } : undefined}
       tabIndex={onSelectTask ? 0 : undefined}
       onKeyDown={onSelectTask ? (e) => {
         if (isInteractiveTarget(e.target)) return;

@@ -238,14 +238,6 @@ export default function TechnicianFieldJob() {
       });
       return false;
     }
-    if (pendingPhotos.length === 0) {
-      toast({
-        title: "Photo required",
-        description: "Take a picture of the problem so we can see what you found.",
-        variant: "destructive",
-      });
-      return false;
-    }
     return true;
   };
 
@@ -372,10 +364,10 @@ export default function TechnicianFieldJob() {
             <div className={sectionCard.photo}>
               <Label className="flex items-center gap-1.5 text-violet-800 dark:text-violet-200">
                 <Camera className="w-4 h-4 shrink-0" />
-                Photo of the problem
+                Photo of the problem (optional)
               </Label>
               <p className="text-xs text-violet-700/80 dark:text-violet-300/80">
-                Required — show us what you found so we know what we&apos;re dealing with.
+                Optional — add a photo if it helps show what you found.
               </p>
               <ObjectUploader
                 maxNumberOfFiles={5}

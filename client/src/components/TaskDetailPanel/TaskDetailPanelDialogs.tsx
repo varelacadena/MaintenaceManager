@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { BarcodeScanner } from "../BarcodeScanner";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
+import { minutesToHoursInputValue, parseHoursToMinutes } from "@/lib/timeEntryUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
 interface TaskDetailPanelDialogsProps {
@@ -110,11 +111,12 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (minutes)</label>
+              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (hours)</label>
               <Input
                 type="number"
-                min="1"
-                placeholder="e.g. 30"
+                min="0.25"
+                step="0.25"
+                placeholder="e.g. 0.5"
                 value={ctx.logTimeDuration}
                 onChange={(e) => ctx.setLogTimeDuration(e.target.value)}
                 data-testid="input-time-duration"
@@ -130,8 +132,8 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
               Cancel
             </Button>
             <Button
-              onClick={() => ctx.logTimeMutation.mutate(parseInt(ctx.logTimeDuration, 10))}
-              disabled={!ctx.logTimeDuration || parseInt(ctx.logTimeDuration, 10) <= 0 || ctx.logTimeMutation.isPending}
+              onClick={() => ctx.logTimeMutation.mutate(parseHoursToMinutes(ctx.logTimeDuration))}
+              disabled={!ctx.logTimeDuration || parseHoursToMinutes(ctx.logTimeDuration) <= 0 || ctx.logTimeMutation.isPending}
               data-testid="button-save-time"
             >
               {ctx.logTimeMutation.isPending ? "Saving..." : "Log Time"}
@@ -169,10 +171,11 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (minutes)</label>
+              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (hours)</label>
               <Input
                 type="number"
                 min="0"
+                step="0.25"
                 value={ctx.editTimeDuration}
                 onChange={(e) => ctx.setEditTimeDuration(e.target.value)}
                 data-testid="input-edit-time-duration"
@@ -192,7 +195,7 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
                 if (ctx.editingTimeEntryId) {
                   ctx.updateTimeEntryMutation.mutate({
                     entryId: ctx.editingTimeEntryId,
-                    durationMinutes: parseInt(ctx.editTimeDuration, 10) || 0,
+                    durationMinutes: parseHoursToMinutes(ctx.editTimeDuration),
                   });
                 }
               }}

@@ -2,11 +2,37 @@ import { memo } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
+import { useScrollAwareClick } from "@/hooks/useScrollAwareClick";
 import type { Task, User } from "@shared/schema";
 import { getAvatarColor } from "@/utils/taskUtils";
 import type { StatusType } from "./constants";
 
 const WORK_TABLE_COLUMN_COUNT = 7;
+
+function SubtaskOpenButton({
+  subtask,
+  onOpen,
+}: {
+  subtask: Task;
+  onOpen: () => void;
+}) {
+  const { onPointerDown, handleClick } = useScrollAwareClick(onOpen);
+  const isCompleted = subtask.status === "completed";
+
+  return (
+    <button
+      type="button"
+      className={`flex-1 min-w-0 text-left text-sm truncate touch-manipulation ${
+        isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+      }`}
+      onPointerDown={onPointerDown}
+      onClick={(e) => handleClick(e)}
+      data-testid={`button-open-subtask-${subtask.id}`}
+    >
+      {subtask.name}
+    </button>
+  );
+}
 
 type WorkSubtaskListProps = {
   subtasks: Task[];
@@ -97,18 +123,10 @@ export const WorkSubtaskList = memo(function WorkSubtaskList({
                       {isCompleted && <Check className="w-3 h-3" strokeWidth={3} />}
                     </button>
 
-                    <button
-                      type="button"
-                      className={`flex-1 min-w-0 text-left text-sm truncate ${
-                        isCompleted
-                          ? "text-muted-foreground line-through"
-                          : "text-foreground"
-                      }`}
-                      onClick={() => onSelectTask?.(subtask.id)}
-                      data-testid={`button-open-subtask-${subtask.id}`}
-                    >
-                      {subtask.name}
-                    </button>
+                    <SubtaskOpenButton
+                      subtask={subtask}
+                      onOpen={() => onSelectTask?.(subtask.id)}
+                    />
 
                     {assignee ? (
                       <Avatar
