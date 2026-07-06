@@ -30,7 +30,7 @@ import {
   getAvatarColor,
 } from "@/utils/taskUtils";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
-import type { Task, User, Property, Area } from "@shared/schema";
+import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
@@ -50,8 +50,6 @@ export const TaskTableRow = memo(function TaskTableRow({
   handleUrgencyChange,
   handleAssigneeChange,
   handlePropertyChange,
-  handleDepartmentChange,
-  areas,
   handleInlineEdit,
   isChildTask,
   isParentWithSubtasks,
@@ -71,8 +69,6 @@ export const TaskTableRow = memo(function TaskTableRow({
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
-  handleDepartmentChange: (taskId: string, areaId: string) => void;
-  areas: Area[];
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isChildTask?: boolean;
   isParentWithSubtasks?: boolean;
@@ -297,30 +293,6 @@ export const TaskTableRow = memo(function TaskTableRow({
             <SelectItem value="low">Low</SelectItem>
             <SelectItem value="medium">Medium</SelectItem>
             <SelectItem value="high">High</SelectItem>
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2.5 hidden lg:table-cell">
-        <Select
-          value={task.areaId || "__none__"}
-          onValueChange={(val) => handleDepartmentChange(task.id, val)}
-        >
-          <SelectTrigger
-            className="text-sm border-0 bg-transparent p-0 shadow-none h-auto text-left"
-            data-testid={`select-department-${task.id}`}
-            data-no-row-open
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SelectValue placeholder="No department" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">Unassigned</SelectItem>
-            {(areas || []).map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.name}
-              </SelectItem>
-            ))}
           </SelectContent>
         </Select>
       </TableCell>

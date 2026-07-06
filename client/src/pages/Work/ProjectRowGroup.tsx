@@ -21,7 +21,7 @@ import { format } from "date-fns";
 import {
   taskStatusBadgeColors as taskStatusColors,
 } from "@/utils/taskUtils";
-import type { Task, User, Property, Project, Area } from "@shared/schema";
+import type { Task, User, Property, Project } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { projectStatusMapping, projectPriorityConfig } from "./constants";
 import { TaskTableRow } from "./TaskTableRow";
@@ -44,12 +44,9 @@ export function ProjectRowGroup({
   handleUrgencyChange,
   handleAssigneeChange,
   handlePropertyChange,
-  handleDepartmentChange,
   handleInlineEdit,
   getPropertyName,
-  getDepartmentName,
   handleProjectStatusChange,
-  areas,
   isAdmin,
   onReviewEstimates,
   onSelectTask,
@@ -71,12 +68,9 @@ export function ProjectRowGroup({
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
-  handleDepartmentChange: (taskId: string, areaId: string) => void;
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   getPropertyName: (propertyId: string | null) => string | null;
-  getDepartmentName: (areaId: string | null) => string | null;
   handleProjectStatusChange: (projectId: string, status: string) => void;
-  areas: Area[];
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
   onSelectTask?: (taskId: string) => void;
@@ -175,11 +169,6 @@ export function ProjectRowGroup({
             <span className={`text-xs ${urg.color}`}>{urg.label}</span>
           </span>
         </TableCell>
-        <TableCell className="py-2.5 hidden lg:table-cell">
-          <span className="text-sm text-muted-foreground">
-            {getDepartmentName(project.areaId) || "-"}
-          </span>
-        </TableCell>
         <TableCell className="py-2.5 hidden md:table-cell">
           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="w-3.5 h-3.5 shrink-0" />
@@ -207,8 +196,6 @@ export function ProjectRowGroup({
                 handleUrgencyChange={handleUrgencyChange}
                 handleAssigneeChange={handleAssigneeChange}
                 handlePropertyChange={handlePropertyChange}
-                handleDepartmentChange={handleDepartmentChange}
-                areas={areas}
                 handleInlineEdit={handleInlineEdit}
                 isAdmin={isAdmin}
                 onReviewEstimates={onReviewEstimates}
@@ -224,12 +211,10 @@ export function ProjectRowGroup({
               userGroups={userGroups}
               allUsers={allUsers}
               properties={properties}
-              areas={areas}
               handleStatusChange={handleStatusChange}
               handleUrgencyChange={handleUrgencyChange}
               handleAssigneeChange={handleAssigneeChange}
               handlePropertyChange={handlePropertyChange}
-              handleDepartmentChange={handleDepartmentChange}
               handleInlineEdit={handleInlineEdit}
               indentLevel={1}
               rowIndex={idx}

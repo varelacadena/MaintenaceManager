@@ -17,11 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, MapPin, Calendar, Building2 } from "lucide-react";
+import { FileText, MapPin, Calendar } from "lucide-react";
 import { TaskLocationFields } from "@/components/task-form/TaskLocationFields";
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
-import { NameSelectItems } from "@/components/PropertySelectItems";
 import type { NewTaskContext } from "./useNewTask";
 
 export interface NewTaskFormSectionsProps {
@@ -34,7 +33,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
     form, selectedPropertyId, setSelectedPropertyId,
     selectedSpaceId, setSelectedSpaceId,
     selectedProperty, isBuilding,
-    properties, areas, spaces, equipment, allVehicles,
+    properties, spaces, equipment, allVehicles,
     showVehicle,
     selectedAssets, handleAddAsset, handleRemoveAsset, multiAssetMode,
     locationScope, setLocationScope, setSelectedAssets,
@@ -85,35 +84,6 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
                     data-testid="textarea-description"
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="areaId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  Department
-                </FormLabel>
-                <Select
-                  value={field.value || "__none__"}
-                  onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
-                >
-                  <FormControl>
-                    <SelectTrigger data-testid="select-department">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <NameSelectItems
-                      items={areas}
-                      noneLabel="Unassigned Department"
-                    />
-                  </SelectContent>
-                </Select>
                 <FormMessage />
               </FormItem>
             )}

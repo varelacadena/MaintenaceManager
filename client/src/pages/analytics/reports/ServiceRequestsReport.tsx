@@ -261,8 +261,8 @@ export default function ServiceRequestsReport() {
 
       {data?.byArea && data.byArea.length > 0 && (
         <CountBarChart
-          title="Service requests by department"
-          testId="chart-requests-by-department"
+          title="Service requests by area"
+          testId="chart-requests-by-area"
           data={data.byArea.map((a) => ({
             name: a.areaName,
             value: a.count,
@@ -364,7 +364,7 @@ export default function ServiceRequestsReport() {
                   <TableHead className="text-xs">Urgency</TableHead>
                   <TableHead className="text-xs hidden sm:table-cell">Requester</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Property</TableHead>
-                  <TableHead className="text-xs hidden lg:table-cell">Department</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Area</TableHead>
                   <TableHead className="text-xs hidden xl:table-cell">Created</TableHead>
                 </TableRow>
               </TableHeader>

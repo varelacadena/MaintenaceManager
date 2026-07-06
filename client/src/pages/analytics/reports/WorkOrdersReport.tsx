@@ -304,8 +304,8 @@ export default function WorkOrdersReport() {
 
       {data?.byArea && data.byArea.length > 0 && (
         <CountBarChart
-          title="Work orders by department"
-          testId="chart-work-orders-by-department"
+          title="Work orders by area"
+          testId="chart-work-orders-by-area"
           data={data.byArea.map((a) => ({ name: a.areaName, value: a.count }))}
         />
       )}
@@ -335,7 +335,7 @@ export default function WorkOrdersReport() {
                   <TableHead className="text-xs">Priority</TableHead>
                   <TableHead className="text-xs">Assigned To</TableHead>
                   <TableHead className="text-xs">Property</TableHead>
-                  <TableHead className="text-xs hidden lg:table-cell">Department</TableHead>
+                  <TableHead className="text-xs hidden lg:table-cell">Area</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Space</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Start Date</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Due Date</TableHead>

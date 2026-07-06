@@ -29,8 +29,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation, useSearch } from "wouter";
 import type { EmergencyContact, NotificationSetting, User as UserType } from "@shared/schema";
 import EmergencyContacts from "./EmergencyContacts";
-import DepartmentSettings from "./DepartmentSettings";
-import type { Area } from "@shared/schema";
 
 type InventorySummaryResponse = {
   total: number;
@@ -45,7 +43,7 @@ type SystemSettingCard = {
   icon: React.ComponentType<{ className?: string }>;
   actionLabel: string;
   href?: string;
-  tab?: "emergency" | "departments";
+  tab?: "emergency";
   testId: string;
 };
 
@@ -77,15 +75,6 @@ const systemSettingSections: SystemSettingSection[] = [
         actionLabel: "Open User Settings",
         href: "/users",
         testId: "button-open-user-settings",
-      },
-      {
-        title: "Departments",
-        description: "Manage Plant Services departments for the dashboard, work queues, and task routing.",
-        status: "embedded",
-        icon: Building2,
-        actionLabel: "Manage Departments",
-        tab: "departments",
-        testId: "button-open-department-settings",
       },
       {
         title: "Emergency Contacts",
@@ -207,14 +196,14 @@ export default function Settings() {
 
   const isAdmin = user?.role === "admin";
   const adminTabParam =
-    isAdmin && (tabParam === "emergency" || tabParam === "departments" || tabParam === "system")
+    isAdmin && (tabParam === "emergency" || tabParam === "system")
       ? tabParam
       : undefined;
   const defaultTab = adminTabParam || "account";
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
-    if (isAdmin && (tabParam === "emergency" || tabParam === "departments" || tabParam === "system")) {
+    if (isAdmin && (tabParam === "emergency" || tabParam === "system")) {
       setActiveTab(tabParam);
       return;
     }
@@ -244,7 +233,6 @@ export default function Settings() {
 
   const getSystemCardStatusText = (card: SystemSettingCard) => {
     const safeNotificationSettings = Array.isArray(notificationSettings) ? notificationSettings : [];
-    const safeDepartments = Array.isArray(departments) ? departments : [];
 
     switch (card.testId) {
       case "button-open-email-settings":
@@ -255,10 +243,6 @@ export default function Settings() {
         return notificationCounts.pendingSignups > 0
           ? `${notificationCounts.pendingSignups} pending signup${notificationCounts.pendingSignups === 1 ? "" : "s"}`
           : "No pending signups";
-      case "button-open-department-settings":
-        return safeDepartments.length > 0
-          ? `${safeDepartments.length} department${safeDepartments.length === 1 ? "" : "s"} configured`
-          : "No departments configured";
       case "button-open-emergency-settings":
         return activeEmergencyContact
           ? `Active: ${activeEmergencyContact.name}`
@@ -299,11 +283,6 @@ export default function Settings() {
 
   const { data: inventorySummary } = useQuery<InventorySummaryResponse>({
     queryKey: ["/api/inventory", "summary"],
-    enabled: isAdmin,
-  });
-
-  const { data: departments = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
     enabled: isAdmin,
   });
 
@@ -426,10 +405,6 @@ export default function Settings() {
               <TabsTrigger value="system" data-testid="tab-system">
                 <Shield className="w-4 h-4 mr-2" />
                 System
-              </TabsTrigger>
-              <TabsTrigger value="departments" data-testid="tab-departments">
-                <Building2 className="w-4 h-4 mr-2" />
-                Departments
               </TabsTrigger>
               <TabsTrigger value="emergency" data-testid="tab-emergency">
                 <Phone className="w-4 h-4 mr-2" />
@@ -679,12 +654,6 @@ export default function Settings() {
                 </section>
               ))}
             </div>
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="departments" className="mt-4">
-            <DepartmentSettings />
           </TabsContent>
         )}
 

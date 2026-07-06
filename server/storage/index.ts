@@ -170,8 +170,6 @@ export interface IStorage {
 
   getAreas(): Promise<Area[]>;
   createArea(area: InsertArea): Promise<Area>;
-  updateArea(id: string, data: Partial<InsertArea>): Promise<Area | undefined>;
-  deleteArea(id: string): Promise<void>;
 
   getSubdivisionsByArea(areaId: string): Promise<Subdivision[]>;
   createSubdivision(subdivision: InsertSubdivision): Promise<Subdivision>;
@@ -558,8 +556,6 @@ export class DatabaseStorage implements IStorage {
 
   getAreas = facilityStorage.getAreas;
   createArea = facilityStorage.createArea;
-  updateArea = facilityStorage.updateArea;
-  deleteArea = facilityStorage.deleteArea;
   getSubdivisionsByArea = facilityStorage.getSubdivisionsByArea;
   createSubdivision = facilityStorage.createSubdivision;
   deleteSubdivision = facilityStorage.deleteSubdivision;

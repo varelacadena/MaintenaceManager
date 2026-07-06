@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, ClipboardList, FileText, MapPin, Plus, Send, AlertTriangle, X } from "lucide-react";
-import type { Area, Property, Task, Vehicle } from "@shared/schema";
+import type { Property, Task, Vehicle } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { isAutoShopName } from "@/lib/autoShopUtils";
 import { sortByName } from "@/lib/propertyDisplayUtils";
-import { PropertySelectLabel, NameSelectItems } from "@/components/PropertySelectItems";
+import { PropertySelectLabel } from "@/components/PropertySelectItems";
 import {
   getSignedUploadParameters,
   mapUploaderResultForRegistration,
@@ -37,7 +37,6 @@ type FieldJobForm = {
   urgency: "low" | "medium" | "high";
   propertyId: string;
   vehicleId: string;
-  areaId: string;
 };
 
 type PendingPhoto = {
@@ -60,7 +59,6 @@ const defaultForm: FieldJobForm = {
   urgency: "medium",
   propertyId: "",
   vehicleId: "",
-  areaId: "",
 };
 
 const touchInputClass = "h-11 text-base sm:text-sm bg-background";
@@ -79,8 +77,6 @@ const sectionCard = {
     "rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/80 dark:bg-emerald-950/30 p-4 space-y-2 border-l-4 border-l-emerald-500",
   vehicle:
     "rounded-lg border border-orange-200 dark:border-orange-800/80 bg-orange-50/80 dark:bg-orange-950/30 p-4 space-y-2 border-l-4 border-l-orange-500",
-  department:
-    "rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/30 p-4 space-y-2 border-l-4 border-l-slate-400",
 } as const;
 
 const urgencyButtonClass = {
@@ -114,9 +110,6 @@ export default function TechnicianFieldJob() {
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
@@ -129,9 +122,7 @@ export default function TechnicianFieldJob() {
   );
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === form.vehicleId);
-  const selectedArea = areas.find((area) => area.id === form.areaId);
-  const showVehicle =
-    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
+  const showVehicle = isAutoShopName(selectedProperty?.name);
   const progressValue = ((step + 1) / steps.length) * 100;
   const currentStep = steps[step];
   const summaryLength = form.name.length;
@@ -144,7 +135,6 @@ export default function TechnicianFieldJob() {
         urgency: form.urgency,
         propertyId: form.propertyId,
         vehicleId: form.vehicleId || undefined,
-        areaId: form.areaId || undefined,
       });
       const task = (await response.json()) as Task;
 
@@ -468,16 +458,11 @@ export default function TechnicianFieldJob() {
                 value={form.propertyId}
                 onValueChange={(value) => {
                   const property = sortedProperties.find((item) => item.id === value);
-                  setForm((current) => {
-                    const area = areas.find((item) => item.id === current.areaId);
-                    const nextShowVehicle =
-                      isAutoShopName(property?.name) || isAutoShopName(area?.name);
-                    return {
-                      ...current,
-                      propertyId: value,
-                      vehicleId: nextShowVehicle ? current.vehicleId : "",
-                    };
-                  });
+                  setForm((current) => ({
+                    ...current,
+                    propertyId: value,
+                    vehicleId: isAutoShopName(property?.name) ? current.vehicleId : "",
+                  }));
                 }}
               >
                 <SelectTrigger className={touchSelectClass} data-testid="select-field-job-property">
@@ -520,30 +505,6 @@ export default function TechnicianFieldJob() {
               </div>
             )}
 
-            <div className={sectionCard.department}>
-              <Label className="text-slate-700 dark:text-slate-300">Department</Label>
-              <Select
-                value={form.areaId || "__none__"}
-                onValueChange={(value) => {
-                  const areaId = value === "__none__" ? "" : value;
-                  const area = areas.find((item) => item.id === areaId);
-                  const nextShowVehicle =
-                    isAutoShopName(selectedProperty?.name) || isAutoShopName(area?.name);
-                  setForm((current) => ({
-                    ...current,
-                    areaId,
-                    vehicleId: nextShowVehicle ? current.vehicleId : "",
-                  }));
-                }}
-              >
-                <SelectTrigger className={touchSelectClass} data-testid="select-field-job-department">
-                  <SelectValue placeholder="Optional department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <NameSelectItems items={areas} noneLabel="No department" />
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         )}
 
@@ -592,9 +553,6 @@ export default function TechnicianFieldJob() {
                 <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80 break-words">
                   {selectedVehicle.make} {selectedVehicle.model} ({selectedVehicle.vehicleId})
                 </p>
-              )}
-              {selectedArea && (
-                <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80 break-words">{selectedArea.name}</p>
               )}
             </div>
 

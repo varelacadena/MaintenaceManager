@@ -42,9 +42,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { invalidateDashboard, invalidateTaskLists } from "@/lib/taskQueryInvalidation";
 import { getServiceRequestStatusLabel } from "@/lib/serviceRequestLabels";
-import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog, Area } from "@shared/schema";
+import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
-import DepartmentOverview from "@/components/dashboard/DepartmentOverview";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -210,9 +209,6 @@ export default function AdminDashboard({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [techFilter, setTechFilter] = useState<"today" | "weekly">("weekly");
 
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
   const [kpiModal, setKpiModal] = useState<{ title: string; tasks: Task[] } | null>(null);
   const [techModal, setTechModal] = useState<{ name: string; tasks: Task[] } | null>(null);
   const [selectedAiLog, setSelectedAiLog] = useState<AiAgentLog | null>(null);
@@ -510,11 +506,7 @@ export default function AdminDashboard({
           </Card>
         </div>
 
-        <div className="lg:col-span-6 flex flex-col">
-          <DepartmentOverview tasks={tasks} areas={areas} />
-        </div>
-
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-9 space-y-6">
           {aiStats && aiStats.total > 0 && (
             <Card className="shadow-sm" data-testid="card-ai-insights">
               <CardHeader className="pb-3 pt-4">

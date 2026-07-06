@@ -28,8 +28,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
-import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelectItems";
-import type { Property, Area } from "@shared/schema";
+import { PropertySelectItems } from "@/components/PropertySelectItems";
+import type { Property } from "@shared/schema";
 import { format, parse } from "date-fns";
 import type { UseFormReturn } from "react-hook-form";
 import type { UseMutationResult } from "@tanstack/react-query";
@@ -56,7 +56,6 @@ interface ProjectDetailDialogsProps {
   updateTaskStatusMutation: UseMutationResult<any, any, any, any>;
   handleHoldReasonSubmit: () => void;
   properties?: Property[];
-  areas?: Area[];
 }
 
 export function ProjectDetailDialogs({
@@ -69,7 +68,7 @@ export function ProjectDetailDialogs({
   summaryTaskId, setSummaryTaskId,
   editForm, updateProjectMutation, deleteProjectMutation, updateTaskStatusMutation,
   handleHoldReasonSubmit,
-  properties, areas,
+  properties,
 }: ProjectDetailDialogsProps) {
   return (
     <>
@@ -194,29 +193,6 @@ export function ProjectDetailDialogs({
                         </FormControl>
                         <SelectContent>
                           <PropertySelectItems properties={properties ?? []} />
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="areaId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <Select
-                        onValueChange={(val) => field.onChange(val === "__none__" ? null : val)}
-                        value={field.value || "__none__"}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-edit-project-department">
-                            <SelectValue placeholder="No department" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <NameSelectItems items={areas ?? []} noneLabel="None" />
                         </SelectContent>
                       </Select>
                       <FormMessage />

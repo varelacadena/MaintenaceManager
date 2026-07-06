@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Project, Task, Property, Area, User, ProjectComment, Upload } from "@shared/schema";
+import type { Project, Task, Property, User, ProjectComment, Upload } from "@shared/schema";
 import { format } from "date-fns";
 import { getAvatarColor } from "@/utils/taskUtils";
 
@@ -25,7 +25,6 @@ const editProjectSchema = z.object({
   startDate: z.string().optional(),
   targetEndDate: z.string().optional(),
   propertyId: z.string().nullable().optional(),
-  areaId: z.string().nullable().optional(),
 });
 
 export type EditProjectFormValues = z.infer<typeof editProjectSchema>;
@@ -98,10 +97,6 @@ export function useProjectDetail() {
 
   const { data: properties } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
-  });
-
-  const { data: areas } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
   });
 
   const { data: allUsers } = useQuery<User[]>({
@@ -339,7 +334,6 @@ export function useProjectDetail() {
       startDate: project.startDate ? format(new Date(project.startDate), "yyyy-MM-dd") : "",
       targetEndDate: project.targetEndDate ? format(new Date(project.targetEndDate), "yyyy-MM-dd") : "",
       propertyId: project.propertyId || null,
-      areaId: project.areaId || null,
     } : undefined,
   });
 
@@ -383,11 +377,6 @@ export function useProjectDetail() {
   const getPropertyName = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find(p => p.id === propertyId)?.name;
-  };
-
-  const getAreaName = (areaId: string | null) => {
-    if (!areaId) return null;
-    return areas?.find(a => a.id === areaId)?.name;
   };
 
   const taskProgress = analytics?.taskStats.total
@@ -441,7 +430,6 @@ export function useProjectDetail() {
     tasks,
     analytics,
     properties,
-    areas,
     allUsers,
     comments,
     projectUploads,
@@ -474,7 +462,6 @@ export function useProjectDetail() {
     handleTaskTypeChange,
     handleInlineEdit,
     getPropertyName,
-    getAreaName,
     taskProgress,
     isOverdue,
     daysLeft,

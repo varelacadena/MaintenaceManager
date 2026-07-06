@@ -27,7 +27,7 @@ import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
-import { PropertySelectItems, NameSelectItems } from "@/components/PropertySelectItems";
+import { PropertySelectItems } from "@/components/PropertySelectItems";
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
 import { format } from "date-fns";
@@ -49,17 +49,6 @@ import {
   toEditableChecklistGroups,
   type EditableChecklistGroup,
 } from "@/lib/syncTaskChecklists";
-
-interface Area {
-  id: string;
-  name: string;
-}
-
-interface Subdivision {
-  id: string;
-  name: string;
-  areaId: string;
-}
 
 interface SubtaskEdit {
   id?: string;
@@ -109,8 +98,6 @@ export function TaskEditMode({
     getTaskDateInputValue(task.estimatedCompletionDate)
   );
   const [propertyId, setPropertyId] = useState<string>(task.propertyId || "");
-  const [areaId, setAreaId] = useState<string>(task.areaId || "");
-  const [subdivisionId, setSubdivisionId] = useState<string>(task.subdivisionId || "");
   const [assignedToId, setAssignedToId] = useState<string>(task.assignedToId || "");
   const [helperUserIds, setHelperUserIds] = useState<string[]>(
     () => task.helpers?.map((helper) => helper.userId) ?? []
@@ -140,10 +127,6 @@ export function TaskEditMode({
     queryKey: ["/api/users"],
   });
 
-  const { data: areas } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
-
   const { data: properties } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
@@ -159,25 +142,12 @@ export function TaskEditMode({
   });
 
   const selectedProperty = properties?.find((p) => p.id === propertyId);
-  const selectedArea = areas?.find((a) => a.id === areaId);
-  const showVehicle =
-    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
+  const showVehicle = isAutoShopName(selectedProperty?.name);
   const showAssetEditor =
     selectedAssets.length > 0 ||
     initialAssetsRef.current.length > 0 ||
     showVehicle ||
     !!propertyId;
-
-  const { data: subdivisions } = useQuery<Subdivision[]>({
-    queryKey: ["/api/subdivisions", areaId],
-    queryFn: async () => {
-      if (!areaId) return [];
-      const res = await fetch(`/api/subdivisions/${areaId}`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!areaId,
-  });
 
   const { data: originalChecklistGroups = [], isSuccess: checklistsFetched } = useQuery<ChecklistGroupWithItems[]>({
     queryKey: ["/api/tasks", taskId, "checklist-groups"],
@@ -190,8 +160,6 @@ export function TaskEditMode({
     setUrgency(task.urgency);
     setEstimatedCompletionDate(getTaskDateInputValue(task.estimatedCompletionDate));
     setPropertyId(task.propertyId || "");
-    setAreaId(task.areaId || "");
-    setSubdivisionId(task.subdivisionId || "");
     setAssignedToId(task.assignedToId || "");
     setHelperUserIds(task.helpers?.map((helper) => helper.userId) ?? []);
   }, [task.id, task.helpers]);
@@ -298,14 +266,8 @@ export function TaskEditMode({
       if (description !== (task.description || "")) patchData.description = description;
       if (urgency !== task.urgency) patchData.urgency = urgency as InsertTask["urgency"];
 
-      const origAreaId = task.areaId || "";
-      if (areaId !== origAreaId) patchData.areaId = areaId || null;
-
       const origPropertyId = task.propertyId || "";
       if (propertyId !== origPropertyId) patchData.propertyId = propertyId || null;
-
-      const origSubdivisionId = task.subdivisionId || "";
-      if (subdivisionId !== origSubdivisionId) patchData.subdivisionId = subdivisionId || null;
 
       const origAssignedToId = task.assignedToId || "";
       if (assignedToId !== origAssignedToId) patchData.assignedToId = assignedToId || null;
@@ -555,51 +517,6 @@ export function TaskEditMode({
             </SelectContent>
           </Select>
         </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
-            Department
-          </Label>
-          <Select
-            value={areaId || "__none__"}
-            onValueChange={(v) => {
-              setAreaId(v === "__none__" ? "" : v);
-              setSubdivisionId("");
-            }}
-          >
-            <SelectTrigger data-testid="select-edit-department">
-              <SelectValue placeholder="Select department" />
-            </SelectTrigger>
-            <SelectContent>
-              <NameSelectItems
-                items={areas || []}
-                noneLabel="Unassigned Department"
-              />
-            </SelectContent>
-          </Select>
-        </div>
-
-        {areaId && (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
-              Sub-department
-            </Label>
-            <Select
-              value={subdivisionId || "__none__"}
-              onValueChange={(v) => setSubdivisionId(v === "__none__" ? "" : v)}
-            >
-              <SelectTrigger data-testid="select-edit-subarea">
-                <SelectValue placeholder="Select sub-area" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">No sub-area</SelectItem>
-                {(subdivisions || []).map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>

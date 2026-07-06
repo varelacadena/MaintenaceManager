@@ -136,12 +136,10 @@ function DraggableTask({
   task,
   onClick,
   assigneeInfo,
-  area,
 }: {
   task: Task;
   onClick: (e: React.MouseEvent) => void;
   assigneeInfo: { name: string; colorIndex: number };
-  area?: any;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
@@ -169,14 +167,14 @@ function DraggableTask({
         </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-72" side="top">
-        <TaskHoverContent task={task} assigneeInfo={assigneeInfo} area={area} />
+        <TaskHoverContent task={task} assigneeInfo={assigneeInfo} />
       </HoverCardContent>
     </HoverCard>
   );
 }
 
 // ─── Hover card content (shared) ─────────────────────────────────────────────
-function TaskHoverContent({ task, assigneeInfo, area }: { task: Task; assigneeInfo: { name: string; colorIndex: number }; area?: any }) {
+function TaskHoverContent({ task, assigneeInfo }: { task: Task; assigneeInfo: { name: string; colorIndex: number } }) {
   const overdue = isOverdue(task);
   const color = getUserColor(assigneeInfo.colorIndex);
 
@@ -211,12 +209,6 @@ function TaskHoverContent({ task, assigneeInfo, area }: { task: Task; assigneeIn
           <span>{assigneeInfo.name}</span>
         </div>
       )}
-      {area && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="w-3 h-3 shrink-0" />
-          <span>{area.name}</span>
-        </div>
-      )}
       <div className="flex flex-col gap-0.5 text-xs text-muted-foreground pt-1 border-t">
         {task.initialDate && (
           <div className="flex items-center gap-1.5">
@@ -244,7 +236,6 @@ function DroppableDay({
   onTaskClick,
   onDayClick,
   users,
-  areas,
   vendors,
   isMobile,
 }: {
@@ -255,7 +246,6 @@ function DroppableDay({
   onTaskClick: (taskId: string) => void;
   onDayClick: (date: Date) => void;
   users: any[];
-  areas: any[];
   vendors: any[];
   isMobile: boolean;
 }) {
@@ -295,14 +285,12 @@ function DroppableDay({
       <div className="space-y-0.5">
         {tasks.slice(0, 4).map((task) => {
           const assigneeInfo = getAssigneeInfo(task, users, vendors);
-          const area = areas.find((a) => a.id === task.areaId);
           return (
             <DraggableTask
               key={task.id}
               task={task}
               onClick={(e) => { e.stopPropagation(); onTaskClick(task.id); }}
               assigneeInfo={assigneeInfo}
-              area={area}
             />
           );
         })}
@@ -323,14 +311,12 @@ function TimeGrid({
   dates,
   tasks,
   users,
-  areas,
   vendors,
   onTaskClick,
 }: {
   dates: Date[];
   tasks: Task[];
   users: any[];
-  areas: any[];
   vendors: any[];
   onTaskClick: (id: string) => void;
 }) {
@@ -419,7 +405,6 @@ function TimeGrid({
               )}
               {dayAllDay.slice(0, 3).map((task) => {
                 const assigneeInfo = getAssigneeInfo(task, users, vendors);
-                const area = areas.find((a) => a.id === task.areaId);
                 const color = getUserColor(assigneeInfo.colorIndex);
                 const overdue = isOverdue(task);
                 return (
@@ -438,7 +423,7 @@ function TimeGrid({
                       </div>
                     </HoverCardTrigger>
                     <HoverCardContent className="w-72" side="bottom">
-                      <TaskHoverContent task={task} assigneeInfo={assigneeInfo} area={area} />
+                      <TaskHoverContent task={task} assigneeInfo={assigneeInfo} />
                     </HoverCardContent>
                   </HoverCard>
                 );
@@ -502,7 +487,6 @@ function TimeGrid({
                 {/* Timed task blocks */}
                 {dayTimed.map(({ task, top, height, column, columnCount }) => {
                   const assigneeInfo = getAssigneeInfo(task, users, vendors);
-                  const area = areas.find((a) => a.id === task.areaId);
                   const color = getUserColor(assigneeInfo.colorIndex);
                   const overdue = isOverdue(task);
                   const width = `${100 / columnCount}%`;
@@ -531,7 +515,7 @@ function TimeGrid({
                         </div>
                       </HoverCardTrigger>
                       <HoverCardContent className="w-72" side="right">
-                        <TaskHoverContent task={task} assigneeInfo={assigneeInfo} area={area} />
+                        <TaskHoverContent task={task} assigneeInfo={assigneeInfo} />
                       </HoverCardContent>
                     </HoverCard>
                   );
@@ -691,7 +675,6 @@ export default function Calendar() {
   }, []);
 
   const { data: users = [] } = useQuery<any[]>({ queryKey: ["/api/users/directory"] });
-  const { data: areas = [] } = useQuery<any[]>({ queryKey: ["/api/areas"] });
   const { data: vendors = [] } = useQuery<any[]>({ queryKey: ["/api/vendors"] });
 
   const updateTaskDateMutation = useMutation({
@@ -874,7 +857,6 @@ export default function Calendar() {
                   onTaskClick={handleTaskClick}
                   onDayClick={(d) => { setCurrentDate(d); setView("day"); }}
                   users={users}
-                  areas={areas}
                   vendors={vendors}
                   isMobile={isMobile}
                 />
@@ -896,7 +878,6 @@ export default function Calendar() {
           dates={weekDays}
           tasks={allWeekTasks}
           users={users}
-          areas={areas}
           vendors={vendors}
           onTaskClick={handleTaskClick}
         />

@@ -9,7 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
 import { insertTaskSchema, insertEquipmentSchema } from "@shared/schema";
-import type { User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle, Area } from "@shared/schema";
+import type { User, Vendor, ServiceRequest, Property, Equipment, Space, ChecklistTemplate, Project, Vehicle } from "@shared/schema";
 import { z } from "zod";
 import type { SelectedAsset } from "@/components/task-form/TaskLocationFields";
 import { isAutoShopName } from "@/lib/autoShopUtils";
@@ -43,7 +43,6 @@ const formSchema = insertTaskSchema.extend({
   contactPhone: z.string().optional(),
   isCampusWide: z.boolean().optional(),
   propertyIds: z.array(z.string()).optional(),
-  areaId: z.string().optional(),
 }).refine((data) => {
   if (data.contactType === "staff" && !data.contactStaffId) {
     return false;
@@ -107,10 +106,6 @@ export function useNewTask() {
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
-  });
-
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -402,14 +397,10 @@ export function useNewTask() {
       contactPhone: "",
       isCampusWide: false,
       propertyIds: [],
-      areaId: "",
     },
   });
 
-  const selectedAreaId = form.watch("areaId");
-  const selectedArea = areas.find((area) => area.id === selectedAreaId);
-  const showVehicle =
-    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
+  const showVehicle = isAutoShopName(selectedProperty?.name);
 
   const { data: requester } = useQuery<User>({
     queryKey: ["/api/users", request?.requesterId],
@@ -426,19 +417,10 @@ export function useNewTask() {
         form.setValue("propertyId", request.propertyId);
         setSelectedPropertyId(request.propertyId);
       }
-      if (request.areaId) {
-        form.setValue("areaId", request.areaId);
-      }
       form.setValue("contactType", "requester");
       setContactType("requester");
     }
   }, [request, form]);
-
-  useEffect(() => {
-    if (project?.areaId) {
-      form.setValue("areaId", project.areaId);
-    }
-  }, [project, form]);
 
   useEffect(() => {
     if (!showVehicle) {
@@ -522,7 +504,7 @@ export function useNewTask() {
         isCampusWide: data.isCampusWide || false,
         propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : undefined,
         helperUserIds: selectedHelperIds.length > 0 ? selectedHelperIds : undefined,
-        areaId: data.areaId || undefined,
+        areaId: request?.areaId || undefined,
       };
 
       if (isSingleScope) {
@@ -652,7 +634,6 @@ export function useNewTask() {
     request,
     project,
     properties,
-    areas,
     users,
     technicianUsers,
     studentUsers,

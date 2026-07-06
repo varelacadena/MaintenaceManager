@@ -7,8 +7,6 @@ import {
   lockboxes,
   lockboxCodes,
   tasks,
-  serviceRequests,
-  projects,
   type Area,
   type InsertArea,
   type Subdivision,
@@ -35,26 +33,6 @@ export async function getAreas(): Promise<Area[]> {
 export async function createArea(areaData: InsertArea): Promise<Area> {
   const [area] = await db.insert(areas).values(areaData).returning();
   return area;
-}
-
-export async function updateArea(
-  id: string,
-  data: Partial<InsertArea>,
-): Promise<Area | undefined> {
-  const [area] = await db.update(areas).set(data).where(eq(areas.id, id)).returning();
-  return area;
-}
-
-export async function deleteArea(id: string): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx.update(tasks).set({ areaId: null, subdivisionId: null }).where(eq(tasks.areaId, id));
-    await tx
-      .update(serviceRequests)
-      .set({ areaId: null, subdivisionId: null })
-      .where(eq(serviceRequests.areaId, id));
-    await tx.update(projects).set({ areaId: null }).where(eq(projects.areaId, id));
-    await tx.delete(areas).where(eq(areas.id, id));
-  });
 }
 
 export async function getSubdivisionsByArea(areaId: string): Promise<Subdivision[]> {

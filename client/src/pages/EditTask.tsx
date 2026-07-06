@@ -31,7 +31,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { insertTaskSchema } from "@shared/schema";
-import type { Property, Equipment, User, Vendor, Task, Space, Vehicle, Area } from "@shared/schema";
+import type { Property, Equipment, User, Vendor, Task, Space, Vehicle } from "@shared/schema";
 import { z } from "zod";
 import { TaskLocationFields, type SelectedAsset } from "@/components/task-form/TaskLocationFields";
 import { isAutoShopName } from "@/lib/autoShopUtils";
@@ -124,13 +124,7 @@ export default function EditTask() {
     queryKey: ["/api/vehicles"],
   });
 
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-  });
-
-  const selectedArea = areas.find((area) => area.id === task?.areaId);
-  const showVehicle =
-    isAutoShopName(selectedProperty?.name) || isAutoShopName(selectedArea?.name);
+  const showVehicle = isAutoShopName(selectedProperty?.name);
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],

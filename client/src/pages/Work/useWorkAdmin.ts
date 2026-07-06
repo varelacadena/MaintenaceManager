@@ -8,8 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
 import { exitTo } from "@/lib/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Task, User, Property, Project, Area } from "@shared/schema";
-import { matchesDepartmentFilter, UNASSIGNED_DEPARTMENT_ID } from "@/lib/departmentHealth";
+import type { Task, User, Property, Project } from "@shared/schema";
 import { matchesTechFilter, UNASSIGNED_TECH_ID } from "./workFilters";
 import {
   unifiedStatusConfig,
@@ -49,9 +48,6 @@ export function useWorkAdmin() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedParentTasks, setExpandedParentTasks] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState(() =>
-    new URLSearchParams(window.location.search).get("departmentId") || ""
-  );
   const [techFilter, setTechFilter] = useState(() =>
     new URLSearchParams(window.location.search).get("techId") || ""
   );
@@ -76,7 +72,6 @@ export function useWorkAdmin() {
     if (new URLSearchParams(search).get("tab") === "projects") {
       setActiveTab("projects");
     }
-    setDepartmentFilter(new URLSearchParams(search).get("departmentId") || "");
     setTechFilter(new URLSearchParams(search).get("techId") || "");
   }, [search]);
 
@@ -105,11 +100,6 @@ export function useWorkAdmin() {
     queryKey: ["/api/properties"],
     enabled: isAdmin,
   });
-  const { data: areas = [] } = useQuery<Area[]>({
-    queryKey: ["/api/areas"],
-    enabled: isAdmin,
-  });
-
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, data }: { taskId: string; data: Record<string, unknown> }) => {
       return await apiRequest("PATCH", `/api/tasks/${taskId}`, data);
@@ -184,11 +174,6 @@ export function useWorkAdmin() {
     return properties?.find((p) => p.id === propertyId)?.name || null;
   };
 
-  const getDepartmentName = (areaId: string | null) => {
-    if (!areaId) return null;
-    return areas.find((a) => a.id === areaId)?.name || null;
-  };
-
   const getPropertyById = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find((p) => p.id === propertyId) || null;
@@ -248,24 +233,6 @@ export function useWorkAdmin() {
     const data: Record<string, unknown> =
       propertyId === "__none__" ? { propertyId: null } : { propertyId };
     updateTaskMutation.mutate({ taskId, data });
-  };
-
-  const handleDepartmentChange = (taskId: string, areaId: string) => {
-    const data: Record<string, unknown> =
-      areaId === "__none__" ? { areaId: null } : { areaId };
-    updateTaskMutation.mutate({ taskId, data });
-  };
-
-  const setDepartmentFilterAndUrl = (departmentId: string) => {
-    setDepartmentFilter(departmentId);
-    const params = new URLSearchParams(search);
-    if (departmentId) {
-      params.set("departmentId", departmentId);
-    } else {
-      params.delete("departmentId");
-    }
-    const qs = params.toString();
-    navigate(`/work${qs ? `?${qs}` : ""}`, { replace: true });
   };
 
   const setTechFilterAndUrl = (techId: string) => {
@@ -355,9 +322,6 @@ export function useWorkAdmin() {
 
   const filteredStandaloneTasks = useMemo(() => {
     let filtered = standaloneTasks;
-    if (departmentFilter) {
-      filtered = filtered.filter((t) => matchesDepartmentFilter(t.areaId, departmentFilter));
-    }
     if (techFilter) {
       filtered = filtered.filter((t) => matchesTechFilter(t.assignedToId, techFilter));
     }
@@ -368,13 +332,10 @@ export function useWorkAdmin() {
       );
     }
     return filtered;
-  }, [standaloneTasks, searchQuery, departmentFilter, techFilter]);
+  }, [standaloneTasks, searchQuery, techFilter]);
 
   const filteredProjects = useMemo(() => {
     let filtered = projects || [];
-    if (departmentFilter) {
-      filtered = filtered.filter((p) => matchesDepartmentFilter(p.areaId, departmentFilter));
-    }
     if (techFilter) {
       filtered = filtered.filter((p) => {
         const childTasks = allProjectTasksMap[p.id] || [];
@@ -396,7 +357,7 @@ export function useWorkAdmin() {
       });
     }
     return filtered;
-  }, [projects, searchQuery, allProjectTasksMap, departmentFilter, techFilter]);
+  }, [projects, searchQuery, allProjectTasksMap, techFilter]);
 
   const projectsTabFiltered = useMemo(() => {
     let filtered = projects || [];
@@ -505,19 +466,13 @@ export function useWorkAdmin() {
     handleUrgencyChange,
     handleAssigneeChange,
     handlePropertyChange,
-    handleDepartmentChange,
     handleProjectStatusChange,
-    departmentFilter,
-    setDepartmentFilterAndUrl,
     techFilter,
     setTechFilterAndUrl,
     technicianUsers,
-    areas,
-    UNASSIGNED_DEPARTMENT_ID,
     UNASSIGNED_TECH_ID,
     getTechName,
     getPropertyName,
-    getDepartmentName,
     getPropertyById,
     subTasksMap,
     standaloneTasks,

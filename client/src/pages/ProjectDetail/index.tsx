@@ -26,7 +26,7 @@ export default function ProjectDetail() {
   const ctx = useProjectDetail();
   const {
     user, isMobile, isAdmin, isLoading, projectId, project, tasks, analytics,
-    properties, areas, allUsers, comments, projectUploads,
+    properties, allUsers, comments, projectUploads,
     editDialogOpen, setEditDialogOpen,
     deleteDialogOpen, setDeleteDialogOpen,
     isHoldReasonDialogOpen, setIsHoldReasonDialogOpen,
@@ -45,7 +45,7 @@ export default function ProjectDetail() {
     handleStatusChange, handleHoldReasonSubmit,
     handleUrgencyChange, handleAssigneeChange,
     handlePropertyChange, handleTaskTypeChange, handleInlineEdit,
-    getPropertyName, getAreaName,
+    getPropertyName,
     taskProgress, isOverdue, daysLeft,
     commentsByDate, getSenderInfo,
     imageUploads, fileUploads,
@@ -294,7 +294,6 @@ export default function ProjectDetail() {
         updateTaskStatusMutation={updateTaskStatusMutation}
         handleHoldReasonSubmit={handleHoldReasonSubmit}
         properties={properties}
-        areas={areas}
       />
     </div>
   );

@@ -18,8 +18,6 @@ type ParentTaskRowGroupProps = {
   handleUrgencyChange: (taskId: string, urgency: string) => void;
   handleAssigneeChange: (taskId: string, assignedToId: string) => void;
   handlePropertyChange: (taskId: string, propertyId: string) => void;
-  handleDepartmentChange: (taskId: string, areaId: string) => void;
-  areas: Area[];
   handleInlineEdit: (taskId: string, field: string, value: string) => void;
   isAdmin?: boolean;
   onReviewEstimates?: (taskId: string) => void;
