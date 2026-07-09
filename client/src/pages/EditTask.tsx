@@ -121,7 +121,7 @@ export default function EditTask() {
   });
 
   const { data: allVehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+    queryKey: ["/api/vehicles/for-task-selection"],
   });
 
   const showVehicle = isAutoShopName(selectedProperty?.name);

@@ -70,6 +70,16 @@ function parseReservationStatuses(raw: string | undefined): string[] | undefined
 }
 
 export function registerVehicleRoutes(app: Express) {
+  // Read-only vehicle list for task creation/editing (technicians without fleet management)
+  app.get("/api/vehicles/for-task-selection", isAuthenticated, requireTechnicianOrAdmin, async (_req, res) => {
+    try {
+      const vehicles = await storage.getVehicles();
+      res.json(vehicles);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch vehicles for task selection");
+    }
+  });
+
   // Vehicle routes
   app.get("/api/vehicles", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {

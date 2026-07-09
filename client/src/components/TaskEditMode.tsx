@@ -132,7 +132,7 @@ export function TaskEditMode({
   });
 
   const { data: allVehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+    queryKey: ["/api/vehicles/for-task-selection"],
   });
 
   const { data: equipment = [] } = useQuery<Equipment[]>({

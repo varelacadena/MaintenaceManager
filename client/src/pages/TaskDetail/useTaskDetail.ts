@@ -260,7 +260,7 @@ export function useTaskDetail() {
   });
 
   const { data: allVehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+    queryKey: ["/api/vehicles/for-task-selection"],
     enabled: !!isAddSubTaskDialogOpen,
   });
 

@@ -111,7 +111,7 @@ export default function TechnicianFieldJob() {
     queryKey: ["/api/properties"],
   });
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+    queryKey: ["/api/vehicles/for-task-selection"],
   });
 
   const sortedProperties = useMemo(() => sortByName(properties), [properties]);

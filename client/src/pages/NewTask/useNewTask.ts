@@ -125,7 +125,7 @@ export function useNewTask() {
   });
 
   const { data: allVehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+    queryKey: ["/api/vehicles/for-task-selection"],
   });
 
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
