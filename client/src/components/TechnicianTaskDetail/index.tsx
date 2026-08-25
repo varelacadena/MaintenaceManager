@@ -43,6 +43,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         isPaused={hook.isPaused}
         isSubTask={isSubTask}
         locationText={hook.locationText}
+        vehicleText={hook.vehicleText}
         locationExpanded={hook.locationExpanded}
         setLocationExpanded={hook.setLocationExpanded}
         hasMoreBuildings={hook.hasMoreBuildings}
@@ -51,6 +52,17 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         taskStarted={hook.taskStarted}
         elapsedSeconds={hook.elapsedSeconds}
       />
+
+      {!!props.activeTimer && !hook.isPaused && (
+        <div
+          className="shrink-0 px-3 py-2 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800"
+          data-testid="banner-timer-running"
+        >
+          <p className="text-xs sm:text-sm text-amber-900 dark:text-amber-100 text-center">
+            Timer is running — pause or finish this task to go back to your work list.
+          </p>
+        </div>
+      )}
 
       <div className="flex shrink-0 bg-background border-b border-border" data-testid="tech-tabs">
         {(["task", "more"] as const).map((tab) => (
@@ -139,6 +151,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       <TechnicianDialogs
         task={task}
+        isStartReminderOpen={hook.isStartReminderOpen}
+        setIsStartReminderOpen={hook.setIsStartReminderOpen}
+        handleStartReminderConfirm={hook.handleStartReminderConfirm}
+        startTimerMutation={startTimerMutation}
         isPauseDialogOpen={hook.isPauseDialogOpen}
         pauseDialogMode={hook.pauseDialogMode}
         setIsPauseDialogOpen={hook.setIsPauseDialogOpen}
@@ -167,6 +183,10 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         setIsResourcesOpen={hook.setIsResourcesOpen}
         allTaskResources={resourcesForSheet}
         userRole={props.user?.role}
+        isLeaveConfirmDialogOpen={props.isLeaveConfirmDialogOpen}
+        cancelLeave={props.cancelLeave}
+        confirmLeave={props.confirmLeave}
+        handlePauseAndLeave={hook.handlePauseAndLeave}
       />
       <TechnicianDialogsExtra
         isAddQuoteDialogOpen={props.isAddQuoteDialogOpen}

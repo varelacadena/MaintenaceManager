@@ -6,7 +6,7 @@ import type { TechnicianTaskDetailProps } from "./types";
 
 export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
-    task, property, multiProperties = [], space, equipment, contactStaff,
+    task, property, multiProperties = [], space, equipment, vehicle, contactStaff,
     notes, uploads, parts, quotes, activeTimer, timeEntries,
     allTaskResources, startTimerMutation, stopTimerMutation,
     addUploadMutation, estimateBlocksCompletion,
@@ -20,6 +20,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [showCompletion, setShowCompletion] = useState(false);
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [pauseDialogMode, setPauseDialogMode] = useState<"running" | "paused">("running");
+  const [isStartReminderOpen, setIsStartReminderOpen] = useState(false);
   const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
@@ -55,13 +56,17 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
     const startMs = new Date(entry.startTime).getTime();
     const previousCompleted = timeEntries
-      .filter((e) => e.id !== activeTimer && e.durationMinutes)
-      .reduce((sum, e) => sum + (e.durationMinutes || 0) * 60, 0);
+      .filter((e) => e.id !== activeTimer && e.startTime && e.endTime)
+      .reduce((sum, e) => {
+        const start = new Date(e.startTime!).getTime();
+        const end = new Date(e.endTime!).getTime();
+        return sum + Math.max(0, Math.floor((end - start) / 1000));
+      }, 0);
 
     const update = () => {
       const now = Date.now();
       const currentSeg = Math.floor((now - startMs) / 1000);
-      setElapsedSeconds(previousCompleted + currentSeg);
+      setElapsedSeconds(previousCompleted + Math.max(0, currentSeg));
     };
     update();
     const interval = setInterval(update, 1000);
@@ -71,8 +76,12 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   useEffect(() => {
     if (isPaused || !activeTimer) {
       const total = timeEntries
-        .filter((e) => e.durationMinutes)
-        .reduce((sum, e) => sum + (e.durationMinutes || 0) * 60, 0);
+        .filter((e) => e.startTime && e.endTime)
+        .reduce((sum, e) => {
+          const start = new Date(e.startTime!).getTime();
+          const end = new Date(e.endTime!).getTime();
+          return sum + Math.max(0, Math.floor((end - start) / 1000));
+        }, 0);
       if (total > 0) setElapsedSeconds(total);
     }
   }, [isPaused, activeTimer, timeEntries]);
@@ -128,7 +137,13 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   }, [currentNoteId, task.id]);
 
   const handleStartTask = () => {
-    startTimerMutation.mutate();
+    setIsStartReminderOpen(true);
+  };
+
+  const handleStartReminderConfirm = () => {
+    startTimerMutation.mutate(undefined, {
+      onSuccess: () => setIsStartReminderOpen(false),
+    });
   };
 
   const handlePauseTap = () => {
@@ -159,6 +174,21 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       const message = error instanceof Error ? error.message : "Failed to pause timer";
       toast({ title: "Failed to pause", description: message, variant: "destructive" });
     }
+  };
+
+  const handlePauseAndLeave = async () => {
+    if (activeTimer) {
+      try {
+        await stopTimerMutation.mutateAsync({ timerId: activeTimer });
+        setIsPaused(true);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Failed to pause timer";
+        toast({ title: "Failed to pause", description: message, variant: "destructive" });
+        return;
+      }
+    }
+    // Pause clears the active timer; navigate using the pending leave target.
+    props.confirmLeave();
   };
 
   const handleMarkComplete = async () => {
@@ -203,6 +233,14 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   })();
   const hasMoreBuildings = !locationExpanded && multiProperties.length > 2;
 
+  const vehicleText = (() => {
+    if (vehicle) {
+      const name = `${vehicle.make} ${vehicle.model}`.trim();
+      return [name, vehicle.vehicleId].filter(Boolean).join(" · ");
+    }
+    return task.vehicleName?.trim() || "";
+  })();
+
   const contactName = contactStaff
     ? `${contactStaff.firstName || ""} ${contactStaff.lastName || ""}`.trim() || contactStaff.username
     : task.contactName || "";
@@ -230,6 +268,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     showCompletion,
     isPauseDialogOpen, setIsPauseDialogOpen,
     pauseDialogMode,
+    isStartReminderOpen, setIsStartReminderOpen,
     isEstimateSheetOpen, setIsEstimateSheetOpen,
     isPartModalOpen, setIsPartModalOpen,
     isResourcesOpen, setIsResourcesOpen,
@@ -241,13 +280,16 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     isRunning,
     handleNoteChange,
     handleStartTask,
+    handleStartReminderConfirm,
     handlePauseTap,
     handleFinishTap,
     handleResume,
     handlePauseConfirm,
+    handlePauseAndLeave,
     handleMarkComplete,
     locationExpanded, setLocationExpanded,
     locationText,
+    vehicleText,
     hasMoreBuildings,
     contactName,
     contactPhone,

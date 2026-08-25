@@ -7,6 +7,8 @@ import {
   QrCode,
   MapPin,
   Package,
+  Camera,
+  StickyNote,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
@@ -18,6 +20,10 @@ import type { Task, Quote, InventoryItem } from "@shared/schema";
 
 export interface TechnicianDialogsProps {
   task: Task;
+  isStartReminderOpen: boolean;
+  setIsStartReminderOpen: (v: boolean) => void;
+  handleStartReminderConfirm: () => void;
+  startTimerMutation: any;
   isPauseDialogOpen: boolean;
   pauseDialogMode: "running" | "paused";
   setIsPauseDialogOpen: (v: boolean) => void;
@@ -46,10 +52,18 @@ export interface TechnicianDialogsProps {
   setIsResourcesOpen: (v: boolean) => void;
   allTaskResources: any[];
   userRole?: string;
+  isLeaveConfirmDialogOpen: boolean;
+  cancelLeave: () => void;
+  confirmLeave: () => void;
+  handlePauseAndLeave: () => void;
 }
 
 export function TechnicianDialogs({
   task,
+  isStartReminderOpen,
+  setIsStartReminderOpen,
+  handleStartReminderConfirm,
+  startTimerMutation,
   isPauseDialogOpen,
   pauseDialogMode,
   setIsPauseDialogOpen,
@@ -78,14 +92,131 @@ export function TechnicianDialogs({
   setIsResourcesOpen,
   allTaskResources,
   userRole,
+  isLeaveConfirmDialogOpen,
+  cancelLeave,
+  confirmLeave,
+  handlePauseAndLeave,
 }: TechnicianDialogsProps) {
   const { openImagePreview } = useImagePreview();
   const showCost = canSeeInventoryCost(userRole);
   const isTimerRunning = pauseDialogMode === "running";
   const isPending = stopTimerMutation.isPending;
+  const isStartPending = startTimerMutation.isPending;
 
   return (
     <>
+      {isLeaveConfirmDialogOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+          onClick={() => !isPending && cancelLeave()}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="dialog-leave-running-timer"
+          >
+            <p className="text-sm font-semibold mb-1 text-foreground">
+              Timer is still running
+            </p>
+            <p className="text-xs mb-4 text-muted-foreground">
+              The app is working. You can&apos;t go back to the main page while the timer is on.
+              Pause this task to leave, or stay and keep working.
+            </p>
+            <div className="space-y-2">
+              <button
+                className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 bg-gray-600 dark:bg-gray-500"
+                onClick={handlePauseAndLeave}
+                disabled={isPending}
+                data-testid="button-pause-and-leave"
+              >
+                <Pause className="w-4 h-4" />
+                {isPending ? "Pausing..." : "Pause & leave"}
+              </button>
+              <button
+                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center bg-muted border border-border text-foreground"
+                onClick={cancelLeave}
+                disabled={isPending}
+                data-testid="button-stay-on-task"
+              >
+                Stay on task
+              </button>
+              <button
+                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center text-destructive"
+                onClick={confirmLeave}
+                disabled={isPending}
+                data-testid="button-leave-anyway"
+              >
+                Leave anyway (timer keeps running)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isStartReminderOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+          onClick={() => !isStartPending && setIsStartReminderOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="dialog-start-reminder"
+          >
+            <p className="text-sm font-semibold mb-1 text-foreground">
+              Don&apos;t forget
+            </p>
+            <p className="text-xs mb-4 text-muted-foreground">
+              Before you finish this task, please:
+            </p>
+            <ul className="space-y-3 mb-5">
+              <li className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <StickyNote className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Add work notes</p>
+                  <p className="text-xs text-muted-foreground">
+                    Write what you did so others have a clear record.
+                  </p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Camera className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Upload a photo</p>
+                  <p className="text-xs text-muted-foreground">
+                    Use the camera button to attach at least one picture.
+                  </p>
+                </div>
+              </li>
+            </ul>
+            <div className="space-y-2">
+              <button
+                className="w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 bg-primary"
+                onClick={handleStartReminderConfirm}
+                disabled={isStartPending}
+                data-testid="button-start-reminder-confirm"
+              >
+                {isStartPending ? "Starting..." : "Got it — Start task"}
+              </button>
+              <button
+                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center bg-muted border border-border text-muted-foreground"
+                onClick={() => setIsStartReminderOpen(false)}
+                disabled={isStartPending}
+                data-testid="button-start-reminder-cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isPauseDialogOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"

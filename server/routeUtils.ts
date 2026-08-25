@@ -85,13 +85,15 @@ export function isFleetPrivilegedUser(user: TechPermissionUser | null | undefine
   return canManageFleet(user);
 }
 
-/** Non-privileged users may only read vehicles tied to their own non-cancelled reservations. */
+/** Fleet managers have full access. Technicians can read vehicles for work orders
+ *  (they already list them via for-task-selection). Others need a reservation. */
 export async function canAccessFleetVehicle(
   userId: string,
   user: TechPermissionUser,
   vehicleId: string,
 ): Promise<boolean> {
   if (canManageFleet(user)) return true;
+  if (user.role === "technician") return true;
   const reservations = await storage.getVehicleReservations({ userId });
   return reservations.some(
     (r) =>

@@ -2,7 +2,6 @@ import type { InsertTask } from "@shared/schema";
 import {
   formatEquipmentDisplayName,
   formatUserDisplayName,
-  formatVehicleDisplayName,
 } from "@shared/displayNames";
 import { getUser } from "../storage/users";
 import { getProperty, getSpace, getEquipmentItem } from "../storage/facilities";
@@ -55,7 +54,10 @@ export async function enrichTaskWithNameSnapshots(
 
   if (data.vehicleId) {
     const vehicle = await getVehicle(data.vehicleId);
-    if (vehicle) enriched.vehicleName = formatVehicleDisplayName(vehicle);
+    if (vehicle) {
+      // Task header needs make/model + fleet ID (not year/plate)
+      enriched.vehicleName = `${vehicle.make} ${vehicle.model} · ${vehicle.vehicleId}`.trim();
+    }
   } else if (data.vehicleId === null) {
     enriched.vehicleName = null;
   }

@@ -3,6 +3,7 @@ import {
   MapPin,
   ArrowLeft,
   Globe,
+  Car,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
@@ -14,6 +15,7 @@ interface TechnicianHeroProps {
   isPaused: boolean;
   isSubTask: boolean;
   locationText: string;
+  vehicleText: string;
   locationExpanded: boolean;
   setLocationExpanded: (v: boolean) => void;
   hasMoreBuildings: boolean;
@@ -28,6 +30,7 @@ export function TechnicianHero({
   isPaused,
   isSubTask,
   locationText,
+  vehicleText,
   locationExpanded,
   setLocationExpanded,
   hasMoreBuildings,
@@ -93,13 +96,15 @@ export function TechnicianHero({
         </div>
         {taskStarted && (
           <span
-            className="text-sm font-medium"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold"
             style={{
-              color: "rgba(255,255,255,0.85)",
+              color: "rgba(255,255,255,0.95)",
               fontVariantNumeric: "tabular-nums",
             }}
             data-testid="text-elapsed-timer"
+            title="Elapsed time (hours : minutes : seconds)"
           >
+            <Clock className="w-3.5 h-3.5 shrink-0 opacity-80" />
             {formatElapsed(elapsedSeconds)}
           </span>
         )}
@@ -141,6 +146,17 @@ export function TechnicianHero({
               (less)
             </span>
           )}
+        </div>
+      )}
+      {vehicleText && (
+        <div
+          className="flex items-center gap-1.5 mt-1 min-w-0"
+          data-testid="tech-vehicle-display"
+        >
+          <Car className="w-3.5 h-3.5 shrink-0 text-white/70" />
+          <span className="text-xs sm:text-sm text-white/90 truncate min-w-0 font-medium">
+            {vehicleText}
+          </span>
         </div>
       )}
       {task.estimatedCompletionDate && (

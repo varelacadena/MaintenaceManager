@@ -117,6 +117,9 @@ export interface TechnicianTaskDetailProps {
   scannedVehicle: Vehicle | null;
   isVehicleInfoOpen: boolean;
   setIsVehicleInfoOpen: (v: boolean) => void;
+  isLeaveConfirmDialogOpen: boolean;
+  cancelLeave: () => void;
+  confirmLeave: () => void;
 }
 
 export const statusColors: Record<string, string> = {
@@ -145,7 +148,9 @@ export function getStatusLabel(status: string, isPaused: boolean): string {
 }
 
 export function formatElapsed(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  const total = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }

@@ -135,6 +135,9 @@ export default function TaskDetail() {
           scannedVehicle={ctx.scannedVehicle}
           isVehicleInfoOpen={ctx.isVehicleInfoOpen}
           setIsVehicleInfoOpen={ctx.setIsVehicleInfoOpen}
+          isLeaveConfirmDialogOpen={ctx.isLeaveConfirmDialogOpen}
+          cancelLeave={ctx.cancelLeave}
+          confirmLeave={ctx.confirmLeave}
         />
         <UploadLabelDialog
           open={!!ctx.pendingUploadForLabel}
