@@ -70,7 +70,7 @@ app.use(
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      sameSite: process.env.CROSS_SITE_COOKIES === "true" ? "none" : "lax",
     },
   })
 );
@@ -172,7 +172,7 @@ app.use((req, res, next) => {
     // Route handlers should call res.json() or res.status().json() themselves
     if (!res.headersSent) {
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+      const message = status >= 500 ? "Internal Server Error" : (err.message || "Internal Server Error");
       console.error("Unhandled error in global handler:", err);
       res.status(status).json({ message });
     }

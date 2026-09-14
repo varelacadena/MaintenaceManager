@@ -33,6 +33,45 @@ export function getServiceRequestUrgencyLabel(urgency: string): string {
   return serviceRequestUrgencyLabels[urgency] ?? urgency;
 }
 
+export function getServiceRequestReporter(
+  request: {
+    requesterName?: string | null;
+    requesterEmail?: string | null;
+    requesterPhone?: string | null;
+    requesterId?: string | null;
+  } | null | undefined,
+  requester?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    phoneNumber?: string | null;
+    role?: string | null;
+  } | null,
+) {
+  if (requester) {
+    const name = `${requester.firstName ?? ""} ${requester.lastName ?? ""}`.trim();
+    return {
+      name: name || request?.requesterName || "Unknown",
+      email: requester.email || request?.requesterEmail || null,
+      phone: requester.phoneNumber || request?.requesterPhone || null,
+      role: requester.role || null,
+      isGuest: false,
+    };
+  }
+
+  if (request?.requesterName || request?.requesterEmail || request?.requesterPhone) {
+    return {
+      name: request.requesterName || "Campus reporter",
+      email: request.requesterEmail || null,
+      phone: request.requesterPhone || null,
+      role: null,
+      isGuest: true,
+    };
+  }
+
+  return null;
+}
+
 /** Stable order for filters and charts */
 export const serviceRequestStatusOrder = [
   "pending",

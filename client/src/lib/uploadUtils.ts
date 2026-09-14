@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, parseApiError } from "@/lib/queryClient";
 
 export type SignedUploadParams = {
   method: "PUT";
@@ -8,6 +8,19 @@ export type SignedUploadParams = {
 
 export async function getSignedUploadParameters(): Promise<SignedUploadParams> {
   const res = await apiRequest("POST", "/api/objects/upload");
+  const data = await res.json();
+  return {
+    method: "PUT" as const,
+    url: data.uploadURL,
+    objectPath: data.objectPath,
+  };
+}
+
+export async function getSignedPublicUploadParameters(): Promise<SignedUploadParams> {
+  const res = await fetch("/api/public/objects/upload", { method: "POST" });
+  if (!res.ok) {
+    throw new Error(await parseApiError(res, "Could not start photo upload"));
+  }
   const data = await res.json();
   return {
     method: "PUT" as const,

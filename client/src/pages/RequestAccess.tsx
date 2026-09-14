@@ -259,7 +259,14 @@ export default function RequestAccess() {
               {isLoading ? "Submitting..." : "Submit Request"}
             </Button>
 
-            <div className="text-center mt-2">
+            <div className="text-center mt-2 flex flex-col gap-1.5">
+              <a
+                href="/report"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-report-problem"
+              >
+                Just need to report a problem?
+              </a>
               <a
                 href="/login"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"

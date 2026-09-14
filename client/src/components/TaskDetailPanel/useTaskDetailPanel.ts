@@ -27,6 +27,7 @@ import {
   priorityConfig,
   getAvatarHexColor as getAvatarColorForId,
 } from "@/utils/taskUtils";
+import { PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
 
 interface UseTaskDetailPanelArgs {
   taskId: string;
@@ -472,6 +473,22 @@ export function useTaskDetailPanel({
       toast({
         title: "Cannot complete task",
         description: "All subtasks must be completed first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (task?.requiresEstimate && task?.estimateStatus !== "approved") {
+      toast({
+        title: "Cannot complete task",
+        description: "Estimates must be approved before completing this task.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (task?.requiresPhoto && imgCount === 0) {
+      toast({
+        title: "Photo required",
+        description: PHOTO_REQUIRED_MESSAGE,
         variant: "destructive",
       });
       return;

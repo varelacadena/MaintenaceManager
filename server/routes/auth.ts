@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { handleRouteError } from "../routeUtils";
+import { getPublicAppUrl } from "../appUrl";
 
 export function registerAuthRoutes(app: Express) {
   app.get("/api/health", async (_req, res) => {
@@ -39,6 +40,11 @@ export function registerAuthRoutes(app: Express) {
       const allUsers = await storage.getAllUsers();
 
       if (allUsers.length === 0) {
+        const allowBootstrap =
+          process.env.ALLOW_FIRST_USER_SETUP === "true" || process.env.NODE_ENV !== "production";
+        if (!allowBootstrap) {
+          return res.status(403).json({ message: "Initial setup is disabled" });
+        }
         console.log("First-time setup detected - creating initial admin account");
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -152,9 +158,7 @@ export function registerAuthRoutes(app: Express) {
 
       await storage.createResetToken(user.id, token, expiresAt);
 
-      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-      const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:5000";
-      const resetUrl = `${protocol}://${host}/reset-password?token=${token}`;
+      const resetUrl = `${getPublicAppUrl(req)}/reset-password?token=${token}`;
 
       try {
         const { Resend } = await import("resend");

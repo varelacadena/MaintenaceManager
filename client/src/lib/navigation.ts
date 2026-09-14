@@ -20,6 +20,7 @@ export function isNavItemActive(location: string, itemUrl: string): boolean {
     "/analytics",
     "/inventory",
     "/vendors",
+    "/students",
   ];
 
   return prefixRoutes.some(
@@ -75,8 +76,14 @@ export function getParentRoute(pathname: string, role?: string): string {
   if (/^\/tasks\/[^/]+\/edit$/.test(path)) {
     return path.replace(/\/edit$/, "");
   }
-  if (path === "/tasks/new" || path === "/work/add-job") {
+  if (path === "/tasks/new" || path === "/work/add-job" || path === "/work/recap") {
     return "/work";
+  }
+  if (path === "/clock-out" || path === "/hours") {
+    return "/work";
+  }
+  if (/^\/students\/[^/]+$/.test(path)) {
+    return "/students";
   }
   if (/^\/tasks\/[^/]+$/.test(path)) {
     return "/work";
@@ -115,6 +122,7 @@ export function getParentRoute(pathname: string, role?: string): string {
   }
   if (
     path === "/users" ||
+    path === "/students" ||
     path === "/vendors" ||
     path === "/calendar" ||
     path === "/settings" ||
@@ -137,7 +145,10 @@ export function hasPageBackControl(pathname: string, role?: string): boolean {
     return true;
   }
 
-  if (path === "/work/add-job") {
+  if (path === "/work/add-job" || path === "/work/recap" || path === "/clock-out" || path === "/hours") {
+    return true;
+  }
+  if (/^\/students\/[^/]+$/.test(path)) {
     return true;
   }
 

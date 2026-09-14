@@ -48,7 +48,7 @@ async function validateResourceReferences(
 }
 
 export function registerResourceRoutes(app: Express) {
-  app.get("/api/resource-categories", isAuthenticated, async (req, res) => {
+  app.get("/api/resource-categories", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const categories = await storage.getResourceCategories();
       res.json(categories);
@@ -70,7 +70,7 @@ export function registerResourceRoutes(app: Express) {
     }
   });
 
-  app.get("/api/resource-folders", isAuthenticated, async (req, res) => {
+  app.get("/api/resource-folders", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       if (req.query.all === "true") {
         const folders = await storage.getAllResourceFolders();
@@ -84,7 +84,7 @@ export function registerResourceRoutes(app: Express) {
     }
   });
 
-  app.get("/api/resource-folders/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/resource-folders/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const folder = await storage.getResourceFolderById(req.params.id);
       if (!folder) return res.status(404).json({ message: "Folder not found" });
@@ -137,7 +137,7 @@ export function registerResourceRoutes(app: Express) {
     }
   });
 
-  app.get("/api/resources", isAuthenticated, async (req, res) => {
+  app.get("/api/resources", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const filters: { categoryId?: string; type?: string; folderId?: string | null } = {};
       if (req.query.categoryId) filters.categoryId = req.query.categoryId as string;
@@ -154,7 +154,7 @@ export function registerResourceRoutes(app: Express) {
     }
   });
 
-  app.get("/api/resources/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const resource = await storage.getResourceById(req.params.id);
       if (!resource) return res.status(404).json({ message: "Resource not found" });

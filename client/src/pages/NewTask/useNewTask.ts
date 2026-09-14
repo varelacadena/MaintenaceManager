@@ -419,6 +419,11 @@ export function useNewTask() {
       }
       form.setValue("contactType", "requester");
       setContactType("requester");
+      if (!request.requesterId) {
+        form.setValue("contactName", request.requesterName || "");
+        form.setValue("contactEmail", request.requesterEmail || "");
+        form.setValue("contactPhone", request.requesterPhone || "");
+      }
     }
   }, [request, form]);
 

@@ -590,7 +590,7 @@ export function registerVehicleRoutes(app: Express) {
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting vehicle reservation:", error);
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ message: "Failed to delete reservation" });
     }
   });
 

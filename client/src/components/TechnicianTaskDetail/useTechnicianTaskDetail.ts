@@ -2,6 +2,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  hasWorkExplanation,
+  isSystemGeneratedNoteContent,
+  isWorkExplanationContent,
+  uploadIsCompletionPhoto,
+  PHOTO_REQUIRED_MESSAGE,
+  WORK_NOTE_REQUIRED_MESSAGE,
+} from "@shared/taskCompletion";
 import type { TechnicianTaskDetailProps } from "./types";
 
 export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
@@ -30,11 +38,14 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [noteText, setNoteText] = useState(existingJobNote?.content || "");
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(existingJobNote?.id || null);
   const [saveIndicator, setSaveIndicator] = useState<"idle" | "saving" | "saved">("idle");
+  const [completionNoteError, setCompletionNoteError] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteInitializedRef = useRef(false);
+  const currentNoteIdRef = useRef<string | null>(existingJobNote?.id || null);
+  currentNoteIdRef.current = currentNoteId;
 
-  const taskStarted = task.status === "in_progress" || task.status === "completed" || task.status === "waiting_approval";
+  const taskStarted = task.status === "in_progress" || task.status === "completed";
   const isRunning = !!activeTimer && !isPaused;
 
   useEffect(() => {
@@ -103,8 +114,30 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     }
   }, [existingJobNote, task.id]);
 
+  const persistNote = useCallback(async (content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    const noteId = currentNoteIdRef.current;
+    if (noteId) {
+      await apiRequest("PATCH", `/api/task-notes/${noteId}`, { content: trimmed });
+    } else {
+      const response = await apiRequest("POST", "/api/task-notes", {
+        taskId: task.id,
+        content: trimmed,
+        noteType: "job_note",
+      });
+      const created = await response.json();
+      if (created?.id) {
+        currentNoteIdRef.current = created.id;
+        setCurrentNoteId(created.id);
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", task.id] });
+  }, [task.id]);
+
   const handleNoteChange = useCallback((value: string) => {
     setNoteText(value);
+    setCompletionNoteError(false);
     if (!value.trim()) {
       setSaveIndicator("idle");
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -115,18 +148,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     const trimmed = value.trim();
     debounceRef.current = setTimeout(async () => {
       try {
-        if (currentNoteId) {
-          await apiRequest("PATCH", `/api/task-notes/${currentNoteId}`, { content: trimmed });
-        } else {
-          const response = await apiRequest("POST", "/api/task-notes", {
-            taskId: task.id,
-            content: trimmed,
-            noteType: "job_note",
-          });
-          const created = await response.json();
-          if (created?.id) setCurrentNoteId(created.id);
-        }
-        queryClient.invalidateQueries({ queryKey: ["/api/task-notes/task", task.id] });
+        await persistNote(trimmed);
         setSaveIndicator("saved");
         if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current);
         savedIndicatorRef.current = setTimeout(() => setSaveIndicator("idle"), 2000);
@@ -134,7 +156,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         setSaveIndicator("idle");
       }
     }, 1200);
-  }, [currentNoteId, task.id]);
+  }, [persistNote]);
 
   const handleStartTask = () => {
     setIsStartReminderOpen(true);
@@ -147,11 +169,13 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   };
 
   const handlePauseTap = () => {
+    setCompletionNoteError(false);
     setPauseDialogMode("running");
     setIsPauseDialogOpen(true);
   };
 
   const handleFinishTap = () => {
+    setCompletionNoteError(false);
     setPauseDialogMode("paused");
     setIsPauseDialogOpen(true);
   };
@@ -191,21 +215,42 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     props.confirmLeave();
   };
 
+  const notesReady = isWorkExplanationContent(noteText) || hasWorkExplanation(notes);
+  const photoReady = !task.requiresPhoto || uploads.some(uploadIsCompletionPhoto);
+  const completionNoteValue = isSystemGeneratedNoteContent(noteText) ? "" : noteText;
+
   const handleMarkComplete = async () => {
     if (estimateBlocksCompletion) {
       toast({ title: "Cannot complete", description: "Estimates must be approved first.", variant: "destructive" });
       return;
     }
-    if (task.requiresPhoto && uploads.length === 0) {
-      toast({ title: "Photo required", description: "Please take a photo before completing.", variant: "destructive" });
+    if (!photoReady) {
+      toast({ title: "Photo required", description: PHOTO_REQUIRED_MESSAGE, variant: "destructive" });
       return;
     }
+    if (!notesReady) {
+      setCompletionNoteError(true);
+      toast({
+        title: "Work note required",
+        description: WORK_NOTE_REQUIRED_MESSAGE,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     try {
+      if (isWorkExplanationContent(noteText)) {
+        await persistNote(noteText);
+      }
       await stopTimerMutation.mutateAsync({
         timerId: activeTimer ?? undefined,
         newStatus: "completed",
       });
       setIsPauseDialogOpen(false);
+      setCompletionNoteError(false);
       setShowCompletion(true);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Please try again.";
@@ -276,6 +321,10 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     noteText, setNoteText,
     currentNoteId,
     saveIndicator,
+    completionNoteValue,
+    completionNoteError,
+    notesReady,
+    photoReady,
     taskStarted,
     isRunning,
     handleNoteChange,

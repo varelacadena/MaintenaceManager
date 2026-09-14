@@ -41,7 +41,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
     updateStatusMutation,
     deleteTaskMutation, addUploadMutation, addNoteMutation,
     getUploadParameters, handleAutoSaveUpload, handleEquipmentScan,
-    isCompleted, allSubtasksDone,
+    isCompleted, allSubtasksDone, handleMarkComplete, handleStartTask,
   } = ctx;
 
   if (!task) return null;
@@ -92,11 +92,11 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
             </Button>
           </div>
           <div className="flex-1">
-            {task.status === "not_started" || task.status === "needs_estimate" || task.status === "waiting_approval" ? (
+            {task.status === "not_started" ? (
               <Button
                 className="w-full"
                 style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
-                onClick={() => updateStatusMutation.mutate("in_progress")}
+                onClick={() => void handleStartTask()}
                 disabled={updateStatusMutation.isPending}
                 data-testid="button-mobile-start-task"
               >
@@ -109,7 +109,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
                   backgroundColor: allSubtasksDone ? "#4338CA" : "#9CA3AF",
                   color: "#FFFFFF",
                 }}
-                onClick={() => updateStatusMutation.mutate("completed")}
+                onClick={handleMarkComplete}
                 disabled={!allSubtasksDone || updateStatusMutation.isPending}
                 data-testid="button-mobile-mark-complete"
               >

@@ -19,11 +19,14 @@ import { goBack, hasPageBackControl } from "@/lib/navigation";
 import { queryClient } from "./lib/queryClient";
 import { markRouteNavigation, measureRouteNavigation } from "@/lib/performanceMarks";
 import { AppRoutes } from "@/routes/AppRoutes";
+import { StudentClockInGate } from "@/pages/StudentPortal/StudentClockInGate";
+import { StudentHeaderStatus } from "@/pages/StudentPortal/StudentHeaderStatus";
 
 const Landing = lazyWithRetry(() => import("@/pages/Landing"));
 const ForgotPassword = lazyWithRetry(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazyWithRetry(() => import("@/pages/ResetPassword"));
 const RequestAccess = lazyWithRetry(() => import("@/pages/RequestAccess"));
+const PublicReport = lazyWithRetry(() => import("@/pages/PublicReport"));
 const AdminTaskDetailPage = lazyWithRetry(() => import("@/pages/AdminTaskDetailPage"));
 const TaskDetail = lazyWithRetry(() => import("@/pages/TaskDetail"));
 const MobileTaskDetail = lazyWithRetry(() => import("@/components/MobileTaskDetail"));
@@ -79,15 +82,32 @@ function AuthenticatedApp() {
     "--sidebar-width-icon": "3rem",
   };
 
-  if (isLoading) {
+  const publicPath = typeof window !== "undefined" ? window.location.pathname : currentPath;
+  const isPublicReport = publicPath === "/report";
+  const isPublicAuthPage =
+    publicPath === "/forgot-password" ||
+    publicPath === "/reset-password" ||
+    publicPath === "/request-access" ||
+    isPublicReport;
+
+  if (isLoading && !isPublicAuthPage) {
     return <AuthShellSkeleton />;
   }
 
+  if (isPublicReport) {
+    return (
+      <Suspense fallback={<SuspenseFallback />}>
+        <PublicReport />
+      </Suspense>
+    );
+  }
+
   if (!isAuthenticated) {
-    const path = window.location.pathname;
+    const path = publicPath;
     if (path === "/forgot-password") return <Suspense fallback={<SuspenseFallback />}><ForgotPassword /></Suspense>;
     if (path === "/reset-password") return <Suspense fallback={<SuspenseFallback />}><ResetPassword /></Suspense>;
     if (path === "/request-access") return <Suspense fallback={<SuspenseFallback />}><RequestAccess /></Suspense>;
+    if (path === "/report") return <Suspense fallback={<SuspenseFallback />}><PublicReport /></Suspense>;
     if (path && path !== "/" && path !== "/login") {
       const fullUrl = path + window.location.search + window.location.hash;
       sessionStorage.setItem("returnUrl", fullUrl);
@@ -95,7 +115,7 @@ function AuthenticatedApp() {
     return <Suspense fallback={<SuspenseFallback />}><Landing /></Suspense>;
   }
 
-  const isMobileTaskDetail = isMobileView && /^\/tasks\/[^/]+$/.test(currentPath) && !currentPath.endsWith("/edit") && !currentPath.endsWith("/new") && !window.location.search.includes("view=full");
+  const isMobileTaskDetail = user?.role !== "student" && isMobileView && /^\/tasks\/[^/]+$/.test(currentPath) && !currentPath.endsWith("/edit") && !currentPath.endsWith("/new") && !window.location.search.includes("view=full");
 
   const userName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
@@ -160,6 +180,7 @@ function AuthenticatedApp() {
                     {userName}
                   </span>
                 )}
+                {user?.role === "student" && <StudentHeaderStatus />}
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
                 {user?.role !== "student" && user?.role !== "technician" && (
@@ -193,11 +214,11 @@ function AuthenticatedApp() {
                   <AppRoutes />
                 </Suspense>
               </ErrorBoundary>
+              {user?.role === "student" && <StudentClockInGate enabled />}
             </main>
           </div>
         </div>
       </SidebarProvider>
-      <Toaster />
     </>
   );
 }
@@ -209,6 +230,7 @@ function App() {
         <TooltipProvider>
           <ImagePreviewProvider>
             <AuthenticatedApp />
+            <Toaster />
           </ImagePreviewProvider>
         </TooltipProvider>
       </PwaInstallProvider>

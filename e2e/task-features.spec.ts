@@ -67,6 +67,17 @@ async function apiDelete(path: string, cookie: string) {
   return { status: res.status };
 }
 
+async function addWorkNote(taskId: string | null, cookie: string, content = "Replaced the part and verified the repair.") {
+  assert.ok(taskId, "Task ID is required to add a work note");
+  const res = await apiPost("/api/task-notes", {
+    taskId,
+    content,
+    noteType: "job_note",
+  }, cookie);
+  assert.ok(res.status === 200 || res.status === 201, `Expected 200/201 adding note, got ${res.status}: ${JSON.stringify(res.data)}`);
+  return res;
+}
+
 async function test(name: string, fn: () => Promise<void>) {
   try {
     await fn();
@@ -127,7 +138,16 @@ async function main() {
       assert.strictEqual(res.data.status, "in_progress");
     });
 
-    await test("Technician can complete task via status update", async () => {
+    await test("Technician cannot complete task without a work note", async () => {
+      const res = await apiPatch(`/api/tasks/${testTaskId}/status`, {
+        status: "completed",
+      }, techCookie);
+      assert.strictEqual(res.status, 400);
+      assert.match(String(res.data.message || ""), /work note/i);
+    });
+
+    await test("Technician can complete task after adding a work note", async () => {
+      await addWorkNote(testTaskId, techCookie);
       const res = await apiPatch(`/api/tasks/${testTaskId}/status`, {
         status: "completed",
       }, techCookie);
@@ -223,6 +243,7 @@ async function main() {
     });
 
     await test("Completing subtask preserves parentTaskId for navigation", async () => {
+      await addWorkNote(subtaskId, techCookie);
       const res = await apiPatch(`/api/tasks/${subtaskId}/status`, {
         status: "completed",
       }, techCookie);
@@ -390,6 +411,7 @@ async function main() {
       assert.ok(createRes.status === 200 || createRes.status === 201);
       multiAssigneeTaskId = createRes.data.id;
 
+      await addWorkNote(multiAssigneeTaskId, secondTechSession.cookie);
       const completeRes = await apiPatch(`/api/tasks/${multiAssigneeTaskId}/status`, {
         status: "completed",
       }, secondTechSession.cookie);

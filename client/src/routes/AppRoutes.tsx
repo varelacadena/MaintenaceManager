@@ -41,6 +41,11 @@ const VehicleCheckOut = lazyWithRetry(() => import("@/pages/VehicleCheckOut"));
 const VehicleCheckIn = lazyWithRetry(() => import("@/pages/VehicleCheckIn"));
 const VehicleCheckInVerification = lazyWithRetry(() => import("@/pages/VehicleCheckInVerification"));
 const AnalyticsDashboard = lazyWithRetry(() => import("@/pages/analytics/AnalyticsDashboard"));
+const Students = lazyWithRetry(() => import("@/pages/Students"));
+const StudentAdminDetail = lazyWithRetry(() => import("@/pages/Students/StudentAdminDetail"));
+const StudentNewRecap = lazyWithRetry(() => import("@/pages/StudentPortal/StudentNewRecap"));
+const StudentClockOut = lazyWithRetry(() => import("@/pages/StudentPortal/StudentClockOut"));
+const StudentHours = lazyWithRetry(() => import("@/pages/StudentPortal/StudentHours"));
 const ProjectDetail = lazyWithRetry(() => import("@/pages/ProjectDetail"));
 const EmailManagement = lazyWithRetry(() => import("@/pages/EmailManagement"));
 const ResourceLibrary = lazyWithRetry(() => import("@/pages/ResourceLibrary"));
@@ -95,7 +100,7 @@ function WorkRoute() {
 function GrabRoute() {
   return (
     <DomainErrorBoundary domain="Work Orders & Tasks">
-      <RoleGuard allowedRoles={["student", "technician"]}>
+      <RoleGuard allowedRoles={["technician"]}>
         <GrabAJob />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -141,6 +146,8 @@ function EditTaskRoute() {
 }
 
 function TaskDetailRoute() {
+  const { user } = useAuth();
+  if (user?.role === "student") return <RedirectTo to="/work" />;
   return (
     <DomainErrorBoundary domain="Work Orders & Tasks">
       <TaskDetailResponsive />
@@ -151,7 +158,7 @@ function TaskDetailRoute() {
 function RequestsRoute() {
   return (
     <DomainErrorBoundary domain="Service Requests">
-      <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}>
+      <RoleGuard allowedRoles={["admin", "staff", "technician"]}>
         <Requests />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -161,7 +168,7 @@ function RequestsRoute() {
 function RequestDetailRoute() {
   return (
     <DomainErrorBoundary domain="Service Requests">
-      <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}>
+      <RoleGuard allowedRoles={["admin", "staff", "technician"]}>
         <RequestDetail />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -171,7 +178,7 @@ function RequestDetailRoute() {
 function NewRequestRoute() {
   return (
     <DomainErrorBoundary domain="Service Requests">
-      <RoleGuard allowedRoles={["admin", "staff", "technician", "student"]}>
+      <RoleGuard allowedRoles={["admin", "staff", "technician"]}>
         <NewRequest />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -383,10 +390,68 @@ function AnalyticsRoute() {
   );
 }
 
+function StudentsRoute() {
+  return (
+    <DomainErrorBoundary domain="Students">
+      <RoleGuard allowedRoles={["admin"]}>
+        <Students />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function StudentAdminDetailRoute() {
+  return (
+    <DomainErrorBoundary domain="Students">
+      <RoleGuard allowedRoles={["admin"]}>
+        <StudentAdminDetail />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function StudentNewRecapRoute() {
+  return (
+    <DomainErrorBoundary domain="Work Orders & Tasks">
+      <RoleGuard allowedRoles={["student"]}>
+        <StudentNewRecap />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function StudentClockOutRoute() {
+  return (
+    <DomainErrorBoundary domain="Work Orders & Tasks">
+      <RoleGuard allowedRoles={["student"]}>
+        <StudentClockOut />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function StudentHoursRoute() {
+  return (
+    <DomainErrorBoundary domain="Work Orders & Tasks">
+      <RoleGuard allowedRoles={["student"]}>
+        <StudentHours />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
 function LoginRedirectRoute() {
   return (
     <DomainErrorBoundary domain="General">
       <RedirectTo to="/" />
+    </DomainErrorBoundary>
+  );
+}
+
+function PublicReportRedirectRoute() {
+  return (
+    <DomainErrorBoundary domain="General">
+      <RedirectTo to="/new-request" />
     </DomainErrorBoundary>
   );
 }
@@ -450,7 +515,10 @@ export function AppRoutes() {
     <Switch>
       <Route path="/" component={HomeRoute} />
       <Route path="/work/add-job" component={TechnicianFieldJobRoute} />
+      <Route path="/work/recap" component={StudentNewRecapRoute} />
       <Route path="/work" component={WorkRoute} />
+      <Route path="/clock-out" component={StudentClockOutRoute} />
+      <Route path="/hours" component={StudentHoursRoute} />
       <Route path="/grab" component={GrabRoute} />
       <Route path="/tasks" component={TasksRedirectRoute} />
       <Route path="/tasks/new" component={NewTaskRoute} />
@@ -459,6 +527,7 @@ export function AppRoutes() {
       <Route path="/requests" component={RequestsRoute} />
       <Route path="/requests/:id" component={RequestDetailRoute} />
       <Route path="/new-request" component={NewRequestRoute} />
+      <Route path="/report" component={PublicReportRedirectRoute} />
       <Route path="/settings" component={SettingsRoute} />
       <Route path="/calendar" component={CalendarRoute} />
       <Route path="/properties" component={PropertiesRoute} />
@@ -480,6 +549,8 @@ export function AppRoutes() {
       <Route path="/vehicle-checkin/:checkOutLogId" component={VehicleCheckInRoute} />
       <Route path="/vehicle-checkin-verify/:checkInLogId" component={VehicleCheckInVerifyRoute} />
       <Route path="/analytics" component={AnalyticsRoute} />
+      <Route path="/students/:id" component={StudentAdminDetailRoute} />
+      <Route path="/students" component={StudentsRoute} />
       <Route path="/login" component={LoginRedirectRoute} />
       <Route path="/emergency-contacts" component={EmergencyContactsRedirectRoute} />
       <Route path="/projects" component={ProjectsRedirectRoute} />

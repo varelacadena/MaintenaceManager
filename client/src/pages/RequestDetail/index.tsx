@@ -74,6 +74,7 @@ export default function RequestDetail() {
         rejectRequestMutation={hook.rejectRequestMutation}
         markUnderReviewMutation={hook.markUnderReviewMutation}
         requester={hook.requester}
+        reporter={hook.reporter}
         property={hook.property}
         space={hook.space}
         linkedTask={hook.linkedTask}
@@ -98,6 +99,7 @@ export default function RequestDetail() {
       rejectRequestMutation={hook.rejectRequestMutation}
       markUnderReviewMutation={hook.markUnderReviewMutation}
       requester={hook.requester}
+      reporter={hook.reporter}
       property={hook.property}
       space={hook.space}
       linkedTask={hook.linkedTask}

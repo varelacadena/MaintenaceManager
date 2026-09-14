@@ -65,7 +65,7 @@ async function fetchTechnicianDashboardTasks(userId: string) {
   return [...assignedTasks.map((task) => toTaskListSummary(task)), ...helperTasks];
 }
 
-async function fetchDirectoryUsers() {
+async function fetchDirectoryUsers(includeEmail = false) {
   const users = await storage.getAllUsers();
   return users.map((user) => ({
     id: user.id,
@@ -73,7 +73,7 @@ async function fetchDirectoryUsers() {
     lastName: user.lastName,
     role: user.role,
     username: user.username,
-    email: user.email,
+    ...(includeEmail ? { email: user.email } : {}),
   }));
 }
 
@@ -90,7 +90,7 @@ export function registerDashboardRoutes(app: Express) {
 
       if (role === "staff") {
         const [requests, vehicleReservations] = await Promise.all([
-          storage.getServiceRequests({ limit: 5 }),
+          storage.getServiceRequests({ userId, limit: 5 }),
           storage.getVehicleReservations({ userId }),
         ]);
         return res.json({ requests, vehicleReservations });
@@ -114,7 +114,7 @@ export function registerDashboardRoutes(app: Express) {
           await Promise.all([
             fetchWorkTasksForAdmin(),
             storage.getServiceRequests({ limit: 5 }),
-            fetchDirectoryUsers(),
+            fetchDirectoryUsers(true),
             storage.getProperties(),
             storage.getVehicleReservations({ userId }),
             storage.getProjects(),

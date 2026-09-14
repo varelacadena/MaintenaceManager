@@ -69,10 +69,16 @@ test.describe("Work page – student", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("shows student task view with date filters", async ({ page }) => {
-    await expect(page.getByTestId("text-page-title")).toHaveText("Your Tasks");
-    await expect(page.getByTestId("date-filter-bar")).toBeVisible();
-    await expect(page.getByTestId("button-filter-today")).toBeVisible();
+  test("requires clock in before using the recap portal", async ({ page }) => {
+    const gate = page.getByTestId("student-clock-in-gate");
+    const recapTitle = page.getByTestId("text-page-title");
+    await expect(gate.or(recapTitle)).toBeVisible({ timeout: 15000 });
+    if (await gate.isVisible()) {
+      await expect(page.getByTestId("button-clock-in")).toBeVisible();
+      return;
+    }
+    await expect(recapTitle).toHaveText("Daily Recap");
+    await expect(page.getByTestId("button-new-recap")).toBeVisible();
   });
 });
 

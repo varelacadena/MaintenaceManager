@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import type { Task, User } from "@shared/schema";
 import { TechnicianWorkView } from "../TechnicianWorkView";
@@ -95,6 +95,11 @@ describe("WorkTasksEmptyState", () => {
 });
 
 describe("TechnicianWorkView", () => {
+  beforeEach(() => {
+    cleanup();
+    sessionStorage.clear();
+  });
+
   it("opens the guided add job flow from My Tasks", () => {
     const navigate = vi.fn();
     const user = { id: "tech-1", role: "technician" } as User;
@@ -116,5 +121,32 @@ describe("TechnicianWorkView", () => {
 
     fireEvent.click(screen.getByTestId("button-add-field-job"));
     expect(navigate).toHaveBeenCalledWith("/work/add-job");
+  });
+
+  it("keeps the date filter after remounting, like opening a task and coming back", () => {
+    const navigate = vi.fn();
+    const user = { id: "tech-1", role: "technician" } as User;
+    const tasks = [
+      {
+        id: "task-1",
+        name: "Today task",
+        description: "Task description",
+        urgency: "medium",
+        initialDate: new Date(),
+        estimatedCompletionDate: new Date(),
+        assignedToId: "tech-1",
+        status: "not_started",
+        taskType: "one_time",
+      },
+    ] as Task[];
+
+    const { unmount } = render(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+    fireEvent.click(screen.getByTestId("button-filter-week"));
+    expect(screen.getByTestId("button-filter-week")).toHaveAttribute("aria-pressed", "true");
+
+    unmount();
+    render(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+    expect(screen.getByTestId("button-filter-week")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("button-filter-today")).toHaveAttribute("aria-pressed", "false");
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,8 +47,37 @@ export default function Requests() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
-  const [urgencyFilter, setUrgencyFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(() => {
+    try {
+      return sessionStorage.getItem("requests-status-filter") || "pending";
+    } catch {
+      return "pending";
+    }
+  });
+  const [urgencyFilter, setUrgencyFilter] = useState(() => {
+    try {
+      return sessionStorage.getItem("requests-urgency-filter") || "all";
+    } catch {
+      return "all";
+    }
+  });
+
+  const persistStatusFilter = useCallback((value: string) => {
+    setStatusFilter(value);
+    try {
+      sessionStorage.setItem("requests-status-filter", value);
+    } catch {
+      // ignore
+    }
+  }, []);
+  const persistUrgencyFilter = useCallback((value: string) => {
+    setUrgencyFilter(value);
+    try {
+      sessionStorage.setItem("requests-urgency-filter", value);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const {
     data: requests = [],
@@ -246,7 +275,7 @@ export default function Requests() {
           />
         </div>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={persistStatusFilter}>
           <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -259,7 +288,7 @@ export default function Requests() {
           </SelectContent>
         </Select>
 
-        <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
+        <Select value={urgencyFilter} onValueChange={persistUrgencyFilter}>
           <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-urgency-filter">
             <SelectValue placeholder="Filter by urgency" />
           </SelectTrigger>
@@ -299,6 +328,7 @@ export default function Requests() {
                     <p className="font-medium text-sm truncate">{request.title}</p>
                     <p className="text-xs text-muted-foreground" data-testid={`text-requester-${request.id}`}>
                       Request {getServiceRequestNumber(request)} · {getRequesterName(request)}
+                      {!request.requesterId ? " · Public" : ""}
                     </p>
                   </div>
                   <Badge

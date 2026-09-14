@@ -339,7 +339,7 @@ export function TechnicianTaskTab({
         <textarea
           value={noteText}
           onChange={(e) => handleNoteChange(e.target.value)}
-          placeholder="Type your observations... auto-saved as you type"
+          placeholder="Type what you did... required before you can finish"
           rows={3}
           className="w-full resize-none bg-transparent outline-none text-foreground"
           style={{

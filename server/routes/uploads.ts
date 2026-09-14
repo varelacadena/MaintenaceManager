@@ -68,7 +68,6 @@ export function registerUploadRoutes(app: Express) {
       }
 
       let objectKey: string;
-      let supabaseBucket: string | undefined;
 
       if (rawPath.includes(".supabase.co/storage/")) {
         const parsed = parseSupabaseStorageUrl(rawPath);
@@ -76,7 +75,6 @@ export function registerUploadRoutes(app: Express) {
           return res.status(400).json({ message: "Cannot resolve Supabase image path" });
         }
         objectKey = parsed.objectPath;
-        supabaseBucket = parsed.bucket;
       } else if (rawPath.startsWith("https://storage.googleapis.com/")) {
         const urlPath = new URL(rawPath).pathname;
         const uploadsMatch = urlPath.match(/\/uploads\/(.+)$/);
@@ -115,16 +113,14 @@ export function registerUploadRoutes(app: Express) {
       } else {
         const isReferencedImage = await isReferencedEntityImage(objectKey);
         if (!isReferencedImage) {
-          // Allow staff to preview uploads before they are linked to equipment or other records.
           const user = await storage.getUser(userId);
-          const isStaff = user?.role === "admin" || user?.role === "technician";
-          if (!isStaff) {
+          if (user?.role !== "admin") {
             return res.status(403).json({ message: "Access denied" });
           }
         }
       }
 
-      const signedUrl = await getDownloadUrl(objectKey, supabaseBucket);
+      const signedUrl = await getDownloadUrl(objectKey);
       return res.redirect(302, signedUrl);
     } catch (error) {
       handleRouteError(res, error, "Failed to serve image");

@@ -49,6 +49,8 @@ export const serviceRequests = pgTable("service_requests", {
   status: requestStatusEnum("status").notNull().default("pending"),
   requesterId: varchar("requester_id").references(() => users.id, { onDelete: "set null" }),
   requesterName: varchar("requester_name", { length: 200 }),
+  requesterEmail: varchar("requester_email", { length: 200 }),
+  requesterPhone: varchar("requester_phone", { length: 30 }),
   propertyId: varchar("property_id").references(() => properties.id, { onDelete: "set null" }),
   propertyName: varchar("property_name", { length: 200 }),
   spaceId: varchar("space_id").references(() => spaces.id),

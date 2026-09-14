@@ -38,6 +38,7 @@ const adminRoutes: { path: string; ready?: string }[] = [
   { path: "/analytics", ready: "button-date-filter" },
   { path: "/properties" },
   { path: "/users" },
+  { path: "/students" },
   { path: "/vendors" },
   { path: "/inventory" },
   { path: "/vehicles" },

@@ -161,8 +161,23 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
   const {
     form, assignmentOption,
     contactType, setContactType,
-    users, requestId, requester,
+    users, requestId, request, requester,
   } = ctx;
+
+  const guestReporter = !requester && request?.requesterName
+    ? {
+        name: request.requesterName,
+        email: request.requesterEmail,
+        phone: request.requesterPhone,
+      }
+    : null;
+  const reporter = requester
+    ? {
+        name: `${requester.firstName || ""} ${requester.lastName || ""}`.trim(),
+        email: requester.email,
+        phone: requester.phoneNumber,
+      }
+    : guestReporter;
 
   return (
     <>
@@ -170,7 +185,7 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</Label>
         <div className="space-y-3">
           <div className="flex gap-2 flex-wrap">
-            {requestId && requester && (
+            {requestId && reporter && (
               <Button
                 type="button"
                 variant={contactType === "requester" ? "default" : "outline"}
@@ -179,9 +194,9 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
                   setContactType("requester");
                   form.setValue("contactType", "requester");
                   form.setValue("contactStaffId", undefined);
-                  form.setValue("contactName", `${requester.firstName || ""} ${requester.lastName || ""}`.trim());
-                  form.setValue("contactEmail", requester.email || "");
-                  form.setValue("contactPhone", requester.phoneNumber || "");
+                  form.setValue("contactName", reporter.name);
+                  form.setValue("contactEmail", reporter.email || "");
+                  form.setValue("contactPhone", reporter.phone || "");
                 }}
                 data-testid="button-contact-requester"
               >
@@ -217,11 +232,11 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
               Other
             </Button>
           </div>
-          {contactType === "requester" && requester && (
+          {contactType === "requester" && reporter && (
             <div className="p-3 rounded-md border bg-muted/30 text-sm space-y-1" data-testid="contact-requester-info">
-              <p><span className="text-muted-foreground">Contact:</span> {requester.firstName} {requester.lastName}</p>
-              {requester.email && <p><span className="text-muted-foreground">Email:</span> {requester.email}</p>}
-              {requester.phoneNumber && <p><span className="text-muted-foreground">Phone:</span> {requester.phoneNumber}</p>}
+              <p><span className="text-muted-foreground">Contact:</span> {reporter.name}</p>
+              {reporter.email && <p><span className="text-muted-foreground">Email:</span> {reporter.email}</p>}
+              {reporter.phone && <p><span className="text-muted-foreground">Phone:</span> {reporter.phone}</p>}
             </div>
           )}
           {contactType === "staff" && (

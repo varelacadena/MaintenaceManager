@@ -94,14 +94,19 @@ export function registerUserRoutes(app: Express) {
         users = users.filter((user) => user.role === roleFilter);
       }
 
-      res.json(users.map((user) => ({
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        username: user.username,
-        email: user.email,
-      })));
+      res.json(users.map((user) => {
+        const base = {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          username: user.username,
+        };
+        if (currentUser?.role === "admin") {
+          return { ...base, email: user.email };
+        }
+        return base;
+      }));
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch user directory");
     }

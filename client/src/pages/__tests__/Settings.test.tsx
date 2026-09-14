@@ -80,6 +80,7 @@ describe("Settings", () => {
       unreadMessages: 0,
       approvedReservations: 0,
       pendingSignups: 2,
+      pendingStudentTimeEdits: 0,
     });
 
     global.fetch = vi.fn((url) => {

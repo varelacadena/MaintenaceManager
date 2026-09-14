@@ -8,12 +8,47 @@ import { validateTaskLocation } from "../facilityValidation";
 import { touchPropertyLastWorkFromTask } from "../propertyMaintenance";
 import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskAssigned } from "../notifications";
 import { insertTaskSchema, insertPartUsedSchema, insertTaskNoteSchema, partsUsed } from "@shared/schema";
+import {
+  hasWorkExplanation,
+  roleRequiresPhotoOnCompletion,
+  roleRequiresWorkNoteOnCompletion,
+  uploadIsCompletionPhoto,
+  PHOTO_REQUIRED_MESSAGE,
+  WORK_NOTE_REQUIRED_MESSAGE,
+} from "@shared/taskCompletion";
+import { sanitizeTaskPatch } from "@shared/taskPatch";
 import { resolvePartLineCost } from "../inventoryPartCost";
 import { redactPartsUsedForRole } from "../inventoryDto";
 import { z } from "zod";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { toTaskListSummary } from "../taskDto";
+
+async function rejectIfWorkNoteRequired(
+  res: any,
+  taskId: string,
+  role: string | undefined,
+): Promise<boolean> {
+  if (!roleRequiresWorkNoteOnCompletion(role)) return false;
+  const notes = await storage.getNotesByTask(taskId);
+  if (hasWorkExplanation(notes)) return false;
+  res.status(400).json({ message: WORK_NOTE_REQUIRED_MESSAGE });
+  return true;
+}
+
+async function rejectIfPhotoRequired(
+  res: any,
+  taskId: string,
+  role: string | undefined,
+  requiresPhoto: boolean | null | undefined,
+): Promise<boolean> {
+  if (!requiresPhoto) return false;
+  if (!roleRequiresPhotoOnCompletion(role)) return false;
+  const uploads = await storage.getUploadsByTask(taskId);
+  if (uploads.some(uploadIsCompletionPhoto)) return false;
+  res.status(400).json({ message: PHOTO_REQUIRED_MESSAGE });
+  return true;
+}
 
 export function registerTaskRoutes(app: Express) {
   const fieldJobSchema = z.object({
@@ -560,10 +595,16 @@ export function registerTaskRoutes(app: Express) {
 
       const { helperUserIds: patchHelperIds, ...restBody } = req.body;
 
+      const sanitized = sanitizeTaskPatch(currentUser.role, restBody, userId);
+      if (!sanitized.ok) {
+        return res.status(sanitized.status).json({ message: sanitized.message });
+      }
+      const patchBody = sanitized.data;
+
       const locationFields = ["propertyId", "spaceId", "equipmentId", "propertyIds"];
       if (
         currentUser.role !== "admin" &&
-        locationFields.some((field) => restBody[field] !== undefined)
+        locationFields.some((field) => patchBody[field] !== undefined)
       ) {
         return res.status(403).json({ message: "Only admins can change task location fields" });
       }
@@ -577,7 +618,7 @@ export function registerTaskRoutes(app: Express) {
         for (const id of toRemove) await storage.removeTaskHelper(req.params.id, id);
       }
 
-      const updateData: any = { ...restBody };
+      const updateData: any = { ...patchBody };
 
       const needsPoolSync = updateData.assignedToId !== undefined || updateData.assignedVendorId !== undefined || updateData.executorType !== undefined;
       if (needsPoolSync) {
@@ -607,6 +648,14 @@ export function registerTaskRoutes(app: Express) {
           }
           if (currentTask.estimateStatus !== "approved") {
             return res.status(400).json({ message: "Estimates must be approved before completing this task" });
+          }
+        }
+        if (currentTask?.status !== "completed") {
+          if (await rejectIfWorkNoteRequired(res, req.params.id, currentUser.role)) {
+            return;
+          }
+          if (await rejectIfPhotoRequired(res, req.params.id, currentUser.role, currentTask?.requiresPhoto)) {
+            return;
           }
         }
         if (!updateData.actualCompletionDate) {
@@ -869,6 +918,15 @@ export function registerTaskRoutes(app: Express) {
         }
         if (task.estimateStatus !== "approved") {
           return res.status(400).json({ message: "Estimates must be approved before completing this task" });
+        }
+      }
+
+      if (normalizedStatus === "completed" && task.status !== "completed") {
+        if (await rejectIfWorkNoteRequired(res, taskId, currentUser.role)) {
+          return;
+        }
+        if (await rejectIfPhotoRequired(res, taskId, currentUser.role, task.requiresPhoto)) {
+          return;
         }
       }
 

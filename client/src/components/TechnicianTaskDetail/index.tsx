@@ -162,6 +162,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         handleMarkComplete={hook.handleMarkComplete}
         stopTimerMutation={stopTimerMutation}
         estimateBlocksCompletion={estimateBlocksCompletion}
+        completionNoteValue={hook.completionNoteValue}
+        completionNoteError={hook.completionNoteError}
+        notesReady={hook.notesReady}
+        photoReady={hook.photoReady}
+        handleNoteChange={hook.handleNoteChange}
         isEstimateSheetOpen={hook.isEstimateSheetOpen}
         setIsEstimateSheetOpen={hook.setIsEstimateSheetOpen}
         quotes={quotes}

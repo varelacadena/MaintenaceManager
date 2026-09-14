@@ -26,12 +26,12 @@ export function handleRouteError(res: Response, error: unknown, defaultMessage: 
   if (isDatabaseError(error)) {
     if (error.code === "23505") {
       return res.status(409).json({
-        message: error.detail || "A record with this value already exists",
+        message: "A record with this value already exists",
       });
     }
     if (error.code === "23503") {
       return res.status(409).json({
-        message: error.detail || "Referenced record does not exist",
+        message: "Referenced record does not exist",
       });
     }
   }

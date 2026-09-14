@@ -14,7 +14,10 @@ import {
   vehicleMaintenanceLogs,
   spaces,
   projects,
+  studentTimeEntries,
+  studentDailyRecaps,
 } from "@shared/schema";
+import { computeDurationMinutes, hoursFromMinutes } from "@shared/studentPortal";
 import { compareVehicleIds } from "@shared/vehicleSort";
 import { eq, and, gte, lte, sql, count, desc } from "drizzle-orm";
 import {
@@ -115,6 +118,13 @@ export interface TechnicianTaskDetail {
   hoursLogged: number;
 }
 
+export interface StudentRecapDetail {
+  recapId: string;
+  recapDate: string;
+  whatIDid: string;
+  whatILearned: string;
+}
+
 export interface TechnicianPerformance {
   technicianId: string;
   technicianName: string;
@@ -122,9 +132,12 @@ export interface TechnicianPerformance {
   tasksCompleted: number;
   tasksAssigned: number;
   totalHoursLogged: number;
+  clockHoursLogged: number;
+  recapsSubmitted: number;
   avgCompletionTimeHours: number;
   completionRate: number;
   taskDetails: TechnicianTaskDetail[];
+  recapDetails: StudentRecapDetail[];
 }
 
 export interface ServiceRecord {
@@ -378,6 +391,33 @@ function buildMetricComparison(
   const isPositive = lowerIsBetter ? delta < 0 : delta > 0;
 
   return { current, previous, changePercent, isPositive };
+}
+
+function analyticsDateBounds(filters: AnalyticsFilters) {
+  const start = filters.startDate ? new Date(`${filters.startDate}T00:00:00.000`) : undefined;
+  const end = filters.endDate ? new Date(`${filters.endDate}T23:59:59.999`) : undefined;
+  return { start, end };
+}
+
+async function fetchStudentClockEntries(filters: AnalyticsFilters) {
+  const { start, end } = analyticsDateBounds(filters);
+  const clauses = [];
+  if (start) clauses.push(gte(studentTimeEntries.clockInAt, start));
+  if (end) clauses.push(lte(studentTimeEntries.clockInAt, end));
+  return db
+    .select()
+    .from(studentTimeEntries)
+    .where(clauses.length ? and(...clauses) : undefined);
+}
+
+async function fetchStudentRecaps(filters: AnalyticsFilters) {
+  const clauses = [];
+  if (filters.startDate) clauses.push(gte(studentDailyRecaps.recapDate, filters.startDate));
+  if (filters.endDate) clauses.push(lte(studentDailyRecaps.recapDate, filters.endDate));
+  return db
+    .select()
+    .from(studentDailyRecaps)
+    .where(clauses.length ? and(...clauses) : undefined);
 }
 
 export class AnalyticsService {
@@ -739,9 +779,35 @@ export class AnalyticsService {
     const allTimeEntries = await fetchTimeEntriesForTasks(taskIds);
     const propertiesList = await db.select().from(properties);
     const areasList = await db.select().from(areas);
+    const [clockEntries, recapRows] = await Promise.all([
+      fetchStudentClockEntries(filters),
+      fetchStudentRecaps(filters),
+    ]);
     
     const propertyMap = new Map(propertiesList.map(p => [p.id, p.name]));
     const areaMap = new Map(areasList.map(a => [a.id, a.name]));
+    const clockMinutesByStudent = new Map<string, number>();
+    const recapsByStudent = new Map<string, StudentRecapDetail[]>();
+    const now = new Date();
+
+    for (const entry of clockEntries) {
+      if (!entry.studentId) continue;
+      const minutes = entry.durationMinutes
+        ?? (!entry.clockOutAt && entry.clockInAt ? computeDurationMinutes(entry.clockInAt, now) : 0);
+      clockMinutesByStudent.set(entry.studentId, (clockMinutesByStudent.get(entry.studentId) || 0) + minutes);
+    }
+
+    for (const recap of recapRows) {
+      if (!recap.studentId) continue;
+      const list = recapsByStudent.get(recap.studentId) ?? [];
+      list.push({
+        recapId: recap.id,
+        recapDate: typeof recap.recapDate === "string" ? recap.recapDate.slice(0, 10) : String(recap.recapDate).slice(0, 10),
+        whatIDid: recap.whatIDid,
+        whatILearned: recap.whatILearned,
+      });
+      recapsByStudent.set(recap.studentId, list);
+    }
 
     const results: TechnicianPerformance[] = [];
 
@@ -754,6 +820,8 @@ export class AnalyticsService {
         (te) => te.userId === member.id && memberTaskIds.has(te.taskId),
       );
       const totalMinutes = memberTimeEntries.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
+      const clockMinutes = clockMinutesByStudent.get(member.id) || 0;
+      const memberRecaps = recapsByStudent.get(member.id) || [];
 
       const completedTasksWithDates = completedTasks.filter(t => t.actualCompletionDate && t.initialDate);
       let avgCompletionTimeHours = 0;
@@ -798,16 +866,23 @@ export class AnalyticsService {
             })
         : [];
 
+      const clockHoursLogged = hoursFromMinutes(clockMinutes);
+      const taskHoursLogged = Math.round(totalMinutes / 60);
       results.push({
         technicianId: member.id,
         technicianName: `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.username,
         memberType: member.role === "student" ? "student" : "technician",
-        tasksCompleted: completedTasks.length,
-        tasksAssigned: memberTasks.length,
-        totalHoursLogged: Math.round(totalMinutes / 60),
+        tasksCompleted: member.role === "student" ? memberRecaps.length : completedTasks.length,
+        tasksAssigned: member.role === "student" ? memberRecaps.length : memberTasks.length,
+        totalHoursLogged: member.role === "student" ? clockHoursLogged : taskHoursLogged,
+        clockHoursLogged,
+        recapsSubmitted: memberRecaps.length,
         avgCompletionTimeHours,
-        completionRate: memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 0,
+        completionRate: member.role === "student"
+          ? (memberRecaps.length > 0 ? 100 : 0)
+          : (memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 0),
         taskDetails,
+        recapDetails: includeDetails && member.role === "student" ? memberRecaps : [],
       });
     }
 
@@ -1296,12 +1371,15 @@ export class AnalyticsService {
 
       case "technicians":
         const techData = await this.getTechnicianPerformance(filters);
-        headers = ["Technician", "Tasks Completed", "Tasks Assigned", "Hours Logged", "Avg Completion Time (hrs)", "Completion Rate"];
+        headers = ["Name", "Role", "Tasks / Recaps", "Assigned", "Hours Logged", "Clock Hours", "Recaps", "Avg Completion Time (hrs)", "Completion Rate"];
         data = techData.map(t => [
           t.technicianName,
+          t.memberType,
           t.tasksCompleted,
           t.tasksAssigned,
           t.totalHoursLogged,
+          t.clockHoursLogged,
+          t.recapsSubmitted,
           t.avgCompletionTimeHours,
           `${t.completionRate}%`,
         ]);
@@ -1309,20 +1387,28 @@ export class AnalyticsService {
 
       case "technicians-detailed":
         const techDetailData = await this.getTechnicianPerformance(filters);
-        headers = ["Technician", "Task Name", "Description", "Status", "Urgency", "Property", "Area", "Hours Logged", "Start Date", "Completion Date"];
+        headers = ["Name", "Type", "Title", "Details", "Status", "Hours", "Date"];
         for (const tech of techDetailData) {
           for (const task of tech.taskDetails) {
             data.push([
               tech.technicianName,
+              "Task",
               task.taskName,
               task.description,
               task.status.replace(/_/g, " "),
-              task.urgency,
-              task.propertyName,
-              task.areaName,
               task.hoursLogged,
-              task.initialDate ? new Date(task.initialDate).toLocaleDateString() : "N/A",
               task.completionDate ? new Date(task.completionDate).toLocaleDateString() : "N/A",
+            ]);
+          }
+          for (const recap of tech.recapDetails) {
+            data.push([
+              tech.technicianName,
+              "Recap",
+              recap.recapDate,
+              recap.whatIDid,
+              recap.whatILearned,
+              tech.clockHoursLogged,
+              recap.recapDate,
             ]);
           }
         }

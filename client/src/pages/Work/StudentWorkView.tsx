@@ -10,6 +10,7 @@ import {
   DateFilterBar,
   DaySeparator,
 } from "./helpers";
+import { useWorkDateFilter } from "./workDateFilterPrefs";
 import { FieldWorkActiveList } from "./FieldWorkActiveList";
 import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
 
@@ -22,7 +23,7 @@ interface StudentWorkViewProps {
 
 export function StudentWorkView({ user, tasks, properties, navigate }: StudentWorkViewProps) {
   const [showCompleted, setShowCompleted] = useState(false);
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
+  const [dateFilter, setDateFilter] = useWorkDateFilter();
   const getPropertyById = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find((p) => p.id === propertyId) || null;

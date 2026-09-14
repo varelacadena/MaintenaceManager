@@ -27,6 +27,9 @@ import {
   BookOpen,
   Hand,
   Hammer,
+  GraduationCap,
+  Clock,
+  CalendarDays,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +42,7 @@ import {
   canManageInventory,
   canManageEquipment,
 } from "@shared/techPermissions";
+import { useStudentTimeClock } from "@/pages/StudentPortal/studentPortalApi";
 
 interface AppSidebarProps {
   user: User | null | undefined;
@@ -51,6 +55,7 @@ const roleMenus = {
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "Work", url: "/work", icon: FolderKanban },
+    { title: "Students", url: "/students", icon: GraduationCap },
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Resource Library", url: "/resources", icon: BookOpen },
@@ -78,10 +83,9 @@ const roleMenus = {
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   student: [
-    { title: "My Tasks", url: "/work", icon: ClipboardList },
-    { title: "Grab a Job", url: "/grab", icon: Hand },
-    { title: "My Requests", url: "/requests", icon: ClipboardList },
-    { title: "New Request", url: "/new-request", icon: Wrench },
+    { title: "Daily Recap", url: "/work", icon: BookOpen },
+    { title: "Hours", url: "/hours", icon: CalendarDays },
+    { title: "Clock Out", url: "/clock-out", icon: Clock },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
 };
@@ -89,9 +93,13 @@ const roleMenus = {
 export default function AppSidebar({ user, userName, userInitials }: AppSidebarProps) {
   const [location] = useLocation();
   const userRole = user?.role as "admin" | "staff" | "student" | "technician" | undefined;
+  const studentClock = useStudentTimeClock(userRole === "student");
   const menuItems = (() => {
     if (!userRole) return [];
     const base = roleMenus[userRole];
+    if (userRole === "student" && !studentClock.data?.openEntry) {
+      return base.filter((item) => item.url !== "/clock-out");
+    }
     if (userRole !== "technician") return base;
 
     const extra: typeof base = [];
@@ -115,7 +123,7 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
 
   const { data: availableJobCount } = useQuery<{ count: number }>({
     queryKey: ["/api/tasks/available/count"],
-    enabled: userRole === "student" || userRole === "technician",
+    enabled: userRole === "technician",
   });
 
   const handleMouseEnter = () => {
@@ -153,6 +161,8 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
 
                 if (item.title === "Service Requests" && notificationCounts.pendingServiceRequests > 0) {
                   badgeCount = notificationCounts.pendingServiceRequests;
+                } else if (item.title === "Students" && notificationCounts.pendingStudentTimeEdits > 0) {
+                  badgeCount = notificationCounts.pendingStudentTimeEdits;
                 } else if (item.title === "Vehicles" && notificationCounts.pendingVehicleReservations > 0) {
                   badgeCount = notificationCounts.pendingVehicleReservations;
                 } else if (item.title === "Settings" && notificationCounts.pendingSignups > 0) {

@@ -28,6 +28,14 @@ import type {
   Vehicle,
 } from "@shared/schema";
 import { getDateLabel } from "./helpers";
+import {
+  hasWorkExplanation,
+  isWorkExplanationContent,
+  roleRequiresWorkNoteOnCompletion,
+  uploadIsCompletionPhoto,
+  PHOTO_REQUIRED_MESSAGE,
+  WORK_NOTE_REQUIRED_MESSAGE,
+} from "@shared/taskCompletion";
 import { useTaskDetailMutations } from "./useTaskDetailMutations";
 import {
   getSignedUploadParameters,
@@ -615,6 +623,7 @@ export function useTaskDetail() {
     stopTimerMutation,
     addUploadMutation,
     updateStatusMutation,
+    addNoteMutation,
   } = mutations;
 
   const getUploadParameters = getSignedUploadParameters;
@@ -768,7 +777,7 @@ export function useTaskDetail() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (estimateBlocksCompletion) {
       toast({
         title: "Cannot complete task",
@@ -779,13 +788,32 @@ export function useTaskDetail() {
       });
       return;
     }
-    if (task?.requiresPhoto && uploads.length === 0) {
+    if (task?.requiresPhoto && !uploads.some(uploadIsCompletionPhoto)) {
       toast({
         title: "Photo required",
-        description: "This task requires at least one photo before it can be marked as completed. Please upload a photo first.",
+        description: PHOTO_REQUIRED_MESSAGE,
         variant: "destructive",
       });
       return;
+    }
+    if (roleRequiresWorkNoteOnCompletion(user?.role)) {
+      const hasSavedNote = hasWorkExplanation(notes);
+      const hasDraftNote = isWorkExplanationContent(newNote);
+      if (!hasSavedNote && !hasDraftNote) {
+        toast({
+          title: "Work note required",
+          description: WORK_NOTE_REQUIRED_MESSAGE,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!hasSavedNote && hasDraftNote) {
+        try {
+          await addNoteMutation.mutateAsync({ content: newNote.trim(), noteType: "job_note" });
+        } catch {
+          return;
+        }
+      }
     }
     if (activeTimer) {
       stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" });

@@ -84,7 +84,7 @@ export default function Landing() {
             Hartland Maintenance
           </CardTitle>
           <CardDescription className="text-center text-base font-medium text-foreground/80">
-            Sign in to access your workspace
+            Report a problem or sign in to work
           </CardDescription>
           {error && error.includes("first") && (
             <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded text-sm text-blue-800 dark:text-blue-300">
@@ -92,7 +92,25 @@ export default function Landing() {
             </div>
           )}
         </CardHeader>
-        <CardContent className="px-8 pb-8">
+        <CardContent className="px-8 pb-8 space-y-5">
+          <div className="space-y-2">
+            <a
+              href="/report"
+              className="inline-flex w-full items-center justify-center h-11 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              data-testid="link-report-problem"
+            >
+              Report a problem
+            </a>
+            <p className="text-center text-xs text-muted-foreground">No account needed</p>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Staff sign in</span>
+            </div>
+          </div>
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-semibold text-foreground">Username or Email</Label>

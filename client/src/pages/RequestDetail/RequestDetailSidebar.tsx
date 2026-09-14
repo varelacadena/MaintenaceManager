@@ -8,12 +8,12 @@ import {
   MapPin,
 } from "lucide-react";
 import type { RequestDetailHookReturn } from "./useRequestDetail";
-import { getUserDisplayName } from "@/utils/taskUtils";
 
 type RequestDetailSidebarProps = Pick<
   RequestDetailHookReturn,
   | "request"
   | "requester"
+  | "reporter"
   | "property"
   | "space"
 >;
@@ -21,6 +21,7 @@ type RequestDetailSidebarProps = Pick<
 export function RequestDetailSidebar({
   request,
   requester,
+  reporter,
   property,
   space,
 }: RequestDetailSidebarProps) {
@@ -67,7 +68,7 @@ export function RequestDetailSidebar({
         </CardContent>
       </Card>
 
-      {requester && (
+      {reporter && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Requester</CardTitle>
@@ -79,31 +80,31 @@ export function RequestDetailSidebar({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" data-testid="text-requester-name">
-                  {getUserDisplayName(requester)}
+                  {reporter.name}
                 </p>
                 <p className="text-xs text-muted-foreground capitalize">
-                  {requester.role}
+                  {reporter.isGuest ? "Public report" : requester?.role}
                 </p>
               </div>
             </div>
 
-            {(requester.email || requester.phoneNumber) && (
+            {(reporter.email || reporter.phone) && (
               <>
                 <Separator />
                 <div className="space-y-2">
-                  {requester.email && (
+                  {reporter.email && (
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="truncate text-muted-foreground" data-testid="text-requester-email">
-                        {requester.email}
+                        {reporter.email}
                       </span>
                     </div>
                   )}
-                  {requester.phoneNumber && (
+                  {reporter.phone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-muted-foreground" data-testid="text-requester-phone">
-                        {requester.phoneNumber}
+                        {reporter.phone}
                       </span>
                     </div>
                   )}

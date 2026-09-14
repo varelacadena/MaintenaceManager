@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { requireAdmin } from "../middleware";
 import { handleRouteError } from "../routeUtils";
+import { getPublicAppUrl } from "../appUrl";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
@@ -191,9 +192,7 @@ export function registerSignupRoutes(app: Express) {
 
       try {
         const { notifySignupDecision } = await import("../notifications");
-        const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-        const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:5000";
-        const loginUrl = `${protocol}://${host}/login`;
+        const loginUrl = `${getPublicAppUrl(req)}/login`;
         await notifySignupDecision(pendingUser, "approved", undefined, loginUrl);
       } catch (emailErr) {
         console.error("[SIGNUP] Approval email failed:", emailErr);

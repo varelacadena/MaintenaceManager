@@ -38,9 +38,17 @@ interface TechnicianData {
   tasksCompleted: number;
   tasksAssigned: number;
   totalHoursLogged: number;
+  clockHoursLogged?: number;
+  recapsSubmitted?: number;
   avgCompletionTimeHours: number;
   completionRate: number;
   taskDetails: TechnicianTaskDetail[];
+  recapDetails?: {
+    recapId: string;
+    recapDate: string;
+    whatIDid: string;
+    whatILearned: string;
+  }[];
 }
 
 export default function TechniciansReport() {
@@ -78,6 +86,7 @@ export default function TechniciansReport() {
   const data = summary.map((tech) => ({
     ...tech,
     taskDetails: detailsById.get(tech.technicianId)?.taskDetails ?? [],
+    recapDetails: detailsById.get(tech.technicianId)?.recapDetails ?? tech.recapDetails ?? [],
   }));
   const isLoading = summaryLoading;
 
@@ -115,7 +124,8 @@ export default function TechniciansReport() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <ToggleGroup
+      <div className="flex items-center justify-between gap-3">
+        <ToggleGroup
         type="single"
         value={roleFilter}
         onValueChange={(value) => value && setRoleFilter(value as RoleFilter)}
@@ -135,6 +145,14 @@ export default function TechniciansReport() {
           <span className="text-xs sm:text-sm">Students</span>
         </ToggleGroupItem>
       </ToggleGroup>
+        {(roleFilter === "student" || roleFilter === "all") && (
+          <Link href="/students">
+            <span className="text-xs sm:text-sm text-primary hover:underline" data-testid="link-review-students">
+              Review recaps
+            </span>
+          </Link>
+        )}
+      </div>
 
       <AnalyticsFilters
         filters={filters}
@@ -162,7 +180,7 @@ export default function TechniciansReport() {
           icon={Users}
         />
         <KpiCard
-          title="Tasks Done"
+          title={roleFilter === "student" ? "Recaps" : "Tasks Done"}
           value={totalTasksCompleted}
           icon={CheckCircle2}
           variant="success"
@@ -189,7 +207,7 @@ export default function TechniciansReport() {
                 <p className="text-xs sm:text-sm text-muted-foreground">Top Performer</p>
                 <p className="text-base sm:text-xl font-bold truncate">{topPerformer.technicianName}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  {topPerformer.tasksCompleted} tasks | {topPerformer.totalHoursLogged}h | {topPerformer.completionRate}%
+                  {topPerformer.tasksCompleted} {roleFilter === "student" ? (topPerformer.tasksCompleted === 1 ? "recap" : "recaps") : "tasks"} | {topPerformer.totalHoursLogged}h | {topPerformer.completionRate}%
                 </p>
               </div>
             </div>
@@ -201,7 +219,9 @@ export default function TechniciansReport() {
 
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Technician Leaderboard</CardTitle>
+          <CardTitle className="text-xs sm:text-sm font-medium">
+            {roleFilter === "student" ? "Student Leaderboard" : "Team Leaderboard"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 pt-0">
           <ScrollArea className="w-full">
@@ -249,7 +269,7 @@ export default function TechniciansReport() {
         </CardContent>
       </Card>
 
-      {data.length > 0 && (
+      {data.length > 0 && roleFilter !== "student" && (
         <Card>
           <CardHeader className="p-3 sm:p-4 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium">
@@ -314,6 +334,53 @@ export default function TechniciansReport() {
                         No tasks found in the selected date range
                       </TableCell>
                     </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {data.length > 0 && roleFilter !== "technician" && data.some((tech) => (tech.recapDetails?.length ?? 0) > 0) && (
+        <Card>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
+              Student daily recaps
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <ScrollArea className="w-full h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Student</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">What they did</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">What they learned</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.flatMap((tech) =>
+                    (tech.recapDetails ?? []).map((recap) => (
+                      <TableRow key={recap.recapId} data-testid={`row-recap-${recap.recapId}`}>
+                        <TableCell className="text-xs sm:text-sm py-2">
+                          <Link href={`/students/${tech.technicianId}`}>
+                            <span className="text-primary hover:underline cursor-pointer font-medium">
+                              {tech.technicianName}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs py-2">{recap.recapDate}</TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 max-w-[220px]">
+                          <span className="line-clamp-3">{recap.whatIDid}</span>
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm py-2 hidden sm:table-cell max-w-[220px]">
+                          <span className="line-clamp-3">{recap.whatILearned}</span>
+                        </TableCell>
+                      </TableRow>
+                    )),
                   )}
                 </TableBody>
               </Table>

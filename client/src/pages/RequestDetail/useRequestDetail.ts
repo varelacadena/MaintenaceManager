@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   getServiceRequestStatusLabel,
   getServiceRequestUrgencyLabel,
+  getServiceRequestReporter,
 } from "@/lib/serviceRequestLabels";
 import type {
   ServiceRequest,
@@ -109,6 +110,7 @@ export function useRequestDetail() {
   });
 
   const requester = request ? users.find((u) => u.id === request.requesterId) : undefined;
+  const reporter = getServiceRequestReporter(request, requester);
   const property = request ? properties.find((p) => p.id === request.propertyId) : undefined;
   const space = request ? allSpaces.find((s) => s.id === request.spaceId) : undefined;
 
@@ -171,6 +173,7 @@ export function useRequestDetail() {
     rejectRequestMutation,
     markUnderReviewMutation,
     requester,
+    reporter,
     property,
     space,
     canReviewRequest,

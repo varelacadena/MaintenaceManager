@@ -8,7 +8,14 @@ import { getSignedUploadParameters, mapUploaderResultForRegistration } from "@/l
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
-import type { Task, User, Property, Upload, PartUsed, InventoryItem } from "@shared/schema";
+import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote } from "@shared/schema";
+import {
+  hasWorkExplanation,
+  isWorkExplanationContent,
+  roleRequiresWorkNoteOnCompletion,
+  PHOTO_REQUIRED_MESSAGE,
+  WORK_NOTE_REQUIRED_MESSAGE,
+} from "@shared/taskCompletion";
 
 export function useMobileTaskDetail() {
   const [currentPath, navigate] = useLocation();
@@ -79,6 +86,11 @@ export function useMobileTaskDetail() {
 
   const { data: timeEntries } = useQuery<any[]>({
     queryKey: ["/api/time-entries/task", id],
+    enabled: !!id,
+  });
+
+  const { data: notes = [] } = useQuery<TaskNote[]>({
+    queryKey: ["/api/task-notes/task", id],
     enabled: !!id,
   });
 
@@ -172,8 +184,8 @@ export function useMobileTaskDetail() {
       invalidateTaskAfterMutation(id);
       toast({ title: "Status updated" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error?.message || "Failed to update status", variant: "destructive" });
     },
   });
 
@@ -329,6 +341,65 @@ export function useMobileTaskDetail() {
   const totalSubtasks = subtasks?.length || 0;
   const allSubtasksDone = totalSubtasks === 0 || completedSubtasks === totalSubtasks;
   const subtaskProgress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+  const estimateBlocksCompletion = !!task?.requiresEstimate && task?.estimateStatus !== "approved";
+
+  const handleStartTask = async () => {
+    if (!id || !task) return;
+    if (task.assignedPool && !task.assignedToId) {
+      try {
+        await apiRequest("POST", `/api/tasks/${id}/claim`);
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+        invalidateTaskAfterMutation(id);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Failed to claim this job";
+        toast({ title: "Could not start", description: message, variant: "destructive" });
+        return;
+      }
+    }
+    updateStatusMutation.mutate("in_progress");
+  };
+
+  const handleMarkComplete = async () => {
+    if (!allSubtasksDone) return;
+    if (estimateBlocksCompletion) {
+      toast({
+        title: "Cannot complete",
+        description: "Estimates must be approved first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const photoCount = (uploads || []).filter((u) => (u.fileType || "").startsWith("image/")).length;
+    if (task?.requiresPhoto && photoCount === 0) {
+      toast({
+        title: "Photo required",
+        description: PHOTO_REQUIRED_MESSAGE,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (roleRequiresWorkNoteOnCompletion(user?.role)) {
+      const hasSavedNote = hasWorkExplanation(notes);
+      const hasDraftNote = isWorkExplanationContent(noteText);
+      if (!hasSavedNote && !hasDraftNote) {
+        toast({
+          title: "Work note required",
+          description: WORK_NOTE_REQUIRED_MESSAGE,
+          variant: "destructive",
+        });
+        setIsNoteSheetOpen(true);
+        return;
+      }
+      if (!hasSavedNote && hasDraftNote) {
+        try {
+          await addNoteMutation.mutateAsync(noteText.trim());
+        } catch {
+          return;
+        }
+      }
+    }
+    updateStatusMutation.mutate("completed");
+  };
 
   return {
     id,
@@ -373,6 +444,8 @@ export function useMobileTaskDetail() {
     handleAutoSaveUpload,
     handleEquipmentScan,
     toggleSubtaskExpanded,
+    handleMarkComplete,
+    handleStartTask,
     totalTime,
     docCount,
     imgCount,

@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 
 import { users, availabilitySchedules, userSkills } from "./users";
+import { studentTimeEntries, studentDailyRecaps, studentTimeEditRequests } from "./students";
 import { properties, spaces, equipment } from "./facilities";
 import { areas, subdivisions, serviceRequests } from "./serviceRequests";
 import { vendors } from "./vendors";
@@ -35,6 +36,54 @@ export const usersRelations = relations(users, ({ many }) => ({
   vehicleCheckOutLogs: many(vehicleCheckOutLogs),
   vehicleCheckInLogs: many(vehicleCheckInLogs),
   taskHelperships: many(taskHelpers),
+  studentTimeEntries: many(studentTimeEntries, { relationName: "student_time_student" }),
+  supervisedStudentTimeEntries: many(studentTimeEntries, { relationName: "student_time_supervisor" }),
+  studentDailyRecaps: many(studentDailyRecaps),
+  studentTimeEditRequests: many(studentTimeEditRequests, { relationName: "student_time_edit_student" }),
+  reviewedStudentTimeEditRequests: many(studentTimeEditRequests, { relationName: "student_time_edit_reviewer" }),
+}));
+
+export const studentTimeEntriesRelations = relations(studentTimeEntries, ({ one, many }) => ({
+  student: one(users, {
+    fields: [studentTimeEntries.studentId],
+    references: [users.id],
+    relationName: "student_time_student",
+  }),
+  supervisor: one(users, {
+    fields: [studentTimeEntries.supervisorId],
+    references: [users.id],
+    relationName: "student_time_supervisor",
+  }),
+  recaps: many(studentDailyRecaps),
+  editRequests: many(studentTimeEditRequests),
+}));
+
+export const studentTimeEditRequestsRelations = relations(studentTimeEditRequests, ({ one }) => ({
+  student: one(users, {
+    fields: [studentTimeEditRequests.studentId],
+    references: [users.id],
+    relationName: "student_time_edit_student",
+  }),
+  reviewer: one(users, {
+    fields: [studentTimeEditRequests.reviewedById],
+    references: [users.id],
+    relationName: "student_time_edit_reviewer",
+  }),
+  timeEntry: one(studentTimeEntries, {
+    fields: [studentTimeEditRequests.timeEntryId],
+    references: [studentTimeEntries.id],
+  }),
+}));
+
+export const studentDailyRecapsRelations = relations(studentDailyRecaps, ({ one }) => ({
+  student: one(users, {
+    fields: [studentDailyRecaps.studentId],
+    references: [users.id],
+  }),
+  timeEntry: one(studentTimeEntries, {
+    fields: [studentDailyRecaps.timeEntryId],
+    references: [studentTimeEntries.id],
+  }),
 }));
 
 export const areasRelations = relations(areas, ({ many }) => ({

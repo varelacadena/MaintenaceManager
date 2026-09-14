@@ -29,8 +29,6 @@ export function requireRole(...allowedRoles: string[]): RequestHandler {
     if (!allowedRoles.includes(user.role)) {
       return res.status(403).json({
         message: "Forbidden: Insufficient permissions",
-        required: allowedRoles,
-        current: user.role,
       });
     }
 

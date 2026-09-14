@@ -98,7 +98,6 @@ class ProductionNotificationService implements NotificationService {
       console.log(`[EMAIL] Sent via Resend to ${to}: ${subject}`);
     } catch (error) {
       console.error(`[EMAIL] Failed to send email to ${to} (subject: "${subject}"):`, error);
-      console.log(`[EMAIL FALLBACK] To: ${to}, Subject: ${subject}, Body: ${body}`);
       throw error;
     }
   }
@@ -226,21 +225,30 @@ export async function notifyTaskAssigned(
 
 }
 
+function serviceRequestReporterName(
+  request: ServiceRequest,
+  requester?: Pick<User, "firstName" | "lastName"> | null,
+) {
+  const fromUser = `${requester?.firstName ?? ""} ${requester?.lastName ?? ""}`.trim();
+  return fromUser || request.requesterName || "Campus reporter";
+}
+
 export async function notifyNewServiceRequest(
   request: ServiceRequest,
-  requester: User,
+  requester: Pick<User, "firstName" | "lastName"> | null,
   admins: User[],
   ns: NotificationService
 ): Promise<void> {
+  const reporterName = serviceRequestReporterName(request, requester);
   const variables: Record<string, string> = {
-    '{{requester_name}}': `${requester.firstName} ${requester.lastName}`,
+    '{{requester_name}}': reporterName,
     '{{request_title}}': request.title,
     '{{request_description}}': request.description,
     '{{urgency}}': request.urgency,
   };
 
   const fallbackSubject = `New Service Request: ${request.title}`;
-  const fallbackBody = `A new service request has been submitted.\n\nSubmitted by: ${requester.firstName} ${requester.lastName}\nTitle: ${request.title}\nDescription: ${request.description}\nUrgency: ${request.urgency}\n\nPlease review and take action on this request in the maintenance portal.`;
+  const fallbackBody = `A new service request has been submitted.\n\nSubmitted by: ${reporterName}\nTitle: ${request.title}\nDescription: ${request.description}\nUrgency: ${request.urgency}\n\nPlease review and take action on this request in the maintenance portal.`;
 
   for (const admin of admins) {
     if (admin.email) {

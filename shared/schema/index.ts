@@ -11,4 +11,5 @@ export * from "./misc";
 export * from "./resources";
 export * from "./mobileEquipment";
 export * from "./deletionAudit";
+export * from "./students";
 export * from "./relations";

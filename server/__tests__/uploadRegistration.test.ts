@@ -25,7 +25,11 @@ vi.mock("../middleware", () => ({
   canAccessTask: (...args: unknown[]) => mocks.canAccessTask(...args),
 }));
 
-import { registerUpload } from "../uploadRegistration";
+vi.mock("../routeUtils", () => ({
+  canAccessServiceRequest: vi.fn(),
+}));
+
+import { registerUpload, registerPublicRequestUpload } from "../uploadRegistration";
 
 describe("registerUpload", () => {
   beforeEach(() => {
@@ -84,5 +88,51 @@ describe("registerUpload", () => {
     });
 
     expect(result.error?.status).toBe(403);
+  });
+
+  it("rejects object paths outside uploads/", async () => {
+    const result = await registerUpload("user-1", {
+      taskId: "task-1",
+      fileName: "photo.jpg",
+      fileType: "image/jpeg",
+      objectUrl: "https://example.com/photo.jpg",
+      objectPath: "../secret",
+    });
+
+    expect(result.error?.status).toBe(400);
+    expect(mocks.storage.createUpload).not.toHaveBeenCalled();
+  });
+});
+
+describe("registerPublicRequestUpload", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getBucketId.mockReturnValue("private-bucket");
+    mocks.getDownloadUrl.mockResolvedValue("https://signed.example/download");
+    mocks.storage.createUpload.mockImplementation(async (data: unknown) => ({
+      id: "upload-public",
+      ...(data as object),
+      createdAt: new Date(),
+    }));
+  });
+
+  it("attaches a photo to a service request without a user", async () => {
+    const result = await registerPublicRequestUpload("req-1", "Alex Rivera", {
+      fileName: "leak.jpg",
+      fileType: "image/jpeg",
+      objectUrl: "https://example.com/leak.jpg",
+      objectPath: "uploads/leak.jpg",
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(mocks.storage.createUpload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "req-1",
+        uploadedById: null,
+        uploadedByName: "Alex Rivera",
+        objectPath: "uploads/leak.jpg",
+        objectUrl: "https://signed.example/download",
+      })
+    );
   });
 });

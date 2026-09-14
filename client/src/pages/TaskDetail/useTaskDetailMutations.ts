@@ -162,6 +162,9 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "subtasks"] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to update subtask", variant: "destructive" });
+    },
   });
 
   const updateTaskMutation = useMutation({
@@ -181,6 +184,9 @@ export function useTaskDetailMutations(deps: MutationDeps) {
 
   const startTimerMutation = useMutation({
     mutationFn: async () => {
+      if (task?.assignedPool && !task?.assignedToId) {
+        await apiRequest("POST", `/api/tasks/${id}/claim`);
+      }
       const response = await apiRequest("POST", "/api/time-entries", {
         taskId: id,
         userId: user?.id,
@@ -191,25 +197,17 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     onSuccess: async (data: TimeEntry) => {
       setActiveTimer(data.id);
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
-      if (task?.status === "not_started" || task?.status === "waiting_approval") {
+      if (task?.assignedPool && !task?.assignedToId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+        invalidateTaskAfterMutation(id);
+      }
+      if (task?.status === "not_started") {
         try {
           await apiRequest("PATCH", `/api/tasks/${id}/status`, { status: "in_progress" });
           queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
           invalidateTaskAfterMutation(id);
         } catch (error) {
           console.error("Error updating task status:", error);
-        }
-      }
-      if (task?.assignedPool && !task?.assignedToId && user?.id) {
-        try {
-          await apiRequest("PATCH", `/api/tasks/${id}`, {
-            assignedToId: user.id,
-            assignedPool: null,
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-          invalidateTaskAfterMutation(id);
-        } catch (error) {
-          console.error("Error claiming pool task:", error);
         }
       }
       toast({ title: "Timer started" });

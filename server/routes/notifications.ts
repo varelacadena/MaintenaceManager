@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
-import { handleRouteError, getAuthUser } from "../routeUtils";
+import { handleRouteError } from "../routeUtils";
+import * as studentStorage from "../storage/students";
 
 export function registerNotificationRoutes(app: Express) {
   app.get("/api/notifications/counts", isAuthenticated, async (req: any, res) => {
@@ -18,6 +19,7 @@ export function registerNotificationRoutes(app: Express) {
       const unreadMessages = 0;
       let approvedReservations = 0;
       let pendingSignups = 0;
+      let pendingStudentTimeEdits = 0;
 
       if (currentUser.role === "admin") {
         pendingServiceRequests = await storage.countServiceRequests({
@@ -31,6 +33,7 @@ export function registerNotificationRoutes(app: Express) {
         pendingVehicleReservations = vehicleReservations.total;
 
         pendingSignups = await storage.getPendingUserCount();
+        pendingStudentTimeEdits = await studentStorage.countPendingStudentTimeEditRequests();
       } else if (currentUser.role === "technician") {
         const vehicleReservations = await storage.getVehicleReservationsPage(
           { status: "pending" },
@@ -52,6 +55,7 @@ export function registerNotificationRoutes(app: Express) {
         unreadMessages,
         approvedReservations,
         pendingSignups,
+        pendingStudentTimeEdits,
       });
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch notification counts");

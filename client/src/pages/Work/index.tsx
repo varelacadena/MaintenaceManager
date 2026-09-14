@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { StudentWorkView } from "./StudentWorkView";
+import { StudentRecapHome } from "@/pages/StudentPortal/StudentRecapHome";
 import { TechnicianWorkView } from "./TechnicianWorkView";
 import { StaffWorkUnavailable } from "./StaffWorkUnavailable";
 import { WorkLoadError } from "./WorkLoadError";
@@ -61,19 +61,9 @@ function WorkFieldShell({
 }
 
 function WorkStudentPage() {
-  const ctx = useWorkField();
-  if (!ctx.user || ctx.user.role !== "student") return null;
-
-  return (
-    <WorkFieldShell ctx={ctx}>
-      <StudentWorkView
-        user={ctx.user}
-        tasks={ctx.tasks || []}
-        properties={ctx.properties}
-        navigate={ctx.navigate}
-      />
-    </WorkFieldShell>
-  );
+  const { user } = useAuth();
+  if (!user || user.role !== "student") return null;
+  return <StudentRecapHome user={user} />;
 }
 
 function WorkTechnicianPage() {

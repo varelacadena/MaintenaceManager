@@ -1,4 +1,5 @@
 import type { Task } from "@shared/schema";
+import type { WorkDateFilter } from "./workDateFilterPrefs";
 
 export type TaskWithHelperFlag = Task & { isHelper?: boolean };
 
@@ -139,7 +140,7 @@ export const groupTasksByDay = (taskList: Task[]): { label: string; dateKey: str
   return result;
 };
 
-export function DateFilterBar({ dateFilter, setDateFilter }: { dateFilter: "today" | "week" | "all"; setDateFilter: (v: "today" | "week" | "all") => void }) {
+export function DateFilterBar({ dateFilter, setDateFilter }: { dateFilter: WorkDateFilter; setDateFilter: (v: WorkDateFilter) => void }) {
   return (
     <div className="flex gap-1 bg-muted rounded-md p-1" data-testid="date-filter-bar">
       {([["today", "Today"], ["week", "This Week"], ["all", "All"]] as const).map(([value, label]) => (

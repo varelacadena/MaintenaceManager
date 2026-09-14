@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/collapsible";
 import type { RequestDetailHookReturn } from "./useRequestDetail";
 import { getServiceRequestNumber } from "@shared/recordNumbers";
-import { getUserDisplayName } from "@/utils/taskUtils";
 
 type RequestDetailMobileProps = Pick<
   RequestDetailHookReturn,
@@ -46,6 +45,7 @@ type RequestDetailMobileProps = Pick<
   | "rejectRequestMutation"
   | "markUnderReviewMutation"
   | "requester"
+  | "reporter"
   | "property"
   | "space"
   | "linkedTask"
@@ -69,6 +69,7 @@ export function RequestDetailMobile({
   rejectRequestMutation,
   markUnderReviewMutation,
   requester,
+  reporter,
   property,
   space,
   linkedTask,
@@ -245,7 +246,7 @@ export function RequestDetailMobile({
                   </div>
                 )}
                 
-                {requester && (
+                {reporter && (
                   <>
                     <Separator />
                     <div className="space-y-2">
@@ -256,23 +257,29 @@ export function RequestDetailMobile({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate" data-testid="text-requester-name">
-                            {getUserDisplayName(requester)}
+                            {reporter.name}
                           </p>
-                          {requester.email && (
+                          {reporter.isGuest ? (
+                            <p className="text-xs text-muted-foreground">Public report</p>
+                          ) : requester?.email ? (
                             <p className="text-xs text-muted-foreground truncate" data-testid="text-requester-email">
                               {requester.email}
                             </p>
-                          )}
+                          ) : reporter.email ? (
+                            <p className="text-xs text-muted-foreground truncate" data-testid="text-requester-email">
+                              {reporter.email}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
-                      {requester.phoneNumber && (
-                        <a 
-                          href={`tel:${requester.phoneNumber}`}
+                      {reporter.phone && (
+                        <a
+                          href={`tel:${reporter.phone}`}
                           className="flex items-center gap-2 text-sm text-primary"
                           data-testid="link-requester-phone"
                         >
                           <Phone className="h-3.5 w-3.5" />
-                          {requester.phoneNumber}
+                          {reporter.phone}
                         </a>
                       )}
                     </div>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, MapPin, Plus } from "lucide-react";
@@ -11,6 +10,7 @@ import {
   DaySeparator,
   type TaskWithHelperFlag,
 } from "./helpers";
+import { useWorkDateFilter } from "./workDateFilterPrefs";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
 import { FieldWorkActiveList } from "./FieldWorkActiveList";
 import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
@@ -23,7 +23,7 @@ interface TechnicianWorkViewProps {
 }
 
 export function TechnicianWorkView({ user, tasks, properties, navigate }: TechnicianWorkViewProps) {
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
+  const [dateFilter, setDateFilter] = useWorkDateFilter();
   const getPropertyById = (propertyId: string | null) => {
     if (!propertyId) return null;
     return properties?.find((p) => p.id === propertyId) || null;

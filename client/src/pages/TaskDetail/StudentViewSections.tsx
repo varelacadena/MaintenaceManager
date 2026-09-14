@@ -146,6 +146,15 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
               <span className="truncate">{estimateBlocksCompletion ? "Estimate Required" : "Mark Complete"}</span>
             </Button>
           </>
+        ) : task.status === "needs_estimate" || task.status === "waiting_approval" ? (
+          <Button
+            size="lg"
+            className="min-w-0 flex-1 px-4 font-bold"
+            disabled
+            data-testid="bottom-button-estimate-required"
+          >
+            <span className="truncate">Estimate Required</span>
+          </Button>
         ) : (
           <Button
             size="lg"
@@ -180,7 +189,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
 
 export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
   const { openImagePreview } = useImagePreview();
-  const { activeTimer, estimateBlocksCompletion, stopTimerMutation, toast,
+  const { activeTimer, estimateBlocksCompletion, stopTimerMutation,
     isStopTimerDialogOpen, setIsStopTimerDialogOpen,
     isResourcesSheetOpen, setIsResourcesSheetOpen, allTaskResources,
     isScanEquipmentOpen, setIsScanEquipmentOpen, handleEquipmentScan,
@@ -188,7 +197,7 @@ export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
     scannedEquipment, scannedEquipmentTasks, scannedEquipmentResources,
     equipmentInfoTab, setEquipmentInfoTab, navigate,
     pendingUploadForLabel, isUploadLabelSaving,
-    handleUploadLabelSave, handleUploadLabelCancel } = ctx;
+    handleUploadLabelSave, handleUploadLabelCancel, handleComplete } = ctx;
   return (
     <>
       <Dialog open={isStopTimerDialogOpen} onOpenChange={setIsStopTimerDialogOpen}>
@@ -199,10 +208,7 @@ export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
           </DialogHeader>
           <div className="flex flex-col gap-3 py-4">
             <Button variant="outline" className="w-full justify-start"
-              onClick={() => {
-                if (estimateBlocksCompletion) { toast({ title: "Cannot complete task", description: "Estimates must be approved before completing this task.", variant: "destructive" }); return; }
-                if (activeTimer) { stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" }); }
-              }}
+              onClick={() => handleComplete()}
               disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
               data-testid="button-stop-complete">
               <CheckCircle2 className="w-4 h-4 mr-2" />

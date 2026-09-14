@@ -455,6 +455,16 @@ export function registerProjectRoutes(app: Express) {
 
   app.get("/api/tasks/:taskId/quotes", isAuthenticated, async (req, res) => {
     try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      if (user.role !== "admin") {
+        const hasAccess = await canAccessTask(user.id, req.params.taskId);
+        if (!hasAccess) {
+          return res.status(403).json({ message: "You don't have access to this task" });
+        }
+      }
       const quotes = await storage.getQuotesByTaskId(req.params.taskId);
       res.json(quotes);
     } catch (error) {
@@ -629,6 +639,19 @@ export function registerProjectRoutes(app: Express) {
 
   app.get("/api/quotes/:id/attachments", isAuthenticated, async (req, res) => {
     try {
+      const user = await getAuthUser(req);
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+      if (user.role !== "admin") {
+        if (!quote.taskId || !(await canAccessTask(user.id, quote.taskId))) {
+          return res.status(403).json({ message: "You don't have access to this estimate" });
+        }
+      }
       const attachments = await storage.getQuoteAttachments(req.params.id);
       res.json(attachments);
     } catch (error) {

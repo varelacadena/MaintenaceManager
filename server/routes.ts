@@ -19,8 +19,10 @@ import { registerAiRoutes } from "./routes/ai";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerResourceRoutes } from "./routes/resources";
 import { registerSignupRoutes } from "./routes/signup";
+import { registerPublicRequestRoutes } from "./routes/publicRequests";
 import { registerEmailRoutes } from "./routes/email";
 import { registerDashboardRoutes } from "./routes/dashboard";
+import { registerStudentRoutes } from "./routes/students";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
@@ -28,6 +30,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerAuthRoutes(app);
   registerSignupRoutes(app);
+  registerPublicRequestRoutes(app);
+  registerStudentRoutes(app);
   registerUserRoutes(app);
   registerVendorRoutes(app);
   registerInventoryRoutes(app);

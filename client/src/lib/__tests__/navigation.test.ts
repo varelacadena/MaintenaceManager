@@ -24,6 +24,10 @@ describe("getParentRoute", () => {
     expect(getParentRoute("/requests/req-1")).toBe("/requests");
     expect(getParentRoute("/tasks/task-1")).toBe("/work");
     expect(getParentRoute("/work/add-job", "technician")).toBe("/work");
+    expect(getParentRoute("/work/recap", "student")).toBe("/work");
+    expect(getParentRoute("/clock-out", "student")).toBe("/work");
+    expect(getParentRoute("/hours", "student")).toBe("/work");
+    expect(getParentRoute("/students/stu-1", "admin")).toBe("/students");
     expect(getParentRoute("/vehicles/v-1/edit")).toBe("/vehicles/v-1");
     expect(getParentRoute("/vehicles/v-1")).toBe("/vehicles");
   });
@@ -31,6 +35,10 @@ describe("getParentRoute", () => {
   it("identifies routes that already render their own back control", () => {
     expect(hasPageBackControl("/tasks/task-1", "admin")).toBe(false);
     expect(hasPageBackControl("/work/add-job", "technician")).toBe(true);
+    expect(hasPageBackControl("/work/recap", "student")).toBe(true);
+    expect(hasPageBackControl("/clock-out", "student")).toBe(true);
+    expect(hasPageBackControl("/hours", "student")).toBe(true);
+    expect(hasPageBackControl("/students/stu-1", "admin")).toBe(true);
     expect(hasPageBackControl("/vehicle-checkin-verify/checkin-1", "admin")).toBe(true);
     expect(hasPageBackControl("/requests/request-1", "staff")).toBe(true);
     expect(hasPageBackControl("/requests/request-1", "admin")).toBe(false);
@@ -45,5 +53,7 @@ describe("isNavItemActive", () => {
     expect(isNavItemActive("/requests/req-1", "/requests")).toBe(true);
     expect(isNavItemActive("/resources", "/work")).toBe(false);
     expect(isNavItemActive("/vehicles/v-1", "/vehicles")).toBe(true);
+    expect(isNavItemActive("/hours", "/hours")).toBe(true);
+    expect(isNavItemActive("/hours", "/work")).toBe(false);
   });
 });

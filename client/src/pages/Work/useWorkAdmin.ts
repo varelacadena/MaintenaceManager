@@ -9,7 +9,7 @@ import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQu
 import { exitTo } from "@/lib/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Task, User, Property, Project } from "@shared/schema";
-import { matchesTechFilter, UNASSIGNED_TECH_ID } from "./workFilters";
+import { matchesTechFilter, UNASSIGNED_TECH_ID, loadTechFilter, saveTechFilter, loadWorkTab, saveWorkTab } from "./workFilters";
 import {
   unifiedStatusConfig,
   projectStatusMapping,
@@ -49,10 +49,12 @@ export function useWorkAdmin() {
   const [expandedParentTasks, setExpandedParentTasks] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [techFilter, setTechFilter] = useState(() =>
-    new URLSearchParams(window.location.search).get("techId") || ""
+    new URLSearchParams(window.location.search).get("techId") || loadTechFilter()
   );
   const [activeTab, setActiveTab] = useState<"tasks" | "projects">(() =>
-    new URLSearchParams(window.location.search).get("tab") === "projects" ? "projects" : "tasks"
+    new URLSearchParams(window.location.search).get("tab") === "projects"
+      ? "projects"
+      : loadWorkTab()
   );
   const [projectStatusFilter, setProjectStatusFilter] = useState<string>("all");
   const [projectSearchQuery, setProjectSearchQuery] = useState("");
@@ -69,10 +71,20 @@ export function useWorkAdmin() {
   const { tasks, tasksLoading } = tasksQuery;
 
   useEffect(() => {
-    if (new URLSearchParams(search).get("tab") === "projects") {
+    const params = new URLSearchParams(search);
+    if (params.get("tab") === "projects") {
       setActiveTab("projects");
+      saveWorkTab("projects");
+    } else {
+      setActiveTab(loadWorkTab());
     }
-    setTechFilter(new URLSearchParams(search).get("techId") || "");
+    const urlTechId = params.get("techId");
+    if (urlTechId) {
+      setTechFilter(urlTechId);
+      saveTechFilter(urlTechId);
+      return;
+    }
+    setTechFilter(loadTechFilter());
   }, [search]);
 
   useEffect(() => {
@@ -235,8 +247,19 @@ export function useWorkAdmin() {
     updateTaskMutation.mutate({ taskId, data });
   };
 
+  const setActiveTabAndUrl = (tab: "tasks" | "projects") => {
+    setActiveTab(tab);
+    saveWorkTab(tab);
+    const params = new URLSearchParams(search);
+    if (tab === "projects") params.set("tab", "projects");
+    else params.delete("tab");
+    const qs = params.toString();
+    navigate(`/work${qs ? `?${qs}` : ""}`, { replace: true });
+  };
+
   const setTechFilterAndUrl = (techId: string) => {
     setTechFilter(techId);
+    saveTechFilter(techId);
     const params = new URLSearchParams(search);
     if (techId) {
       params.set("techId", techId);
@@ -436,7 +459,7 @@ export function useWorkAdmin() {
     searchQuery,
     setSearchQuery,
     activeTab,
-    setActiveTab,
+    setActiveTab: setActiveTabAndUrl,
     collapsedGroups,
     toggleGroup,
     expandedProjects,

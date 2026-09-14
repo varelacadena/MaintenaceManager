@@ -211,7 +211,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 <Textarea
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Add a note about this task..."
+                  placeholder="Add a note explaining the work you completed..."
                   rows={3}
                   className="text-base"
                   data-testid="textarea-new-note"

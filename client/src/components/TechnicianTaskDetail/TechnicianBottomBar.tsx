@@ -70,7 +70,14 @@ export function TechnicianBottomBar({
             <Check className="w-4 h-4" />
             <span className="truncate">Completed</span>
           </div>
-        ) : !taskStarted ? (
+        ) : task.status === "needs_estimate" || task.status === "waiting_approval" ? (
+          <div
+            className="min-w-0 flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-muted-foreground"
+            data-testid="bottom-button-estimate-required"
+          >
+            <span className="truncate">Estimate Required</span>
+          </div>
+        ) : task.status === "not_started" ? (
           <button
             className="min-w-0 flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-white font-medium text-sm bg-primary transition-colors"
             onClick={handleStartTask}

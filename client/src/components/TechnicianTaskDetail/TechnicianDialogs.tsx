@@ -9,10 +9,12 @@ import {
   Package,
   Camera,
   StickyNote,
+  CircleHelp,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
@@ -31,6 +33,11 @@ export interface TechnicianDialogsProps {
   handleMarkComplete: () => void;
   stopTimerMutation: any;
   estimateBlocksCompletion: boolean;
+  completionNoteValue: string;
+  completionNoteError: boolean;
+  notesReady: boolean;
+  photoReady: boolean;
+  handleNoteChange: (value: string) => void;
   isEstimateSheetOpen: boolean;
   setIsEstimateSheetOpen: (v: boolean) => void;
   quotes: Quote[];
@@ -71,6 +78,11 @@ export function TechnicianDialogs({
   handleMarkComplete,
   stopTimerMutation,
   estimateBlocksCompletion,
+  completionNoteValue,
+  completionNoteError,
+  notesReady,
+  photoReady,
+  handleNoteChange,
   isEstimateSheetOpen,
   setIsEstimateSheetOpen,
   quotes,
@@ -224,18 +236,83 @@ export function TechnicianDialogs({
         >
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="relative w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
+            className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
             onClick={(e) => e.stopPropagation()}
             data-testid="dialog-pause-complete"
           >
-            <p className="text-sm font-semibold mb-1 text-foreground">
-              {isTimerRunning ? "Timer running" : "Finish this task?"}
-            </p>
-            <p className="text-xs mb-4 text-muted-foreground">
-              {isTimerRunning
-                ? "What would you like to do?"
-                : "Confirm you want to mark this task as completed."}
-            </p>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  {isTimerRunning ? "Timer running" : "Finish this task?"}
+                </p>
+                {isTimerRunning && (
+                  <p className="text-xs mt-0.5 text-muted-foreground">
+                    Pause now, or complete with a work note.
+                  </p>
+                )}
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="shrink-0 flex items-center justify-center rounded-full border border-border text-muted-foreground hover-elevate"
+                    style={{ width: 28, height: 28 }}
+                    aria-label="How to finish this task"
+                    data-testid="button-complete-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <CircleHelp className="w-4 h-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="space-y-2" data-testid="popover-complete-help">
+                  <p className="text-sm font-medium text-foreground">Work note required</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Write a short sentence about what you found and what you did.
+                    Example: &ldquo;Replaced the belt and tested the unit.&rdquo;
+                    &ldquo;Done&rdquo; or &ldquo;ok&rdquo; is not enough.
+                  </p>
+                  {task.instructions && (
+                    <div
+                      className="pt-2 border-t border-border"
+                      data-testid="dialog-complete-instructions"
+                    >
+                      <p className="text-[11px] uppercase font-medium mb-1 text-muted-foreground tracking-wide">
+                        Task instructions
+                      </p>
+                      <p className="text-xs whitespace-pre-wrap text-foreground leading-relaxed">
+                        {task.instructions}
+                      </p>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="mb-4">
+              <label
+                htmlFor="completion-work-note"
+                className="text-xs font-medium text-foreground"
+              >
+                Work notes <span className="text-destructive">*</span>
+              </label>
+              <textarea
+                id="completion-work-note"
+                value={completionNoteValue}
+                onChange={(e) => handleNoteChange(e.target.value)}
+                placeholder="What did you do?"
+                rows={3}
+                className={`w-full resize-none rounded-lg px-3 py-2 mt-1.5 text-sm bg-background text-foreground outline-none ${
+                  completionNoteError
+                    ? "border-2 border-destructive"
+                    : "border border-border"
+                }`}
+                data-testid="textarea-completion-note"
+              />
+              {completionNoteError && (
+                <p className="text-xs text-destructive mt-1" data-testid="text-completion-note-error">
+                  Add a work note before marking this task complete.
+                </p>
+              )}
+            </div>
             <div className="space-y-2">
               {isTimerRunning && (
                 <button
@@ -249,9 +326,9 @@ export function TechnicianDialogs({
                 </button>
               )}
               <button
-                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion ? "bg-muted-foreground opacity-70" : "bg-green-700 dark:bg-green-600"}`}
+                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion || !notesReady || !photoReady ? "bg-muted-foreground opacity-70" : "bg-green-700 dark:bg-green-600"}`}
                 onClick={handleMarkComplete}
-                disabled={isPending || !!estimateBlocksCompletion}
+                disabled={isPending || !!estimateBlocksCompletion || !notesReady || !photoReady}
                 data-testid="button-mark-complete"
               >
                 <Check className="w-4 h-4" />
@@ -260,6 +337,18 @@ export function TechnicianDialogs({
               {estimateBlocksCompletion && (
                 <p className="text-xs text-center mt-1 text-amber-600 dark:text-amber-400" data-testid="text-estimate-block-reason">
                   Estimate must be approved before completing
+                </p>
+              )}
+              {!estimateBlocksCompletion && !photoReady && (
+                <p className="text-xs text-center mt-1 text-muted-foreground" data-testid="text-photo-required-hint">
+                  Add a photo before marking this task complete.
+                </p>
+              )}
+              {!estimateBlocksCompletion && photoReady && !notesReady && (
+                <p className="text-xs text-center mt-1 text-muted-foreground" data-testid="text-note-required-hint">
+                  {completionNoteValue.trim()
+                    ? "Add a bit more detail so the note is a real explanation."
+                    : "Write a work note above to enable Mark as complete."}
                 </p>
               )}
               <button

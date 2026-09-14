@@ -10,7 +10,6 @@ import { FileAttachmentList } from "@/components/FileAttachment";
 import { apiRequest } from "@/lib/queryClient";
 import type { RequestDetailHookReturn } from "./useRequestDetail";
 import { getServiceRequestNumber } from "@shared/recordNumbers";
-import { getUserDisplayName } from "@/utils/taskUtils";
 import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 
 type RequestDetailDesktopProps = Pick<
@@ -24,6 +23,7 @@ type RequestDetailDesktopProps = Pick<
   | "rejectRequestMutation"
   | "markUnderReviewMutation"
   | "requester"
+  | "reporter"
   | "property"
   | "space"
   | "linkedTask"
@@ -113,6 +113,7 @@ export function RequestDetailDesktop({
   rejectRequestMutation,
   markUnderReviewMutation,
   requester,
+  reporter,
   property,
   space,
   linkedTask,
@@ -173,10 +174,10 @@ export function RequestDetailDesktop({
                 <Calendar className="h-3.5 w-3.5" />
                 {submittedDate}
               </span>
-              {requester && (
+              {reporter && (
                 <span className="inline-flex items-center gap-1.5" data-testid="text-requester-name">
                   <User className="h-3.5 w-3.5" />
-                  {getUserDisplayName(requester)}
+                  {reporter.name}
                 </span>
               )}
             </div>
@@ -355,13 +356,20 @@ export function RequestDetailDesktop({
                   <p className="text-xs text-muted-foreground">Submitted</p>
                   <p className="font-medium">{submittedDate}</p>
                 </div>
-                {requester && (
+                {reporter && (
                   <div>
                     <p className="text-xs text-muted-foreground">Requester</p>
-                    <p className="font-medium">
-                      {getUserDisplayName(requester)}
+                    <p className="font-medium" data-testid="text-requester-details">
+                      {reporter.name}
                     </p>
-                    <p className="text-xs text-muted-foreground capitalize">{requester.role}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {reporter.isGuest ? "Public report" : requester?.role}
+                    </p>
+                    {reporter.phone && (
+                      <p className="text-xs text-muted-foreground" data-testid="text-requester-phone">
+                        {reporter.phone}
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
