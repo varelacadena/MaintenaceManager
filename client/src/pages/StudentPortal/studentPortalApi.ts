@@ -16,7 +16,7 @@ export interface StudentRecapDto {
   id: string;
   studentId: string | null;
   studentName: string;
-  timeEntryId: string | null;
+  timeEntryId: string;
   recapDate: string;
   whatIDid: string;
   whatILearned: string;

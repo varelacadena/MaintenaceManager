@@ -51,7 +51,9 @@ export const studentDailyRecaps = pgTable(
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     studentId: varchar("student_id").references(() => users.id, { onDelete: "set null" }),
     studentName: varchar("student_name", { length: 200 }).notNull(),
-    timeEntryId: varchar("time_entry_id").references(() => studentTimeEntries.id, { onDelete: "set null" }),
+    timeEntryId: varchar("time_entry_id")
+      .notNull()
+      .references(() => studentTimeEntries.id, { onDelete: "cascade" }),
     recapDate: date("recap_date").notNull(),
     whatIDid: text("what_i_did").notNull(),
     whatILearned: text("what_i_learned").notNull(),

@@ -58,6 +58,21 @@ interface StudentAdminDetailResponse {
   editRequests: StudentTimeEditRequestDto[];
 }
 
+function recapsForEntry(recaps: StudentRecapDto[], timeEntryId: string) {
+  return recaps.filter((recap) => recap.timeEntryId === timeEntryId);
+}
+
+function formatShiftRange(entry: Pick<StudentTimeEntryDto, "clockInAt" | "clockOutAt">) {
+  const start = entry.clockInAt ? new Date(entry.clockInAt).toLocaleString() : "—";
+  if (!entry.clockOutAt) return `${start} · In progress`;
+  return `${start} → ${new Date(entry.clockOutAt).toLocaleString()}`;
+}
+
+function recapShiftLabel(recap: StudentRecapDto, entries: StudentTimeEntryDto[]) {
+  const entry = entries.find((item) => item.id === recap.timeEntryId);
+  return entry ? formatShiftRange(entry) : recap.recapDate;
+}
+
 export default function StudentAdminDetail() {
   const [, params] = useRoute("/students/:id");
   const [, navigate] = useLocation();
@@ -176,7 +191,12 @@ export default function StudentAdminDetail() {
     },
     onSuccess: () => {
       invalidate();
-      toast({ title: "Time entry deleted" });
+      toast({
+        title: "Time entry deleted",
+        description: recapsForEntry(data?.recaps ?? [], deleting?.id ?? "").length
+          ? "The recap for this shift was deleted too."
+          : undefined,
+      });
       setDeleting(null);
     },
     onError: (error: Error) => {
@@ -300,10 +320,12 @@ export default function StudentAdminDetail() {
                     {formatDurationMinutes(resolveEntryMinutes(entry.clockInAt, entry.clockOutAt, entry.durationMinutes, nowDate))}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {entry.clockInAt ? new Date(entry.clockInAt).toLocaleString() : "—"}
-                  {entry.clockOutAt ? ` → ${new Date(entry.clockOutAt).toLocaleString()}` : " · In progress"}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{formatShiftRange(entry)}</p>
+                {recapsForEntry(data.recaps, entry.id).map((recap) => (
+                  <p key={recap.id} className="mt-2 text-xs text-muted-foreground line-clamp-2" data-testid={`text-shift-recap-${entry.id}`}>
+                    Recap: {recap.whatIDid}
+                  </p>
+                ))}
                 <div className="mt-2 flex items-center gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => openEdit(entry)} data-testid={`button-edit-time-${entry.id}`}>
                     <Pencil className="w-3.5 h-3.5 mr-1" />
@@ -336,7 +358,9 @@ export default function StudentAdminDetail() {
           <div className="space-y-3">
             {data.recaps.map((recap) => (
               <article key={recap.id} className="rounded-xl border border-border p-4 space-y-2" data-testid={`row-recap-${recap.id}`}>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{recap.recapDate}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {recapShiftLabel(recap, data.timeEntries)}
+                </p>
                 <div>
                   <p className="text-[11px] font-semibold text-muted-foreground">What they did</p>
                   <p className="text-sm whitespace-pre-wrap">{recap.whatIDid}</p>
@@ -462,7 +486,9 @@ export default function StudentAdminDetail() {
             <AlertDialogTitle>Delete this clock time?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleting
-                ? `This removes ${formatDurationMinutes(resolveEntryMinutes(deleting.clockInAt, deleting.clockOutAt, deleting.durationMinutes, nowDate))} from ${deleting.clockInAt ? new Date(deleting.clockInAt).toLocaleString() : "this entry"}. Recaps stay; this cannot be undone.`
+                ? recapsForEntry(data.recaps, deleting.id).length > 0
+                  ? `This removes ${formatDurationMinutes(resolveEntryMinutes(deleting.clockInAt, deleting.clockOutAt, deleting.durationMinutes, nowDate))} from ${deleting.clockInAt ? new Date(deleting.clockInAt).toLocaleString() : "this entry"} and deletes the recap for this shift. This cannot be undone.`
+                  : `This removes ${formatDurationMinutes(resolveEntryMinutes(deleting.clockInAt, deleting.clockOutAt, deleting.durationMinutes, nowDate))} from ${deleting.clockInAt ? new Date(deleting.clockInAt).toLocaleString() : "this entry"}. This cannot be undone.`
                 : "This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>

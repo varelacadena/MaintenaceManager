@@ -86,6 +86,7 @@ async function run() {
       whatILearned: "How to check the filter orientation before installing a new one.",
     });
     assert.strictEqual(recap.status, 201, "recap should save while clocked in");
+    assert.equal(recap.data.timeEntryId, clockIn.data.id, "recap should belong to the open shift");
 
     const recaps = await api("GET", "/api/student/recaps", studentCookie);
     assert.strictEqual(recaps.status, 200);
@@ -186,6 +187,21 @@ async function run() {
     assert.ok(analyticRow, "student should appear on team analytics");
     assert.ok(analyticRow.clockHoursLogged >= 0);
     assert.ok(analyticRow.recapsSubmitted >= 1);
+
+    const removedShift = await api("DELETE", `/api/admin/students/${studentId}/time-entries/${clockIn.data.id}`, techCookie);
+    assert.strictEqual(removedShift.status, 200, "admin can delete a shift that has a recap");
+    const afterShiftDelete = await api("GET", `/api/admin/students/${studentId}`, techCookie);
+    assert.ok(!afterShiftDelete.data.timeEntries.some((row: { id: string }) => row.id === clockIn.data.id));
+    assert.ok(
+      !afterShiftDelete.data.recaps.some((row: { id: string }) => row.id === recap.data.id),
+      "recap should be deleted with its shift",
+    );
+    const recapsAfterDelete = await api("GET", "/api/student/recaps", studentCookie);
+    assert.strictEqual(recapsAfterDelete.status, 200);
+    assert.ok(
+      !recapsAfterDelete.data.some((item: { id: string }) => item.id === recap.data.id),
+      "student recap list should drop the recap when its shift is deleted",
+    );
 
     console.log("Student portal API checks passed.");
   } finally {
