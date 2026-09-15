@@ -1,6 +1,7 @@
 import type { Express, RequestHandler } from "express";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
+import { enforceStudentDailySession } from "./studentSession";
 
 export async function setupAuth(app: Express) {
   // Login and logout endpoints are registered in server/routes.ts
@@ -17,6 +18,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
     if ((req as any).currentUser?.id === userId) {
       (req as any).userId = userId;
+      if (!(await enforceStudentDailySession(req, res, (req as any).currentUser))) {
+        return;
+      }
       return next();
     }
 
@@ -29,6 +33,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     // repeat the same DB lookup for every protected request.
     (req as any).userId = userId;
     (req as any).currentUser = user;
+    if (!(await enforceStudentDailySession(req, res, user))) {
+      return;
+    }
     next();
   } catch (error) {
     res.status(401).json({ message: "Unauthorized" });

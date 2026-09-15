@@ -12,6 +12,7 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { computeDurationMinutes, localDateString, startOfNextLocalDay } from "@shared/studentPortal";
 
 export type StudentTimeRange = {
   startDate?: Date;
@@ -50,6 +51,21 @@ export async function getLatestStudentTimeEntry(studentId: string): Promise<Stud
 export async function createStudentTimeEntry(entry: InsertStudentTimeEntry): Promise<StudentTimeEntry> {
   const [created] = await db.insert(studentTimeEntries).values(entry).returning();
   return created;
+}
+
+export async function closeOvernightOpenStudentShift(
+  studentId: string,
+  now: Date = new Date(),
+): Promise<StudentTimeEntry | undefined> {
+  const open = await getOpenStudentTimeEntry(studentId);
+  if (!open?.clockInAt) return undefined;
+  if (localDateString(open.clockInAt) >= localDateString(now)) return undefined;
+  const clockOutAt = startOfNextLocalDay(open.clockInAt);
+  return clockOutStudentTimeEntry(
+    open.id,
+    clockOutAt,
+    computeDurationMinutes(open.clockInAt, clockOutAt),
+  );
 }
 
 export async function clockOutStudentTimeEntry(

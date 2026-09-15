@@ -78,7 +78,7 @@ test.describe("Work page – student", () => {
       return;
     }
     await expect(recapTitle).toHaveText("Daily Recap");
-    await expect(page.getByTestId("button-new-recap")).toBeVisible();
+    await expect(page.getByTestId("button-start-clock-out")).toBeVisible();
   });
 });
 

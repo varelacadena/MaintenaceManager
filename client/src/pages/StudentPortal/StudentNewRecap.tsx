@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { BookOpen, FileText, Lightbulb, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ const touchArea = "min-h-[140px] text-base sm:text-sm resize-y bg-background";
 
 export default function StudentNewRecap() {
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const afterSavePath = new URLSearchParams(search).get("next") === "clock-out" ? "/clock-out" : "/work";
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [whatIDid, setWhatIDid] = useState("");
@@ -40,7 +42,7 @@ export default function StudentNewRecap() {
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.timeClock });
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.adminList });
       toast({ title: "Recap saved", description: "Nice work capturing today." });
-      navigate("/work", { replace: true });
+      navigate(afterSavePath, { replace: true });
     },
     onError: (error: Error) => {
       toast({ title: "Could not save recap", description: error.message, variant: "destructive" });

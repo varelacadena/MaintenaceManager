@@ -9,8 +9,11 @@ import {
   hoursFromMinutes,
   localDateString,
   localWeekRange,
+  msUntilNextLocalMidnight,
   resolveEntryMinutes,
   startOfLocalWeek,
+  startOfNextLocalDay,
+  isStudentSessionExpired,
   studentClockInRequestSchema,
   studentRecapRequestSchema,
   studentTimeEditRequestSchema,
@@ -75,6 +78,20 @@ describe("studentPortal helpers", () => {
 
   it("formats a local calendar date", () => {
     expect(localDateString(new Date(2026, 8, 13))).toBe("2026-09-13");
+  });
+
+  it("treats a previous calendar date as an expired student session", () => {
+    expect(isStudentSessionExpired("2026-09-13", "2026-09-14")).toBe(true);
+    expect(isStudentSessionExpired("2026-09-14", "2026-09-14")).toBe(false);
+    expect(isStudentSessionExpired(undefined, "2026-09-14")).toBe(false);
+  });
+
+  it("computes local midnight after a date", () => {
+    const next = startOfNextLocalDay(new Date(2026, 8, 13, 22, 15));
+    expect(localDateString(next)).toBe("2026-09-14");
+    expect(next.getHours()).toBe(0);
+    expect(msUntilNextLocalMidnight(new Date(2026, 8, 13, 23, 59, 0))).toBeGreaterThan(0);
+    expect(msUntilNextLocalMidnight(new Date(2026, 8, 13, 23, 59, 0))).toBeLessThanOrEqual(60_000);
   });
 
   it("starts the local week on Monday", () => {

@@ -81,6 +81,9 @@ async function run() {
     const duplicate = await api("POST", "/api/student/time-clock/clock-in", studentCookie, { supervisorId });
     assert.strictEqual(duplicate.status, 409, "cannot clock in twice");
 
+    const blockedClockOut = await api("POST", "/api/student/time-clock/clock-out", studentCookie);
+    assert.strictEqual(blockedClockOut.status, 409, "clock out should require a daily recap");
+
     const recap = await api("POST", "/api/student/recaps", studentCookie, {
       whatIDid: "Helped the technician inspect filters and restock supplies.",
       whatILearned: "How to check the filter orientation before installing a new one.",

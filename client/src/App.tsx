@@ -21,6 +21,7 @@ import { markRouteNavigation, measureRouteNavigation } from "@/lib/performanceMa
 import { AppRoutes } from "@/routes/AppRoutes";
 import { StudentClockInGate } from "@/pages/StudentPortal/StudentClockInGate";
 import { StudentHeaderStatus } from "@/pages/StudentPortal/StudentHeaderStatus";
+import { useStudentDailySession } from "@/hooks/useStudentDailySession";
 
 const Landing = lazyWithRetry(() => import("@/pages/Landing"));
 const ForgotPassword = lazyWithRetry(() => import("@/pages/ForgotPassword"));
@@ -68,6 +69,7 @@ function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const isMobileView = useIsMobile();
   const [currentPath, setLocation] = useLocation();
+  useStudentDailySession(user?.role === "student");
 
   useEffect(() => {
     markRouteNavigation(currentPath);

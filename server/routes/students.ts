@@ -171,6 +171,7 @@ export function registerStudentRoutes(app: Express) {
   app.get("/api/student/time-clock", isAuthenticated, requireStudent, async (req: any, res) => {
     try {
       const student = req.currentUser;
+      await studentStorage.closeOvernightOpenStudentShift(student.id);
       const openEntry = await studentStorage.getOpenStudentTimeEntry(student.id);
       const latest = openEntry ?? (await studentStorage.getLatestStudentTimeEntry(student.id));
       const todayRecapCount = await studentStorage.countStudentRecapsOnDate(student.id, localDateString());
@@ -207,6 +208,7 @@ export function registerStudentRoutes(app: Express) {
       }
 
       const student = req.currentUser;
+      await studentStorage.closeOvernightOpenStudentShift(student.id);
       const existing = await studentStorage.getOpenStudentTimeEntry(student.id);
       if (existing) {
         return res.status(409).json({ message: "You are already clocked in" });
@@ -237,6 +239,11 @@ export function registerStudentRoutes(app: Express) {
       const openEntry = await studentStorage.getOpenStudentTimeEntry(student.id);
       if (!openEntry) {
         return res.status(409).json({ message: "You are not clocked in" });
+      }
+
+      const recapCount = await studentStorage.countStudentRecapsOnDate(student.id, localDateString());
+      if (recapCount < 1) {
+        return res.status(409).json({ message: "Write your daily recap before clocking out" });
       }
 
       const clockOutAt = new Date();

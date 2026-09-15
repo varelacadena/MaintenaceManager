@@ -75,6 +75,22 @@ export function localDateString(date: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Local midnight that starts the calendar day after `date`. */
+export function startOfNextLocalDay(date: Date = new Date()): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+}
+
+export function msUntilNextLocalMidnight(now: Date = new Date()): number {
+  return Math.max(1, startOfNextLocalDay(now).getTime() - now.getTime());
+}
+
+export function isStudentSessionExpired(
+  sessionDate: string | null | undefined,
+  today = localDateString(),
+): boolean {
+  return Boolean(sessionDate) && sessionDate !== today;
+}
+
 export function computeDurationMinutes(clockInAt: Date, clockOutAt: Date = new Date()): number {
   const minutes = Math.round((clockOutAt.getTime() - clockInAt.getTime()) / 60000);
   return Math.max(0, minutes);

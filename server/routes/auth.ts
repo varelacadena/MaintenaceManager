@@ -8,6 +8,8 @@ import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { handleRouteError } from "../routeUtils";
 import { getPublicAppUrl } from "../appUrl";
+import { stampStudentSessionDate } from "../studentSession";
+import * as studentStorage from "../storage/students";
 
 export function registerAuthRoutes(app: Express) {
   app.get("/api/health", async (_req, res) => {
@@ -101,6 +103,10 @@ export function registerAuthRoutes(app: Express) {
       }
 
       (req.session as any).userId = user.id;
+      if (user.role === "student") {
+        stampStudentSessionDate(req);
+        await studentStorage.closeOvernightOpenStudentShift(user.id);
+      }
       req.session.save(() => {
         res.json({ success: true, user: {
           id: user.id,
