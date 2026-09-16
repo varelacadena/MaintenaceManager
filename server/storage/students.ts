@@ -108,6 +108,14 @@ export async function countStudentRecapsOnDate(studentId: string, recapDate: str
   return row?.count ?? 0;
 }
 
+export async function countStudentRecapsForTimeEntry(timeEntryId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(studentDailyRecaps)
+    .where(eq(studentDailyRecaps.timeEntryId, timeEntryId));
+  return row?.count ?? 0;
+}
+
 export async function createStudentDailyRecap(recap: InsertStudentDailyRecap): Promise<StudentDailyRecap> {
   const [created] = await db.insert(studentDailyRecaps).values(recap).returning();
   return created;

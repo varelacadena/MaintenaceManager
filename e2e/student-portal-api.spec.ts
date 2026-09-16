@@ -99,6 +99,30 @@ async function run() {
     assert.strictEqual(clockOut.status, 200);
     assert.ok(clockOut.data.clockOutAt);
 
+    const clockInDated = await api("POST", "/api/student/time-clock/clock-in", studentCookie, { supervisorId });
+    assert.strictEqual(clockInDated.status, 201, "can clock in again after clocking out");
+    const recapOtherDay = await api("POST", "/api/student/recaps", studentCookie, {
+      whatIDid: "Helped the technician inspect filters and restock supplies.",
+      whatILearned: "How to check the filter orientation before installing a new one.",
+      recapDate: "2020-01-01",
+    });
+    assert.strictEqual(recapOtherDay.status, 201);
+    const clockOutOtherDay = await api("POST", "/api/student/time-clock/clock-out", studentCookie);
+    assert.strictEqual(
+      clockOutOtherDay.status,
+      200,
+      "clock out should use this shift recap, not the server calendar date",
+    );
+
+    const clockInWithBody = await api("POST", "/api/student/time-clock/clock-in", studentCookie, { supervisorId });
+    assert.strictEqual(clockInWithBody.status, 201);
+    const clockOutWithBody = await api("POST", "/api/student/time-clock/clock-out", studentCookie, {
+      whatIDid: "Helped replace a faucet and restocked shop supplies.",
+      whatILearned: "Always shut the water off before loosening fittings.",
+    });
+    assert.strictEqual(clockOutWithBody.status, 200, "clock out can save the recap in the same request");
+    assert.ok(clockOutWithBody.data.clockOutAt);
+
     const hours = await api("GET", "/api/student/hours", studentCookie);
     assert.strictEqual(hours.status, 200);
     assert.ok(typeof hours.data.totalMinutes === "number");

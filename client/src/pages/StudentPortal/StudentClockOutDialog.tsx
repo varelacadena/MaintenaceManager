@@ -35,9 +35,8 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
   const recapsQuery = useStudentRecaps(open);
   const openEntry = clockQuery.data?.openEntry;
   const now = useLiveNow(open && Boolean(openEntry?.clockInAt));
-  const today = localDateString();
-  const todayRecap = (recapsQuery.data ?? []).find((recap) => recap.recapDate === today);
-  const alreadyRecapped = Boolean(todayRecap) || (clockQuery.data?.todayRecapCount ?? 0) > 0;
+  const shiftRecap = (recapsQuery.data ?? []).find((recap) => recap.timeEntryId === openEntry?.id);
+  const alreadyRecapped = Boolean(shiftRecap);
 
   const [step, setStep] = useState<"recap" | "review">("recap");
   const [whatIDid, setWhatIDid] = useState("");
@@ -45,10 +44,10 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
 
   useEffect(() => {
     if (!open) return;
-    setWhatIDid(todayRecap?.whatIDid ?? "");
-    setWhatILearned(todayRecap?.whatILearned ?? "");
+    setWhatIDid(shiftRecap?.whatIDid ?? "");
+    setWhatILearned(shiftRecap?.whatILearned ?? "");
     setStep(alreadyRecapped ? "review" : "recap");
-  }, [open, alreadyRecapped, todayRecap?.whatIDid, todayRecap?.whatILearned]);
+  }, [open, alreadyRecapped, shiftRecap?.whatIDid, shiftRecap?.whatILearned]);
 
   const elapsed = openEntry?.clockInAt
     ? formatLiveDuration(elapsedMilliseconds(openEntry.clockInAt, now))
@@ -62,7 +61,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
       const response = await apiRequest("POST", "/api/student/recaps", {
         whatIDid: whatIDid.trim(),
         whatILearned: whatILearned.trim(),
-        recapDate: today,
+        recapDate: localDateString(openEntry?.clockInAt ? new Date(openEntry.clockInAt) : undefined),
       });
       return response.json();
     },
@@ -79,7 +78,10 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
 
   const clockOutMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/student/time-clock/clock-out");
+      const response = await apiRequest("POST", "/api/student/time-clock/clock-out", {
+        whatIDid: whatIDid.trim(),
+        whatILearned: whatILearned.trim(),
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -104,7 +106,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
       });
       return;
     }
-    if (alreadyRecapped && whatIDid === (todayRecap?.whatIDid ?? "") && whatILearned === (todayRecap?.whatILearned ?? "")) {
+    if (alreadyRecapped && whatIDid === (shiftRecap?.whatIDid ?? "") && whatILearned === (shiftRecap?.whatILearned ?? "")) {
       setStep("review");
       return;
     }
@@ -187,13 +189,13 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What I did</p>
                 <p className="text-sm mt-1 whitespace-pre-wrap" data-testid="text-review-did">
-                  {whatIDid.trim() || todayRecap?.whatIDid}
+                  {whatIDid.trim() || shiftRecap?.whatIDid}
                 </p>
               </div>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What I learned</p>
                 <p className="text-sm mt-1 whitespace-pre-wrap" data-testid="text-review-learned">
-                  {whatILearned.trim() || todayRecap?.whatILearned}
+                  {whatILearned.trim() || shiftRecap?.whatILearned}
                 </p>
               </div>
             </div>

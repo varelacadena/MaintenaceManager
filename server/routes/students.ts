@@ -241,9 +241,20 @@ export function registerStudentRoutes(app: Express) {
         return res.status(409).json({ message: "You are not clocked in" });
       }
 
-      const recapCount = await studentStorage.countStudentRecapsOnDate(student.id, localDateString());
+      let recapCount = await studentStorage.countStudentRecapsForTimeEntry(openEntry.id);
       if (recapCount < 1) {
-        return res.status(409).json({ message: "Write your daily recap before clocking out" });
+        const parsed = studentRecapRequestSchema.safeParse(req.body ?? {});
+        if (!parsed.success) {
+          return res.status(409).json({ message: "Write your daily recap before clocking out" });
+        }
+        await studentStorage.createStudentDailyRecap({
+          studentId: student.id,
+          studentName: formatUserDisplayName(student),
+          timeEntryId: openEntry.id,
+          recapDate: parsed.data.recapDate || localDateString(openEntry.clockInAt ?? new Date()),
+          whatIDid: parsed.data.whatIDid,
+          whatILearned: parsed.data.whatILearned,
+        });
       }
 
       const clockOutAt = new Date();
