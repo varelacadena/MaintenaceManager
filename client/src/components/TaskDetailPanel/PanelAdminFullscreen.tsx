@@ -39,12 +39,15 @@ import { useToast } from "@/hooks/use-toast";
 import type { User, TimeEntry, Property } from "@shared/schema";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { cn } from "@/lib/utils";
-import { minutesToHoursInputValue } from "@/lib/timeEntryUtils";
+import { durationFromHoursAndMinutes } from "@/lib/timeEntryUtils";
+import { ManualTimeLogFields } from "@/components/ManualTimeLogFields";
+import { TimeLogEntryRow } from "@/components/TimeLogEntryRow";
 import { PhotoThumbnailGrid } from "./PanelResourcesSection";
 import { PanelNoteList } from "./PanelNotesSection";
 import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
 import { PanelFileInput } from "./PanelFileInput";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
+import { EditableDateCell } from "@/components/EditableDateCell";
 import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { Link } from "wouter";
@@ -146,10 +149,14 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
     editingNoteId, setEditingNoteId, editNoteContent, setEditNoteContent,
     updateNoteMutation, setDeleteNoteId, setIsAddNoteDialogOpen,
     setIsEditMode, setDeleteDialogOpen,
-    setEditingTimeEntryId, setEditTimeDuration, setDeleteTimeEntryId,
+    setDeleteTimeEntryId,
     setIsLogTimeDialogOpen,
+    logTimeHours, setLogTimeHours, logTimeMinutes, setLogTimeMinutes, logTimeDate, setLogTimeDate,
+    logTimeMutation,
+    editingTimeEntryId, editTimeHours, setEditTimeHours, editTimeMinutes, setEditTimeMinutes,
+    startEditTimeEntry, cancelEditTimeEntry, saveEditTimeEntry, updateTimeEntryMutation,
     isNotStarted, isStarted, handleStartTask, handleMarkComplete, updateStatusMutation,
-    isAdmin,
+    isAdmin, handleInlineEdit,
     fileInputRef, handleFileUpload, isFileUploading,
   } = ctx;
 
@@ -310,7 +317,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
           </div>
 
           <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               <MetaStripItem icon={<UserIcon className="w-3.5 h-3.5" />} label="Lead technician">
                 {assignee ? (
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -331,15 +338,64 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                   <p className="text-sm text-muted-foreground">Unassigned</p>
                 )}
               </MetaStripItem>
-              <MetaStripItem icon={<Calendar className="w-3.5 h-3.5" />} label="Scheduled target">
-                <p className={cn("text-sm font-medium", isOverdue && "text-destructive")}>
-                  {task.estimatedCompletionDate
-                    ? format(new Date(task.estimatedCompletionDate), "MMM d, yyyy")
-                    : "Not set"}
-                </p>
+              <MetaStripItem icon={<Calendar className="w-3.5 h-3.5" />} label="Start date">
+                {isAdmin ? (
+                  <EditableDateCell
+                    value={task.initialDate}
+                    taskId={taskId}
+                    field="initialDate"
+                    onSave={handleInlineEdit}
+                  />
+                ) : (
+                  <p className="text-sm font-medium">{formatTaskDate(task.initialDate, "Not set")}</p>
+                )}
+              </MetaStripItem>
+              <MetaStripItem icon={<Calendar className="w-3.5 h-3.5" />} label="Due date">
+                {isAdmin ? (
+                  <p className={cn("text-sm font-medium", isOverdue && "text-destructive")}>
+                    <EditableDateCell
+                      value={task.estimatedCompletionDate}
+                      taskId={taskId}
+                      field="estimatedCompletionDate"
+                      onSave={handleInlineEdit}
+                    />
+                  </p>
+                ) : (
+                  <p className={cn("text-sm font-medium", isOverdue && "text-destructive")}>
+                    {task.estimatedCompletionDate
+                      ? format(new Date(task.estimatedCompletionDate), "MMM d, yyyy")
+                      : "Not set"}
+                  </p>
+                )}
+              </MetaStripItem>
+              <MetaStripItem icon={<CheckCircle2 className="w-3.5 h-3.5" />} label="Completed">
+                {isAdmin ? (
+                  <p className={cn("text-sm font-medium", task.actualCompletionDate && "text-green-700 dark:text-green-400")}>
+                    <EditableDateCell
+                      value={task.actualCompletionDate}
+                      taskId={taskId}
+                      field="actualCompletionDate"
+                      onSave={handleInlineEdit}
+                    />
+                  </p>
+                ) : (
+                  <p className={cn("text-sm font-medium", task.actualCompletionDate ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>
+                    {formatTaskDateTime(task.actualCompletionDate, "Not set")}
+                  </p>
+                )}
               </MetaStripItem>
               <MetaStripItem icon={<Clock className="w-3.5 h-3.5" />} label="Time logged">
                 <p className="text-sm font-medium">{formatLoggedTime(totalMinutes)}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-8 px-2.5 text-xs"
+                  onClick={() => setIsLogTimeDialogOpen(true)}
+                  data-testid="button-header-log-time"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Add time
+                </Button>
               </MetaStripItem>
               <MetaStripItem icon={<MapPin className="w-3.5 h-3.5" />} label="Assigned site">
                 <div className="flex items-start gap-2 min-w-0">
@@ -676,76 +732,59 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
             }
             testId="panel-right-sidebar"
           >
+            <div className="rounded-lg border border-border bg-muted/20 p-3 mb-4 space-y-3">
+              <p className="text-sm font-medium">Add time manually</p>
+              <ManualTimeLogFields
+                hours={logTimeHours}
+                minutes={logTimeMinutes}
+                date={logTimeDate}
+                onHoursChange={setLogTimeHours}
+                onMinutesChange={setLogTimeMinutes}
+                onDateChange={setLogTimeDate}
+                idPrefix="inline-log-time"
+              />
+              <Button
+                className="w-full"
+                onClick={() => logTimeMutation.mutate(durationFromHoursAndMinutes(logTimeHours, logTimeMinutes))}
+                disabled={durationFromHoursAndMinutes(logTimeHours, logTimeMinutes) <= 0 || logTimeMutation.isPending}
+                data-testid="button-inline-save-time"
+              >
+                {logTimeMutation.isPending ? "Saving..." : "Add time log"}
+              </Button>
+            </div>
             {timeEntries.length === 0 ? (
               <div className="rounded-lg border border-dashed py-8 px-4 text-center">
                 <Clock className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">No time logged yet</p>
               </div>
             ) : (
-              <ul className="space-y-3">
+              <div className="space-y-3">
                 {timeEntries.map((entry: TimeEntry) => {
                   const entryUser = allUsers?.find((u) => u.id === entry.userId);
-                  const isRunning = entry.startTime && !entry.endTime;
-                  const duration = entry.durationMinutes
-                    ? `${Math.floor(entry.durationMinutes / 60)}h ${entry.durationMinutes % 60}m`
-                    : isRunning ? "Running" : "—";
+                  const userName = entryUser
+                    ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username
+                    : "Unknown";
                   return (
-                    <li key={entry.id} className="flex items-center justify-between gap-3" data-testid={`panel-history-${entry.id}`}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">
-                          {entryUser
-                            ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username
-                            : "Unknown"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {entry.startTime ? format(new Date(entry.startTime), "MMM d, h:mm a") : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge variant={isRunning ? "default" : "outline"} className="text-xs font-medium">
-                          {duration}
-                        </Badge>
-                        {!isRunning && (
-                          <>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                setEditingTimeEntryId(entry.id);
-                                setEditTimeDuration(minutesToHoursInputValue(entry.durationMinutes || 0));
-                              }}
-                              data-testid={`button-edit-time-${entry.id}`}
-                            >
-                              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => setDeleteTimeEntryId(entry.id)}
-                              data-testid={`button-delete-time-${entry.id}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </li>
+                    <TimeLogEntryRow
+                      key={entry.id}
+                      entry={entry}
+                      userName={userName}
+                      canModify={isAdmin}
+                      isEditing={editingTimeEntryId === entry.id}
+                      hours={editTimeHours}
+                      minutes={editTimeMinutes}
+                      onHoursChange={setEditTimeHours}
+                      onMinutesChange={setEditTimeMinutes}
+                      onStartEdit={() => startEditTimeEntry(entry)}
+                      onCancelEdit={cancelEditTimeEntry}
+                      onSave={() => saveEditTimeEntry(entry.id)}
+                      onDelete={() => setDeleteTimeEntryId(entry.id)}
+                      isSaving={updateTimeEntryMutation.isPending && editingTimeEntryId === entry.id}
+                    />
                   );
                 })}
-              </ul>
+              </div>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full mt-4 gap-2 border-dashed"
-              onClick={() => setIsLogTimeDialogOpen(true)}
-              data-testid="button-panel-log-time-inline"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Log time
-            </Button>
           </DossierCard>
         </div>
       </div>

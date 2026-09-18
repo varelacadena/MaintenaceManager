@@ -29,7 +29,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import { DatePicker } from "@/components/ui/date-picker";
-import { dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
+import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
 import { format } from "date-fns";
 import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem } from "@shared/schema";
 import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";
@@ -97,6 +97,13 @@ export function TaskEditMode({
   const [estimatedCompletionDate, setEstimatedCompletionDate] = useState(
     getTaskDateInputValue(task.estimatedCompletionDate)
   );
+  const [initialDate, setInitialDate] = useState(getTaskDateInputValue(task.initialDate));
+  const [actualCompletionDate, setActualCompletionDate] = useState(
+    getTaskDateInputValue(task.actualCompletionDate)
+  );
+  const [estimatedHours, setEstimatedHours] = useState(
+    task.estimatedHours != null ? String(task.estimatedHours) : ""
+  );
   const [propertyId, setPropertyId] = useState<string>(task.propertyId || "");
   const [assignedToId, setAssignedToId] = useState<string>(task.assignedToId || "");
   const [helperUserIds, setHelperUserIds] = useState<string[]>(
@@ -159,6 +166,9 @@ export function TaskEditMode({
     setDescription(task.description || "");
     setUrgency(task.urgency);
     setEstimatedCompletionDate(getTaskDateInputValue(task.estimatedCompletionDate));
+    setInitialDate(getTaskDateInputValue(task.initialDate));
+    setActualCompletionDate(getTaskDateInputValue(task.actualCompletionDate));
+    setEstimatedHours(task.estimatedHours != null ? String(task.estimatedHours) : "");
     setPropertyId(task.propertyId || "");
     setAssignedToId(task.assignedToId || "");
     setHelperUserIds(task.helpers?.map((helper) => helper.userId) ?? []);
@@ -261,7 +271,7 @@ export function TaskEditMode({
 
     setIsSaving(true);
     try {
-      const patchData: Partial<InsertTask> = {};
+      const patchData: Record<string, unknown> = {};
       if (name !== task.name) patchData.name = name;
       if (description !== (task.description || "")) patchData.description = description;
       if (urgency !== task.urgency) patchData.urgency = urgency as InsertTask["urgency"];
@@ -278,11 +288,29 @@ export function TaskEditMode({
         normalizedHelperIds.length !== originalHelperIds.length ||
         normalizedHelperIds.some((id) => !originalHelperIds.includes(id));
 
+      const origStartDate = getTaskDateInputValue(task.initialDate);
+      if (initialDate !== origStartDate && initialDate) {
+        patchData.initialDate = new Date(dateInputValueToTaskTimestamp(initialDate));
+      }
+
       const origDate = getTaskDateInputValue(task.estimatedCompletionDate);
       if (estimatedCompletionDate !== origDate) {
         patchData.estimatedCompletionDate = estimatedCompletionDate
           ? new Date(dateInputValueToTaskTimestamp(estimatedCompletionDate))
           : null;
+      }
+
+      const origCompleted = getTaskDateInputValue(task.actualCompletionDate);
+      if (actualCompletionDate !== origCompleted) {
+        patchData.actualCompletionDate = actualCompletionDate
+          ? new Date(dateInputValuePreservingTime(actualCompletionDate, task.actualCompletionDate))
+          : null;
+      }
+
+      const origHours = task.estimatedHours != null ? String(task.estimatedHours) : "";
+      if (estimatedHours !== origHours) {
+        const parsedHours = estimatedHours.trim() === "" ? null : Number(estimatedHours);
+        patchData.estimatedHours = parsedHours != null && Number.isNaN(parsedHours) ? null : parsedHours;
       }
 
       if (Object.keys(patchData).length > 0 || helpersChanged) {
@@ -518,15 +546,53 @@ export function TaskEditMode({
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
-            Due Date
-          </Label>
-          <DatePicker
-            value={estimatedCompletionDate ? toCalendarDate(estimatedCompletionDate) ?? undefined : undefined}
-            onChange={(date) => setEstimatedCompletionDate(date ? format(date, "yyyy-MM-dd") : "")}
-            data-testid="input-edit-due-date"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+              Start Date
+            </Label>
+            <DatePicker
+              value={initialDate ? toCalendarDate(initialDate) ?? undefined : undefined}
+              onChange={(date) => setInitialDate(date ? format(date, "yyyy-MM-dd") : "")}
+              data-testid="input-edit-start-date"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+              Due Date
+            </Label>
+            <DatePicker
+              value={estimatedCompletionDate ? toCalendarDate(estimatedCompletionDate) ?? undefined : undefined}
+              onChange={(date) => setEstimatedCompletionDate(date ? format(date, "yyyy-MM-dd") : "")}
+              data-testid="input-edit-due-date"
+              clearable
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+              Completion Date
+            </Label>
+            <DatePicker
+              value={actualCompletionDate ? toCalendarDate(actualCompletionDate) ?? undefined : undefined}
+              onChange={(date) => setActualCompletionDate(date ? format(date, "yyyy-MM-dd") : "")}
+              data-testid="input-edit-completion-date"
+              clearable
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
+              Estimated Hours
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.25}
+              placeholder="e.g. 2"
+              value={estimatedHours}
+              onChange={(event) => setEstimatedHours(event.target.value)}
+              data-testid="input-edit-estimated-hours"
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">

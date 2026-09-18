@@ -35,19 +35,31 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
   const recapsQuery = useStudentRecaps(open);
   const openEntry = clockQuery.data?.openEntry;
   const now = useLiveNow(open && Boolean(openEntry?.clockInAt));
-  const shiftRecap = (recapsQuery.data ?? []).find((recap) => recap.timeEntryId === openEntry?.id);
-  const alreadyRecapped = Boolean(shiftRecap);
+  const shiftRecap = openEntry?.id
+    ? (recapsQuery.data ?? []).find((recap) => recap.timeEntryId === openEntry.id)
+    : undefined;
 
   const [step, setStep] = useState<"recap" | "review">("recap");
+  const [recapConfirmed, setRecapConfirmed] = useState(false);
   const [whatIDid, setWhatIDid] = useState("");
   const [whatILearned, setWhatILearned] = useState("");
 
   useEffect(() => {
-    if (!open) return;
-    setWhatIDid(shiftRecap?.whatIDid ?? "");
-    setWhatILearned(shiftRecap?.whatILearned ?? "");
-    setStep(alreadyRecapped ? "review" : "recap");
-  }, [open, alreadyRecapped, shiftRecap?.whatIDid, shiftRecap?.whatILearned]);
+    if (!open) {
+      setStep("recap");
+      setRecapConfirmed(false);
+      setWhatIDid("");
+      setWhatILearned("");
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || recapConfirmed) return;
+    if (shiftRecap) {
+      setWhatIDid(shiftRecap.whatIDid);
+      setWhatILearned(shiftRecap.whatILearned);
+    }
+  }, [open, recapConfirmed, shiftRecap?.id, shiftRecap?.whatIDid, shiftRecap?.whatILearned]);
 
   const elapsed = openEntry?.clockInAt
     ? formatLiveDuration(elapsedMilliseconds(openEntry.clockInAt, now))
@@ -55,6 +67,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
 
   const recapReady =
     whatIDid.trim().length >= MIN_RECAP_LENGTH && whatILearned.trim().length >= MIN_RECAP_LENGTH;
+  const canClockOut = step === "review" && recapConfirmed && recapReady;
 
   const saveRecapMutation = useMutation({
     mutationFn: async () => {
@@ -69,6 +82,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.recaps });
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.timeClock });
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.adminList });
+      setRecapConfirmed(true);
       setStep("review");
     },
     onError: (error: Error) => {
@@ -106,11 +120,28 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
       });
       return;
     }
-    if (alreadyRecapped && whatIDid === (shiftRecap?.whatIDid ?? "") && whatILearned === (shiftRecap?.whatILearned ?? "")) {
+    if (
+      shiftRecap &&
+      whatIDid.trim() === shiftRecap.whatIDid.trim() &&
+      whatILearned.trim() === shiftRecap.whatILearned.trim()
+    ) {
+      setRecapConfirmed(true);
       setStep("review");
       return;
     }
     saveRecapMutation.mutate();
+  }
+
+  function handleClockOut() {
+    if (!canClockOut) {
+      toast({
+        title: "Write your recap first",
+        description: "Clock out is only available after you save what you did and learned.",
+        variant: "destructive",
+      });
+      return;
+    }
+    clockOutMutation.mutate();
   }
 
   return (
@@ -125,12 +156,12 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
           </DialogTitle>
           <DialogDescription>
             {step === "recap"
-              ? "Tell us what you did and what you learned, then tap Next."
+              ? "Tell us what you did and what you learned. Clock out is next."
               : "Check your hours and recap, then clock out."}
           </DialogDescription>
         </DialogHeader>
 
-        {step === "recap" ? (
+        {step === "recap" || !recapConfirmed ? (
           <div className="px-5 pb-5 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="clock-out-did" className="flex items-center gap-1.5">
@@ -164,7 +195,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
               type="button"
               className="w-full h-12 text-base font-semibold"
               onClick={handleNext}
-              disabled={saveRecapMutation.isPending}
+              disabled={!recapReady || saveRecapMutation.isPending}
               data-testid="button-recap-next"
             >
               {saveRecapMutation.isPending ? "Saving…" : "Next"}
@@ -199,16 +230,31 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
                 </p>
               </div>
             </div>
+            {canClockOut && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full h-14 text-lg font-semibold"
+                onClick={handleClockOut}
+                disabled={clockOutMutation.isPending}
+                data-testid="button-clock-out"
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                {clockOutMutation.isPending ? "Clocking out…" : "Clock out"}
+              </Button>
+            )}
             <Button
               type="button"
-              variant="destructive"
-              className="w-full h-14 text-lg font-semibold"
-              onClick={() => clockOutMutation.mutate()}
+              variant="outline"
+              className="w-full h-11"
+              onClick={() => {
+                setRecapConfirmed(false);
+                setStep("recap");
+              }}
               disabled={clockOutMutation.isPending}
-              data-testid="button-clock-out"
+              data-testid="button-recap-back"
             >
-              <LogOut className="w-5 h-5 mr-2" />
-              {clockOutMutation.isPending ? "Clocking out…" : "Clock out"}
+              Back to recap
             </Button>
           </div>
         )}

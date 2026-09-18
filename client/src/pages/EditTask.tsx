@@ -43,16 +43,17 @@ import {
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
 import { SpaceDialog } from "@/components/task-form/SpaceDialog";
+import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue } from "@/lib/taskCalendarDates";
 
 const formSchema = insertTaskSchema.extend({
   initialDate: z.string().min(1, "Please select a start date"),
   estimatedCompletionDate: z.string().min(1, "Please select an estimated completion date"),
+  actualCompletionDate: z.string().optional(),
   propertyId: z.string().optional(),
   spaceId: z.string().optional(),
   equipmentId: z.string().optional(),
   vehicleId: z.string().optional(),
   taskType: z.enum(["one_time", "recurring", "reminder", "project"]),
-  scheduledStartTime: z.string().optional(),
   contactType: z.enum(["requester", "staff", "other"]).optional(),
   contactStaffId: z.string().optional(),
   contactName: z.string().optional(),
@@ -175,6 +176,8 @@ export default function EditTask() {
       contactPhone: "",
       isCampusWide: false,
       propertyIds: [],
+      actualCompletionDate: "",
+      estimatedHours: undefined,
     },
   });
   const primaryAssigneeId = form.watch("assignedToId");
@@ -199,13 +202,15 @@ export default function EditTask() {
       if (task.recurringEndDate) {
         form.setValue("recurringEndDate", task.recurringEndDate);
       }
-      form.setValue("initialDate", new Date(task.initialDate).toISOString().split("T")[0]);
+      form.setValue("initialDate", getTaskDateInputValue(task.initialDate));
       if (task.estimatedCompletionDate) {
-        form.setValue("estimatedCompletionDate", new Date(task.estimatedCompletionDate).toISOString().split("T")[0]);
+        form.setValue("estimatedCompletionDate", getTaskDateInputValue(task.estimatedCompletionDate));
       }
-      const taskExt = task as Task & { scheduledStartTime?: string; helpers?: Array<{ userId: string }> };
-      if (taskExt.scheduledStartTime) {
-        form.setValue("scheduledStartTime", taskExt.scheduledStartTime);
+      if (task.actualCompletionDate) {
+        form.setValue("actualCompletionDate", getTaskDateInputValue(task.actualCompletionDate));
+      }
+      if (task.estimatedHours != null) {
+        form.setValue("estimatedHours", task.estimatedHours);
       }
       if (task.isCampusWide) {
         setLocationScope("campus");
@@ -310,10 +315,14 @@ export default function EditTask() {
         name: data.name,
         description: data.description,
         urgency: data.urgency,
-        initialDate: new Date(data.initialDate).toISOString(),
-        estimatedCompletionDate: data.estimatedCompletionDate 
-          ? new Date(data.estimatedCompletionDate).toISOString()
+        initialDate: new Date(dateInputValueToTaskTimestamp(data.initialDate)).toISOString(),
+        estimatedCompletionDate: data.estimatedCompletionDate
+          ? new Date(dateInputValueToTaskTimestamp(data.estimatedCompletionDate)).toISOString()
           : undefined,
+        actualCompletionDate: data.actualCompletionDate
+          ? new Date(dateInputValuePreservingTime(data.actualCompletionDate, task?.actualCompletionDate)).toISOString()
+          : null,
+        estimatedHours: data.estimatedHours ?? null,
         isCampusWide: data.isCampusWide || false,
         propertyIds: data.propertyIds && data.propertyIds.length > 0 ? data.propertyIds : [],
         propertyId: (!data.isCampusWide && (!data.propertyIds || data.propertyIds.length === 0)) ? (data.propertyId || undefined) : undefined,
@@ -339,7 +348,6 @@ export default function EditTask() {
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
-        scheduledStartTime: (data as any).scheduledStartTime || undefined,
         helperUserIds: selectedHelperIds,
       };
       const response = await apiRequest("PATCH", `/api/tasks/${id}`, taskData);
@@ -563,7 +571,7 @@ export default function EditTask() {
               showVehicle={showVehicle}
             />
 
-            <TaskDateFields form={form} allowPastDates={true} />
+            <TaskDateFields form={form} allowPastDates={true} showActualCompletion />
 
             <div className="space-y-4">
               <FormItem>

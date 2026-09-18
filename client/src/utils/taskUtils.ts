@@ -230,3 +230,29 @@ export function formatTaskDate(date: string | Date | null | undefined, fallback:
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
+
+export function formatScheduledTime(value: string | null | undefined, fallback: string = ""): string {
+  if (!value) return fallback;
+  const [hStr, mStr] = value.split(":");
+  const hours = parseInt(hStr, 10);
+  const minutes = parseInt(mStr, 10);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return fallback;
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHour}:${String(minutes).padStart(2, "0")} ${period}`;
+}
+
+export function formatTaskDateTime(date: string | Date | null | undefined, fallback: string = ""): string {
+  const datePart = formatTaskDate(date, "");
+  if (!datePart) return fallback;
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  if (!parsed || Number.isNaN(parsed.getTime())) return fallback;
+  const hours = parsed.getHours();
+  const minutes = parsed.getMinutes();
+  if ((hours === 0 || hours === 12) && minutes === 0) return datePart;
+  const time = formatScheduledTime(
+    `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
+    "",
+  );
+  return time ? `${datePart} at ${time}` : datePart;
+}

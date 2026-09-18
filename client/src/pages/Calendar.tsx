@@ -324,23 +324,16 @@ function TimeGrid({
   const todayKey = now.toDateString();
   const currentHourOffset = ((now.getHours() - HOUR_START) * HOUR_HEIGHT) + (now.getMinutes() / 60) * HOUR_HEIGHT;
 
-  const allDayTasks = tasks.filter((t) => !t.scheduledStartTime);
-  const timedTasks = tasks.filter((t) => !!t.scheduledStartTime);
+  const allDayTasks = tasks;
+  const timedTasks: Task[] = [];
 
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
   const getTasksForDate = (date: Date, timed: boolean) =>
     (timed ? timedTasks : allDayTasks).filter((t) => taskCoversDate(t, date));
 
-  function getTaskTopOffset(task: Task): number {
-    if (!task.scheduledStartTime) return 0;
-    const parts = task.scheduledStartTime.split(":");
-    const h = parseInt(parts[0], 10);
-    const m = parseInt(parts[1] || "0", 10);
-    if (isNaN(h) || isNaN(m)) return 0;
-    const rawOffset = ((h - HOUR_START) * HOUR_HEIGHT) + (m / 60) * HOUR_HEIGHT;
-    const maxOffset = (HOUR_END - HOUR_START) * HOUR_HEIGHT - 28;
-    return Math.min(Math.max(rawOffset, 0), maxOffset);
+  function getTaskTopOffset(_task: Task): number {
+    return 0;
   }
 
   function getTaskHeight(task: Task): number {
@@ -507,9 +500,6 @@ function TimeGrid({
                                 {overdue && <AlertTriangle className="w-2.5 h-2.5 text-red-500 shrink-0" />}
                                 {task.name}
                               </div>
-                              {task.scheduledStartTime && height > 40 && (
-                                <div className="text-xs text-muted-foreground">{task.scheduledStartTime}</div>
-                              )}
                             </div>
                           </div>
                         </div>

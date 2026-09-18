@@ -12,7 +12,7 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
-import { computeDurationMinutes, localDateString, startOfNextLocalDay } from "@shared/studentPortal";
+import { computeDurationMinutes, localDateString, MIN_RECAP_LENGTH, startOfNextLocalDay } from "@shared/studentPortal";
 
 export type StudentTimeRange = {
   startDate?: Date;
@@ -112,7 +112,13 @@ export async function countStudentRecapsForTimeEntry(timeEntryId: string): Promi
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(studentDailyRecaps)
-    .where(eq(studentDailyRecaps.timeEntryId, timeEntryId));
+    .where(
+      and(
+        eq(studentDailyRecaps.timeEntryId, timeEntryId),
+        sql`char_length(trim(${studentDailyRecaps.whatIDid})) >= ${MIN_RECAP_LENGTH}`,
+        sql`char_length(trim(${studentDailyRecaps.whatILearned})) >= ${MIN_RECAP_LENGTH}`,
+      ),
+    );
   return row?.count ?? 0;
 }
 

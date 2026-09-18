@@ -5,6 +5,7 @@ const EXECUTOR_ALLOWED_KEYS = new Set([
   "description",
   "initialDate",
   "estimatedCompletionDate",
+  "estimatedHours",
   "assignedToId",
   "assignedPool",
 ]);

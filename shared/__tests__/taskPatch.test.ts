@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { sanitizeTaskPatch } from "../taskPatch";
 
 describe("sanitizeTaskPatch", () => {
+  it("allows technicians to set estimated hours", () => {
+    const result = sanitizeTaskPatch(
+      "technician",
+      { estimatedHours: 2, actualCompletionDate: "2026-09-16" },
+      "tech-1",
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.estimatedHours).toBe(2);
+      expect(result.data.actualCompletionDate).toBeUndefined();
+    }
+  });
+
   it("lets admins set estimate fields", () => {
     const result = sanitizeTaskPatch(
       "admin",

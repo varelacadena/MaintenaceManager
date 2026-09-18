@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
+import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 import type { MobileTaskDetailProps } from "./types";
 
 interface MobileTaskContentProps {
@@ -137,6 +138,10 @@ export function MobileTaskContent({ ctx }: MobileTaskContentProps) {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid #EEEEEE" }}>
+        <TaskScheduleSummary task={task} className="border-0 bg-transparent p-0 rounded-none" />
       </div>
 
       {task.description && (

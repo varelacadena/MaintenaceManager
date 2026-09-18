@@ -31,6 +31,19 @@ export function dateInputValueToTaskTimestamp(value: string): string {
   return `${value}T12:00:00`;
 }
 
+export function dateInputValuePreservingTime(
+  value: string,
+  existing: Date | string | null | undefined,
+): string {
+  if (!existing) return dateInputValueToTaskTimestamp(value);
+  const previous = new Date(existing);
+  if (Number.isNaN(previous.getTime())) return dateInputValueToTaskTimestamp(value);
+  const hours = String(previous.getHours()).padStart(2, "0");
+  const minutes = String(previous.getMinutes()).padStart(2, "0");
+  const seconds = String(previous.getSeconds()).padStart(2, "0");
+  return `${value}T${hours}:${minutes}:${seconds}`;
+}
+
 export function getTaskDateSpan(task: Pick<Task, "initialDate" | "estimatedCompletionDate">): {
   start: Date | null;
   end: Date | null;

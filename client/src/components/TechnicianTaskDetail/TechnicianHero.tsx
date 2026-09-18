@@ -5,9 +5,9 @@ import {
   Globe,
   Car,
 } from "lucide-react";
-import { format } from "date-fns";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
 import { getGradient, getStatusLabel, formatElapsed } from "./types";
+import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 import type { Task, Property } from "@shared/schema";
 
 interface TechnicianHeroProps {
@@ -159,14 +159,11 @@ export function TechnicianHero({
           </span>
         </div>
       )}
-      {task.estimatedCompletionDate && (
-        <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
-          <Clock className="w-3.5 h-3.5 shrink-0 text-white/70" />
-          <span className="text-xs sm:text-sm text-white/70 truncate">
-            Due {format(new Date(task.estimatedCompletionDate), "MMM d, yyyy")}
-          </span>
-        </div>
-      )}
+      <TaskScheduleSummary
+        task={task}
+        variant="hero"
+        className="text-white/70"
+      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ import { taskStatusLabels as statusLabels } from "@/lib/constants";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { StudentBottomBar, StudentDialogs } from "./StudentViewSections";
+import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 
 export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
   const {
@@ -80,6 +81,8 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 </p>
               )}
             </div>
+
+            <TaskScheduleSummary task={task} />
 
             {isParentTask && (
               <div className="space-y-3" data-testid="subtasks-section">

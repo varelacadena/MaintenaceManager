@@ -28,6 +28,8 @@ import {
   getAvatarHexColor as getAvatarColorForId,
 } from "@/utils/taskUtils";
 import { PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
+import { buildManualTimeEntryRange, durationFromHoursAndMinutes, splitMinutes } from "@/lib/timeEntryUtils";
+import { getTaskDateInputValue } from "@/lib/taskCalendarDates";
 
 interface UseTaskDetailPanelArgs {
   taskId: string;
@@ -78,9 +80,12 @@ export function useTaskDetailPanel({
   const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [newNoteType, setNewNoteType] = useState("job_note");
-  const [logTimeDuration, setLogTimeDuration] = useState("");
+  const [logTimeHours, setLogTimeHours] = useState("");
+  const [logTimeMinutes, setLogTimeMinutes] = useState("");
+  const [logTimeDate, setLogTimeDate] = useState(() => getTaskDateInputValue(new Date()));
   const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
-  const [editTimeDuration, setEditTimeDuration] = useState("");
+  const [editTimeHours, setEditTimeHours] = useState("");
+  const [editTimeMinutes, setEditTimeMinutes] = useState("");
   const [deleteTimeEntryId, setDeleteTimeEntryId] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
@@ -296,13 +301,36 @@ export function useTaskDetailPanel({
     },
     onSuccess: () => {
       setEditingTimeEntryId(null);
-      setEditTimeDuration("");
+      setEditTimeHours("");
+      setEditTimeMinutes("");
       refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
       toast({ title: "Time entry updated" });
     },
     onError: () => toast({ title: "Error", description: "Failed to update time entry.", variant: "destructive" }),
   });
+
+  const startEditTimeEntry = (entry: TimeEntry) => {
+    setEditingTimeEntryId(entry.id);
+    const split = splitMinutes(entry.durationMinutes || 0);
+    setEditTimeHours(split.hours);
+    setEditTimeMinutes(split.minutes);
+  };
+
+  const cancelEditTimeEntry = () => {
+    setEditingTimeEntryId(null);
+    setEditTimeHours("");
+    setEditTimeMinutes("");
+  };
+
+  const saveEditTimeEntry = (entryId?: string | null) => {
+    const id = entryId ?? editingTimeEntryId;
+    if (!id) return;
+    updateTimeEntryMutation.mutate({
+      entryId: id,
+      durationMinutes: durationFromHoursAndMinutes(editTimeHours, editTimeMinutes),
+    });
+  };
 
   const deleteTimeEntryMutation = useMutation({
     mutationFn: async (entryId: string) => {
@@ -319,19 +347,23 @@ export function useTaskDetailPanel({
 
   const logTimeMutation = useMutation({
     mutationFn: async (durationMinutes: number) => {
-      const now = new Date();
-      const startTime = new Date(now.getTime() - durationMinutes * 60000);
+      const { startTime, endTime } = buildManualTimeEntryRange(
+        durationMinutes,
+        logTimeDate || getTaskDateInputValue(new Date()),
+      );
       return apiRequest("POST", "/api/time-entries", {
         taskId,
         durationMinutes,
         startTime: startTime.toISOString(),
-        endTime: now.toISOString(),
+        endTime: endTime.toISOString(),
       });
     },
     onSuccess: () => {
       refreshTaskDetail();
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", taskId] });
-      setLogTimeDuration("");
+      setLogTimeHours("");
+      setLogTimeMinutes("");
+      setLogTimeDate(getTaskDateInputValue(new Date()));
       setIsLogTimeDialogOpen(false);
       toast({ title: "Time logged" });
     },
@@ -559,12 +591,18 @@ export function useTaskDetailPanel({
     setNewNoteContent,
     newNoteType,
     setNewNoteType,
-    logTimeDuration,
-    setLogTimeDuration,
+    logTimeHours,
+    setLogTimeHours,
+    logTimeMinutes,
+    setLogTimeMinutes,
+    logTimeDate,
+    setLogTimeDate,
     editingTimeEntryId,
     setEditingTimeEntryId,
-    editTimeDuration,
-    setEditTimeDuration,
+    editTimeHours,
+    setEditTimeHours,
+    editTimeMinutes,
+    setEditTimeMinutes,
     deleteTimeEntryId,
     setDeleteTimeEntryId,
     editingNoteId,
@@ -588,6 +626,9 @@ export function useTaskDetailPanel({
     deleteNoteMutation,
     updateTimeEntryMutation,
     deleteTimeEntryMutation,
+    startEditTimeEntry,
+    cancelEditTimeEntry,
+    saveEditTimeEntry,
     logTimeMutation,
 
     handleFileUpload,

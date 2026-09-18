@@ -33,6 +33,7 @@ import { MultiPropertyDisplay } from "./helpers";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
 import type { TaskDetailContext } from "./useTaskDetail";
+import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 
 export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
   const {
@@ -159,6 +160,8 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
           </div>
         </div>
       </div>
+
+      <TaskScheduleSummary task={task} isOverdue={isOverdue} />
 
       {task.requiresEstimate && (
         task.estimateStatus === "needs_estimate" ? (

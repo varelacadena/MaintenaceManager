@@ -42,7 +42,7 @@ import {
   canManageInventory,
   canManageEquipment,
 } from "@shared/techPermissions";
-import { useStudentTimeClock } from "@/pages/StudentPortal/studentPortalApi";
+import { useStudentRecaps, useStudentTimeClock } from "@/pages/StudentPortal/studentPortalApi";
 
 interface AppSidebarProps {
   user: User | null | undefined;
@@ -94,11 +94,18 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
   const [location] = useLocation();
   const userRole = user?.role as "admin" | "staff" | "student" | "technician" | undefined;
   const studentClock = useStudentTimeClock(userRole === "student");
+  const studentRecaps = useStudentRecaps(userRole === "student");
   const menuItems = (() => {
     if (!userRole) return [];
     const base = roleMenus[userRole];
-    if (userRole === "student" && !studentClock.data?.openEntry) {
-      return base.filter((item) => item.url !== "/clock-out");
+    if (userRole === "student") {
+      const openEntry = studentClock.data?.openEntry;
+      const hasShiftRecap = Boolean(
+        openEntry?.id && (studentRecaps.data ?? []).some((recap) => recap.timeEntryId === openEntry.id),
+      );
+      if (!hasShiftRecap) {
+        return base.filter((item) => item.url !== "/clock-out");
+      }
     }
     if (userRole !== "technician") return base;
 

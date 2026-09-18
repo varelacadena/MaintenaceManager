@@ -14,7 +14,8 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { EditableDateCell } from "@/components/EditableDateCell";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate } from "@/utils/taskUtils";
+import { TimeLogEntryRow } from "@/components/TimeLogEntryRow";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
 import type { User } from "@shared/schema";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelResourcesSection } from "./PanelResourcesSection";
@@ -90,6 +91,18 @@ export function PanelCompactMain({ ctx, taskId, allUsers, onViewCompletionReport
     toggleSubtaskExpanded,
     isAdmin,
     handleInlineEdit,
+    setIsLogTimeDialogOpen,
+    timeEntries,
+    editingTimeEntryId,
+    editTimeHours,
+    editTimeMinutes,
+    setEditTimeHours,
+    setEditTimeMinutes,
+    startEditTimeEntry,
+    cancelEditTimeEntry,
+    saveEditTimeEntry,
+    updateTimeEntryMutation,
+    setDeleteTimeEntryId,
     fileInputRef,
     handleFileUpload,
     isFileUploading,
@@ -183,59 +196,107 @@ export function PanelCompactMain({ ctx, taskId, allUsers, onViewCompletionReport
             <MetaCell label="Location" icon={<MapPin className="w-3 h-3" />}>
               {property?.name || "\u2014"}
             </MetaCell>
-            {isCompleted ? (
-              <>
-                <MetaCell label="Started" icon={<Calendar className="w-3 h-3" />}>
-                  {formatTaskDate(task.initialDate, "Not set")}
-                </MetaCell>
-                <MetaCell label="Completed" icon={<CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />}>
-                  <span className="text-green-700 dark:text-green-400">
-                    {formatTaskDate(task.actualCompletionDate, "Not set")}
-                  </span>
-                </MetaCell>
-              </>
-            ) : (
-              <>
-                <MetaCell label="Start" icon={<Calendar className="w-3 h-3" />}>
-                  {isAdmin ? (
-                    <EditableDateCell
-                      value={task.initialDate}
-                      taskId={taskId}
-                      field="initialDate"
-                      onSave={handleInlineEdit}
-                    />
-                  ) : (
-                    formatTaskDate(task.initialDate, "Not set")
-                  )}
-                </MetaCell>
-                <MetaCell label="Due" icon={<Calendar className="w-3 h-3" />}>
-                  {isAdmin ? (
-                    <span className={isOverdue ? "text-destructive" : undefined}>
-                      <EditableDateCell
-                        value={task.estimatedCompletionDate}
-                        taskId={taskId}
-                        field="estimatedCompletionDate"
-                        onSave={handleInlineEdit}
-                      />
-                    </span>
-                  ) : (
-                    <span className={isOverdue ? "text-destructive" : undefined}>
-                      {formatTaskDate(task.estimatedCompletionDate, "Not set")}
-                    </span>
-                  )}
-                </MetaCell>
-              </>
-            )}
+            <MetaCell label="Start" icon={<Calendar className="w-3 h-3" />}>
+              {isAdmin ? (
+                <EditableDateCell
+                  value={task.initialDate}
+                  taskId={taskId}
+                  field="initialDate"
+                  onSave={handleInlineEdit}
+                />
+              ) : (
+                formatTaskDate(task.initialDate, "Not set")
+              )}
+            </MetaCell>
+            <MetaCell label="Due" icon={<Calendar className="w-3 h-3" />}>
+              {isAdmin ? (
+                <span className={isOverdue ? "text-destructive" : undefined}>
+                  <EditableDateCell
+                    value={task.estimatedCompletionDate}
+                    taskId={taskId}
+                    field="estimatedCompletionDate"
+                    onSave={handleInlineEdit}
+                  />
+                </span>
+              ) : (
+                <span className={isOverdue ? "text-destructive" : undefined}>
+                  {formatTaskDate(task.estimatedCompletionDate, "Not set")}
+                </span>
+              )}
+            </MetaCell>
+            <MetaCell
+              label="Completed"
+              icon={<CheckCircle2 className={`w-3 h-3 ${task.actualCompletionDate ? "text-green-600 dark:text-green-400" : ""}`} />}
+            >
+              {isAdmin ? (
+                <span className={task.actualCompletionDate ? "text-green-700 dark:text-green-400" : undefined}>
+                  <EditableDateCell
+                    value={task.actualCompletionDate}
+                    taskId={taskId}
+                    field="actualCompletionDate"
+                    onSave={handleInlineEdit}
+                  />
+                </span>
+              ) : (
+                <span className={task.actualCompletionDate ? "text-green-700 dark:text-green-400" : "text-muted-foreground font-normal"}>
+                  {formatTaskDateTime(task.actualCompletionDate, "Not set")}
+                </span>
+              )}
+            </MetaCell>
             <MetaCell label="Priority" icon={<Flag className="w-3 h-3" style={{ color: urg.color }} />}>
               <span style={{ color: urg.color }}>{urg.label}</span>
             </MetaCell>
             <MetaCell label="Logged" icon={<Clock className="w-3 h-3" />}>
-              <span className={totalMinutes <= 0 ? "text-muted-foreground font-normal" : undefined}>
-                {formatLoggedTime(totalMinutes)}
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className={totalMinutes <= 0 ? "text-muted-foreground font-normal" : undefined}>
+                  {formatLoggedTime(totalMinutes)}
+                </span>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary hover:underline shrink-0"
+                    onClick={() => setIsLogTimeDialogOpen(true)}
+                    data-testid="button-compact-log-time"
+                  >
+                    Add
+                  </button>
+                )}
+              </div>
             </MetaCell>
           </div>
         </div>
+
+        {timeEntries.length > 0 && (
+          <div className="px-4 py-3 border-b border-border space-y-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Time log
+            </p>
+            {timeEntries.map((entry) => {
+              const entryUser = allUsers?.find((u) => u.id === entry.userId);
+              const userName = entryUser
+                ? `${entryUser.firstName || ""} ${entryUser.lastName || ""}`.trim() || entryUser.username
+                : "Unknown";
+              return (
+                <TimeLogEntryRow
+                  key={entry.id}
+                  entry={entry}
+                  userName={userName}
+                  canModify={isAdmin}
+                  isEditing={editingTimeEntryId === entry.id}
+                  hours={editTimeHours}
+                  minutes={editTimeMinutes}
+                  onHoursChange={setEditTimeHours}
+                  onMinutesChange={setEditTimeMinutes}
+                  onStartEdit={() => startEditTimeEntry(entry)}
+                  onCancelEdit={cancelEditTimeEntry}
+                  onSave={() => saveEditTimeEntry(entry.id)}
+                  onDelete={() => setDeleteTimeEntryId(entry.id)}
+                  isSaving={updateTimeEntryMutation.isPending && editingTimeEntryId === entry.id}
+                />
+              );
+            })}
+          </div>
+        )}
 
         <PanelSection
           title="Subtasks"
@@ -281,7 +342,7 @@ export function PanelCompactMain({ ctx, taskId, allUsers, onViewCompletionReport
           {isCompleted
             ? "Use the completion report for full details, or open the full task page."
             : isAdmin
-            ? "Click start or due dates to edit. Open the full page to log time or add parts."
+            ? "Click dates to edit. Use Add or Edit on a time log to change hours worked."
             : "Open the full task page to log time or add parts."}
         </p>
       </div>

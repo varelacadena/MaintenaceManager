@@ -1,8 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin, Clock, ChevronRight, ChevronDown, Flag, Calendar, User as UserIcon, CheckCircle2 } from "lucide-react";
-import { format } from "date-fns";
 import type { User } from "@shared/schema";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelPartsSection } from "./PanelPartsSection";
 import { PanelNotesSection } from "./PanelNotesSection";
@@ -37,7 +36,9 @@ export function PanelMainContent({
     setSelectedInventoryItemId, isNotesOpen, setIsNotesOpen,
     setIsAddNoteDialogOpen, editingNoteId, setEditingNoteId,
     editNoteContent, setEditNoteContent, setDeleteNoteId,
-    setEditingTimeEntryId, setEditTimeDuration, setDeleteTimeEntryId,
+    setEditTimeHours, setEditTimeMinutes, setDeleteTimeEntryId,
+    editingTimeEntryId, editTimeHours, editTimeMinutes,
+    startEditTimeEntry, cancelEditTimeEntry, saveEditTimeEntry, updateTimeEntryMutation,
     addPartMutation, updateNoteMutation,
     property, assignee, assigneeInitials, assigneeName,
     completedSubtasks, totalSubtasks, allSubtasksComplete,
@@ -135,11 +136,25 @@ export function PanelMainContent({
         </div>
         <div className="flex items-center gap-3">
           <Calendar className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>Start date</span>
+          <span className="text-sm font-medium ml-auto" style={{ color: "#1A1A1A" }}>
+            {formatTaskDate(task.initialDate, "Not set")}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Calendar className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
           <span className="text-xs" style={{ color: "#6B7280" }}>Due date</span>
           <span className="text-sm font-medium ml-auto" style={{ color: isOverdue ? "#D94F4F" : "#1A1A1A" }}>
             {task.estimatedCompletionDate
               ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "Not set"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "#9CA3AF" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>Completed</span>
+          <span className="text-sm font-medium ml-auto" style={{ color: task.actualCompletionDate ? "#15803D" : "#9CA3AF" }}>
+            {formatTaskDateTime(task.actualCompletionDate, "Not set")}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -213,9 +228,16 @@ export function PanelMainContent({
         setIsHistoryOpen={setIsHistoryOpen}
         timeEntries={timeEntries}
         allUsers={allUsers}
-        setEditingTimeEntryId={setEditingTimeEntryId}
-        setEditTimeDuration={setEditTimeDuration}
+        editingTimeEntryId={editingTimeEntryId}
+        editTimeHours={editTimeHours}
+        editTimeMinutes={editTimeMinutes}
+        setEditTimeHours={setEditTimeHours}
+        setEditTimeMinutes={setEditTimeMinutes}
+        startEditTimeEntry={startEditTimeEntry}
+        cancelEditTimeEntry={cancelEditTimeEntry}
+        saveEditTimeEntry={saveEditTimeEntry}
         setDeleteTimeEntryId={setDeleteTimeEntryId}
+        isSaving={updateTimeEntryMutation.isPending}
         isAdmin={isAdmin}
       />
     </div>

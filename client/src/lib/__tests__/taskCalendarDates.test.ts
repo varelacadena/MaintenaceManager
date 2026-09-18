@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "@shared/schema";
 import {
+  dateInputValuePreservingTime,
   dateInputValueToTaskTimestamp,
   getCalendarDateKey,
   getTaskActiveDateKeys,
@@ -48,6 +49,11 @@ describe("task calendar dates", () => {
     expect(payload).not.toBeNull();
     expect(getCalendarDateKey(payload?.initialDate)).toBe("2026-05-08");
     expect(getCalendarDateKey(payload?.estimatedCompletionDate)).toBe("2026-05-10");
+  });
+
+  it("preserves the original time of day when only the date changes", () => {
+    expect(dateInputValuePreservingTime("2026-09-16", "2026-09-10T15:42:08")).toBe("2026-09-16T15:42:08");
+    expect(dateInputValuePreservingTime("2026-09-16", null)).toBe("2026-09-16T12:00:00");
   });
 
   it("keeps date input values on the selected calendar day", () => {

@@ -659,13 +659,23 @@ export function registerTaskRoutes(app: Express) {
           }
         }
         if (!updateData.actualCompletionDate) {
-          updateData.actualCompletionDate = new Date();
+          updateData.actualCompletionDate = currentTask.actualCompletionDate || new Date();
         }
       } else if (updateData.status) {
         const currentTask = await storage.getTask(req.params.id);
         if (currentTask?.status === "completed") {
           updateData.actualCompletionDate = null;
         }
+      }
+
+      if (updateData.actualCompletionDate === "") {
+        updateData.actualCompletionDate = null;
+      }
+      if (updateData.estimatedCompletionDate === "") {
+        updateData.estimatedCompletionDate = null;
+      }
+      if (updateData.estimatedHours === "" || Number.isNaN(updateData.estimatedHours)) {
+        updateData.estimatedHours = null;
       }
 
       if (updateData.actualCompletionDate) {
@@ -932,7 +942,7 @@ export function registerTaskRoutes(app: Express) {
 
       const updateData: any = { status: normalizedStatus };
       if (normalizedStatus === "completed") {
-        updateData.actualCompletionDate = new Date();
+        updateData.actualCompletionDate = task.actualCompletionDate || new Date();
       }
       if (normalizedStatus === "on_hold" && onHoldReason) {
         updateData.onHoldReason = onHoldReason;

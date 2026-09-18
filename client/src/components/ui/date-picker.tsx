@@ -1,6 +1,6 @@
 import * as React from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, X } from "lucide-react";
 import type { Matcher } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   disabledDates?: Matcher | Matcher[];
+  clearable?: boolean;
   "data-testid"?: string;
 }
 
@@ -50,6 +51,7 @@ export function DatePicker({
   placeholder = "Select date",
   disabled = false,
   disabledDates,
+  clearable = false,
   "data-testid": testId,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -74,9 +76,32 @@ export function DatePicker({
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           {value ? (
-            <span className="truncate">{format(value, "MMM d, yyyy")}</span>
+            <span className="truncate flex-1">{format(value, "MMM d, yyyy")}</span>
           ) : (
             <span className="truncate">{placeholder}</span>
+          )}
+          {clearable && value && (
+            <span
+              role="button"
+              tabIndex={0}
+              className="ml-auto rounded-sm p-0.5 hover:bg-muted"
+              data-testid={testId ? `${testId}-clear` : "button-clear-date"}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onChange(undefined);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onChange(undefined);
+                }
+              }}
+              aria-label="Clear date"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
           )}
         </Button>
       </PopoverTrigger>

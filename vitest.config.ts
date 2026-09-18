@@ -10,6 +10,7 @@ export default defineConfig({
       "client/src/pages/Work/**/*.test.{ts,tsx}",
       "client/src/pages/__tests__/**/*.test.{ts,tsx}",
       "client/src/lib/__tests__/**/*.test.ts",
+      "client/src/utils/__tests__/**/*.test.ts",
       "client/src/components/**/__tests__/**/*.test.{ts,tsx}",
       "shared/__tests__/**/*.test.ts",
       "server/__tests__/**/*.test.ts",

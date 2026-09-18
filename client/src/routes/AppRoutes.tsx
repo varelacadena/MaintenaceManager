@@ -43,7 +43,6 @@ const VehicleCheckInVerification = lazyWithRetry(() => import("@/pages/VehicleCh
 const AnalyticsDashboard = lazyWithRetry(() => import("@/pages/analytics/AnalyticsDashboard"));
 const Students = lazyWithRetry(() => import("@/pages/Students"));
 const StudentAdminDetail = lazyWithRetry(() => import("@/pages/Students/StudentAdminDetail"));
-const StudentNewRecap = lazyWithRetry(() => import("@/pages/StudentPortal/StudentNewRecap"));
 const StudentClockOut = lazyWithRetry(() => import("@/pages/StudentPortal/StudentClockOut"));
 const StudentHours = lazyWithRetry(() => import("@/pages/StudentPortal/StudentHours"));
 const ProjectDetail = lazyWithRetry(() => import("@/pages/ProjectDetail"));
@@ -414,7 +413,7 @@ function StudentNewRecapRoute() {
   return (
     <DomainErrorBoundary domain="Work Orders & Tasks">
       <RoleGuard allowedRoles={["student"]}>
-        <StudentNewRecap />
+        <RedirectTo to="/clock-out" />
       </RoleGuard>
     </DomainErrorBoundary>
   );

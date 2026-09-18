@@ -14,7 +14,7 @@ import {
   Play,
   Loader2,
 } from "lucide-react";
-import { panelStatusLabels, taskTypeLabels, getAvatarHexColor as getAvatarColorForId } from "@/utils/taskUtils";
+import { panelStatusLabels, taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
 interface PanelRightSidebarProps {
@@ -116,11 +116,23 @@ export function PanelRightSidebar({ ctx }: PanelRightSidebarProps) {
             </div>
           </div>
           <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: "#6B7280" }}>Start Date</span>
+            <span className="text-xs font-medium" style={{ color: "#1A1A1A" }}>
+              {formatTaskDate(task.initialDate, "—")}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: "#6B7280" }}>Due Date</span>
             <span className="text-xs font-medium" style={{ color: isOverdue ? "#D94F4F" : "#1A1A1A" }}>
               {task.estimatedCompletionDate
                 ? new Date(task.estimatedCompletionDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                 : "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: "#6B7280" }}>Completed</span>
+            <span className="text-xs font-medium" style={{ color: task.actualCompletionDate ? "#15803D" : "#1A1A1A" }}>
+              {formatTaskDateTime(task.actualCompletionDate, "—")}
             </span>
           </div>
           <div className="flex items-center justify-between">

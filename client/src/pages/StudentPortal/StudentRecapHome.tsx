@@ -55,6 +55,9 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
   const todayRecaps = recaps.filter((recap) => recap.recapDate === today);
   const earlierRecaps = recaps.filter((recap) => recap.recapDate !== today);
   const openEntry = clockQuery.data?.openEntry;
+  const hasShiftRecap = Boolean(
+    openEntry?.id && recaps.some((recap) => recap.timeEntryId === openEntry.id),
+  );
   const now = useLiveNow(Boolean(openEntry?.clockInAt));
   const elapsed = openEntry?.clockInAt
     ? formatLiveDuration(elapsedMilliseconds(openEntry.clockInAt, now))
@@ -70,7 +73,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
           Daily Recap
         </h1>
         <p className="text-sm text-muted-foreground">
-          Hi {user.firstName || "there"} — when you are done, clock out and we will walk you through your recap.
+          Hi {user.firstName || "there"} — when you are done, write your recap. Clock out is the next step after that.
         </p>
       </div>
 
@@ -109,13 +112,13 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
       {openEntry && (
         <Button
           type="button"
-          variant="destructive"
+          variant={hasShiftRecap ? "destructive" : "default"}
           className="w-full h-14 text-lg font-semibold"
           onClick={() => setClockOutOpen(true)}
           data-testid="button-start-clock-out"
         >
-          <LogOut className="w-5 h-5 mr-2" />
-          Clock out
+          {hasShiftRecap ? <LogOut className="w-5 h-5 mr-2" /> : <BookOpen className="w-5 h-5 mr-2" />}
+          {hasShiftRecap ? "Clock out" : "Write recap"}
         </Button>
       )}
 
@@ -126,7 +129,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
           <BookOpen className="w-14 h-14 mx-auto mb-3 text-primary/70" />
           <p className="text-lg font-semibold">No recaps yet</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Tap Clock out when your shift is done. You will write what you did and learned before you leave.
+            Write your recap when the shift is done. Clock out only appears after that recap is saved.
           </p>
         </div>
       ) : (

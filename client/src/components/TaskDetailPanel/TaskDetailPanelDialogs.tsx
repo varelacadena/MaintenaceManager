@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -28,7 +27,8 @@ import {
 } from "@/components/ui/select";
 import { BarcodeScanner } from "../BarcodeScanner";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
-import { minutesToHoursInputValue, parseHoursToMinutes } from "@/lib/timeEntryUtils";
+import { ManualTimeLogFields } from "@/components/ManualTimeLogFields";
+import { durationFromHoursAndMinutes } from "@/lib/timeEntryUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
 interface TaskDetailPanelDialogsProps {
@@ -107,22 +107,16 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
         <DialogContent data-testid="dialog-log-time">
           <DialogHeader>
             <DialogTitle>Log Time</DialogTitle>
-            <DialogDescription>Record time spent on this task.</DialogDescription>
+            <DialogDescription>Enter hours and minutes spent on this task.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (hours)</label>
-              <Input
-                type="number"
-                min="0.25"
-                step="0.25"
-                placeholder="e.g. 0.5"
-                value={ctx.logTimeDuration}
-                onChange={(e) => ctx.setLogTimeDuration(e.target.value)}
-                data-testid="input-time-duration"
-              />
-            </div>
-          </div>
+          <ManualTimeLogFields
+            hours={ctx.logTimeHours}
+            minutes={ctx.logTimeMinutes}
+            date={ctx.logTimeDate}
+            onHoursChange={ctx.setLogTimeHours}
+            onMinutesChange={ctx.setLogTimeMinutes}
+            onDateChange={ctx.setLogTimeDate}
+          />
           <DialogFooter>
             <Button
               variant="ghost"
@@ -132,8 +126,8 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
               Cancel
             </Button>
             <Button
-              onClick={() => ctx.logTimeMutation.mutate(parseHoursToMinutes(ctx.logTimeDuration))}
-              disabled={!ctx.logTimeDuration || parseHoursToMinutes(ctx.logTimeDuration) <= 0 || ctx.logTimeMutation.isPending}
+              onClick={() => ctx.logTimeMutation.mutate(durationFromHoursAndMinutes(ctx.logTimeHours, ctx.logTimeMinutes))}
+              disabled={durationFromHoursAndMinutes(ctx.logTimeHours, ctx.logTimeMinutes) <= 0 || ctx.logTimeMutation.isPending}
               data-testid="button-save-time"
             >
               {ctx.logTimeMutation.isPending ? "Saving..." : "Log Time"}
@@ -162,51 +156,6 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
         onSave={ctx.handlePanelUploadLabelSave}
         onCancel={ctx.handlePanelUploadLabelCancel}
       />
-
-      <Dialog open={!!ctx.editingTimeEntryId} onOpenChange={(open) => { if (!open) { ctx.setEditingTimeEntryId(null); ctx.setEditTimeDuration(""); } }}>
-        <DialogContent data-testid="dialog-edit-time-entry">
-          <DialogHeader>
-            <DialogTitle>Edit Time Entry</DialogTitle>
-            <DialogDescription>Update the duration of this time entry.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium" style={{ color: "#1A1A1A" }}>Duration (hours)</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.25"
-                value={ctx.editTimeDuration}
-                onChange={(e) => ctx.setEditTimeDuration(e.target.value)}
-                data-testid="input-edit-time-duration"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => { ctx.setEditingTimeEntryId(null); ctx.setEditTimeDuration(""); }}
-              data-testid="button-cancel-edit-time"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (ctx.editingTimeEntryId) {
-                  ctx.updateTimeEntryMutation.mutate({
-                    entryId: ctx.editingTimeEntryId,
-                    durationMinutes: parseHoursToMinutes(ctx.editTimeDuration),
-                  });
-                }
-              }}
-              disabled={ctx.updateTimeEntryMutation.isPending}
-              data-testid="button-save-edit-time"
-            >
-              {ctx.updateTimeEntryMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={!!ctx.deleteTimeEntryId} onOpenChange={(open) => { if (!open) ctx.setDeleteTimeEntryId(null); }}>
         <AlertDialogContent data-testid="dialog-delete-time-entry">

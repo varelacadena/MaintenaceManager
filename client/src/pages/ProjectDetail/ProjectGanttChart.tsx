@@ -27,7 +27,7 @@ export function ProjectGanttChart({ tasks, project }: { tasks: Task[]; project: 
     project.targetEndDate ? new Date(project.targetEndDate).getTime() : null,
     ...tasksWithDates.map((t) => new Date(t.estimatedCompletionDate!).getTime()),
     ...tasksWithDates.map((t) =>
-      t.scheduledStartTime ? new Date(t.scheduledStartTime).getTime() : null
+      t.initialDate ? new Date(t.initialDate).getTime() : null
     ),
   ].filter((v): v is number => v !== null);
 
@@ -38,8 +38,8 @@ export function ProjectGanttChart({ tasks, project }: { tasks: Task[]; project: 
   const range = Math.max(maxDate - minDate, 86400000);
 
   const ganttData = tasksWithDates.map((task) => {
-    const taskStart = task.scheduledStartTime
-      ? new Date(task.scheduledStartTime).getTime()
+    const taskStart = task.initialDate
+      ? new Date(task.initialDate).getTime()
       : minDate;
     const taskEnd = new Date(task.estimatedCompletionDate!).getTime();
     const spacer = taskStart - minDate;
