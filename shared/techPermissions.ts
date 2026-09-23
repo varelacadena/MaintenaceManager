@@ -59,7 +59,7 @@ export const TECH_PERMISSION_LABELS: Record<TechPermissionKey, { title: string; 
   },
   fleet: {
     title: "Fleet",
-    description: "Add and edit vehicles and fleet records",
+    description: "Open the vehicle list, edit vehicles, and manage reservations. Lockbox codes stay admin-only.",
   },
   inventory: {
     title: "Inventory",

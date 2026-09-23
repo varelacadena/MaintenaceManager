@@ -15,6 +15,7 @@ import { startTaskReminderScheduler } from "./taskReminderScheduler";
 import { startPendingUserExpirationScheduler } from "./pendingUserExpirationScheduler";
 import { applyMigrations } from "./applyMigrations";
 import crypto from "crypto";
+import net from "net";
 import rateLimit from "express-rate-limit";
 
 const app = express();
@@ -32,6 +33,20 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 const isProduction = process.env.NODE_ENV === "production";
+const requestedPort = Number(process.env.PORT) || 5000;
+
+function portInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once("error", (err: NodeJS.ErrnoException) => {
+      resolve(err.code === "EADDRINUSE");
+    });
+    probe.once("listening", () => {
+      probe.close(() => resolve(false));
+    });
+    probe.listen(port);
+  });
+}
 
 // Trust proxy must be set before rate limiting so req.ip resolves correctly behind proxies
 // Replit always runs behind a reverse proxy, even in development
@@ -147,6 +162,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  if (!isProduction && await portInUse(requestedPort)) {
+    console.error(
+      `[server] Port ${requestedPort} is already in use. Open http://localhost:${requestedPort} instead of starting another copy.\n` +
+      "A second dev server reruns migrations and schedulers against the same database and makes both copies stall.",
+    );
+    process.exit(1);
+  }
+
   try {
     await applyMigrations();
   } catch (err) {
@@ -202,38 +225,26 @@ app.use((req, res, next) => {
     startPendingUserExpirationScheduler();
   };
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled in production. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  const requestedPort = Number(process.env.PORT) || 5000;
-  const maxPortAttempts = app.get("env") === "development" ? 10 : 1;
-
-  const listen = (port: number, attemptsLeft: number) => {
-    const handleListenError = (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE" && attemptsLeft > 1) {
-        const nextPort = port + 1;
-        log(`port ${port} is already in use, trying ${nextPort}`);
-        listen(nextPort, attemptsLeft - 1);
-        return;
-      }
-
-      if (err.code === "EADDRINUSE") {
-        console.error(`[server] Port ${port} is already in use. Stop the other process or set PORT to an available port.`);
-      } else {
-        console.error("[server] Failed to start:", err);
-      }
-      process.exit(1);
-    };
-
-    server.once("error", handleListenError);
-    server.listen(port, () => {
-      server.off("error", handleListenError);
-      log(`serving on port ${port}`);
-      startBackgroundSchedulers();
-    });
+  // One process per port. A second dev server used to walk to the next port,
+  // start schedulers twice, and exhaust the shared database pool.
+  let schedulersStarted = false;
+  const handleListenError = (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`[server] Port ${requestedPort} is already in use. Open http://localhost:${requestedPort}`);
+    } else {
+      console.error("[server] Failed to start:", err);
+    }
+    process.exit(1);
   };
 
-  listen(requestedPort, maxPortAttempts);
+  server.once("error", handleListenError);
+  server.listen(requestedPort, () => {
+    server.off("error", handleListenError);
+    if (schedulersStarted) return;
+    schedulersStarted = true;
+    log(`serving at http://localhost:${requestedPort}`);
+    startBackgroundSchedulers();
+  });
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {

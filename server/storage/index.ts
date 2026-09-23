@@ -297,7 +297,7 @@ export interface IStorage {
   getVehiclesPage(
     filters: { status?: string } | undefined,
     pagination: { limit: number; offset: number },
-  ): Promise<{ items: Vehicle[]; total: number }>;
+  ): Promise<{ items: vehicleStorage.FleetListVehicle[]; total: number }>;
   getVehicle(id: string): Promise<Vehicle | undefined>;
   getVehiclesByIds(ids: string[]): Promise<Vehicle[]>;
   getVehicleByVehicleId(vehicleId: string): Promise<Vehicle | undefined>;

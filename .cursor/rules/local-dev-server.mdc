@@ -1,0 +1,13 @@
+---
+description: Reuse the running local dev server instead of starting another one
+alwaysApply: true
+---
+
+# Local dev server
+
+The app runs at http://localhost:3000. One process only.
+
+- Before starting `npm run dev`, check whether port 3000 is already listening. If it is, use that server.
+- Do not start a second dev server. Do not switch to port 3001.
+- Client page changes reload through the running server. Refresh the browser. Do not restart.
+- Restart only when server code changed. Stop the process on port 3000 first, then start one `npm run dev`, and wait until it logs `serving at http://localhost:3000`.

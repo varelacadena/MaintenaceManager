@@ -1,12 +1,28 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Car, Search, ImagePlus, X } from "lucide-react";
+import { Plus, Car, Search, ImagePlus, X, Pencil, ChevronDown, Eye, Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link, useLocation, useSearch } from "wouter";
 import { isFleetPrivilegedRole } from "@/lib/fleetUtils";
+import { canManageFleet } from "@shared/techPermissions";
 import { useAuth } from "@/hooks/useAuth";
 import type { Vehicle } from "@shared/schema";
 import {
@@ -41,7 +57,6 @@ import { toDisplayUrl } from "@/lib/imageUtils";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import {
   FLEET_PAGE_SIZE,
-  isPaginatedResponse,
   type PaginatedResponse,
   parseFleetUrlState,
   buildFleetLocationSearch,
@@ -50,8 +65,12 @@ import {
 } from "@/lib/fleetUtils";
 import { parseIntInput } from "@/lib/formInputUtils";
 import { FleetListPagination } from "@/components/fleet/FleetListPagination";
+import { ResponsiveTableScroll } from "@/components/ResponsiveTableScroll";
+import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { invalidateVehicleQueries } from "@/lib/fleetQueryInvalidation";
+import { invalidateVehicleQueries, invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
+import { formatVehicleDisplayName } from "@/lib/displayNames";
+import { format } from "date-fns";
 
 const statusColors = {
   available: "default",
@@ -61,6 +80,122 @@ const statusColors = {
   needs_cleaning: "secondary",
   out_of_service: "destructive",
 } as const;
+
+type FleetListVehicle = Vehicle & {
+  registrationExpiresAt?: string | null;
+  inspectionExpiresAt?: string | null;
+};
+
+function formatMileage(miles: number | null | undefined) {
+  if (miles == null) return "—";
+  return `${miles.toLocaleString()} mi`;
+}
+
+function formatVehicleStatus(status: string) {
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function ComplianceDate({ value }: { value: string | null | undefined }) {
+  if (!value) return <span className="text-muted-foreground">—</span>;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return <span className="text-muted-foreground">—</span>;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const overdue = date < startOfToday;
+  return (
+    <span className={overdue ? "font-medium text-destructive" : undefined}>
+      {format(date, "MMM d, yyyy")}
+    </span>
+  );
+}
+
+function VehicleFleetActions({
+  vehicle,
+  canManage,
+  onView,
+  onEdit,
+  onCopy,
+  onDelete,
+}: {
+  vehicle: Vehicle;
+  canManage: boolean;
+  onView: (vehicle: Vehicle) => void;
+  onEdit: (vehicle: Vehicle) => void;
+  onCopy: (value: string, label: string) => void;
+  onDelete: (vehicle: Vehicle) => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      {canManage ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onEdit(vehicle)}
+          data-testid={`button-edit-vehicle-${vehicle.id}`}
+        >
+          <Pencil />
+          Edit
+        </Button>
+      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid={`button-more-vehicle-${vehicle.id}`}
+            aria-label={`More actions for ${vehicle.vehicleId}`}
+          >
+            More
+            <ChevronDown />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem
+            onClick={() => onView(vehicle)}
+            data-testid={`button-view-vehicle-${vehicle.id}`}
+          >
+            <Eye />
+            View details
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onCopy(vehicle.vehicleId, "Vehicle ID")}
+            data-testid={`button-copy-id-${vehicle.id}`}
+          >
+            <Copy />
+            Copy vehicle ID
+          </DropdownMenuItem>
+          {vehicle.licensePlate ? (
+            <DropdownMenuItem
+              onClick={() => onCopy(vehicle.licensePlate as string, "License plate")}
+              data-testid={`button-copy-plate-${vehicle.id}`}
+            >
+              <Copy />
+              Copy plate
+            </DropdownMenuItem>
+          ) : null}
+          {canManage ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete(vehicle)}
+                className="text-destructive focus:text-destructive"
+                data-testid={`button-delete-vehicle-${vehicle.id}`}
+              >
+                <Trash2 />
+                Delete
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
 
 function FleetContent() {
   const { user } = useAuth();
@@ -73,6 +208,7 @@ function FleetContent() {
   const [fleetSearchInput, setFleetSearchInput] = useState(urlState.fleetSearch);
   const debouncedFleetSearch = useDebouncedValue(fleetSearchInput);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [isUploadingVehicleImage, setIsUploadingVehicleImage] = useState(false);
   const vehicleImageObjectPathRef = useRef("");
   const { toast } = useToast();
@@ -100,7 +236,7 @@ function FleetContent() {
   );
 
   const { data: vehiclesData, isLoading, isError, error, refetch } = useQuery<
-    PaginatedResponse<Vehicle>
+    PaginatedResponse<FleetListVehicle>
   >({
     queryKey: [vehiclesQueryUrl],
   });
@@ -177,13 +313,45 @@ function FleetContent() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/vehicles/${id}`);
+    },
+    onSuccess: () => {
+      setVehicleToDelete(null);
+      toast({ title: "Vehicle deleted successfully" });
+    },
+    onSettled: () => {
+      setTimeout(() => {
+        invalidateVehicleQueries(queryClient);
+        invalidateVehicleReservationQueries(queryClient);
+      }, 300);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete vehicle",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const copyVehicleValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: `${label} copied` });
+    } catch {
+      toast({ title: "Could not copy", variant: "destructive" });
+    }
+  };
+
   const canManageVehicles = isFleetPrivilegedRole(user);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <div className="flex gap-2 flex-wrap">
-          {user?.role === "admin" && (
+          {canManageVehicles && (
             <Button 
               variant="outline" 
               onClick={() => syncStatusesMutation.mutate()}
@@ -524,78 +692,115 @@ function FleetContent() {
           onRetry={() => refetch()}
         />
       ) : isLoading ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardHeader className="animate-pulse">
-                <div className="h-4 bg-muted rounded w-3/4" />
-              </CardHeader>
-              <CardContent className="animate-pulse space-y-2">
-                <div className="h-3 bg-muted rounded" />
-                <div className="h-3 bg-muted rounded w-5/6" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="rounded-lg border bg-card overflow-hidden">
+          <div className="animate-pulse divide-y">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3">
+                <div className="h-10 w-14 rounded-md bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-muted rounded w-16" />
+                  <div className="h-3 bg-muted rounded w-40" />
+                </div>
+                <div className="hidden sm:block h-3 bg-muted rounded w-20" />
+                <div className="h-6 bg-muted rounded w-16" />
+                <div className="h-8 bg-muted rounded w-28" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : vehicles && vehicles.length > 0 ? (
-        <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {vehicles.map((vehicle) => (
-            <Link
-              key={vehicle.id}
-              href={`/vehicles/${vehicle.id}`}
-              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${vehicle.vehicleId}, ${vehicle.make} ${vehicle.model}`}
-            >
-              <Card className="hover-elevate cursor-pointer overflow-hidden h-full" data-testid={`card-vehicle-${vehicle.id}`}>
-                <div className="h-24 w-full bg-muted/20">
-                  {vehicle.imageUrl ? (
-                    <img
-                      src={toDisplayUrl(vehicle.imageUrl)}
-                      alt={`${vehicle.vehicleId} - ${vehicle.make} ${vehicle.model}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                      <div className="flex flex-col items-center gap-1">
-                        <Car className="h-5 w-5" />
-                        <span className="text-xs">No Photo</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-1 pt-2.5">
-                  <div className="min-w-0">
-                    <CardTitle className="text-sm font-semibold leading-tight truncate" data-testid={`text-vehicle-id-${vehicle.id}`}>
-                      {vehicle.vehicleId}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {vehicle.make} {vehicle.model}
-                    </p>
-                  </div>
-                  <Car className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="pb-2.5">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground">Year:</span>
-                      <span className="text-[11px]">{vehicle.year}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground">Mileage:</span>
-                      <span className="text-[11px]">{vehicle.currentMileage?.toLocaleString()} mi</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground">Status:</span>
-                      <Badge className="h-5 px-1.5 text-[10px]" variant={statusColors[vehicle.status]} data-testid={`badge-status-${vehicle.id}`}>
-                        {vehicle.status.replace(/_/g, " ")}
+        <div className="rounded-lg border bg-card overflow-hidden">
+          <ResponsiveTableScroll>
+            <Table className="min-w-[980px] [&_td]:py-2.5 [&_th]:h-10">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="bg-card">Vehicle</TableHead>
+                  <TableHead>Plate</TableHead>
+                  <TableHead>Mileage</TableHead>
+                  <TableHead>Registration</TableHead>
+                  <TableHead>Inspection</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="sticky right-0 z-10 border-l bg-card text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {vehicles.map((vehicle) => (
+                  <TableRow key={vehicle.id} className="group" data-testid={`row-vehicle-${vehicle.id}`}>
+                    <TableCell>
+                      <Link
+                        href={`/vehicles/${vehicle.id}`}
+                        className="group flex items-center gap-3 min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={`${vehicle.vehicleId}, ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                      >
+                        <div className="h-10 w-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
+                          {vehicle.imageUrl ? (
+                            <img
+                              src={toDisplayUrl(vehicle.imageUrl)}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                              <Car className="h-4 w-4" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div
+                            className="font-medium leading-tight truncate group-hover:underline"
+                            data-testid={`text-vehicle-id-${vehicle.id}`}
+                          >
+                            {vehicle.vehicleId}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {vehicle.year} {vehicle.make} {vehicle.model}
+                          </p>
+                        </div>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {vehicle.licensePlate ? (
+                        <span className="font-mono text-xs tracking-wide">{vehicle.licensePlate}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">
+                      {formatMileage(vehicle.currentMileage)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <ComplianceDate value={vehicle.registrationExpiresAt} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <ComplianceDate value={vehicle.inspectionExpiresAt} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className="no-default-hover-elevate"
+                        variant={statusColors[vehicle.status]}
+                        data-testid={`badge-status-${vehicle.id}`}
+                      >
+                        {formatVehicleStatus(vehicle.status)}
                       </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    </TableCell>
+                    <TableCell className="sticky right-0 z-10 whitespace-nowrap border-l bg-card group-hover:bg-muted/50">
+                      <VehicleFleetActions
+                        vehicle={vehicle}
+                        canManage={canManageVehicles}
+                        onView={(selected) => setLocation(`/vehicles/${selected.id}`)}
+                        onEdit={(selected) => setLocation(`/vehicles/${selected.id}/edit`)}
+                        onCopy={copyVehicleValue}
+                        onDelete={setVehicleToDelete}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ResponsiveTableScroll>
         </div>
       ) : (
         <Card>
@@ -605,7 +810,7 @@ function FleetContent() {
             <p className="text-sm text-muted-foreground">
               {searchTerm || statusFilter !== "all"
                 ? "Try adjusting your filters"
-                : user?.role === "admin"
+                : canManageVehicles
                   ? "Add your first vehicle to get started"
                   : "No vehicles match your filters"}
             </p>
@@ -623,6 +828,25 @@ function FleetContent() {
           testIdPrefix="fleet"
         />
       ) : null}
+
+      <DestructiveDeleteDialog
+        open={vehicleToDelete != null}
+        onOpenChange={(open) => {
+          if (!open) setVehicleToDelete(null);
+        }}
+        entityLabel={vehicleToDelete ? formatVehicleDisplayName(vehicleToDelete) : "this vehicle"}
+        entityType="vehicle"
+        requireConfirmationText={vehicleToDelete?.vehicleId}
+        warningDetails={[
+          "Reservations, logbook entries, maintenance logs, and documents for this vehicle will be removed.",
+          "Linked work tasks will be kept with this vehicle name preserved on their records.",
+          "This action is logged and cannot be undone.",
+        ]}
+        onConfirm={() => {
+          if (vehicleToDelete) deleteMutation.mutate(vehicleToDelete.id);
+        }}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }
@@ -634,13 +858,14 @@ export default function Vehicles() {
   const notificationCounts = useNotificationCounts();
   const isAdmin = user?.role === "admin";
   const isTechnician = user?.role === "technician";
+  const canAccessFleet = canManageFleet(user);
 
   const urlParams = new URLSearchParams(searchString);
   const tabParam = urlParams.get("tab");
   const requestedTab =
     tabParam === "reservations" ? "reservations" : tabParam === "codehub" ? "codehub" : "fleet";
   const activeTab =
-    !isAdmin && (requestedTab === "fleet" || requestedTab === "codehub")
+    (requestedTab === "fleet" && !canAccessFleet) || (requestedTab === "codehub" && !isAdmin)
       ? "reservations"
       : requestedTab;
   const pendingCount =
@@ -648,7 +873,8 @@ export default function Vehicles() {
 
   const urlState = parseFleetUrlState(searchString);
   const setActiveTab = (tab: string) => {
-    const nextTab = !isAdmin && (tab === "fleet" || tab === "codehub") ? "reservations" : tab;
+    const nextTab =
+      (tab === "fleet" && !canAccessFleet) || (tab === "codehub" && !isAdmin) ? "reservations" : tab;
     setLocation(`/vehicles${buildFleetLocationSearch({ ...urlState, tab: nextTab })}`);
   };
 
@@ -663,7 +889,7 @@ export default function Vehicles() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-vehicles">
         <TabsList>
-          {isAdmin && (
+          {canAccessFleet && (
             <TabsTrigger value="fleet" data-testid="tab-fleet">Fleet</TabsTrigger>
           )}
           <TabsTrigger value="reservations" data-testid="tab-reservations" className="flex items-center gap-2">
@@ -680,7 +906,7 @@ export default function Vehicles() {
             </TabsTrigger>
           )}
         </TabsList>
-        {isAdmin && (
+        {canAccessFleet && (
           <TabsContent value="fleet">
             <FleetContent />
           </TabsContent>

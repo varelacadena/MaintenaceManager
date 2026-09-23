@@ -98,10 +98,54 @@ export async function getVehicles(filters?: { status?: string; search?: string }
   return await query.orderBy(...vehicleIdOrderBy);
 }
 
+export type FleetListVehicle = Vehicle & {
+  registrationExpiresAt: string | null;
+  inspectionExpiresAt: string | null;
+};
+
+function toIsoDate(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+async function getComplianceDates(vehicleIds: string[]) {
+  const dates = new Map<string, { registrationExpiresAt: string | null; inspectionExpiresAt: string | null }>();
+  if (vehicleIds.length === 0) return dates;
+
+  const rows = await db
+    .select({
+      vehicleId: vehicleDocuments.vehicleId,
+      documentType: vehicleDocuments.documentType,
+      expirationDate: sql<Date | string | null>`max(${vehicleDocuments.expirationDate})`,
+    })
+    .from(vehicleDocuments)
+    .where(
+      and(
+        inArray(vehicleDocuments.vehicleId, vehicleIds),
+        inArray(vehicleDocuments.documentType, ["registration", "annual_inspection"]),
+      ),
+    )
+    .groupBy(vehicleDocuments.vehicleId, vehicleDocuments.documentType);
+
+  for (const row of rows) {
+    const current = dates.get(row.vehicleId) ?? {
+      registrationExpiresAt: null,
+      inspectionExpiresAt: null,
+    };
+    const iso = toIsoDate(row.expirationDate);
+    if (row.documentType === "registration") current.registrationExpiresAt = iso;
+    if (row.documentType === "annual_inspection") current.inspectionExpiresAt = iso;
+    dates.set(row.vehicleId, current);
+  }
+
+  return dates;
+}
+
 export async function getVehiclesPage(
   filters: { status?: string; search?: string } | undefined,
   pagination: { limit: number; offset: number },
-): Promise<{ items: Vehicle[]; total: number }> {
+): Promise<{ items: FleetListVehicle[]; total: number }> {
   const conditions = buildVehicleConditions(filters);
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -115,7 +159,16 @@ export async function getVehiclesPage(
     whereClause ? countQuery.where(whereClause) : countQuery,
   ]);
 
-  return { items, total: Number(countRows[0]?.value ?? 0) };
+  const compliance = await getComplianceDates(items.map((vehicle) => vehicle.id));
+
+  return {
+    items: items.map((vehicle) => ({
+      ...vehicle,
+      registrationExpiresAt: compliance.get(vehicle.id)?.registrationExpiresAt ?? null,
+      inspectionExpiresAt: compliance.get(vehicle.id)?.inspectionExpiresAt ?? null,
+    })),
+    total: Number(countRows[0]?.value ?? 0),
+  };
 }
 
 export async function getVehicle(id: string): Promise<Vehicle | undefined> {
