@@ -69,27 +69,6 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
     whatIDid.trim().length >= MIN_RECAP_LENGTH && whatILearned.trim().length >= MIN_RECAP_LENGTH;
   const canClockOut = step === "review" && recapConfirmed && recapReady;
 
-  const saveRecapMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/student/recaps", {
-        whatIDid: whatIDid.trim(),
-        whatILearned: whatILearned.trim(),
-        recapDate: localDateString(openEntry?.clockInAt ? new Date(openEntry.clockInAt) : undefined),
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.recaps });
-      queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.timeClock });
-      queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.adminList });
-      setRecapConfirmed(true);
-      setStep("review");
-    },
-    onError: (error: Error) => {
-      toast({ title: "Add a bit more to your recap", description: error.message, variant: "destructive" });
-    },
-  });
-
   const clockOutMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/student/time-clock/clock-out", {
@@ -100,6 +79,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.timeClock });
+      queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.recaps });
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.adminList });
       queryClient.invalidateQueries({ queryKey: studentPortalQueryKeys.hours });
       toast({ title: "Clocked out", description: "See you next shift." });
@@ -120,23 +100,15 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
       });
       return;
     }
-    if (
-      shiftRecap &&
-      whatIDid.trim() === shiftRecap.whatIDid.trim() &&
-      whatILearned.trim() === shiftRecap.whatILearned.trim()
-    ) {
-      setRecapConfirmed(true);
-      setStep("review");
-      return;
-    }
-    saveRecapMutation.mutate();
+    setRecapConfirmed(true);
+    setStep("review");
   }
 
   function handleClockOut() {
     if (!canClockOut) {
       toast({
         title: "Write your recap first",
-        description: "Clock out is only available after you save what you did and learned.",
+        description: "Finish the recap, then review it before clocking out.",
         variant: "destructive",
       });
       return;
@@ -146,8 +118,8 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden" data-testid="dialog-clock-out-flow">
-        <DialogHeader className="px-5 pt-5 pb-3 text-left">
+      <DialogContent className="flex max-w-md flex-col gap-0 overflow-hidden p-0" data-testid="dialog-clock-out-flow">
+        <DialogHeader className="shrink-0 px-5 pt-5 pb-3 text-left">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {step === "recap" ? "Step 1 of 2" : "Step 2 of 2"}
           </p>
@@ -162,7 +134,8 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
         </DialogHeader>
 
         {step === "recap" || !recapConfirmed ? (
-          <div className="px-5 pb-5 space-y-4">
+          <>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-4">
             <div className="space-y-2">
               <Label htmlFor="clock-out-did" className="flex items-center gap-1.5">
                 <FileText className="w-4 h-4" />
@@ -173,7 +146,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
                 value={whatIDid}
                 onChange={(event) => setWhatIDid(event.target.value.slice(0, MAX_RECAP_LENGTH))}
                 placeholder="e.g. Helped replace a faucet, cleaned filters, and restocked supplies."
-                className="min-h-[110px] text-base"
+                className="min-h-[96px] text-base"
                 data-testid="textarea-what-i-did"
               />
             </div>
@@ -187,22 +160,28 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
                 value={whatILearned}
                 onChange={(event) => setWhatILearned(event.target.value.slice(0, MAX_RECAP_LENGTH))}
                 placeholder="e.g. Always shut the water off before loosening fittings."
-                className="min-h-[110px] text-base"
+                className="min-h-[96px] text-base"
                 data-testid="textarea-what-i-learned"
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              A short sentence in each box is enough. You can write as much as you need.
+            </p>
+          </div>
+          <div className="shrink-0 border-t px-5 py-3">
             <Button
               type="button"
               className="w-full h-12 text-base font-semibold"
               onClick={handleNext}
-              disabled={!recapReady || saveRecapMutation.isPending}
               data-testid="button-recap-next"
             >
-              {saveRecapMutation.isPending ? "Saving…" : "Next"}
+              Next
             </Button>
           </div>
+          </>
         ) : (
-          <div className="px-5 pb-5 space-y-4">
+          <>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
             <div className="rounded-xl border border-border bg-muted/40 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Hours worked</p>
               <p className="text-3xl font-semibold tabular-nums mt-1" data-testid="text-review-hours">
@@ -230,11 +209,13 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
                 </p>
               </div>
             </div>
+          </div>
+          <div className="shrink-0 space-y-2 border-t px-5 py-3">
             {canClockOut && (
               <Button
                 type="button"
                 variant="destructive"
-                className="w-full h-14 text-lg font-semibold"
+                className="w-full h-12 text-base font-semibold"
                 onClick={handleClockOut}
                 disabled={clockOutMutation.isPending}
                 data-testid="button-clock-out"
@@ -246,7 +227,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
             <Button
               type="button"
               variant="outline"
-              className="w-full h-11"
+              className="w-full h-12"
               onClick={() => {
                 setRecapConfirmed(false);
                 setStep("recap");
@@ -257,6 +238,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
               Back to recap
             </Button>
           </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

@@ -27,7 +27,9 @@ type RequestDetailDesktopProps = Pick<
   | "property"
   | "space"
   | "linkedTask"
+  | "linkedTaskLoaded"
   | "canReviewRequest"
+  | "canReplaceMissingTask"
   | "canMarkUnderReview"
   | "getStatusVariant"
   | "getStatusLabel"
@@ -117,7 +119,9 @@ export function RequestDetailDesktop({
   property,
   space,
   linkedTask,
+  linkedTaskLoaded,
   canReviewRequest,
+  canReplaceMissingTask,
   canMarkUnderReview,
   getStatusVariant,
   getStatusLabel,
@@ -235,8 +239,9 @@ export function RequestDetailDesktop({
                           Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => {
+                          onClick={(event) => {
                             if (!rejectionReason.trim()) {
+                              event.preventDefault();
                               toast({
                                 title: "Please provide a rejection reason",
                                 variant: "destructive",
@@ -268,13 +273,25 @@ export function RequestDetailDesktop({
             <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-green-700 dark:text-green-300">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 shrink-0" />
-                <span>This request was approved and converted to a work order.</span>
+                <span>
+                  {linkedTaskLoaded && !linkedTask
+                    ? "This request was approved. A work order still needs to be created."
+                    : "This request was approved and converted to a work order."}
+                </span>
               </div>
               {linkedTask && (
                 <Link href={`/tasks/${linkedTask.id}`}>
                   <Button variant="outline" size="sm" className="gap-1.5 bg-background" data-testid="button-view-linked-task">
                     <ExternalLink className="h-3.5 w-3.5" />
                     View work order
+                  </Button>
+                </Link>
+              )}
+              {canReplaceMissingTask && (
+                <Link href={`/tasks/new?requestId=${id}`}>
+                  <Button size="sm" className="gap-1.5" data-testid="button-replace-missing-task">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Create task
                   </Button>
                 </Link>
               )}
@@ -352,6 +369,12 @@ export function RequestDetailDesktop({
                     {space && <span className="text-muted-foreground"> / {space.name}</span>}
                   </p>
                 </div>
+                {request.category && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Category</p>
+                    <p className="font-medium" data-testid="text-category">{request.category}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-muted-foreground">Submitted</p>
                   <p className="font-medium">{submittedDate}</p>

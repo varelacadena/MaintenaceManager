@@ -241,20 +241,26 @@ export function registerStudentRoutes(app: Express) {
         return res.status(409).json({ message: "You are not clocked in" });
       }
 
-      let recapCount = await studentStorage.countStudentRecapsForTimeEntry(openEntry.id);
-      if (recapCount < 1) {
-        const parsed = studentRecapRequestSchema.safeParse(req.body ?? {});
-        if (!parsed.success) {
-          return res.status(409).json({ message: "Write your daily recap before clocking out" });
+      const parsed = studentRecapRequestSchema.safeParse(req.body ?? {});
+      const existingRecap = await studentStorage.getLatestRecapForTimeEntry(openEntry.id);
+      if (parsed.success) {
+        if (existingRecap) {
+          await studentStorage.updateStudentDailyRecap(existingRecap.id, {
+            whatIDid: parsed.data.whatIDid,
+            whatILearned: parsed.data.whatILearned,
+          });
+        } else {
+          await studentStorage.createStudentDailyRecap({
+            studentId: student.id,
+            studentName: formatUserDisplayName(student),
+            timeEntryId: openEntry.id,
+            recapDate: parsed.data.recapDate || localDateString(openEntry.clockInAt ?? new Date()),
+            whatIDid: parsed.data.whatIDid,
+            whatILearned: parsed.data.whatILearned,
+          });
         }
-        await studentStorage.createStudentDailyRecap({
-          studentId: student.id,
-          studentName: formatUserDisplayName(student),
-          timeEntryId: openEntry.id,
-          recapDate: parsed.data.recapDate || localDateString(openEntry.clockInAt ?? new Date()),
-          whatIDid: parsed.data.whatIDid,
-          whatILearned: parsed.data.whatILearned,
-        });
+      } else if (!existingRecap) {
+        return res.status(409).json({ message: "Write your daily recap before clocking out" });
       }
 
       const clockOutAt = new Date();
@@ -396,16 +402,22 @@ export function registerStudentRoutes(app: Express) {
         return res.status(409).json({ message: "Clock in before writing a recap" });
       }
 
-      const recap = await studentStorage.createStudentDailyRecap({
-        studentId: student.id,
-        studentName: formatUserDisplayName(student),
-        timeEntryId: openEntry.id,
-        recapDate: parsed.data.recapDate || localDateString(),
-        whatIDid: parsed.data.whatIDid,
-        whatILearned: parsed.data.whatILearned,
-      });
+      const existing = await studentStorage.getLatestRecapForTimeEntry(openEntry.id);
+      const recap = existing
+        ? await studentStorage.updateStudentDailyRecap(existing.id, {
+            whatIDid: parsed.data.whatIDid,
+            whatILearned: parsed.data.whatILearned,
+          })
+        : await studentStorage.createStudentDailyRecap({
+            studentId: student.id,
+            studentName: formatUserDisplayName(student),
+            timeEntryId: openEntry.id,
+            recapDate: parsed.data.recapDate || localDateString(openEntry.clockInAt ?? new Date()),
+            whatIDid: parsed.data.whatIDid,
+            whatILearned: parsed.data.whatILearned,
+          });
 
-      res.status(201).json(serializeRecap(recap));
+      res.status(existing ? 200 : 201).json(serializeRecap(recap!));
     } catch (error) {
       handleRouteError(res, error, "Failed to save recap");
     }

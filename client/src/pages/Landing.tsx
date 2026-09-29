@@ -96,7 +96,7 @@ export default function Landing() {
           <div className="space-y-2">
             <a
               href="/report"
-              className="inline-flex w-full items-center justify-center h-11 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              className="inline-flex w-full items-center justify-center h-12 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
               data-testid="link-report-problem"
             >
               Report a problem
@@ -108,7 +108,7 @@ export default function Landing() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Staff sign in</span>
+              <span className="bg-card/95 px-2 text-muted-foreground">Staff sign in</span>
             </div>
           </div>
           <form onSubmit={handleLogin} className="space-y-5">
@@ -126,7 +126,7 @@ export default function Landing() {
                 required
                 disabled={isLoading}
                 data-testid="input-username"
-                className="h-11"
+                className="h-12"
               />
             </div>
             <div className="space-y-2">
@@ -143,13 +143,13 @@ export default function Landing() {
                 required
                 disabled={isLoading}
                 data-testid="input-password"
-                className="h-11"
+                className="h-12"
               />
               {error && (
                 <p className="text-sm text-red-500 font-medium mt-2">{error}</p>
               )}
             </div>
-            <Button type="submit" size="lg" className="w-full mt-6" disabled={isLoading} data-testid="button-login">
+            <Button type="submit" size="lg" className="w-full h-12 mt-6" disabled={isLoading} data-testid="button-login">
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
             <div className="text-center mt-3 flex flex-col gap-1.5">

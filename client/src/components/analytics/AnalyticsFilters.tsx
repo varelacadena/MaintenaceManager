@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { useQuery } from "@tanstack/react-query";
 import { parse, format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -262,10 +263,7 @@ export default function AnalyticsFilters({
     const tech = technicians.find((t) => t.id === filters.technicianId);
     activeChips.push({
       key: "technicianId",
-      label:
-        tech?.firstName && tech?.lastName
-          ? `${tech.firstName} ${tech.lastName}`
-          : (tech?.username ?? "Technician"),
+      label: tech ? getUserDisplayName(tech) : "Technician",
     });
   }
   if (filters.status) {
@@ -431,7 +429,7 @@ export default function AnalyticsFilters({
                       <SelectItem value="all">All Technicians</SelectItem>
                       {technicians.map(t => (
                         <SelectItem key={t.id} value={t.id}>
-                          {t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.username}
+                          {getUserDisplayName(t)}
                         </SelectItem>
                       ))}
                     </SelectContent>

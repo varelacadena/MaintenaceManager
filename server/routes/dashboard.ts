@@ -110,23 +110,24 @@ export function registerDashboardRoutes(app: Express) {
       }
 
       if (role === "admin") {
-        const [tasks, requests, users, properties, vehicleReservations, projects, aiStats] =
+        await storage.repairConvertedRequestsWithoutTasks();
+        const [tasks, requests, waitingRequestCount, users, properties, vehicleReservations, aiStats] =
           await Promise.all([
             fetchWorkTasksForAdmin(),
-            storage.getServiceRequests({ limit: 5 }),
+            storage.getServiceRequests({ statuses: ["pending", "under_review"], limit: 8 }),
+            storage.countServiceRequests({ statuses: ["pending", "under_review"] }),
             fetchDirectoryUsers(true),
             storage.getProperties(),
-            storage.getVehicleReservations({ userId }),
-            storage.getProjects(),
+            storage.getVehicleReservations({ statuses: ["pending", "approved", "active"] }),
             buildAiStats(),
           ]);
         return res.json({
           tasks,
           requests,
+          waitingRequestCount,
           users,
           properties,
           vehicleReservations,
-          projects,
           aiStats,
         });
       }

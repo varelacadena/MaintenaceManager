@@ -2,15 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import {
   Dialog,
   DialogContent,
@@ -27,41 +19,20 @@ import {
   CheckCircle2,
   Plus,
   Car,
-  Wrench,
   BrainCircuit,
-  Activity,
-  AlertCircle,
-  MapPin,
-  User,
   ArrowUpRight,
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-import { format, parseISO, isPast, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { invalidateDashboard, invalidateTaskLists } from "@/lib/taskQueryInvalidation";
 import { getServiceRequestStatusLabel } from "@/lib/serviceRequestLabels";
-import type { Task, User as UserType, Property, Project, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
+import { getServiceRequestNumber } from "@shared/recordNumbers";
+import type { Task, User as UserType, Property, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-
-function projectProgressPercent(status: Project["status"] | undefined): number {
-  switch (status) {
-    case "completed":
-      return 100;
-    case "in_progress":
-      return 60;
-    case "on_hold":
-      return 35;
-    case "cancelled":
-      return 0;
-    case "planning":
-    default:
-      return 15;
-  }
-}
 
 type AiStats = {
   pending: number;
@@ -77,127 +48,30 @@ interface AdminDashboardProps {
   tasks: Task[];
   users: UserType[];
   properties: Property[];
-  projects: Project[];
   requests: ServiceRequest[];
+  waitingRequestCount: number;
   vehicleReservations: VehicleReservation[];
   aiStats: AiStats | undefined;
   onStatusChange: (taskId: string, status: Task["status"]) => void;
   statusMutationPending: boolean;
 }
 
-const urgencyColors: Record<string, string> = {
-  high: "bg-red-500",
-  medium: "bg-amber-500",
-  low: "bg-emerald-500",
+const statusConfig: Record<string, { label: string }> = {
+  not_started: { label: "To Do" },
+  needs_estimate: { label: "Needs Estimate" },
+  waiting_approval: { label: "Waiting Approval" },
+  ready: { label: "Ready" },
+  in_progress: { label: "In Progress" },
+  completed: { label: "Done" },
+  on_hold: { label: "Blocked" },
 };
-
-const statusConfig: Record<string, { label: string; dotColor: string }> = {
-  not_started: { label: "To Do", dotColor: "bg-slate-400" },
-  needs_estimate: { label: "Needs Estimate", dotColor: "bg-amber-400" },
-  waiting_approval: { label: "Waiting Approval", dotColor: "bg-purple-400" },
-  ready: { label: "Ready", dotColor: "bg-teal-400" },
-  in_progress: { label: "In Progress", dotColor: "bg-blue-500" },
-  completed: { label: "Done", dotColor: "bg-emerald-500" },
-  on_hold: { label: "Blocked", dotColor: "bg-red-500" },
-};
-
-const requestStatusColors: Record<string, string> = {
-  pending: "bg-amber-500",
-  under_review: "bg-blue-500",
-  converted_to_task: "bg-emerald-500",
-  rejected: "bg-red-500",
-};
-
-function RadialProgress({ completed, total, strokeColor }: { completed: number; total: number; strokeColor: string }) {
-  const pct = total > 0 ? (completed / total) * 100 : 0;
-  const radius = 16;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (pct / 100) * circumference;
-
-  return (
-    <div className="relative w-10 h-10 shrink-0">
-      <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
-        <circle cx="20" cy="20" r={radius} fill="none" strokeWidth="3" className="stroke-muted" />
-        <circle
-          cx="20"
-          cy="20"
-          r={radius}
-          fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
-          className={strokeColor}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 0.6s ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-xs font-bold tabular-nums">{Math.round(pct)}%</span>
-      </div>
-    </div>
-  );
-}
-
-function TaskRowPopover({
-  task,
-  assignee,
-  property,
-}: {
-  task: Task;
-  assignee: UserType | null;
-  property: Property | null;
-}) {
-  const isOverdue =
-    task.estimatedCompletionDate &&
-    isPast(parseISO(task.estimatedCompletionDate as unknown as string)) &&
-    task.status !== "completed";
-
-  return (
-    <div className="space-y-3 text-sm" data-testid={`popover-task-${task.id}`}>
-      <div>
-        <p className="font-semibold leading-tight">{task.name}</p>
-        {task.description && (
-          <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <AlertTriangle className="w-3 h-3 shrink-0" />
-          <span className="capitalize">{task.urgency} priority</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <div className={cn("w-2 h-2 rounded-full shrink-0", statusConfig[task.status]?.dotColor || "bg-muted")} />
-          <span>{statusConfig[task.status]?.label || task.status}</span>
-        </div>
-        {assignee && (
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <User className="w-3 h-3 shrink-0" />
-            <span className="truncate">{assignee.firstName} {assignee.lastName}</span>
-          </div>
-        )}
-        {task.estimatedCompletionDate && (
-          <div className={cn("flex items-center gap-1.5", isOverdue ? "text-red-500" : "text-muted-foreground")}>
-            <Clock className="w-3 h-3 shrink-0" />
-            <span>{isOverdue ? "Overdue: " : "Due: "}{format(parseISO(task.estimatedCompletionDate as unknown as string), "MMM d")}</span>
-          </div>
-        )}
-        {property && (
-          <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
-            <MapPin className="w-3 h-3 shrink-0" />
-            <span className="truncate">{property.name}{property.address ? ` - ${property.address}` : ""}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function AdminDashboard({
   tasks,
   users,
   properties,
-  projects,
   requests,
+  waitingRequestCount,
   vehicleReservations,
   aiStats,
   onStatusChange,
@@ -207,10 +81,7 @@ export default function AdminDashboard({
   const { toast } = useToast();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [techFilter, setTechFilter] = useState<"today" | "weekly">("weekly");
-
   const [kpiModal, setKpiModal] = useState<{ title: string; tasks: Task[] } | null>(null);
-  const [techModal, setTechModal] = useState<{ name: string; tasks: Task[] } | null>(null);
   const [selectedAiLog, setSelectedAiLog] = useState<AiAgentLog | null>(null);
 
   const { data: pendingAiLogs = [] } = useQuery<AiAgentLog[]>({
@@ -264,11 +135,11 @@ export default function AdminDashboard({
   }, [tasks, today]);
 
   const kpiCards = [
-    { key: "openTasks", title: "Open Tasks", count: taskCounts.openTasks, icon: ClipboardList, color: "text-indigo-600", bgColor: "bg-indigo-100 dark:bg-indigo-900/20" },
-    { key: "highPriority", title: "High Priority", count: taskCounts.highPriority, icon: AlertTriangle, color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/20" },
-    { key: "overdue", title: "Overdue", count: taskCounts.overdue, icon: Clock, color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/20" },
-    { key: "dueToday", title: "Due Today", count: taskCounts.dueToday, icon: Calendar, color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/20" },
-    { key: "completedToday", title: "Completed Today", count: taskCounts.completedToday, icon: CheckCircle2, color: "text-emerald-600", bgColor: "bg-emerald-100 dark:bg-emerald-900/20" },
+    { key: "openTasks", title: "Open Tasks", count: taskCounts.openTasks, icon: ClipboardList },
+    { key: "highPriority", title: "High Priority", count: taskCounts.highPriority, icon: AlertTriangle },
+    { key: "overdue", title: "Overdue", count: taskCounts.overdue, icon: Clock },
+    { key: "dueToday", title: "Due Today", count: taskCounts.dueToday, icon: Calendar },
+    { key: "completedToday", title: "Completed Today", count: taskCounts.completedToday, icon: CheckCircle2 },
   ];
 
   const getKpiTasks = (key: string): Task[] => {
@@ -291,394 +162,217 @@ export default function AdminDashboard({
     }
   };
 
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
-  const taskMatchesTechnicianWindow = (task: Task, filter: "today" | "weekly") => {
-    if (task.status === "in_progress") return true;
-    const raw = task.initialDate ?? task.estimatedCompletionDate;
-    if (!raw) return true;
-    const taskDate = startOfDay(parseISO(raw as unknown as string));
-    if (filter === "today") {
-      return taskDate.getTime() === today.getTime() || taskDate.getTime() < today.getTime();
-    }
-    return (
-      (taskDate.getTime() >= weekStart.getTime() && taskDate.getTime() <= weekEnd.getTime()) ||
-      taskDate.getTime() < weekStart.getTime()
-    );
-  };
-
-  const technicianStats = useMemo(() => {
-    const techs = users.filter(u => u.role === "technician");
-    return techs.map(tech => {
-      const allTechTasks = tasks.filter((t) => {
-        const helperIds = (t as Task & { helperUserIds?: string[] }).helperUserIds ?? [];
-        return t.assignedToId === tech.id || helperIds.includes(tech.id);
-      });
-      const techTasks = allTechTasks.filter((t) => taskMatchesTechnicianWindow(t, techFilter));
-      const completed = techTasks.filter(t => t.status === "completed").length;
-      const total = techTasks.length;
-      const inProgress = techTasks.filter(t => t.status === "in_progress").length;
-      const currentTask = techTasks.find(t => t.status === "in_progress");
-      const initials = (tech.firstName?.[0] || "") + (tech.lastName?.[0] || tech.username?.[0] || "");
-      return {
-        id: tech.id,
-        name: `${tech.firstName || ""} ${tech.lastName || ""}`.trim() || tech.username,
-        initials: initials.toUpperCase() || "?",
-        completed,
-        total,
-        inProgress,
-        currentTask: currentTask?.name || null,
-        allTasks: techTasks,
-      };
-    }).sort((a, b) => {
-      const aPct = a.total > 0 ? a.completed / a.total : 0;
-      const bPct = b.total > 0 ? b.completed / b.total : 0;
-      if (a.total === 0 && b.total > 0) return 1;
-      if (a.total > 0 && b.total === 0) return -1;
-      return bPct - aPct;
-    });
-  }, [users, tasks, techFilter, today, weekStart, weekEnd]);
-
-  const recentRequests = useMemo(() => {
-    return [...requests]
-      .sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      })
-      .slice(0, 5);
+  const openRequests = useMemo(() => {
+    return requests.filter((request) => request.status === "pending" || request.status === "under_review");
   }, [requests]);
-
-  const projectStats = useMemo(() => {
-    return projects.slice(0, 3).map(p => ({
-      id: p.id,
-      name: p.name,
-      status: p.status,
-      progress: projectProgressPercent(p.status),
-      budget: Number(p.budgetAmount) || 0,
-    }));
-  }, [projects]);
 
   const handleViewDetails = (task: Task) => {
     setSelectedTask(task);
     setDrawerOpen(true);
   };
 
-  const strokeColors = ["stroke-blue-500", "stroke-emerald-500", "stroke-violet-500", "stroke-amber-500", "stroke-rose-500", "stroke-cyan-500", "stroke-orange-500"];
-
   return (
     <div className="space-y-6 pb-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">
-            Operations Overview
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" data-testid="text-dashboard-title">
+            Operations
           </h1>
           <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link href="/tasks/new">
-            <Button data-testid="button-new-task">
-              <Plus className="w-4 h-4 mr-2" />
-              New Task
-            </Button>
-          </Link>
-        </div>
+        <Link href="/tasks/new">
+          <Button data-testid="button-new-task">
+            <Plus className="w-4 h-4 mr-2" />
+            New Task
+          </Button>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {kpiCards.map(kpi => (
           <Card
             key={kpi.key}
-            className="shadow-sm cursor-pointer hover-elevate"
+            className="shadow-none cursor-pointer hover-elevate"
             onClick={() => setKpiModal({ title: kpi.title, tasks: getKpiTasks(kpi.key) })}
             data-testid={`kpi-${kpi.key}`}
           >
-            <CardContent className="p-4 md:p-5 flex items-center justify-between gap-2">
+            <CardContent className="p-4 flex items-center justify-between gap-2">
               <div className="space-y-1 min-w-0">
-                <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">{kpi.title}</p>
-                <p className={cn("text-2xl md:text-3xl font-bold", kpi.color)}>{kpi.count}</p>
+                <p className="text-xs font-medium text-muted-foreground truncate">{kpi.title}</p>
+                <p className="text-2xl font-semibold tabular-nums text-foreground">
+                  {kpi.count}
+                </p>
               </div>
-              <div className={cn("p-2 rounded-full shrink-0", kpi.bgColor)}>
-                <kpi.icon className={cn("w-5 h-5", kpi.color)} />
-              </div>
+              <kpi.icon className="w-4 h-4 text-muted-foreground shrink-0" />
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-          <Card className="flex flex-col shadow-sm" style={{ minHeight: "380px" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {aiStats && aiStats.pending > 0 && (
+          <Card className="shadow-none lg:col-span-3" data-testid="card-ai-insights">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between gap-2 flex-wrap">
-                <span className="flex items-center gap-2">
-                  <Wrench className="w-5 h-5 text-muted-foreground" />
-                  Technician Progress
+              <CardTitle className="text-base flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2 font-medium">
+                  <BrainCircuit className="w-4 h-4 text-muted-foreground" />
+                  AI Insights
                 </span>
-                <Tabs value={techFilter} onValueChange={(v) => setTechFilter(v as "today" | "weekly")}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="today" className="text-xs px-3" data-testid="tech-tab-today">Today</TabsTrigger>
-                    <TabsTrigger value="weekly" className="text-xs px-3" data-testid="tech-tab-weekly">Weekly</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pr-2">
-              <ScrollArea className="h-[300px] pr-4">
-                <div className="space-y-4">
-                  {technicianStats.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No technicians with tasks</p>
-                  ) : (
-                    technicianStats.map((tech, idx) => (
-                      <div
-                        key={tech.id}
-                        className="flex items-center gap-3 cursor-pointer hover-elevate rounded-md p-1 -m-1"
-                        onClick={() => setTechModal({ name: tech.name, tasks: tech.allTasks })}
-                        data-testid={`tech-card-${tech.id}`}
-                      >
-                        <Avatar className="h-9 w-9">
-                          <AvatarFallback className="bg-muted text-xs font-medium">{tech.initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{tech.name}</p>
-                          <p className="text-xs text-muted-foreground tabular-nums">
-                            {tech.total > 0
-                              ? `${tech.completed} / ${tech.total} tasks`
-                              : techFilter === "today"
-                              ? "No tasks today"
-                              : "No tasks this week"}
-                          </p>
-                        </div>
-                        <RadialProgress
-                          completed={tech.completed}
-                          total={tech.total}
-                          strokeColor={strokeColors[idx % strokeColors.length]}
-                        />
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="w-5 h-5 text-muted-foreground" />
-                Project Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {projectStats.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No projects</p>
-              ) : (
-                <div className="space-y-5">
-                  {projectStats.map(project => (
-                    <Link key={project.id} href={`/projects/${project.id}`}>
-                      <div className="space-y-1.5 cursor-pointer hover-elevate rounded-md p-2 -m-2" data-testid={`project-card-${project.id}`}>
-                        <div className="flex justify-between items-center text-sm gap-2">
-                          <span className="font-medium truncate">{project.name}</span>
-                          <span className="text-muted-foreground tabular-nums shrink-0">
-                            ${(project.budget / 1000).toFixed(1)}k
-                          </span>
-                        </div>
-                        <Progress value={project.progress} className="h-2 bg-muted" />
-                        <div className="flex justify-between items-center text-xs text-muted-foreground gap-2">
-                          <span className="capitalize">{project.status?.replace("_", " ")}</span>
-                          <span>{project.progress}%</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-              {projects.length > 3 && (
-                <Link href="/work">
-                  <Button variant="ghost" size="sm" className="w-full mt-3 text-xs text-primary underline-offset-4 hover:underline" data-testid="button-view-all-projects">
-                    View All Projects
-                    <ArrowUpRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-9 space-y-6">
-          {aiStats && aiStats.total > 0 && (
-            <Card className="shadow-sm" data-testid="card-ai-insights">
-              <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-base flex items-center justify-between gap-2 flex-wrap">
-                  <span className="flex items-center gap-2">
-                    <BrainCircuit className="w-5 h-5 text-muted-foreground" />
-                    AI Insights
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {aiStats.pending} pending
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-background rounded-md p-3 text-center border shadow-sm">
-                    <p className="text-2xl font-bold text-indigo-600" data-testid="text-ai-pending">{aiStats.pending}</p>
-                    <p className="text-xs uppercase text-muted-foreground tracking-wider">Pending</p>
-                  </div>
-                  <div className="bg-background rounded-md p-3 text-center border shadow-sm">
-                    <p className="text-2xl font-bold text-indigo-600" data-testid="text-ai-auto-applied">{aiStats.autoApplied}</p>
-                    <p className="text-xs uppercase text-muted-foreground tracking-wider">Auto-Applied</p>
-                  </div>
-                </div>
-                {pendingAiLogs.length > 0 && (
-                  <div className="space-y-2 pt-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Suggestions</p>
-                    {pendingAiLogs.slice(0, 3).map(log => (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between gap-2 p-2 rounded-md hover-elevate"
-                        data-testid={`ai-suggestion-${log.id}`}
-                      >
-                        <div
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => setSelectedAiLog(log)}
-                          data-testid={`ai-suggestion-detail-${log.id}`}
-                        >
-                          <p className="text-sm font-medium truncate capitalize">{log.action.replace(/_/g, " ")}</p>
-                          <p className="text-xs text-muted-foreground truncate">{log.entityType} {log.entityId ? `#${log.entityId.slice(0, 8)}` : ""}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-emerald-600"
-                            onClick={() => aiLogMutation.mutate({ id: log.id, status: "approved" })}
-                            disabled={aiLogMutation.isPending}
-                            data-testid={`button-approve-ai-${log.id}`}
-                          >
-                            <ThumbsUp className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-red-500"
-                            onClick={() => aiLogMutation.mutate({ id: log.id, status: "rejected" })}
-                            disabled={aiLogMutation.isPending}
-                            data-testid={`button-reject-ai-${log.id}`}
-                          >
-                            <ThumbsDown className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={() => setLocation("/ai-agent")}
-                  data-testid="button-review-ai"
-                >
-                  View All Recommendations
-                  <ArrowUpRight className="w-3 h-3 ml-1" />
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card
-            className="flex flex-col shadow-sm cursor-pointer hover-elevate"
-            onClick={() => setLocation("/requests")}
-            data-testid="card-recent-requests"
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center justify-between gap-2 flex-wrap">
-                <span className="flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4 text-muted-foreground" />
-                  Recent Requests
-                </span>
-                <Badge variant="outline" data-testid="badge-pending-requests">
-                  {requests.filter(r => r.status === "pending").length} pending
+                <Badge variant="outline" className="text-xs font-normal">
+                  {aiStats.pending} pending
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {recentRequests.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No requests yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentRequests.map(req => (
-                    <div
-                      key={req.id}
-                      className="flex items-start gap-3"
-                      onClick={(e) => e.stopPropagation()}
-                      data-testid={`recent-request-${req.id}`}
+            <CardContent className="space-y-3">
+              {pendingAiLogs.slice(0, 3).map(log => (
+                <div
+                  key={log.id}
+                  className="flex items-center justify-between gap-2"
+                  data-testid={`ai-suggestion-${log.id}`}
+                >
+                  <button
+                    type="button"
+                    className="flex-1 min-w-0 text-left"
+                    onClick={() => setSelectedAiLog(log)}
+                    data-testid={`ai-suggestion-detail-${log.id}`}
+                  >
+                    <p className="text-sm font-medium truncate capitalize">{log.action.replace(/_/g, " ")}</p>
+                    <p className="text-xs text-muted-foreground truncate">{log.entityType}</p>
+                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => aiLogMutation.mutate({ id: log.id, status: "approved" })}
+                      disabled={aiLogMutation.isPending}
+                      data-testid={`button-approve-ai-${log.id}`}
                     >
-                      <div className={cn("w-2 h-2 rounded-full mt-1.5 shrink-0", requestStatusColors[req.status] || "bg-muted")} />
-                      <Link href={`/requests/${req.id}`}>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium line-clamp-1">{req.title}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">
-                              {req.createdAt ? format(new Date(req.createdAt), "MMM d") : "N/A"}
-                            </span>
-                            <span className="text-xs text-muted-foreground capitalize">
-                              {getServiceRequestStatusLabel(req.status ?? "")}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                  ))}
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => aiLogMutation.mutate({ id: log.id, status: "rejected" })}
+                      disabled={aiLogMutation.isPending}
+                      data-testid={`button-reject-ai-${log.id}`}
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
-              )}
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setLocation("/ai-agent")}
+                data-testid="button-review-ai"
+              >
+                Review recommendations
+                <ArrowUpRight className="w-3 h-3 ml-1" />
+              </Button>
             </CardContent>
           </Card>
+        )}
 
-          <Card
-            className="flex flex-col shadow-sm cursor-pointer hover-elevate"
-            onClick={() => setLocation("/vehicles?tab=reservations")}
-            data-testid="card-vehicle-activity"
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Car className="w-4 h-4 text-muted-foreground" />
-                Fleet Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-2">
-                <div className="text-3xl font-bold" data-testid="text-active-reservations">{vehicleReservations.length}</div>
-                <p className="text-sm text-muted-foreground mb-2">Active Reservations</p>
-                <Button variant="ghost" size="sm" className="text-xs" data-testid="button-manage-reservations">
-                  Manage Reservations
-                </Button>
+        <Card
+          className="shadow-none lg:col-span-2 cursor-pointer hover-elevate"
+          onClick={() => setLocation("/requests")}
+          data-testid="card-recent-requests"
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between gap-2 font-medium">
+              <span className="flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-muted-foreground" />
+                Requests waiting
+              </span>
+              <Badge variant="outline" className="font-normal" data-testid="badge-pending-requests">
+                {waitingRequestCount} waiting
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {openRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">No requests are waiting for review.</p>
+            ) : (
+              <div className="divide-y">
+                {openRequests.map(req => (
+                  <div
+                    key={req.id}
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid={`recent-request-${req.id}`}
+                  >
+                    <Link href={`/requests/${req.id}`}>
+                      <div className="py-3 min-w-0">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <p className="text-sm font-medium truncate">{req.title}</p>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {getServiceRequestNumber(req)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {[
+                            req.propertyName || "No building",
+                            req.requesterName || "Unknown requester",
+                            req.createdAt ? format(new Date(req.createdAt), "MMM d") : null,
+                            getServiceRequestStatusLabel(req.status ?? ""),
+                          ].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card
+          className="shadow-none cursor-pointer hover-elevate"
+          onClick={() => setLocation("/vehicles?tab=reservations")}
+          data-testid="card-vehicle-activity"
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 font-medium">
+              <Car className="w-4 h-4 text-muted-foreground" />
+              Fleet
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold tabular-nums" data-testid="text-active-reservations">
+              {vehicleReservations.length}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Open reservations</p>
+            <Button variant="ghost" size="sm" className="mt-3 px-0 text-sm" data-testid="button-manage-reservations">
+              Manage reservations
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={!!kpiModal} onOpenChange={(open) => !open && setKpiModal(null)}>
         <DialogContent className="max-w-lg max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>{kpiModal?.title}</DialogTitle>
-            <DialogDescription>{kpiModal?.tasks.length} {(kpiModal?.tasks.length || 0) === 1 ? "task" : "tasks"}</DialogDescription>
+            <DialogDescription>
+              {kpiModal?.tasks.length} {(kpiModal?.tasks.length || 0) === 1 ? "task" : "tasks"}
+            </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-2 pr-4">
+            <div className="space-y-1 pr-4">
+              {kpiModal?.tasks.length === 0 && (
+                <p className="text-sm text-muted-foreground py-6 text-center">Nothing in this list.</p>
+              )}
               {kpiModal?.tasks.map(task => {
                 const assignee = getUserById(task.assignedToId);
                 return (
-                  <div
+                  <button
                     key={task.id}
-                    className="flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer"
+                    type="button"
+                    className="flex w-full items-center gap-3 p-2 rounded-md hover-elevate text-left"
                     onClick={() => { setKpiModal(null); handleViewDetails(task); }}
                     data-testid={`kpi-modal-task-${task.id}`}
                   >
-                    <div className={cn("w-2 h-2 rounded-full shrink-0", urgencyColors[task.urgency] || "bg-muted")} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{task.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -686,38 +380,9 @@ export default function AdminDashboard({
                         {assignee ? ` · ${assignee.firstName || assignee.username}` : ""}
                       </p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!techModal} onOpenChange={(open) => !open && setTechModal(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>{techModal?.name}</DialogTitle>
-            <DialogDescription>{techModal?.tasks.length} assigned {(techModal?.tasks.length || 0) === 1 ? "task" : "tasks"}</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-2 pr-4">
-              {techModal?.tasks.map(task => (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer"
-                  onClick={() => { setTechModal(null); handleViewDetails(task); }}
-                  data-testid={`tech-modal-task-${task.id}`}
-                >
-                  <div className={cn("w-2 h-2 rounded-full shrink-0", urgencyColors[task.urgency] || "bg-muted")} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{task.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {statusConfig[task.status]?.label || task.status}
-                    </p>
-                  </div>
-                </div>
-              ))}
             </div>
           </ScrollArea>
         </DialogContent>
@@ -727,49 +392,34 @@ export default function AdminDashboard({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="capitalize">{selectedAiLog?.action.replace(/_/g, " ")}</DialogTitle>
-            <DialogDescription>
-              {selectedAiLog?.entityType} {selectedAiLog?.entityId ? `#${selectedAiLog.entityId.slice(0, 8)}` : ""}
-            </DialogDescription>
+            <DialogDescription>{selectedAiLog?.entityType}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {selectedAiLog?.reasoning && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Reasoning</p>
-                <p className="text-sm" data-testid="text-ai-reasoning">{selectedAiLog.reasoning}</p>
-              </div>
+              <p className="text-sm" data-testid="text-ai-reasoning">{selectedAiLog.reasoning}</p>
             )}
             {selectedAiLog?.proposedValue != null && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Proposed Change</p>
-                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40" data-testid="text-ai-proposed">
-                  {JSON.stringify(selectedAiLog.proposedValue, null, 2)}
-                </pre>
-              </div>
+              <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40" data-testid="text-ai-proposed">
+                {JSON.stringify(selectedAiLog.proposedValue, null, 2)}
+              </pre>
             )}
-            {selectedAiLog?.createdAt && (
-              <p className="text-xs text-muted-foreground">
-                Suggested {format(new Date(selectedAiLog.createdAt), "MMM d, yyyy 'at' h:mm a")}
-              </p>
-            )}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1 text-emerald-600"
+                className="flex-1"
                 onClick={() => selectedAiLog && aiLogMutation.mutate({ id: selectedAiLog.id, status: "approved" })}
                 disabled={aiLogMutation.isPending}
                 data-testid="button-approve-ai-detail"
               >
-                <ThumbsUp className="w-4 h-4 mr-2" />
                 Approve
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 text-red-500"
+                className="flex-1"
                 onClick={() => selectedAiLog && aiLogMutation.mutate({ id: selectedAiLog.id, status: "rejected" })}
                 disabled={aiLogMutation.isPending}
                 data-testid="button-reject-ai-detail"
               >
-                <ThumbsDown className="w-4 h-4 mr-2" />
                 Reject
               </Button>
             </div>

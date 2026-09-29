@@ -1,10 +1,11 @@
 import {
   serviceRequests,
+  tasks,
   type ServiceRequest,
   type InsertServiceRequest,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, desc, count, inArray } from "drizzle-orm";
+import { eq, and, desc, count, inArray, isNull } from "drizzle-orm";
 import { formatUserDisplayName } from "@shared/displayNames";
 import { getUser } from "./users";
 import { getProperty } from "./facilities";
@@ -14,6 +15,7 @@ const SERVICE_REQUEST_LIST_LIMIT = 500;
 export async function getServiceRequests(filters?: {
   userId?: string;
   status?: string;
+  statuses?: string[];
   limit?: number;
 }): Promise<ServiceRequest[]> {
   let query = db.select().from(serviceRequests);
@@ -22,7 +24,9 @@ export async function getServiceRequests(filters?: {
   if (filters?.userId) {
     conditions.push(eq(serviceRequests.requesterId, filters.userId));
   }
-  if (filters?.status) {
+  if (filters?.statuses && filters.statuses.length > 0) {
+    conditions.push(inArray(serviceRequests.status, filters.statuses as any));
+  } else if (filters?.status) {
     conditions.push(eq(serviceRequests.status, filters.status as any));
   }
 
@@ -91,6 +95,25 @@ export async function updateServiceRequest(id: string, data: Partial<InsertServi
 
 export async function deleteServiceRequest(id: string): Promise<void> {
   await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
+}
+
+/** Converted requests whose work order was removed should not stay labeled approved. */
+export async function repairConvertedRequestsWithoutTasks(): Promise<number> {
+  const orphans = await db
+    .select({ id: serviceRequests.id })
+    .from(serviceRequests)
+    .leftJoin(tasks, eq(tasks.requestId, serviceRequests.id))
+    .where(and(eq(serviceRequests.status, "converted_to_task"), isNull(tasks.id)));
+
+  const ids = Array.from(new Set(orphans.map((row) => row.id)));
+  if (ids.length === 0) return 0;
+
+  await db
+    .update(serviceRequests)
+    .set({ status: "under_review", updatedAt: new Date() })
+    .where(inArray(serviceRequests.id, ids));
+
+  return ids.length;
 }
 
 export async function updateServiceRequestStatus(

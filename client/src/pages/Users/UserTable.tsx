@@ -1,3 +1,4 @@
+import { getInitials, getUserDisplayName } from "@/utils/taskUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +33,7 @@ export function UsersTabContent({ ctx }: { ctx: UsersContext }) {
       <CardContent className="p-3 md:p-4 pt-0">
         <div className="space-y-3">
           {users.map((user) => {
-            const initials =
-              user.firstName && user.lastName
-                ? `${user.firstName[0]}${user.lastName[0]}`
-                : user.username?.[0]?.toUpperCase() || "U";
+            const initials = getInitials(user);
 
             return (
               <div
@@ -50,9 +48,7 @@ export function UsersTabContent({ ctx }: { ctx: UsersContext }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-medium text-sm md:text-base">
-                      {user.firstName && user.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username}
+                      {getUserDisplayName(user)}
                     </span>
                     <Badge
                       className={`${getRoleBadgeColor(user.role)} no-default-hover-elevate text-xs`}

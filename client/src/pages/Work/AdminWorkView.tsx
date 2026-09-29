@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -171,9 +172,7 @@ export function AdminWorkView({ ctx }: { ctx: WorkContext }) {
                     <SelectItem value="all">All technicians</SelectItem>
                     {technicianUsers.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
-                        {tech.firstName && tech.lastName
-                          ? `${tech.firstName} ${tech.lastName}`
-                          : tech.username}
+                        {getUserDisplayName(tech)}
                       </SelectItem>
                     ))}
                     <SelectItem value={UNASSIGNED_TECH_ID}>Unassigned</SelectItem>

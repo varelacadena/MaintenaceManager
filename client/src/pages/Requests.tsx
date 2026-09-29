@@ -29,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateDashboard } from "@/lib/taskQueryInvalidation";
 import type { ServiceRequest } from "@shared/schema";
 import {
   getServiceRequestStatusLabel,
@@ -127,6 +128,7 @@ export default function Requests() {
     mutationFn: async (id: string) => apiRequest("DELETE", `/api/service-requests/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      invalidateDashboard();
       toast({ title: "Request deleted successfully" });
     },
     onError: () => {
@@ -166,6 +168,7 @@ export default function Requests() {
       requestNumber.includes(query) ||
       requesterName.includes(query) ||
       request.title.toLowerCase().includes(query) ||
+      (request.category || "").toLowerCase().includes(query) ||
       request.description.toLowerCase().includes(query) ||
       propertyName.includes(query);
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
@@ -326,6 +329,9 @@ export default function Requests() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{request.title}</p>
+                    {request.category && (
+                      <p className="text-xs text-muted-foreground">{request.category}</p>
+                    )}
                     <p className="text-xs text-muted-foreground" data-testid={`text-requester-${request.id}`}>
                       Request {getServiceRequestNumber(request)} · {getRequesterName(request)}
                       {!request.requesterId ? " · Public" : ""}
@@ -384,6 +390,9 @@ export default function Requests() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="max-w-xs truncate text-sm font-medium">{request.title}</div>
+                        {request.category && (
+                          <div className="text-xs text-muted-foreground">{request.category}</div>
+                        )}
                       </td>
                       <td className="px-6 py-5">
                         <div className="text-sm text-muted-foreground">{getPropertyName(request)}</div>

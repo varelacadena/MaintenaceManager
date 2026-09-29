@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { tasks } from "@shared/schema";
-import { eq, and, isNotNull, ne, or } from "drizzle-orm";
+import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { log } from "./vite";
 
 // Calculate the next occurrence date based on frequency and interval
@@ -170,5 +170,38 @@ export function startRecurringTaskScheduler(): void {
   log("Recurring task scheduler started (runs every hour)");
 }
 
-// Export for manual triggering if needed
+// Clear the schedule on every matching occurrence so a deleted open task is not recreated.
+export async function stopRecurringSeries(task: {
+  name: string;
+  propertyId: string | null;
+  areaId: string | null;
+}): Promise<number> {
+  const conditions = [
+    eq(tasks.taskType, "recurring"),
+    eq(tasks.name, task.name),
+    isNotNull(tasks.recurringFrequency),
+  ];
+
+  if (task.propertyId) {
+    conditions.push(eq(tasks.propertyId, task.propertyId));
+  }
+
+  if (task.areaId) {
+    conditions.push(eq(tasks.areaId, task.areaId));
+  }
+
+  const updated = await db
+    .update(tasks)
+    .set({
+      recurringFrequency: null,
+      recurringInterval: null,
+      recurringEndDate: new Date().toISOString(),
+      updatedAt: new Date(),
+    })
+    .where(and(...conditions))
+    .returning({ id: tasks.id });
+
+  return updated.length;
+}
+
 export { processRecurringTasks };

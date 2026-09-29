@@ -112,7 +112,21 @@ describe("studentPortal helpers", () => {
 
   it("formats a datetime-local value in local time", () => {
     const value = toDateTimeLocalValue(new Date(2026, 8, 13, 9, 5));
-    expect(value).toBe("2026-09-13T09:05");
+    expect(value).toBe("2026-09-13T09:05:00");
+  });
+
+  it("keeps seconds so a short shift does not gain a minute in the edit form", () => {
+    const start = new Date(2026, 8, 28, 19, 11, 51, 785);
+    const end = new Date(2026, 8, 28, 19, 13, 21, 191);
+    const stored = computeDurationMinutes(start, end);
+    expect(toDateTimeLocalValue(start)).toBe("2026-09-28T19:11:51.785");
+    expect(toDateTimeLocalValue(end)).toBe("2026-09-28T19:13:21.191");
+    const preview = computeDurationMinutes(
+      new Date(toDateTimeLocalValue(start)),
+      new Date(toDateTimeLocalValue(end)),
+    );
+    expect(stored).toBe(1);
+    expect(preview).toBe(stored);
   });
 });
 

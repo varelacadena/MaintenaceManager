@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { Label } from "@/components/ui/label";
 import {
   FormControl,
@@ -174,9 +175,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
                   <SelectContent>
                     {studentUsers.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.firstName && user.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user.username}
+                        {getUserDisplayName(user)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -209,9 +208,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
                     <SelectContent>
                       {technicianUsers.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.firstName && user.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user.username}
+                          {getUserDisplayName(user)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -245,9 +242,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
                           );
                         }}
                       >
-                        {technician.firstName && technician.lastName
-                          ? `${technician.firstName} ${technician.lastName}`
-                          : technician.username}
+                        {getUserDisplayName(technician)}
                       </button>
                     );
                   })}
@@ -278,9 +273,7 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
                           );
                         }}
                       >
-                        {student.firstName && student.lastName
-                          ? `${student.firstName} ${student.lastName}`
-                          : student.username}
+                        {getUserDisplayName(student)}
                       </button>
                     );
                   })}

@@ -546,6 +546,20 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     },
   });
 
+  const stopRecurrenceMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/tasks/${id}/stop-recurrence`);
+    },
+    onSuccess: () => {
+      invalidateTaskAfterMutation(id);
+      toast({
+        title: "Recurrence stopped",
+        description: "This task will stay, and no future copy will be created.",
+      });
+    },
+    onError: () => toast({ title: "Could not stop recurrence", variant: "destructive" }),
+  });
+
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest("DELETE", `/api/tasks/${id}`);
@@ -581,6 +595,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     addUploadMutation,
     deleteUploadMutation,
     toggleChecklistItemMutation,
+    stopRecurrenceMutation,
     deleteTaskMutation,
   };
 }

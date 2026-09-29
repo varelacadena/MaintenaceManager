@@ -16,6 +16,8 @@ import PwaInstallBanner from "./components/PwaInstallBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DomainErrorBoundary from "@/components/DomainErrorBoundary";
 import { goBack, hasPageBackControl } from "@/lib/navigation";
+import { formatUserDisplayName } from "@shared/displayNames";
+import { getInitials } from "@/utils/taskUtils";
 import { queryClient } from "./lib/queryClient";
 import { markRouteNavigation, measureRouteNavigation } from "@/lib/performanceMarks";
 import { AppRoutes } from "@/routes/AppRoutes";
@@ -119,13 +121,8 @@ function AuthenticatedApp() {
 
   const isMobileTaskDetail = user?.role !== "student" && isMobileView && /^\/tasks\/[^/]+$/.test(currentPath) && !currentPath.endsWith("/edit") && !currentPath.endsWith("/new") && !window.location.search.includes("view=full");
 
-  const userName = user?.firstName && user?.lastName
-    ? `${user.firstName} ${user.lastName}`
-    : user?.email || "User";
-
-  const userInitials = user?.firstName && user?.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`
-    : user?.email?.[0]?.toUpperCase() || "U";
+  const userName = user ? formatUserDisplayName(user) : "User";
+  const userInitials = user ? getInitials(user) : "U";
   const showGlobalBack = user?.role !== "student" &&
     user?.role !== "technician" &&
     !hasPageBackControl(currentPath, user?.role);
@@ -153,7 +150,7 @@ function AuthenticatedApp() {
           <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
             <header className={`flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${(user?.role === "student" || user?.role === "technician") ? "py-1.5" : ""}`}>
               <div className="flex items-center gap-1 sm:gap-3">
-                <SidebarTrigger className="md:hidden h-8 w-8 text-muted-foreground" data-testid="button-sidebar-toggle" />
+                <SidebarTrigger className="md:hidden h-11 w-11 text-muted-foreground" data-testid="button-sidebar-toggle" />
                 {showGlobalBack && (
                   <button
                     onClick={() => goBack(setLocation, currentPath, user?.role)}
@@ -191,17 +188,16 @@ function AuthenticatedApp() {
                   </Suspense>
                 )}
                 <ThemeToggle />
-                {user?.role !== "student" && (
+                {user?.role !== "technician" && (
                   <button
                     onClick={async () => {
                       await fetch("/api/logout", { method: "POST" });
                       window.location.href = "/";
                     }}
-                    className="min-h-9 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-0 sm:min-w-0 sm:px-0 sm:py-0 sm:hover:bg-transparent"
+                    className="min-h-11 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     data-testid="button-logout"
                   >
-                    <span className="hidden sm:inline">Sign Out</span>
-                    <span className="sm:hidden">Out</span>
+                    Sign out
                   </button>
                 )}
               </div>

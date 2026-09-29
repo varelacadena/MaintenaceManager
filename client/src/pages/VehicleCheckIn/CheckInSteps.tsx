@@ -97,9 +97,10 @@ interface CompleteStepProps {
   milesDriven: number;
   checkOutLog: NonNullable<VehicleCheckInContext["checkOutLog"]>;
   setLocation: VehicleCheckInContext["setLocation"];
+  showVehicleHistory?: boolean;
 }
 
-export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLocation }: CompleteStepProps) {
+export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLocation, showVehicleHistory }: CompleteStepProps) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center text-center py-10 gap-6">
@@ -159,6 +160,15 @@ export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLo
         </div>
 
         <div className="flex flex-col gap-2 w-full">
+          {showVehicleHistory && (
+            <Button
+              onClick={() => exitTo(setLocation, `/vehicles/${vehicle.id}?tab=logbook`)}
+              className="w-full"
+              data-testid="button-view-vehicle-history"
+            >
+              View this vehicle's trip history
+            </Button>
+          )}
           {checkOutLog.reservationId && (
             <Button
               onClick={() => exitTo(setLocation, `/vehicle-reservation-details/${checkOutLog.reservationId}`)}

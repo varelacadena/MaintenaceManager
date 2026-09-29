@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { LogIn } from "lucide-react";
 import { useLocation } from "wouter";
@@ -77,9 +78,9 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
 
   const isReady = !clockQuery.isLoading;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
       data-testid="student-clock-in-gate"
       role="dialog"
       aria-modal="true"
@@ -115,7 +116,7 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
               id="student-supervisor"
               value={supervisorId}
               onChange={(event) => setSupervisorId(event.target.value)}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:text-sm text-foreground shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-12 w-full rounded-md border border-input bg-background px-3 text-base text-foreground shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="select-supervisor"
             >
               <option value="">Choose a technician</option>
@@ -134,7 +135,7 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
 
         <Button
           type="button"
-          className="w-full h-11"
+          className="w-full h-12"
           disabled={!supervisorId || clockInMutation.isPending || technicians.length === 0}
           onClick={() => clockInMutation.mutate()}
           data-testid="button-clock-in"
@@ -142,10 +143,10 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
           {clockInMutation.isPending ? "Clocking in…" : "Clock in"}
         </Button>
 
-        <div className="flex items-center justify-center gap-4 text-sm">
+        <div className="flex items-center justify-center gap-2 text-sm">
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground"
+            className="min-h-11 px-3 text-muted-foreground hover:text-foreground"
             onClick={() => setLocation("/hours")}
             data-testid="link-clock-in-hours"
           >
@@ -154,7 +155,7 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
           <span className="text-border">·</span>
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground"
+            className="min-h-11 px-3 text-muted-foreground hover:text-foreground"
             onClick={() => setLocation("/settings")}
             data-testid="link-clock-in-settings"
           >
@@ -163,7 +164,7 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
           <span className="text-border">·</span>
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground"
+            className="min-h-11 px-3 text-muted-foreground hover:text-foreground"
             onClick={async () => {
               await fetch("/api/logout", { method: "POST" });
               window.location.href = "/";
@@ -174,6 +175,7 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

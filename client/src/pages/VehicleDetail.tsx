@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "wouter";
+import { useParams, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Car, Calendar, ClipboardList, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon, LogIn, LogOut, Eye, Printer } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isFleetPrivilegedRole } from "@/lib/fleetUtils";
+import { isFleetPrivilegedRole, itemsFromListResponse } from "@/lib/fleetUtils";
 import { useAuth } from "@/hooks/useAuth";
 import type { Vehicle, VehicleReservation, VehicleCheckOutLog, VehicleCheckInLog, User, VehicleMaintenanceLog, VehicleDocument } from "@shared/schema";
 import { format } from "date-fns";
@@ -46,8 +46,16 @@ const statusColors = {
   out_of_service: "destructive",
 } as const;
 
+const VEHICLE_DETAIL_TABS = ["overview", "documents", "reservations", "logbook", "maintenance", "qr-code"] as const;
+type VehicleDetailTab = (typeof VEHICLE_DETAIL_TABS)[number];
+
+function vehicleDetailTab(value: string | null): VehicleDetailTab {
+  return VEHICLE_DETAIL_TABS.includes(value as VehicleDetailTab) ? (value as VehicleDetailTab) : "overview";
+}
+
 export default function VehicleDetail() {
   const { id } = useParams();
+  const searchString = useSearch();
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
@@ -125,6 +133,16 @@ export default function VehicleDetail() {
   });
 
   const canManageVehicles = isFleetPrivilegedRole(user);
+  const reservationList = itemsFromListResponse<VehicleReservation>(reservations);
+  const activeTab = vehicleDetailTab(new URLSearchParams(searchString).get("tab"));
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchString);
+    if (value === "overview") params.delete("tab");
+    else params.set("tab", value);
+    const qs = params.toString();
+    navigate(`/vehicles/${id}${qs ? `?${qs}` : ""}`, { replace: true });
+  };
 
   const [addDocumentDate, setAddDocumentDate] = useState<Date | undefined>(undefined);
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
@@ -291,7 +309,7 @@ export default function VehicleDetail() {
         </div>
       ) : null}
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <div className="overflow-x-auto -mx-1 px-1">
           <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap">Overview</TabsTrigger>
@@ -622,9 +640,9 @@ export default function VehicleDetail() {
               message={reservationsQueryError instanceof Error ? reservationsQueryError.message : "Failed to load reservations"}
               onRetry={() => refetchReservations()}
             />
-          ) : reservations && reservations.length > 0 ? (
+          ) : reservationList.length > 0 ? (
             <div className="space-y-4">
-              {reservations.map((reservation) => {
+              {reservationList.map((reservation) => {
                 const resCheckOut = checkOutLogs?.find(co => co.reservationId === reservation.id);
                 const resCheckIn = resCheckOut ? checkInLogs?.find(ci => ci.checkOutLogId === resCheckOut.id) : undefined;
 
@@ -664,19 +682,35 @@ export default function VehicleDetail() {
                         </div>
                       )}
 
-                      {reservation.status === "pending_review" && resCheckIn && canManageVehicles && (
+                      {(reservation.status === "pending_review" && resCheckIn && canManageVehicles) ||
+                      ["active", "pending_review", "completed"].includes(reservation.status ?? "") ? (
                         <>
                           <Separator />
-                          <Button
-                            onClick={() => navigate(`/vehicle-checkin-verify/${resCheckIn.id}`)}
-                            className="w-full sm:w-auto"
-                            data-testid={`button-review-checkin-${reservation.id}`}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Review Check-In
-                          </Button>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {["active", "pending_review", "completed"].includes(reservation.status ?? "") && (
+                              <Button
+                                variant="outline"
+                                onClick={() => handleTabChange("logbook")}
+                                className="w-full sm:w-auto"
+                                data-testid={`button-trip-history-${reservation.id}`}
+                              >
+                                <ClipboardList className="h-4 w-4 mr-2" />
+                                View trip history
+                              </Button>
+                            )}
+                            {reservation.status === "pending_review" && resCheckIn && canManageVehicles && (
+                              <Button
+                                onClick={() => navigate(`/vehicle-checkin-verify/${resCheckIn.id}`)}
+                                className="w-full sm:w-auto"
+                                data-testid={`button-review-checkin-${reservation.id}`}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Review Check-In
+                              </Button>
+                            )}
+                          </div>
                         </>
-                      )}
+                      ) : null}
                     </CardContent>
                   </Card>
                 );
@@ -708,9 +742,9 @@ export default function VehicleDetail() {
               }}
             />
           ) : null}
-          {(() => {
+          {checkOutLogsError || checkInLogsError ? null : (() => {
             const trips = (checkOutLogs || []).map(co => {
-              const reservation = reservations?.find(r => r.id === co.reservationId);
+              const reservation = reservationList.find(r => r.id === co.reservationId);
               const checkIn = checkInLogs?.find(ci => ci.checkOutLogId === co.id);
               const coUser = users?.find(u => u.id === co.userId);
               return { checkOut: co, checkIn, reservation, user: coUser };

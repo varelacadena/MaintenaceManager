@@ -127,6 +127,28 @@ export async function createStudentDailyRecap(recap: InsertStudentDailyRecap): P
   return created;
 }
 
+export async function getLatestRecapForTimeEntry(timeEntryId: string): Promise<StudentDailyRecap | undefined> {
+  const [recap] = await db
+    .select()
+    .from(studentDailyRecaps)
+    .where(eq(studentDailyRecaps.timeEntryId, timeEntryId))
+    .orderBy(desc(studentDailyRecaps.createdAt))
+    .limit(1);
+  return recap;
+}
+
+export async function updateStudentDailyRecap(
+  id: string,
+  data: { whatIDid: string; whatILearned: string },
+): Promise<StudentDailyRecap | undefined> {
+  const [updated] = await db
+    .update(studentDailyRecaps)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(studentDailyRecaps.id, id))
+    .returning();
+  return updated;
+}
+
 export async function listStudentDailyRecaps(
   filters: StudentTimeRange & { studentId?: string } = {},
 ): Promise<StudentDailyRecap[]> {

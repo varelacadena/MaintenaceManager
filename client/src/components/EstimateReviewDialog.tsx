@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -163,9 +164,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
                 {assignedUser && (
                   <span className="flex items-center gap-1">
                     <User className="w-3.5 h-3.5" />
-                    {assignedUser.firstName && assignedUser.lastName
-                      ? `${assignedUser.firstName} ${assignedUser.lastName}`
-                      : assignedUser.username}
+                    {getUserDisplayName(assignedUser)}
                   </span>
                 )}
               </div>
@@ -252,9 +251,7 @@ export function EstimateReviewDialog({ taskId, open, onOpenChange }: EstimateRev
                             )}
                             {quoteCreator && (
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                Submitted by {quoteCreator.firstName && quoteCreator.lastName
-                                  ? `${quoteCreator.firstName} ${quoteCreator.lastName}`
-                                  : quoteCreator.username}
+                                Submitted by {getUserDisplayName(quoteCreator)}
                                 {quote.createdAt && ` on ${new Date(quote.createdAt).toLocaleDateString()}`}
                               </p>
                             )}

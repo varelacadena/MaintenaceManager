@@ -409,11 +409,17 @@ export function useNewTask() {
     if (request) {
       form.setValue("requestId", request.id);
       form.setValue("name", request.title);
-      form.setValue("description", request.description);
+      const categoryNote = request.category?.trim() ? `Category: ${request.category.trim()}` : "";
+      const description = [request.description, categoryNote].filter(Boolean).join("\n\n");
+      form.setValue("description", description);
       form.setValue("urgency", request.urgency);
       if (request.propertyId) {
         form.setValue("propertyId", request.propertyId);
         setSelectedPropertyId(request.propertyId);
+      }
+      if (request.spaceId) {
+        form.setValue("spaceId", request.spaceId);
+        setSelectedSpaceId(request.spaceId);
       }
       form.setValue("contactType", "requester");
       setContactType("requester");
@@ -491,7 +497,7 @@ export function useNewTask() {
         estimateStatus: data.requiresEstimate ? "needs_estimate" : null,
         status: data.requiresEstimate ? "needs_estimate" : data.status,
         onHoldReason: data.onHoldReason || undefined,
-        requestId: data.requestId || undefined,
+        requestId: data.requestId || requestId || undefined,
         createdById: data.createdById,
         recurringFrequency: data.recurringFrequency || undefined,
         recurringInterval: data.recurringInterval || undefined,

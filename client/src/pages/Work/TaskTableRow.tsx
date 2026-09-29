@@ -22,18 +22,19 @@ import {
 } from "lucide-react";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
-import {
-  urgencyConfig,
-  taskStatusBadgeColors as taskStatusColors,
-  statusDotColors,
-  taskStatusConfig,
-  getAvatarColor,
-} from "@/utils/taskUtils";
+import { urgencyConfig, taskStatusBadgeColors as taskStatusColors, statusDotColors, taskStatusConfig, getInitials, getUserDisplayName } from "@/utils/taskUtils";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
+
+function rowSubtitle(task: Task): string {
+  const vehicle = task.vehicleName?.trim();
+  const description = (task.description || "").replace(/\s+/g, " ").trim();
+  const short = description.length > 100 ? `${description.slice(0, 100)}…` : description;
+  return [vehicle, short].filter(Boolean).join(" · ");
+}
 
 function indentPadding(level: number): string {
   if (level <= 0) return "";
@@ -85,11 +86,7 @@ export const TaskTableRow = memo(function TaskTableRow({
     && new Date(task.estimatedCompletionDate) < new Date();
 
   const assignee = task.assignedToId ? allUsers?.find(u => u.id === task.assignedToId) : null;
-  const assigneeInitials = assignee
-    ? (assignee.firstName && assignee.lastName
-        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
-        : (assignee.username?.[0] || "?")).toUpperCase()
-    : null;
+  const assigneeInitials = assignee ? getInitials(assignee) : null;
 
   const urg = urgencyConfig[task.urgency] || urgencyConfig.low;
 
@@ -110,7 +107,7 @@ export const TaskTableRow = memo(function TaskTableRow({
       aria-selected={onSelectTask ? selectedTaskId === task.id : undefined}
       aria-label={onSelectTask ? buildTaskRowAriaLabel(task) : undefined}
       className={`[content-visibility:auto] [contain-intrinsic-size:0_52px] cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
-        selectedTaskId === task.id ? "!bg-[#EEF2FF]" : ""
+        selectedTaskId === task.id ? "bg-muted" : ""
       } ${rowClassName ?? ""}`}
       onPointerDown={onSelectTask ? onPointerDown : undefined}
       onClick={onSelectTask ? (e) => {
@@ -123,7 +120,8 @@ export const TaskTableRow = memo(function TaskTableRow({
       } : undefined}
     >
       <TableCell className="py-2.5">
-        <div className={`flex items-center gap-2 min-w-0 flex-wrap ${indentPadding(resolvedIndentLevel)}`}>
+        <div className={`min-w-0 ${indentPadding(resolvedIndentLevel)}`}>
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColors[task.status] || "bg-gray-400"}`} />
           <span className={isParentWithSubtasks ? "font-medium min-w-0" : "min-w-0"}>
             <EditableTextCell
@@ -165,6 +163,12 @@ export const TaskTableRow = memo(function TaskTableRow({
             </span>
           )}
         </div>
+        {rowSubtitle(task) && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5 pl-4" data-testid={`text-task-detail-${task.id}`}>
+            {rowSubtitle(task)}
+          </p>
+        )}
+        </div>
       </TableCell>
       <TableCell className="py-2.5">
         <Select
@@ -180,7 +184,7 @@ export const TaskTableRow = memo(function TaskTableRow({
           >
             {assignee ? (
               <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
-                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-xs font-medium`}>
+                <AvatarFallback className="bg-slate-600 text-white text-xs font-medium">
                   {assigneeInitials}
                 </AvatarFallback>
               </Avatar>
@@ -197,9 +201,7 @@ export const TaskTableRow = memo(function TaskTableRow({
                 <SelectLabel>{group.label}</SelectLabel>
                 {group.items.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
-                    {u.firstName && u.lastName
-                      ? `${u.firstName} ${u.lastName}`
-                      : u.username}
+                    {getUserDisplayName(u)}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -236,7 +238,7 @@ export const TaskTableRow = memo(function TaskTableRow({
             >
               <Badge
                 variant="outline"
-                className={`${taskStatusColors[task.status] || ""} text-xs font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                className={`${taskStatusColors[task.status] || ""} text-xs font-medium cursor-pointer no-default-hover-elevate no-default-active-elevate`}
               >
                 <SelectValue />
               </Badge>

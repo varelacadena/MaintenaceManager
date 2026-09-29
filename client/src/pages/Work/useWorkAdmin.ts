@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -274,9 +275,7 @@ export function useWorkAdmin() {
     if (!userId) return null;
     const tech = allUsers?.find((u) => u.id === userId);
     if (!tech) return null;
-    return tech.firstName && tech.lastName
-      ? `${tech.firstName} ${tech.lastName}`
-      : tech.username;
+    return getUserDisplayName(tech);
   };
 
   const toggleGroup = (statusKey: string) => {

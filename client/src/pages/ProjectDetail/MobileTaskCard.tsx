@@ -4,11 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, User as UserIcon, Flag, AlertTriangle, ClipboardCheck } from "lucide-react";
 import type { Task, User } from "@shared/schema";
 import type { StatusType } from "./useProjectDetail";
-import {
-  urgencyConfig,
-  taskStatusBadgeColors as tableBadgeColors,
-  statusDotColors,
-} from "@/utils/taskUtils";
+import { urgencyConfig, taskStatusBadgeColors as tableBadgeColors, statusDotColors, getUserDisplayName } from "@/utils/taskUtils";
 
 export function MobileTaskCard({
   task,
@@ -53,9 +49,7 @@ export function MobileTaskCard({
           {assignee && (
             <span className="flex items-center gap-1">
               <UserIcon className="w-3 h-3" />
-              {assignee.firstName && assignee.lastName
-                ? `${assignee.firstName} ${assignee.lastName}`
-                : assignee.username}
+              {getUserDisplayName(assignee)}
             </span>
           )}
           <span className="flex items-center gap-1">

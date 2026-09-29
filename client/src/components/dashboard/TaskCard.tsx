@@ -1,3 +1,4 @@
+import { getInitials, getUserDisplayName } from "@/utils/taskUtils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,14 +99,6 @@ export default function TaskCard({
   const isDueToday =
     task.estimatedCompletionDate &&
     isToday(parseISO(task.estimatedCompletionDate as unknown as string));
-
-  const getInitials = (user?: UserType | null) => {
-    if (!user) return "?";
-    if (user.firstName && user.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`;
-    }
-    return user.username?.[0]?.toUpperCase() || "?";
-  };
 
   const formatDueDate = (date: Date | string | null) => {
     if (!date) return null;
@@ -240,7 +233,7 @@ export default function TaskCard({
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-xs text-muted-foreground">
-                      {assignee.firstName || assignee.username}
+                      {getUserDisplayName(assignee)}
                     </span>
                   </div>
                 ) : (

@@ -1,5 +1,6 @@
 import { Car } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { isFleetPrivilegedRole } from "@/lib/fleetUtils";
 import { useVehicleCheckIn } from "./useVehicleCheckIn";
 import { StepProgress } from "./CheckInComponents";
 import { SummaryStep, CompleteStep } from "./CheckInSteps";
@@ -115,6 +116,7 @@ export default function VehicleCheckIn() {
               milesDriven={ctx.milesDriven}
               checkOutLog={checkOutLog}
               setLocation={ctx.setLocation}
+              showVehicleHistory={isFleetPrivilegedRole(ctx.user)}
             />
           )}
 

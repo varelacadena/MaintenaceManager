@@ -20,13 +20,7 @@ import type {
   TaskChecklistGroup,
   TaskChecklistItem,
 } from "@shared/schema";
-import {
-  panelStatusDotStyle,
-  panelStatusPillStyle,
-  panelStatusLabels,
-  priorityConfig,
-  getAvatarHexColor as getAvatarColorForId,
-} from "@/utils/taskUtils";
+import { panelStatusDotStyle, panelStatusPillStyle, panelStatusLabels, priorityConfig, getAvatarHexColor as getAvatarColorForId, getInitials, getUserDisplayName } from "@/utils/taskUtils";
 import { PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
 import { buildManualTimeEntryRange, durationFromHoursAndMinutes, splitMinutes } from "@/lib/timeEntryUtils";
 import { getTaskDateInputValue } from "@/lib/taskCalendarDates";
@@ -236,6 +230,20 @@ export function useTaskDetailPanel({
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update checklist item.", variant: "destructive" });
+    },
+  });
+
+  const stopRecurrenceMutation = useMutation({
+    mutationFn: async () => apiRequest("POST", `/api/tasks/${taskId}/stop-recurrence`),
+    onSuccess: () => {
+      invalidateTaskAfterMutation(taskId);
+      toast({
+        title: "Recurrence stopped",
+        description: "This task will stay, and no future copy will be created.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Could not stop recurrence", variant: "destructive" });
     },
   });
 
@@ -461,17 +469,10 @@ export function useTaskDetailPanel({
     ? allUsers?.find((u) => u.id === task.assignedToId)
     : null;
 
-  const assigneeInitials = assignee
-    ? (assignee.firstName && assignee.lastName
-        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
-        : (assignee.username?.[0] || "?")
-      ).toUpperCase()
-    : null;
+  const assigneeInitials = assignee ? getInitials(assignee) : null;
 
   const assigneeName = assignee
-    ? assignee.firstName && assignee.lastName
-      ? `${assignee.firstName} ${assignee.lastName}`
-      : assignee.username || "Unknown"
+    ? getUserDisplayName(assignee)
     : "Unassigned";
 
   const completedSubtasks = subtasks?.filter((s) => s.status === "completed").length || 0;
@@ -620,6 +621,7 @@ export function useTaskDetailPanel({
     updateStatusMutation,
     updateTaskMutation,
     handleInlineEdit,
+    stopRecurrenceMutation,
     deleteTaskMutation,
     addNoteMutation,
     updateNoteMutation,

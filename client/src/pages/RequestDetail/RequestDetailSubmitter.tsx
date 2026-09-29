@@ -24,6 +24,7 @@ type RequestDetailSubmitterProps = Pick<
   | "property"
   | "space"
   | "linkedTask"
+  | "linkedTaskLoaded"
   | "navigate"
   | "getStatusLabel"
   | "getStatusVariant"
@@ -37,6 +38,7 @@ export function RequestDetailSubmitter({
   property,
   space,
   linkedTask,
+  linkedTaskLoaded,
   navigate,
   getStatusLabel,
   getStatusVariant,
@@ -66,7 +68,10 @@ export function RequestDetailSubmitter({
         return {
           icon: CheckCircle2,
           title: "Your request was approved.",
-          description: "It has been turned into a work order for the maintenance team.",
+          description:
+            linkedTaskLoaded && !linkedTask
+              ? "Maintenance still needs to create the work order."
+              : "It has been turned into a work order for the maintenance team.",
           className: "border-green-500/20 bg-green-500/5 text-green-700 dark:text-green-300",
         };
       case "rejected":
@@ -165,6 +170,18 @@ export function RequestDetailSubmitter({
               </p>
             </div>
           </div>
+
+          {request.category && (
+            <div className="flex gap-3">
+              <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Category</p>
+                <p className="text-sm text-muted-foreground" data-testid="text-category">
+                  {request.category}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />

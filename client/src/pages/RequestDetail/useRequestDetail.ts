@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateDashboard } from "@/lib/taskQueryInvalidation";
 import {
   getServiceRequestStatusLabel,
   getServiceRequestUrgencyLabel,
@@ -44,7 +45,7 @@ export function useRequestDetail() {
     enabled: !!id,
   });
 
-  const { data: linkedTask } = useQuery<Task | null>({
+  const { data: linkedTask, isFetched: linkedTaskLoaded } = useQuery<Task | null>({
     queryKey: ["/api/service-requests", id, "linked-task"],
     enabled: !!id && request?.status === "converted_to_task",
     queryFn: async () => {
@@ -66,6 +67,7 @@ export function useRequestDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
+      invalidateDashboard();
       toast({ title: "Request rejected" });
       navigate("/requests", { replace: true });
     },
@@ -83,6 +85,7 @@ export function useRequestDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests", id] });
+      invalidateDashboard();
       toast({ title: "Marked as under review" });
     },
     onError: () => {
@@ -117,6 +120,8 @@ export function useRequestDetail() {
   const isAdmin = user?.role === "admin";
   const canReviewRequest =
     isAdmin && (request?.status === "pending" || request?.status === "under_review");
+  const canReplaceMissingTask =
+    isAdmin && request?.status === "converted_to_task" && linkedTaskLoaded && !linkedTask;
   const canMarkUnderReview = isAdmin && request?.status === "pending";
 
   const getStatusVariant = (status: string) => {
@@ -164,6 +169,8 @@ export function useRequestDetail() {
     refetch,
     attachments,
     linkedTask,
+    linkedTaskLoaded,
+    canReplaceMissingTask,
     properties,
     users,
     rejectionReason,

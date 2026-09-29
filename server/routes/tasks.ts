@@ -23,6 +23,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { toTaskListSummary } from "../taskDto";
+import { stopRecurringSeries } from "../recurringTaskScheduler";
 
 async function rejectIfWorkNoteRequired(
   res: any,
@@ -55,15 +56,30 @@ export function registerTaskRoutes(app: Express) {
     name: z
       .string()
       .trim()
-      .min(1, "Short summary is required")
-      .max(80, "Keep the summary under 80 characters — save details for the next field"),
-    description: z.string().trim().default(""),
+      .min(3, "Add a job title the office can search for")
+      .max(120, "Keep the job title under 120 characters"),
+    locationDetail: z
+      .string()
+      .trim()
+      .min(2, "Add the exact spot, such as a room, door, or vehicle")
+      .max(160),
+    description: z
+      .string()
+      .trim()
+      .min(20, "Describe what you found and what needs to be done"),
     urgency: z.enum(["low", "medium", "high"]).default("medium"),
-    propertyId: z.string().trim().min(1, "Property is required"),
-    spaceId: z.string().trim().optional().or(z.literal("")),
-    equipmentId: z.string().trim().optional().or(z.literal("")),
+    propertyId: z.string().trim().min(1, "Building is required"),
     vehicleId: z.string().trim().optional().or(z.literal("")),
-    areaId: z.string().trim().optional().or(z.literal("")),
+    photos: z
+      .array(
+        z.object({
+          fileName: z.string().trim().min(1),
+          fileType: z.string().trim().min(1),
+          objectUrl: z.string().trim().min(1),
+          objectPath: z.string().trim().optional(),
+        }),
+      )
+      .min(1, "Add a photo of the problem"),
   });
 
   app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
@@ -344,17 +360,34 @@ export function registerTaskRoutes(app: Express) {
         return res.status(403).json({ message: "Only technicians can add field jobs" });
       }
 
-      const payload = fieldJobSchema.parse(req.body);
+      const parsed = fieldJobSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: parsed.error.errors[0]?.message || "Check the job details and try again.",
+        });
+      }
+      const payload = parsed.data;
+      const property = await storage.getProperty(payload.propertyId);
+      if (!property) {
+        return res.status(400).json({ message: "Select a building that still exists." });
+      }
+      const autoShop = (property.name || "").trim().toLowerCase();
+      const isAutoShop = autoShop.includes("auto shop") || autoShop.includes("autoshop");
+      if (isAutoShop && !payload.vehicleId) {
+        return res.status(400).json({ message: "Select the vehicle this work is for." });
+      }
+      if (payload.photos.some((photo) => !photo.fileType.toLowerCase().startsWith("image/"))) {
+        return res.status(400).json({ message: "Photos must be images." });
+      }
+
+      const workRecord = `Where: ${payload.locationDetail}\n\n${payload.description}`;
       const today = new Date();
       const taskData = insertTaskSchema.parse({
         name: payload.name,
-        description: payload.description,
+        description: workRecord,
         urgency: payload.urgency,
         propertyId: payload.propertyId,
-        spaceId: payload.spaceId || undefined,
-        equipmentId: payload.equipmentId || undefined,
         vehicleId: payload.vehicleId || undefined,
-        areaId: payload.areaId || undefined,
         assignedToId: userId,
         assignedVendorId: undefined,
         taskType: "one_time",
@@ -364,7 +397,7 @@ export function registerTaskRoutes(app: Express) {
         createdById: userId,
         initialDate: today,
         estimatedCompletionDate: today,
-        requiresPhoto: false,
+        requiresPhoto: true,
         requiresEstimate: false,
         estimateStatus: "none",
       });
@@ -376,6 +409,27 @@ export function registerTaskRoutes(app: Express) {
       });
 
       const task = await storage.createTask(taskData);
+      try {
+        await storage.createTaskNote({
+          taskId: task.id,
+          userId,
+          content: workRecord,
+          noteType: "job_note",
+        });
+        for (const photo of payload.photos) {
+          await storage.createUpload({
+            taskId: task.id,
+            fileName: photo.fileName,
+            fileType: photo.fileType,
+            objectUrl: photo.objectUrl,
+            objectPath: photo.objectPath,
+            uploadedById: userId,
+          });
+        }
+      } catch (attachError) {
+        await storage.deleteTask(task.id);
+        throw attachError;
+      }
 
       res.status(201).json(task);
     } catch (error) {
@@ -765,13 +819,47 @@ export function registerTaskRoutes(app: Express) {
     }
   });
 
+  app.post("/api/tasks/:id/stop-recurrence", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      if (task.taskType !== "recurring" || !task.recurringFrequency) {
+        return res.status(400).json({ message: "This task is not an active recurring task" });
+      }
+      const stopped = await stopRecurringSeries(task);
+      const updated = await storage.getTask(req.params.id);
+      res.json({ stopped, task: updated });
+    } catch (error) {
+      handleRouteError(res, error, "Failed to stop recurrence");
+    }
+  });
+
   app.delete("/api/tasks/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const taskToDelete = await storage.getTask(req.params.id);
+      if (
+        taskToDelete?.taskType === "recurring" &&
+        taskToDelete.recurringFrequency &&
+        taskToDelete.status !== "completed"
+      ) {
+        await stopRecurringSeries(taskToDelete);
+      }
       await storage.deleteTask(req.params.id);
 
       if (taskToDelete?.projectId) {
         await syncProjectStatusFromTasks(taskToDelete.projectId);
+      }
+
+      if (taskToDelete?.requestId) {
+        const stillLinked = await storage.getTaskByRequestId(taskToDelete.requestId);
+        if (!stillLinked) {
+          const linkedRequest = await storage.getServiceRequest(taskToDelete.requestId);
+          if (linkedRequest?.status === "converted_to_task") {
+            await storage.updateServiceRequestStatus(taskToDelete.requestId, "under_review");
+          }
+        }
       }
 
       res.json({ success: true });

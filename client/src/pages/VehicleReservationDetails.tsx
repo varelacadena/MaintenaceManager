@@ -35,6 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { isFleetPrivilegedRole } from "@/lib/fleetUtils";
 import { getVehicleReservationNumber } from "@shared/recordNumbers";
 import { getCheckoutOpenTime, isCheckoutWindowOpen } from "@shared/fleetReservationPolicy";
 
@@ -417,6 +418,21 @@ export default function VehicleReservationDetails() {
       )}
 
       <div className="flex gap-3 flex-wrap">
+        {hasVehicle && isFleetPrivilegedRole(currentUser) && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() =>
+              setLocation(
+                `/vehicles/${vehicle.id}?tab=${isCheckoutComplete ? "logbook" : "reservations"}`,
+              )
+            }
+            data-testid="button-view-vehicle-history"
+          >
+            View vehicle history
+          </Button>
+        )}
+
         {showEditButton && (
           <Button
             variant="outline"

@@ -22,7 +22,6 @@ const Requests = lazyWithRetry(() => import("@/pages/Requests"));
 const RequestDetail = lazyWithRetry(() => import("@/pages/RequestDetail"));
 const NewRequest = lazyWithRetry(() => import("@/pages/NewRequest"));
 const Settings = lazyWithRetry(() => import("@/pages/Settings"));
-const Calendar = lazyWithRetry(() => import("@/pages/Calendar"));
 const PropertyMapPage = lazyWithRetry(() => import("@/pages/PropertyMapPage"));
 const PropertyDetail = lazyWithRetry(() => import("@/pages/PropertyDetail"));
 const EquipmentWorkHistory = lazyWithRetry(() => import("@/pages/EquipmentWorkHistory"));
@@ -192,14 +191,12 @@ function SettingsRoute() {
   );
 }
 
-function CalendarRoute() {
-  return (
-    <DomainErrorBoundary domain="Calendar">
-      <RoleGuard allowedRoles={["admin", "technician"]}>
-        <Calendar />
-      </RoleGuard>
-    </DomainErrorBoundary>
-  );
+function RetiredCalendarRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    exitTo(setLocation, "/work");
+  }, [setLocation]);
+  return null;
 }
 
 function PropertiesRoute() {
@@ -528,7 +525,7 @@ export function AppRoutes() {
       <Route path="/new-request" component={NewRequestRoute} />
       <Route path="/report" component={PublicReportRedirectRoute} />
       <Route path="/settings" component={SettingsRoute} />
-      <Route path="/calendar" component={CalendarRoute} />
+      <Route path="/calendar" component={RetiredCalendarRedirect} />
       <Route path="/properties" component={PropertiesRoute} />
       <Route path="/properties/:id" component={PropertyDetailRoute} />
       <Route path="/equipment/:id/work-history" component={EquipmentWorkHistoryRoute} />

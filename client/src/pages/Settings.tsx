@@ -437,6 +437,7 @@ export default function Settings() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
+                        className="h-12"
                         data-testid="input-first-name"
                       />
                     </div>
@@ -448,6 +449,7 @@ export default function Settings() {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
+                        className="h-12"
                         data-testid="input-last-name"
                       />
                     </div>
@@ -461,6 +463,7 @@ export default function Settings() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter email address"
+                      className="h-12"
                       data-testid="input-email"
                     />
                   </div>
@@ -473,6 +476,7 @@ export default function Settings() {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="Enter phone number"
+                      className="h-12"
                       data-testid="input-phone-number"
                     />
                   </div>
@@ -481,7 +485,7 @@ export default function Settings() {
                     <Input
                       value={user?.username || ""}
                       disabled
-                      className="bg-muted"
+                      className="h-12 bg-muted"
                       data-testid="input-username-disabled"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -493,7 +497,7 @@ export default function Settings() {
                     <Input
                       value={user?.role || ""}
                       disabled
-                      className="bg-muted capitalize"
+                      className="h-12 bg-muted capitalize"
                       data-testid="input-role-disabled"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -502,6 +506,7 @@ export default function Settings() {
                   </div>
                   <Button
                     type="submit"
+                    className="h-12 w-full sm:w-auto"
                     disabled={updateProfileMutation.isPending}
                     data-testid="button-update-profile"
                   >
@@ -533,6 +538,7 @@ export default function Settings() {
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter current password"
                       required
+                      className="h-12"
                       data-testid="input-current-password"
                     />
                   </div>
@@ -547,6 +553,7 @@ export default function Settings() {
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
                       required
+                      className="h-12"
                       data-testid="input-new-password"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -563,11 +570,13 @@ export default function Settings() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
                       required
+                      className="h-12"
                       data-testid="input-confirm-password"
                     />
                   </div>
                   <Button
                     type="submit"
+                    className="h-12 w-full sm:w-auto"
                     disabled={changePasswordMutation.isPending}
                     data-testid="button-change-password"
                   >

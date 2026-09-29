@@ -39,9 +39,9 @@ export function registerAuthRoutes(app: Express) {
     }
 
     try {
-      const allUsers = await storage.getAllUsers();
+      const anyUsers = await storage.hasAnyUsers();
 
-      if (allUsers.length === 0) {
+      if (!anyUsers) {
         const allowBootstrap =
           process.env.ALLOW_FIRST_USER_SETUP === "true" || process.env.NODE_ENV !== "production";
         if (!allowBootstrap) {

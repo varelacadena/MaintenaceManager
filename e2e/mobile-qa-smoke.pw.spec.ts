@@ -34,7 +34,6 @@ const adminRoutes: { path: string; ready?: string }[] = [
   { path: "/work", ready: "text-page-title" },
   { path: "/requests", ready: "input-search" },
   { path: "/new-request" },
-  { path: "/calendar" },
   { path: "/analytics", ready: "button-date-filter" },
   { path: "/properties" },
   { path: "/users" },

@@ -30,6 +30,7 @@ import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
+import { taskDeleteWarning, getUserDisplayName } from "@/utils/taskUtils";
 import { format } from "date-fns";
 import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem } from "@shared/schema";
 import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";
@@ -481,7 +482,7 @@ export function TaskEditMode({
                     <SelectLabel>{label}</SelectLabel>
                     {roleUsers.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username}
+                        {getUserDisplayName(u)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -516,7 +517,7 @@ export function TaskEditMode({
                       );
                     }}
                   >
-                    {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username}
+                    {getUserDisplayName(u)}
                   </button>
                 );
               })}
@@ -715,8 +716,7 @@ export function TaskEditMode({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this task?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent and cannot be undone. All subtasks, notes, and attachments
-              associated with this task will also be removed.
+              {taskDeleteWarning(task)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

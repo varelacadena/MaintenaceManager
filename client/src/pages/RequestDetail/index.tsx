@@ -51,6 +51,7 @@ export default function RequestDetail() {
         property={hook.property}
         space={hook.space}
         linkedTask={hook.linkedTask}
+        linkedTaskLoaded={hook.linkedTaskLoaded}
         navigate={hook.navigate}
         getStatusLabel={hook.getStatusLabel}
         getStatusVariant={hook.getStatusVariant}
@@ -78,7 +79,9 @@ export default function RequestDetail() {
         property={hook.property}
         space={hook.space}
         linkedTask={hook.linkedTask}
+        linkedTaskLoaded={hook.linkedTaskLoaded}
         canReviewRequest={hook.canReviewRequest}
+        canReplaceMissingTask={hook.canReplaceMissingTask}
         canMarkUnderReview={hook.canMarkUnderReview}
         getStatusVariant={hook.getStatusVariant}
         getStatusLabel={hook.getStatusLabel}
@@ -101,10 +104,12 @@ export default function RequestDetail() {
       requester={hook.requester}
       reporter={hook.reporter}
       property={hook.property}
-      space={hook.space}
-      linkedTask={hook.linkedTask}
-      canReviewRequest={hook.canReviewRequest}
-      canMarkUnderReview={hook.canMarkUnderReview}
+        space={hook.space}
+        linkedTask={hook.linkedTask}
+        linkedTaskLoaded={hook.linkedTaskLoaded}
+        canReviewRequest={hook.canReviewRequest}
+        canReplaceMissingTask={hook.canReplaceMissingTask}
+        canMarkUnderReview={hook.canMarkUnderReview}
       getStatusVariant={hook.getStatusVariant}
       getStatusLabel={hook.getStatusLabel}
       getPriorityColor={hook.getPriorityColor}

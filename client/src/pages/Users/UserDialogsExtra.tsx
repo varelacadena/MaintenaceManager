@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,7 +58,7 @@ export function UserDialogsExtra({ ctx }: { ctx: UsersContext }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
-              AI Profile — {selectedUser?.firstName && selectedUser?.lastName ? `${selectedUser.firstName} ${selectedUser.lastName}` : selectedUser?.username}
+              AI Profile — {selectedUser ? getUserDisplayName(selectedUser) : ""}
             </DialogTitle>
             <DialogDescription>
               Configure availability and skills used by the AI scheduling agent

@@ -31,6 +31,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateDashboard } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems, SpaceSelectItems } from "@/components/PropertySelectItems";
 import type { Property, Space } from "@shared/schema";
 import { z } from "zod";
@@ -171,6 +172,7 @@ export default function NewRequest() {
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
+      invalidateDashboard();
 
       toast({
         title: "Request Submitted",

@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
 import { useScrollAwareClick } from "@/hooks/useScrollAwareClick";
 import type { Task, User } from "@shared/schema";
-import { getAvatarColor } from "@/utils/taskUtils";
+import { getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
 import type { StatusType } from "./constants";
 
 const WORK_TABLE_COLUMN_COUNT = 7;
@@ -84,13 +84,7 @@ export const WorkSubtaskList = memo(function WorkSubtaskList({
                 const assignee = subtask.assignedToId
                   ? allUsers?.find((u) => u.id === subtask.assignedToId)
                   : null;
-                const assigneeInitials = assignee
-                  ? (
-                      assignee.firstName && assignee.lastName
-                        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
-                        : assignee.username?.[0] || "?"
-                    ).toUpperCase()
-                  : null;
+                const assigneeInitials = assignee ? getInitials(assignee) : null;
 
                 return (
                   <li
@@ -132,9 +126,7 @@ export const WorkSubtaskList = memo(function WorkSubtaskList({
                       <Avatar
                         className="w-6 h-6 shrink-0"
                         title={
-                          assignee.firstName && assignee.lastName
-                            ? `${assignee.firstName} ${assignee.lastName}`
-                            : assignee.username
+                          getUserDisplayName(assignee)
                         }
                       >
                         <AvatarFallback

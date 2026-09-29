@@ -113,7 +113,7 @@ export default function VehicleCheckInVerification() {
               : "The vehicle has been marked as needing maintenance.",
       });
       if (checkInLog?.vehicleId) {
-        exitTo(setLocation, `/vehicles/${checkInLog.vehicleId}`);
+        exitTo(setLocation, `/vehicles/${checkInLog.vehicleId}?tab=logbook`);
       }
     },
     onError: (error: Error) => {
@@ -203,7 +203,7 @@ export default function VehicleCheckInVerification() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => exitTo(setLocation, `/vehicles/${vehicle.id}`)}
+          onClick={() => exitTo(setLocation, `/vehicles/${vehicle.id}?tab=logbook`)}
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -215,7 +215,7 @@ export default function VehicleCheckInVerification() {
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">Check-In Verification</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {vehicle ? (
-              <Link href={`/vehicles/${vehicle.id}`}>
+              <Link href={`/vehicles/${vehicle.id}?tab=logbook`}>
                 <button className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1 transition-colors">
                   {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
                   <ExternalLink className="h-3 w-3" />

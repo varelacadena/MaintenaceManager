@@ -11,7 +11,6 @@ export function isNavItemActive(location: string, itemUrl: string): boolean {
   }
 
   const prefixRoutes = [
-    "/calendar",
     "/vehicles",
     "/tools-equipment",
     "/requests",
@@ -124,7 +123,6 @@ export function getParentRoute(pathname: string, role?: string): string {
     path === "/users" ||
     path === "/students" ||
     path === "/vendors" ||
-    path === "/calendar" ||
     path === "/settings" ||
     path === "/email-management" ||
     path === "/resources"

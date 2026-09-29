@@ -270,9 +270,11 @@ export function registerVehicleRoutes(app: Express) {
         offset: req.query.offset as string | undefined,
       });
 
+      // Org-wide lists are paged. A single vehicle's history is returned in full
+      // unless the caller asks for a page, so the car page can show every trip.
       const resolvedPagination =
         pagination ??
-        (isFleetPrivilegedUser(currentUser)
+        (isFleetPrivilegedUser(currentUser) && !vehicleId
           ? { limit: 100, offset: 0 }
           : null);
 

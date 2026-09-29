@@ -131,6 +131,7 @@ export interface IStorage {
   }): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
+  hasAnyUsers(): Promise<boolean>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUsersByRoles(roles: string[]): Promise<User[]>;
@@ -175,8 +176,9 @@ export interface IStorage {
   createSubdivision(subdivision: InsertSubdivision): Promise<Subdivision>;
   deleteSubdivision(id: string): Promise<void>;
 
-  getServiceRequests(filters?: { userId?: string; status?: string; limit?: number }): Promise<ServiceRequest[]>;
+  getServiceRequests(filters?: { userId?: string; status?: string; statuses?: string[]; limit?: number }): Promise<ServiceRequest[]>;
   countServiceRequests(filters?: { userId?: string; statuses?: string[] }): Promise<number>;
+  repairConvertedRequestsWithoutTasks(): Promise<number>;
   getServiceRequest(id: string): Promise<ServiceRequest | undefined>;
   createServiceRequest(request: InsertServiceRequest): Promise<ServiceRequest>;
   updateServiceRequest(id: string, data: Partial<InsertServiceRequest>): Promise<ServiceRequest | undefined>;
@@ -508,6 +510,7 @@ export class DatabaseStorage implements IStorage {
   updateUser = userStorage.updateUser;
   deleteUser = userStorage.deleteUser;
   getAllUsers = userStorage.getAllUsers;
+  hasAnyUsers = userStorage.hasAnyUsers;
   getUserByUsername = userStorage.getUserByUsername;
   getUserByEmail = userStorage.getUserByEmail;
   getUsersByRoles = userStorage.getUsersByRoles;
@@ -597,6 +600,7 @@ export class DatabaseStorage implements IStorage {
 
   getServiceRequests = serviceRequestStorage.getServiceRequests;
   countServiceRequests = serviceRequestStorage.countServiceRequests;
+  repairConvertedRequestsWithoutTasks = serviceRequestStorage.repairConvertedRequestsWithoutTasks;
   getServiceRequest = serviceRequestStorage.getServiceRequest;
   createServiceRequest = serviceRequestStorage.createServiceRequest;
   updateServiceRequest = serviceRequestStorage.updateServiceRequest;

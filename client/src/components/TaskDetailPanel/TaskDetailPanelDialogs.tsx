@@ -29,6 +29,7 @@ import { BarcodeScanner } from "../BarcodeScanner";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
 import { ManualTimeLogFields } from "@/components/ManualTimeLogFields";
 import { durationFromHoursAndMinutes } from "@/lib/timeEntryUtils";
+import { taskDeleteWarning } from "@/utils/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
 interface TaskDetailPanelDialogsProps {
@@ -43,7 +44,7 @@ export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this task?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The task and all its subtasks will be permanently removed.
+              {ctx.task ? taskDeleteWarning(ctx.task) : "This permanently removes the task."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -23,6 +23,7 @@ import { ObjectUploader } from "../ObjectUploader";
 import { BarcodeScanner } from "../BarcodeScanner";
 import { format } from "date-fns";
 import { resolveTimeEntryUserName } from "@/lib/displayNames";
+import { taskDeleteWarning } from "@/utils/taskUtils";
 import type { MobileTaskDetailProps } from "./types";
 
 interface MobileTaskDialogsProps {
@@ -135,7 +136,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this task? This action cannot be undone.
+              {taskDeleteWarning(task)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -56,7 +56,7 @@ export function TaskDetailPanel({
     urg, isOverdue,
     totalSubtasks, allSubtasksComplete,
     handleStartTask, handleMarkComplete, updateStatusMutation,
-    setIsEditMode, setDeleteDialogOpen, isEditMode,
+    setIsEditMode, setDeleteDialogOpen, isEditMode, stopRecurrenceMutation,
   } = ctx;
 
   if (ctx.isTaskLoadError || (!isLoading && !task)) {
@@ -194,6 +194,15 @@ export function TaskDetailPanel({
                   <Pencil className="w-4 h-4" />
                   Edit Task
                 </DropdownMenuItem>
+                {task?.taskType === "recurring" && task.recurringFrequency && (
+                  <DropdownMenuItem
+                    className="gap-2"
+                    onClick={() => stopRecurrenceMutation.mutate()}
+                    data-testid="button-panel-stop-recurrence"
+                  >
+                    Stop future tasks
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-panel-delete">
                   <Trash2 className="w-4 h-4" />
                   Delete Task

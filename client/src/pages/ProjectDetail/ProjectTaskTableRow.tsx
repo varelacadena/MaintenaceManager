@@ -22,13 +22,7 @@ import { EditableDateCell } from "@/components/EditableDateCell";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./useProjectDetail";
-import {
-  urgencyConfig,
-  taskStatusBadgeColors as tableBadgeColors,
-  statusDotColors,
-  taskStatusConfig,
-  getAvatarColor,
-} from "@/utils/taskUtils";
+import { urgencyConfig, taskStatusBadgeColors as tableBadgeColors, statusDotColors, taskStatusConfig, getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
 
 export function ProjectTaskTableRow({
   task,
@@ -64,9 +58,7 @@ export function ProjectTaskTableRow({
   const assigneeName = resolveTaskAssigneeName(task, allUsers);
   const assignee = task.assignedToId ? allUsers?.find(u => u.id === task.assignedToId) : null;
   const assigneeInitials = assignee
-    ? (assignee.firstName && assignee.lastName
-        ? `${assignee.firstName[0]}${assignee.lastName[0]}`
-        : (assignee.username?.[0] || "?")).toUpperCase()
+    ? getInitials(assignee)
     : assigneeName !== "—"
       ? assigneeName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
       : null;
@@ -124,9 +116,7 @@ export function ProjectTaskTableRow({
                 <SelectLabel>{group.label}</SelectLabel>
                 {group.items.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
-                    {u.firstName && u.lastName
-                      ? `${u.firstName} ${u.lastName}`
-                      : u.username}
+                    {getUserDisplayName(u)}
                   </SelectItem>
                 ))}
               </SelectGroup>

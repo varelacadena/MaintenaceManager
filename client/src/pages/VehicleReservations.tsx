@@ -430,7 +430,23 @@ export function VehicleReservationsContent() {
                     </span>
                     <span className="text-muted-foreground text-xs">·</span>
                     <Car className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="font-semibold text-sm truncate">{getVehicleName(reservation.vehicleId)}</span>
+                    {reservation.vehicleId ? (
+                      <Link
+                        href={`/vehicles/${reservation.vehicleId}?tab=${
+                          reservation.status === "active" ||
+                          reservation.status === "pending_review" ||
+                          reservation.status === "completed"
+                            ? "logbook"
+                            : "reservations"
+                        }`}
+                        className="font-semibold text-sm truncate hover:underline"
+                        data-testid={`link-vehicle-history-${reservation.id}`}
+                      >
+                        {getVehicleName(reservation.vehicleId)}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-sm truncate">{getVehicleName(reservation.vehicleId)}</span>
+                    )}
                     <span className="text-muted-foreground text-xs">·</span>
                     <User className="h-3 w-3 text-muted-foreground shrink-0" />
                     <span className="text-sm font-medium truncate">{getUserName(reservation.userId)}</span>
@@ -615,6 +631,17 @@ export function VehicleReservationsContent() {
                   }
                   return null;
                 })()}
+                {reservation.vehicleId &&
+                  ["active", "pending_review", "completed"].includes(reservation.status) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setLocation(`/vehicles/${reservation.vehicleId}?tab=logbook`)}
+                    data-testid={`button-trip-history-${reservation.id}`}
+                  >
+                    Trip history
+                  </Button>
+                )}
                 {currentUser?.role === "admin" && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

@@ -31,7 +31,7 @@ import {
 import { statusColors, urgencyColors } from "./constants";
 import { MultiPropertyDisplay } from "./helpers";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
-import { formatTaskReferenceId } from "@/utils/taskUtils";
+import { formatTaskReferenceId, getUserDisplayName, taskDeleteWarning } from "@/utils/taskUtils";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 
@@ -47,7 +47,7 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
     isTechnicianOrAdmin,
     assignedUser,
     dateLabel, isOverdue,
-    isSubTask, deleteTaskMutation,
+    isSubTask, deleteTaskMutation, stopRecurrenceMutation,
   } = ctx;
 
   if (!task) return null;
@@ -91,7 +91,7 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Task?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. All associated data will be permanently deleted.
+                    {taskDeleteWarning(task)}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -118,7 +118,19 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
             </Badge>
             <Badge variant="secondary" className="text-xs capitalize" data-testid="badge-task-type">
               {task.taskType.replace("_", " ")}
+              {task.taskType === "recurring" && !task.recurringFrequency ? " · stopped" : ""}
             </Badge>
+            {task.taskType === "recurring" && task.recurringFrequency && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => stopRecurrenceMutation.mutate()}
+                disabled={stopRecurrenceMutation.isPending}
+                data-testid="button-stop-recurrence"
+              >
+                Stop future tasks
+              </Button>
+            )}
             {task.status === "completed" && (
               <Button
                 variant="outline"
@@ -136,11 +148,11 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
             <div className="flex items-center gap-1">
               <User className="w-3.5 h-3.5" />
               <span data-testid="text-assignee">
-                {task.assignedToId === user?.id 
+                {task.assignedToId === user?.id
                   ? "You"
-                  : assignedUser?.firstName && assignedUser?.lastName 
-                    ? `${assignedUser.firstName} ${assignedUser.lastName}` 
-                    : task.assignedPool === "student_pool" 
+                  : assignedUser
+                    ? getUserDisplayName(assignedUser)
+                    : task.assignedPool === "student_pool"
                       ? "Student Pool"
                       : task.assignedPool === "technician_pool"
                         ? "Technician Pool"

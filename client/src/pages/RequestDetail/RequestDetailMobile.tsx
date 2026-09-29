@@ -49,7 +49,9 @@ type RequestDetailMobileProps = Pick<
   | "property"
   | "space"
   | "linkedTask"
+  | "linkedTaskLoaded"
   | "canReviewRequest"
+  | "canReplaceMissingTask"
   | "canMarkUnderReview"
   | "getStatusVariant"
   | "getStatusLabel"
@@ -73,7 +75,9 @@ export function RequestDetailMobile({
   property,
   space,
   linkedTask,
+  linkedTaskLoaded,
   canReviewRequest,
+  canReplaceMissingTask,
   canMarkUnderReview,
   getStatusVariant,
   getStatusLabel,
@@ -161,8 +165,9 @@ export function RequestDetailMobile({
                         Cancel
                       </AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => {
+                        onClick={(event) => {
                           if (!rejectionReason.trim()) {
+                            event.preventDefault();
                             toast({
                               title: "Please provide a rejection reason",
                               variant: "destructive"
@@ -192,13 +197,25 @@ export function RequestDetailMobile({
             <div className="flex flex-col gap-2 rounded-lg border border-green-500/20 bg-green-500/5 p-3 text-sm text-green-700 dark:text-green-300">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 shrink-0" />
-                <span>Approved and converted to a work order.</span>
+                <span>
+                  {linkedTaskLoaded && !linkedTask
+                    ? "This request was approved. A work order still needs to be created."
+                    : "Approved and converted to a work order."}
+                </span>
               </div>
               {linkedTask && (
                 <Link href={`/tasks/${linkedTask.id}`}>
                   <Button variant="outline" size="sm" className="w-full gap-1.5" data-testid="button-view-linked-task-mobile">
                     <ExternalLink className="h-3.5 w-3.5" />
                     View work order
+                  </Button>
+                </Link>
+              )}
+              {canReplaceMissingTask && (
+                <Link href={`/tasks/new?requestId=${id}`}>
+                  <Button size="sm" className="w-full gap-1.5" data-testid="button-replace-missing-task-mobile">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Create task
                   </Button>
                 </Link>
               )}
@@ -243,6 +260,12 @@ export function RequestDetailMobile({
                       {property.name}
                       {space && <span className="text-muted-foreground" data-testid="text-space"> / {space.name}</span>}
                     </span>
+                  </div>
+                )}
+                {request.category && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Category</span>
+                    <span data-testid="text-category">{request.category}</span>
                   </div>
                 )}
                 

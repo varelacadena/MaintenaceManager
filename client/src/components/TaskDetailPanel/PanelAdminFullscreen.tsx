@@ -148,7 +148,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
     toggleChecklistItemMutation,
     editingNoteId, setEditingNoteId, editNoteContent, setEditNoteContent,
     updateNoteMutation, setDeleteNoteId, setIsAddNoteDialogOpen,
-    setIsEditMode, setDeleteDialogOpen,
+    setIsEditMode, setDeleteDialogOpen, stopRecurrenceMutation,
     setDeleteTimeEntryId,
     setIsLogTimeDialogOpen,
     logTimeHours, setLogTimeHours, logTimeMinutes, setLogTimeMinutes, logTimeDate, setLogTimeDate,
@@ -215,6 +215,15 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
           <DropdownMenuItem className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit-mobile">
             <Pencil className="w-4 h-4" />
             Edit Task
+          </DropdownMenuItem>
+        )}
+        {task.taskType === "recurring" && task.recurringFrequency && (
+          <DropdownMenuItem
+            className="gap-2"
+            onClick={() => stopRecurrenceMutation.mutate()}
+            data-testid="button-admin-stop-recurrence"
+          >
+            Stop future tasks
           </DropdownMenuItem>
         )}
         <DropdownMenuItem className="text-red-600 gap-2" onClick={() => setDeleteDialogOpen(true)} data-testid="button-admin-delete">

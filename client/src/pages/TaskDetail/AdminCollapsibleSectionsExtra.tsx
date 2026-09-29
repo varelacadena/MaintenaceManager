@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -226,7 +227,7 @@ export function AdminCollapsibleSectionsExtra({ ctx }: { ctx: TaskDetailContext 
                           )}
                           {quoteCreator && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Submitted by {quoteCreator.firstName && quoteCreator.lastName ? `${quoteCreator.firstName} ${quoteCreator.lastName}` : quoteCreator.username}
+                              Submitted by {getUserDisplayName(quoteCreator)}
                             </p>
                           )}
                           {quote.notes && (

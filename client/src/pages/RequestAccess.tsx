@@ -112,7 +112,7 @@ export default function RequestAccess() {
             </p>
             <Button
               variant="outline"
-              className="mt-4"
+              className="mt-4 h-12 w-full"
               onClick={() => (window.location.href = "/login")}
               data-testid="button-back-to-login"
             >
@@ -155,6 +155,7 @@ export default function RequestAccess() {
                   value={formData.firstName}
                   onChange={(e) => updateField("firstName", e.target.value)}
                   disabled={isLoading}
+                  className="h-12"
                   data-testid="input-first-name"
                 />
                 {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
@@ -166,6 +167,7 @@ export default function RequestAccess() {
                   value={formData.lastName}
                   onChange={(e) => updateField("lastName", e.target.value)}
                   disabled={isLoading}
+                  className="h-12"
                   data-testid="input-last-name"
                 />
                 {errors.lastName && <p className="text-xs text-red-500">{errors.lastName}</p>}
@@ -180,6 +182,7 @@ export default function RequestAccess() {
                 value={formData.email}
                 onChange={(e) => updateField("email", e.target.value)}
                 disabled={isLoading}
+                className="h-12"
                 data-testid="input-email"
               />
               {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
@@ -193,6 +196,7 @@ export default function RequestAccess() {
                 value={formData.phoneNumber}
                 onChange={(e) => updateField("phoneNumber", e.target.value)}
                 disabled={isLoading}
+                className="h-12"
                 data-testid="input-phone"
               />
             </div>
@@ -204,6 +208,7 @@ export default function RequestAccess() {
                 value={formData.username}
                 onChange={(e) => updateField("username", e.target.value)}
                 disabled={isLoading}
+                className="h-12"
                 data-testid="input-signup-username"
               />
               {errors.username && <p className="text-xs text-red-500">{errors.username}</p>}
@@ -218,6 +223,7 @@ export default function RequestAccess() {
                   value={formData.password}
                   onChange={(e) => updateField("password", e.target.value)}
                   disabled={isLoading}
+                  className="h-12"
                   data-testid="input-signup-password"
                 />
                 {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
@@ -230,6 +236,7 @@ export default function RequestAccess() {
                   value={formData.confirmPassword}
                   onChange={(e) => updateField("confirmPassword", e.target.value)}
                   disabled={isLoading}
+                  className="h-12"
                   data-testid="input-confirm-password"
                 />
                 {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword}</p>}
@@ -243,7 +250,7 @@ export default function RequestAccess() {
                 onValueChange={(value) => updateField("requestedRole", value)}
                 disabled={isLoading}
               >
-                <SelectTrigger data-testid="select-role">
+                <SelectTrigger className="h-12" data-testid="select-role">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -255,7 +262,7 @@ export default function RequestAccess() {
               {errors.requestedRole && <p className="text-xs text-red-500">{errors.requestedRole}</p>}
             </div>
 
-            <Button type="submit" size="lg" className="w-full mt-4" disabled={isLoading} data-testid="button-submit-request">
+            <Button type="submit" size="lg" className="w-full h-12 mt-4" disabled={isLoading} data-testid="button-submit-request">
               {isLoading ? "Submitting..." : "Submit Request"}
             </Button>
 
@@ -269,7 +276,7 @@ export default function RequestAccess() {
               </a>
               <a
                 href="/login"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex min-h-11 items-center justify-center text-sm text-muted-foreground hover:text-foreground transition-colors"
                 data-testid="link-back-to-login"
               >
                 Already have an account? Sign in

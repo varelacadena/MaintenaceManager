@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TECH_PERMISSION_LABELS, type TechPermissionKey } from "@shared/techPermissions";
 import type { UsersContext } from "./useUsers";
 import { formatUserDisplayName } from "@/lib/displayNames";
+import { getInitials } from "@/utils/taskUtils";
 
 const PERMISSION_KEYS: TechPermissionKey[] = ["equipment", "fleet", "inventory"];
 
@@ -41,10 +42,7 @@ export function PermissionsTabContent({ ctx }: { ctx: UsersContext }) {
       </CardHeader>
       <CardContent className="p-3 md:p-4 pt-0 space-y-4">
         {technicians.map((user) => {
-          const initials =
-            user.firstName && user.lastName
-              ? `${user.firstName[0]}${user.lastName[0]}`
-              : user.username?.[0]?.toUpperCase() || "T";
+          const initials = getInitials(user);
 
           return (
             <div

@@ -14,7 +14,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { lazy, Suspense, useState, useMemo } from "react";
-import type { ServiceRequest, Task, VehicleReservation, User as UserType, Property, Project } from "@shared/schema";
+import type { ServiceRequest, Task, VehicleReservation, User as UserType, Property } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -68,15 +68,16 @@ export default function Dashboard() {
   type DashboardPayload = {
     tasks?: Task[];
     requests?: ServiceRequest[];
+    waitingRequestCount?: number;
     users?: UserType[];
     properties?: Property[];
     vehicleReservations?: VehicleReservation[];
-    projects?: Project[];
     aiStats?: AiStats;
   };
 
   const { data: dashboard, isLoading: dashboardLoading } = useQuery<DashboardPayload>({
     queryKey: ["/api/dashboard"],
+    refetchOnMount: "always",
     queryFn: async () => {
       const res = await fetch("/api/dashboard", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch dashboard");
@@ -86,10 +87,10 @@ export default function Dashboard() {
 
   const tasks = dashboard?.tasks ?? [];
   const requests = dashboard?.requests ?? [];
+  const waitingRequestCount = dashboard?.waitingRequestCount ?? requests.filter((request) => request.status === "pending" || request.status === "under_review").length;
   const users = dashboard?.users ?? [];
   const properties = dashboard?.properties ?? [];
   const vehicleReservations = dashboard?.vehicleReservations ?? [];
-  const projects = dashboard?.projects ?? [];
   const aiStats = dashboard?.aiStats;
 
   const statusMutation = useMutation({
@@ -634,8 +635,8 @@ export default function Dashboard() {
         tasks={baseTasks}
         users={users}
         properties={properties}
-        projects={projects}
         requests={requests}
+        waitingRequestCount={waitingRequestCount}
         vehicleReservations={vehicleReservations}
         aiStats={aiStats}
         onStatusChange={handleStatusChange}

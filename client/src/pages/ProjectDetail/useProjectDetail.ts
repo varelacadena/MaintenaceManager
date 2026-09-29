@@ -11,7 +11,7 @@ import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Project, Task, Property, User, ProjectComment, Upload } from "@shared/schema";
 import { format } from "date-fns";
-import { getAvatarColor } from "@/utils/taskUtils";
+import { getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
 
 export type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
 
@@ -401,9 +401,7 @@ export function useProjectDetail() {
   const getSenderInfo = (senderId: string) => {
     const u = allUsers?.find(u => u.id === senderId);
     if (!u) return { name: "Unknown", initials: "?" };
-    const name = u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username || "Unknown";
-    const initials = u.firstName && u.lastName ? `${u.firstName[0]}${u.lastName[0]}` : (u.username?.[0] || "?");
-    return { name, initials: initials.toUpperCase() };
+    return { name: getUserDisplayName(u), initials: getInitials(u) };
   };
 
   const imageUploads = (projectUploads || []).filter(u => u.fileType?.startsWith("image/"));

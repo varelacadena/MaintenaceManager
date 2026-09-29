@@ -9,7 +9,7 @@ import {
   formatLiveDuration,
   formatWeekLabel,
   localDateString,
-  weekDurationMs,
+  resolveEntryMinutes,
 } from "@shared/studentPortal";
 import type { User } from "@shared/schema";
 import { useStudentRecaps, useStudentTimeClock, type StudentRecapDto } from "./studentPortalApi";
@@ -62,9 +62,10 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
   const elapsed = openEntry?.clockInAt
     ? formatLiveDuration(elapsedMilliseconds(openEntry.clockInAt, now))
     : null;
-  const weekTotal = openEntry?.clockInAt
-    ? formatLiveDuration(weekDurationMs(clockQuery.data?.weekMinutes ?? 0, openEntry.clockInAt, now))
-    : formatDurationMinutes(clockQuery.data?.weekMinutes ?? 0);
+  const openMinutes = openEntry?.clockInAt
+    ? resolveEntryMinutes(openEntry.clockInAt, null, null, new Date(now))
+    : 0;
+  const weekTotal = formatDurationMinutes((clockQuery.data?.weekMinutes ?? 0) + openMinutes);
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto space-y-5">
@@ -73,7 +74,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
           Daily Recap
         </h1>
         <p className="text-sm text-muted-foreground">
-          Hi {user.firstName || "there"} — when you are done, write your recap. Clock out is the next step after that.
+          Hi {user.firstName?.trim() || user.username?.trim() || "there"} — when you are done, write your recap. Clock out is the next step after that.
         </p>
       </div>
 
@@ -113,7 +114,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
         <Button
           type="button"
           variant={hasShiftRecap ? "destructive" : "default"}
-          className="w-full h-14 text-lg font-semibold"
+          className="w-full h-12 text-base font-semibold"
           onClick={() => setClockOutOpen(true)}
           data-testid="button-start-clock-out"
         >

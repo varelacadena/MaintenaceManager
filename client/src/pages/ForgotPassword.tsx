@@ -63,7 +63,7 @@ export default function ForgotPassword() {
                 If an account with that username or email exists and has an email address on file, a recovery link has been sent. Please check your inbox.
               </div>
               <Link href="/login">
-                <Button variant="outline" className="w-full" data-testid="button-back-to-login">
+                <Button variant="outline" className="w-full h-12" data-testid="button-back-to-login">
                   Back to Sign In
                 </Button>
               </Link>
@@ -86,7 +86,7 @@ export default function ForgotPassword() {
                   required
                   disabled={isLoading}
                   data-testid="input-username"
-                  className="h-11"
+                  className="h-12"
                 />
                 {error && (
                   <p className="text-sm text-red-500 font-medium mt-1">{error}</p>
@@ -95,7 +95,7 @@ export default function ForgotPassword() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full mt-2"
+                className="w-full h-12 mt-2"
                 disabled={isLoading || !username.trim()}
                 data-testid="button-send-reset"
               >
@@ -105,7 +105,7 @@ export default function ForgotPassword() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="w-full"
+                  className="w-full h-12"
                   data-testid="button-back-to-login"
                 >
                   Back to Sign In

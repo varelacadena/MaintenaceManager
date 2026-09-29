@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/utils/taskUtils";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -630,9 +631,7 @@ export default function EditTask() {
                               <SelectLabel>{group.label}</SelectLabel>
                               {group.items.map((user) => (
                                 <SelectItem key={user.id} value={user.id}>
-                                  {user.firstName && user.lastName 
-                                    ? `${user.firstName} ${user.lastName}` 
-                                    : user.username}
+                                  {getUserDisplayName(user)}
                                 </SelectItem>
                               ))}
                             </SelectGroup>
@@ -707,9 +706,7 @@ export default function EditTask() {
                               );
                             }}
                           >
-                            {technician.firstName && technician.lastName
-                              ? `${technician.firstName} ${technician.lastName}`
-                              : technician.username}
+                            {getUserDisplayName(technician)}
                           </button>
                         );
                       })}
@@ -741,9 +738,7 @@ export default function EditTask() {
                               );
                             }}
                           >
-                            {student.firstName && student.lastName
-                              ? `${student.firstName} ${student.lastName}`
-                              : student.username}
+                            {getUserDisplayName(student)}
                           </button>
                         );
                       })}

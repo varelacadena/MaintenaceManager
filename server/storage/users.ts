@@ -87,6 +87,11 @@ export async function getAllUsers(): Promise<User[]> {
   return await db.select().from(users);
 }
 
+export async function hasAnyUsers(): Promise<boolean> {
+  const [row] = await db.select({ id: users.id }).from(users).limit(1);
+  return Boolean(row);
+}
+
 export async function getUserByUsername(username: string): Promise<User | undefined> {
   const [user] = await db
     .select()

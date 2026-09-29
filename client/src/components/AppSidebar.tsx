@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   ClipboardList,
-  Calendar,
   Settings,
   Wrench,
   Building2,
@@ -42,7 +41,7 @@ import {
   canManageInventory,
   canManageEquipment,
 } from "@shared/techPermissions";
-import { useStudentRecaps, useStudentTimeClock } from "@/pages/StudentPortal/studentPortalApi";
+import { useStudentTimeClock } from "@/pages/StudentPortal/studentPortalApi";
 
 interface AppSidebarProps {
   user: User | null | undefined;
@@ -56,7 +55,6 @@ const roleMenus = {
     { title: "Service Requests", url: "/requests", icon: ClipboardList },
     { title: "Work", url: "/work", icon: FolderKanban },
     { title: "Students", url: "/students", icon: GraduationCap },
-    { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Resource Library", url: "/resources", icon: BookOpen },
     { title: "Vehicles", url: "/vehicles", icon: Car },
@@ -68,7 +66,6 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
-    { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
@@ -94,18 +91,11 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
   const [location] = useLocation();
   const userRole = user?.role as "admin" | "staff" | "student" | "technician" | undefined;
   const studentClock = useStudentTimeClock(userRole === "student");
-  const studentRecaps = useStudentRecaps(userRole === "student");
   const menuItems = (() => {
     if (!userRole) return [];
     const base = roleMenus[userRole];
-    if (userRole === "student") {
-      const openEntry = studentClock.data?.openEntry;
-      const hasShiftRecap = Boolean(
-        openEntry?.id && (studentRecaps.data ?? []).some((recap) => recap.timeEntryId === openEntry.id),
-      );
-      if (!hasShiftRecap) {
-        return base.filter((item) => item.url !== "/clock-out");
-      }
+    if (userRole === "student" && !studentClock.data?.openEntry) {
+      return base.filter((item) => item.url !== "/clock-out");
     }
     if (userRole !== "technician") return base;
 
@@ -182,6 +172,7 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
+                      size={isMobile ? "lg" : "default"}
                       isActive={isNavItemActive(location, item.url)}
                       tooltip={item.title}
                     >
@@ -228,8 +219,9 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
               await fetch("/api/logout", { method: "POST" });
               window.location.href = "/";
             }}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover-elevate"
-            title="Sign Out"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover-elevate"
+            title="Sign out"
+            aria-label="Sign out"
             data-testid="button-sidebar-logout"
           >
             <LogOut className="w-4 h-4" />

@@ -48,12 +48,7 @@ import type {
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
-import {
-  urgencyBadgeStyles as urgencyColors,
-  statusBadgeStyles as statusColors,
-  statusLabels,
-  formatTaskReferenceId,
-} from "@/utils/taskUtils";
+import { urgencyBadgeStyles as urgencyColors, statusBadgeStyles as statusColors, statusLabels, formatTaskReferenceId, getUserDisplayName } from "@/utils/taskUtils";
 
 interface CompletedTaskSummaryProps {
   taskId: string;
@@ -210,7 +205,7 @@ function SummaryContent({
 
   const assignee = task?.assignedToId ? users.find(u => u.id === task.assignedToId) : null;
   const assigneeName = assignee
-    ? (assignee.firstName && assignee.lastName ? `${assignee.firstName} ${assignee.lastName}` : assignee.username)
+    ? (getUserDisplayName(assignee))
     : "Unassigned";
 
   const totalMinutes = timeEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
@@ -365,9 +360,7 @@ function SummaryContent({
               {timeEntries.map((entry) => {
                 const entryUser = users.find(u => u.id === entry.userId);
                 const entryName = entryUser
-                  ? (entryUser.firstName && entryUser.lastName
-                      ? `${entryUser.firstName} ${entryUser.lastName}`
-                      : entryUser.username)
+                  ? (getUserDisplayName(entryUser))
                   : "Unknown";
                 return (
                   <div
@@ -415,9 +408,7 @@ function SummaryContent({
               {taskNotes.map((note) => {
                 const noteAuthor = users.find((u) => u.id === note.userId);
                 const authorName = noteAuthor
-                  ? (noteAuthor.firstName && noteAuthor.lastName
-                      ? `${noteAuthor.firstName} ${noteAuthor.lastName}`
-                      : noteAuthor.username)
+                  ? (getUserDisplayName(noteAuthor))
                   : "Unknown";
                 return (
                   <div
@@ -593,9 +584,7 @@ function SummaryContent({
               {subTasks.map((sub) => {
                 const subAssignee = sub.assignedToId ? users.find(u => u.id === sub.assignedToId) : null;
                 const subName = subAssignee
-                  ? (subAssignee.firstName && subAssignee.lastName
-                      ? `${subAssignee.firstName} ${subAssignee.lastName}`
-                      : subAssignee.username)
+                  ? (getUserDisplayName(subAssignee))
                   : "Unassigned";
                 return (
                   <div

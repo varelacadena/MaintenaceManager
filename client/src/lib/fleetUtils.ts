@@ -27,6 +27,13 @@ export function isPaginatedResponse<T>(data: unknown): data is PaginatedResponse
   );
 }
 
+/** Fleet list endpoints return either a bare array or `{ items, total }`. */
+export function itemsFromListResponse<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (isPaginatedResponse<T>(data)) return data.items;
+  return [];
+}
+
 function appendPagination(params: URLSearchParams, page: number, pageSize: number) {
   params.set("limit", String(pageSize));
   params.set("offset", String(page * pageSize));

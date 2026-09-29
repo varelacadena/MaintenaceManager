@@ -76,7 +76,7 @@ export default function ResetPassword() {
               This password reset link is invalid or missing a token.
             </p>
             <Link href="/forgot-password">
-              <Button className="w-full" data-testid="button-request-new-link">
+              <Button className="w-full h-12" data-testid="button-request-new-link">
                 Request a New Link
               </Button>
             </Link>
@@ -113,7 +113,7 @@ export default function ResetPassword() {
                 Your password has been reset successfully. You can now sign in with your new password.
               </div>
               <Link href="/login">
-                <Button className="w-full" data-testid="button-go-to-login">
+                <Button className="w-full h-12" data-testid="button-go-to-login">
                   Go to Sign In
                 </Button>
               </Link>
@@ -136,7 +136,7 @@ export default function ResetPassword() {
                   required
                   disabled={isLoading}
                   data-testid="input-new-password"
-                  className="h-11"
+                  className="h-12"
                 />
               </div>
               <div className="space-y-2">
@@ -155,7 +155,7 @@ export default function ResetPassword() {
                   required
                   disabled={isLoading}
                   data-testid="input-confirm-password"
-                  className="h-11"
+                  className="h-12"
                 />
                 {error && (
                   <p className="text-sm text-red-500 font-medium mt-1">{error}</p>
@@ -164,7 +164,7 @@ export default function ResetPassword() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full mt-2"
+                className="w-full h-12 mt-2"
                 disabled={isLoading || !newPassword || !confirmPassword}
                 data-testid="button-reset-password"
               >
@@ -174,7 +174,7 @@ export default function ResetPassword() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="w-full"
+                  className="w-full h-12"
                   data-testid="button-request-new-link"
                 >
                   Request a New Link

@@ -18,6 +18,8 @@ export type TaskListSummary = {
   assignedPool: string | null;
   estimateStatus: Task["estimateStatus"] | null;
   taskType: Task["taskType"];
+  description?: string;
+  vehicleName?: string | null;
   helperCount?: number;
   helperUserIds?: string[];
   isHelper?: boolean;
@@ -44,6 +46,10 @@ export function toTaskListSummary(
     assignedPool: task.assignedPool,
     estimateStatus: task.estimateStatus,
     taskType: task.taskType,
+    description: task.description
+      ? task.description.replace(/\s+/g, " ").trim().slice(0, 140)
+      : "",
+    vehicleName: task.vehicleName ?? null,
     helperCount: task.helperCount,
     helperUserIds: task.helperUserIds,
     isHelper: task.isHelper,

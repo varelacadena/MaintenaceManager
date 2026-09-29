@@ -39,6 +39,7 @@ export function ClockTimeFields({
         <Input
           id={`${idPrefix}-clock-in`}
           type="datetime-local"
+          step={0.001}
           value={clockIn}
           onChange={(event) => onClockInChange(event.target.value)}
           data-testid={`${idPrefix}-clock-in`}
@@ -49,6 +50,7 @@ export function ClockTimeFields({
         <Input
           id={`${idPrefix}-clock-out`}
           type="datetime-local"
+          step={0.001}
           value={clockOut}
           onChange={(event) => onClockOutChange(event.target.value)}
           data-testid={`${idPrefix}-clock-out`}

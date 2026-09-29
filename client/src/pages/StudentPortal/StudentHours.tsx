@@ -85,7 +85,7 @@ export default function StudentHours() {
   );
 
   const maxDayMinutes = useMemo(
-    () => Math.max(1, ...liveDays.map((day) => day.minutes), 1),
+    () => Math.max(8 * 60, ...liveDays.map((day) => day.minutes)),
     [liveDays],
   );
 
@@ -136,7 +136,7 @@ export default function StudentHours() {
         <button
           type="button"
           onClick={() => navigate("/work")}
-          className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+          className="mb-2 inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
           data-testid="button-back-hours"
         >
           <ArrowLeft className="w-4 h-4 mr-1" /> Recap
@@ -150,13 +150,13 @@ export default function StudentHours() {
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" size="icon" onClick={() => shiftWeek(-7)} data-testid="button-week-prev">
+        <Button type="button" variant="ghost" size="icon" aria-label="Previous week" onClick={() => shiftWeek(-7)} data-testid="button-week-prev">
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <p className="text-sm font-medium text-center" data-testid="text-week-label">
           {data ? formatWeekLabel(data.weekStartDate, data.weekEndDate) : "This week"}
         </p>
-        <Button type="button" variant="ghost" size="icon" onClick={() => shiftWeek(7)} data-testid="button-week-next">
+        <Button type="button" variant="ghost" size="icon" aria-label="Next week" onClick={() => shiftWeek(7)} data-testid="button-week-next">
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>
@@ -179,7 +179,12 @@ export default function StudentHours() {
                 <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary/80"
-                    style={{ width: `${Math.round((day.minutes / maxDayMinutes) * 100)}%` }}
+                    style={{
+                      width:
+                        day.minutes <= 0
+                          ? "0%"
+                          : `${Math.min(100, Math.max(4, Math.round((day.minutes / maxDayMinutes) * 100)))}%`,
+                    }}
                   />
                 </div>
                 <span className="w-16 text-right tabular-nums">{formatDurationMinutes(day.minutes)}</span>
@@ -212,8 +217,7 @@ export default function StudentHours() {
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
-                      className="w-full"
+                      className="w-full h-12"
                       onClick={() => openRequest(entry)}
                       data-testid={`button-request-edit-${entry.id}`}
                     >
@@ -262,12 +266,13 @@ export default function StudentHours() {
               data-testid="input-edit-reason"
             />
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button type="button" variant="outline" className="h-12 w-full sm:w-auto" onClick={() => setEditing(null)}>
               Cancel
             </Button>
             <Button
               type="button"
+              className="h-12 w-full sm:w-auto"
               onClick={() => requestMutation.mutate()}
               disabled={requestMutation.isPending || reason.trim().length < 8 || !clockIn}
               data-testid="button-submit-time-edit"
