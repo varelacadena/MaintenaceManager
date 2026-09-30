@@ -131,7 +131,6 @@ export function UserDialogs({ ctx }: { ctx: UsersContext }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="staff">Staff</SelectItem>
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="technician">Technician</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>

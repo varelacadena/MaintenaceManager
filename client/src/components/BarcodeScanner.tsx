@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +23,82 @@ declare global {
   }
 }
 
+type CameraSession = {
+  stream: MediaStream;
+  front: boolean;
+};
+
+let cameraSession: CameraSession | null = null;
+let detectorPromise: Promise<any | null> | null = null;
+let jsQRModule: any = null;
+
+function parkCamera() {
+  cameraSession?.stream.getVideoTracks().forEach((track) => {
+    track.enabled = false;
+  });
+}
+
+function dropCamera() {
+  cameraSession?.stream.getTracks().forEach((track) => track.stop());
+  cameraSession = null;
+}
+
+function reusableStream(front: boolean): MediaStream | null {
+  if (!cameraSession || cameraSession.front !== front) return null;
+  const track = cameraSession.stream.getVideoTracks()[0];
+  if (!track || track.readyState !== "live") {
+    dropCamera();
+    return null;
+  }
+  track.enabled = true;
+  return cameraSession.stream;
+}
+
+async function openCamera(front: boolean): Promise<MediaStream> {
+  const existing = reusableStream(front);
+  if (existing) return existing;
+  dropCamera();
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: {
+      facingMode: { ideal: front ? "user" : "environment" },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+  });
+  cameraSession = { stream, front };
+  return stream;
+}
+
+function loadDetector(): Promise<any | null> {
+  if (!detectorPromise) {
+    detectorPromise = (async () => {
+      if (!window.BarcodeDetector) return null;
+      try {
+        const formats = await window.BarcodeDetector.getSupportedFormats();
+        return new window.BarcodeDetector({ formats });
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return detectorPromise;
+}
+
+async function loadJsQR() {
+  if (!jsQRModule) {
+    const mod = await import("jsqr");
+    jsQRModule = mod.default;
+  }
+  return jsQRModule;
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", dropCamera);
+}
+
+const SCAN_INTERVAL_MS = 160;
+
 export function BarcodeScanner({
   open,
   onOpenChange,
@@ -32,149 +108,126 @@ export function BarcodeScanner({
 }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const detectorRef = useRef<any>(null);
-  const jsQRRef = useRef<any>(null);
+  const timerRef = useRef<number | null>(null);
   const activeRef = useRef(false);
-  const isFrontRef = useRef(false);
+  const busyRef = useRef(false);
+  const frontRef = useRef(false);
+  const runRef = useRef(0);
+  const onScanRef = useRef(onScan);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onScanRef.current = onScan;
+  onOpenChangeRef.current = onOpenChange;
 
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [manualEntry, setManualEntry] = useState(false);
   const [manualValue, setManualValue] = useState("");
-  const [isFront, setIsFront] = useState(false);
 
-  const stopCamera = useCallback(() => {
+  function stopLoop() {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function finish(code: string) {
     activeRef.current = false;
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
+    stopLoop();
+    parkCamera();
+    if (videoRef.current) videoRef.current.srcObject = null;
+    onScanRef.current(code);
+    onOpenChangeRef.current(false);
+  }
 
-  const scanFrame = useCallback(() => {
+  function scheduleScan(delay = SCAN_INTERVAL_MS) {
+    stopLoop();
     if (!activeRef.current) return;
+    timerRef.current = window.setTimeout(() => {
+      void scanOnce();
+    }, delay);
+  }
 
+  async function scanOnce() {
+    if (!activeRef.current || busyRef.current) return;
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(scanFrame);
+    if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || video.videoWidth === 0) {
+      scheduleScan(80);
       return;
     }
 
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    if (w === 0 || h === 0) {
-      rafRef.current = requestAnimationFrame(scanFrame);
-      return;
-    }
-
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) {
-      rafRef.current = requestAnimationFrame(scanFrame);
-      return;
-    }
-    ctx.drawImage(video, 0, 0, w, h);
-
-    const runDetection = async () => {
+    busyRef.current = true;
+    try {
+      const detector = await loadDetector();
       if (!activeRef.current) return;
-
-      try {
-        if (detectorRef.current) {
-          const results = await detectorRef.current.detect(canvas);
-          if (results && results.length > 0) {
-            const code = results[0].rawValue;
-            if (code) {
-              activeRef.current = false;
-              onScan(code);
-              onOpenChange(false);
-              return;
-            }
-          }
-        } else if (jsQRRef.current) {
-          const imageData = ctx.getImageData(0, 0, w, h);
-          const result = jsQRRef.current(imageData.data, w, h);
-          if (result && result.data) {
-            activeRef.current = false;
-            onScan(result.data);
-            onOpenChange(false);
-            return;
-          }
+      if (detector) {
+        const results = await detector.detect(video);
+        const code = results?.[0]?.rawValue;
+        if (code) {
+          finish(code);
+          return;
         }
-      } catch (scanErr) {
-        console.warn("Barcode scan frame error:", scanErr);
+      } else {
+        const jsQR = await loadJsQR();
+        const canvas = canvasRef.current;
+        if (!jsQR || !canvas || !activeRef.current) return;
+        const crop = 0.72;
+        const sourceWidth = Math.round(video.videoWidth * crop);
+        const sourceHeight = Math.round(video.videoHeight * crop);
+        const sourceX = Math.round((video.videoWidth - sourceWidth) / 2);
+        const sourceY = Math.round((video.videoHeight - sourceHeight) / 2);
+        const scale = Math.min(1, 420 / Math.max(sourceWidth, sourceHeight));
+        const width = Math.max(1, Math.round(sourceWidth * scale));
+        const height = Math.max(1, Math.round(sourceHeight * scale));
+        if (canvas.width !== width) canvas.width = width;
+        if (canvas.height !== height) canvas.height = height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+        ctx.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, width, height);
+        const image = ctx.getImageData(0, 0, width, height);
+        const result = jsQR(image.data, width, height, { inversionAttempts: "dontInvert" });
+        if (result?.data) {
+          finish(result.data);
+          return;
+        }
       }
+    } catch (scanErr) {
+      console.warn("Barcode scan frame error:", scanErr);
+    } finally {
+      busyRef.current = false;
+    }
 
-      if (activeRef.current) {
-        rafRef.current = requestAnimationFrame(scanFrame);
-      }
-    };
+    if (activeRef.current) scheduleScan();
+  }
 
-    runDetection();
-  }, [onScan, onOpenChange]);
-
-  const startCamera = useCallback(async (front: boolean) => {
+  async function startCamera(front: boolean) {
+    const run = ++runRef.current;
     setError("");
     activeRef.current = true;
-    isFrontRef.current = front;
-
+    frontRef.current = front;
     try {
-      if (window.BarcodeDetector) {
-        const formats = await window.BarcodeDetector.getSupportedFormats();
-        detectorRef.current = new window.BarcodeDetector({ formats });
-      } else {
-        if (!jsQRRef.current) {
-          const mod = await import("jsqr");
-          jsQRRef.current = mod.default;
-        }
-        detectorRef.current = null;
-      }
-    } catch {
-      if (!jsQRRef.current) {
-        try {
-          const mod = await import("jsqr");
-          jsQRRef.current = mod.default;
-        } catch (importErr) {
-          console.warn("Failed to load jsQR fallback:", importErr);
-          setError("Could not initialize barcode scanner. Please try again.");
-        }
-      }
-      detectorRef.current = null;
-    }
-
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: front ? "user" : "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (!activeRef.current) {
-        stream.getTracks().forEach((t) => t.stop());
+      const stream = await openCamera(front);
+      if (run !== runRef.current || !activeRef.current) {
+        if (!activeRef.current) parkCamera();
         return;
       }
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        if (video.srcObject !== stream) video.srcObject = stream;
+        try {
+          await video.play();
+        } catch {
+          // autoPlay still starts the preview once the stream is attached
+        }
       }
-      rafRef.current = requestAnimationFrame(scanFrame);
+      if (run !== runRef.current || !activeRef.current) {
+        if (!activeRef.current) parkCamera();
+        return;
+      }
+      scheduleScan(40);
     } catch (err: any) {
       activeRef.current = false;
       const msg = err?.message || "";
       if (msg.includes("Permission") || msg.includes("NotAllowed") || err?.name === "NotAllowedError") {
-        setError("Camera access was denied. Please allow camera permissions and try again.");
+        setError("Camera access was denied. Allow the camera once in the browser prompt, then scan again.");
       } else if (msg.includes("NotFound") || err?.name === "NotFoundError") {
         setError("No camera found on this device.");
       } else {
@@ -182,29 +235,39 @@ export function BarcodeScanner({
       }
       setManualEntry(true);
     }
-  }, [scanFrame]);
+  }
 
   useEffect(() => {
     if (!open) {
-      stopCamera();
+      activeRef.current = false;
+      stopLoop();
+      parkCamera();
+      if (videoRef.current) videoRef.current.srcObject = null;
       setManualEntry(false);
       setManualValue("");
       setError("");
       return;
     }
-    if (!manualEntry) {
-      const timer = setTimeout(() => startCamera(isFront), 250);
-      return () => clearTimeout(timer);
+    if (manualEntry) {
+      activeRef.current = false;
+      stopLoop();
+      parkCamera();
+      return;
     }
+    void startCamera(frontRef.current);
+    return () => {
+      runRef.current += 1;
+      activeRef.current = false;
+      stopLoop();
+    };
   }, [open, manualEntry]);
 
-  const handleFlipCamera = async () => {
-    const next = !isFront;
-    setIsFront(next);
-    isFrontRef.current = next;
-    stopCamera();
-    setTimeout(() => startCamera(next), 150);
-  };
+  async function handleFlipCamera() {
+    const next = !frontRef.current;
+    frontRef.current = next;
+    stopLoop();
+    await startCamera(next);
+  }
 
   function handleManualSubmit() {
     const value = manualValue.trim();
@@ -217,7 +280,11 @@ export function BarcodeScanner({
     <Dialog
       open={open}
       onOpenChange={(val) => {
-        if (!val) stopCamera();
+        if (!val) {
+          activeRef.current = false;
+          stopLoop();
+          parkCamera();
+        }
         onOpenChange(val);
       }}
     >
@@ -233,23 +300,26 @@ export function BarcodeScanner({
         </DialogHeader>
 
         {!manualEntry && (
-          <div className="relative bg-black" style={{ height: 220 }}>
+          <div className="relative aspect-square w-full overflow-hidden bg-black">
             <video
               ref={videoRef}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               playsInline
               muted
               autoPlay
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative" style={{ width: 240, height: 150 }}>
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl" />
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white rounded-tr" />
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl" />
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white rounded-br" />
-                <div className="animate-scan-line left-2 right-2 h-0.5 bg-primary/90 rounded-full shadow-[0_0_8px_2px_hsl(var(--primary)/0.5)]" />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="relative aspect-square w-[72%] max-w-[260px]">
+                <div className="absolute inset-0 rounded-2xl shadow-[0_0_0_999px_rgba(0,0,0,0.55)]" />
+                <div className="absolute top-0 left-0 h-7 w-7 border-l-2 border-t-2 border-white rounded-tl-md" />
+                <div className="absolute top-0 right-0 h-7 w-7 border-r-2 border-t-2 border-white rounded-tr-md" />
+                <div className="absolute bottom-0 left-0 h-7 w-7 border-b-2 border-l-2 border-white rounded-bl-md" />
+                <div className="absolute bottom-0 right-0 h-7 w-7 border-b-2 border-r-2 border-white rounded-br-md" />
+                <div className="scan-frame absolute inset-3 overflow-hidden">
+                  <div className="animate-scan-line h-0.5 bg-primary/90 shadow-[0_0_8px_2px_hsl(var(--primary)/0.5)]" />
+                </div>
               </div>
             </div>
 
@@ -257,7 +327,7 @@ export function BarcodeScanner({
               size="icon"
               variant="ghost"
               className="absolute bottom-2 right-2 bg-black/40 text-white hover:bg-black/60 rounded-full"
-              onClick={handleFlipCamera}
+              onClick={() => void handleFlipCamera()}
               data-testid="button-flip-camera"
             >
               <FlipHorizontal className="h-4 w-4" />
@@ -300,8 +370,8 @@ export function BarcodeScanner({
                 onClick={() => {
                   setManualEntry(false);
                   setError("");
-                  setTimeout(() => startCamera(isFrontRef.current), 300);
                 }}
+                data-testid="button-toggle-manual-entry"
               >
                 Try camera again
               </Button>
@@ -316,7 +386,9 @@ export function BarcodeScanner({
                 size="sm"
                 className="shrink-0 text-muted-foreground"
                 onClick={() => {
-                  stopCamera();
+                  activeRef.current = false;
+                  stopLoop();
+                  parkCamera();
                   setManualEntry(true);
                 }}
                 data-testid="button-toggle-manual-entry"

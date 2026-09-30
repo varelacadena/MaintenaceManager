@@ -15,7 +15,7 @@ const signupSchema = z.object({
   phoneNumber: z.string().optional(),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  requestedRole: z.enum(["staff", "technician", "student"]),
+  requestedRole: z.enum(["technician", "student"]),
 });
 
 export function registerSignupRoutes(app: Express) {
@@ -135,7 +135,7 @@ export function registerSignupRoutes(app: Express) {
         }
       }
 
-      const validRoles = ["staff", "technician", "student"];
+      const validRoles = ["technician", "student"];
       if (updates.requestedRole) {
         if (!validRoles.includes(updates.requestedRole)) {
           return res.status(400).json({ message: `Invalid role. Allowed roles: ${validRoles.join(", ")}` });

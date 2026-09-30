@@ -161,7 +161,7 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
   const {
     form, assignmentOption,
     contactType, setContactType,
-    users, requestId, request, requester,
+    requestId, request, requester,
   } = ctx;
 
   const guestReporter = !requester && request?.requesterName
@@ -193,7 +193,6 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
                 onClick={() => {
                   setContactType("requester");
                   form.setValue("contactType", "requester");
-                  form.setValue("contactStaffId", undefined);
                   form.setValue("contactName", reporter.name);
                   form.setValue("contactEmail", reporter.email || "");
                   form.setValue("contactPhone", reporter.phone || "");
@@ -205,27 +204,11 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
             )}
             <Button
               type="button"
-              variant={contactType === "staff" ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                setContactType("staff");
-                form.setValue("contactType", "staff");
-                form.setValue("contactName", "");
-                form.setValue("contactEmail", "");
-                form.setValue("contactPhone", "");
-              }}
-              data-testid="button-contact-staff"
-            >
-              Staff
-            </Button>
-            <Button
-              type="button"
               variant={contactType === "other" ? "default" : "outline"}
               size="sm"
               onClick={() => {
                 setContactType("other");
                 form.setValue("contactType", "other");
-                form.setValue("contactStaffId", undefined);
               }}
               data-testid="button-contact-other"
             >
@@ -239,31 +222,6 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
               {reporter.phone && <p><span className="text-muted-foreground">Phone:</span> {reporter.phone}</p>}
             </div>
           )}
-          {contactType === "staff" && (
-              <FormField
-                control={form.control}
-                name="contactStaffId"
-                render={({ field }) => (
-                  <FormItem>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger className="bg-background" data-testid="select-contact-staff">
-                          <SelectValue placeholder="Select staff member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
             {contactType === "other" && (
               <div className="grid gap-2">
                 <FormField

@@ -9,6 +9,7 @@ import {
   hoursFromMinutes,
   localDateString,
   localWeekRange,
+  studentAdminDateRange,
   msUntilNextLocalMidnight,
   resolveEntryMinutes,
   startOfLocalWeek,
@@ -103,6 +104,27 @@ describe("studentPortal helpers", () => {
     const week = localWeekRange(new Date(2026, 8, 13));
     expect(week.startDate).toBe("2026-09-07");
     expect(week.endDate).toBe("2026-09-13");
+  });
+
+  it("defaults the admin student range to the current Monday-Sunday week", () => {
+    const sunday = new Date(2026, 8, 13);
+    expect(studentAdminDateRange("week", sunday)).toEqual({
+      startDate: "2026-09-07",
+      endDate: "2026-09-13",
+    });
+    expect(studentAdminDateRange("lastWeek", sunday)).toEqual({
+      startDate: "2026-08-31",
+      endDate: "2026-09-06",
+    });
+    expect(studentAdminDateRange("today", sunday)).toEqual({
+      startDate: "2026-09-13",
+      endDate: "2026-09-13",
+    });
+    expect(studentAdminDateRange("month", sunday)).toEqual({
+      startDate: "2026-09-01",
+      endDate: "2026-09-30",
+    });
+    expect(studentAdminDateRange("all", sunday)).toEqual({});
   });
 
   it("rejects clock-out before clock-in", () => {

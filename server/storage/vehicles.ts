@@ -35,6 +35,7 @@ const vehicleIdOrderBy = [
 export type VehicleReservationFilters = {
   vehicleId?: string;
   userId?: string;
+  driverId?: string;
   status?: string;
   statuses?: string[];
   search?: string;
@@ -66,6 +67,9 @@ function buildReservationConditions(filters?: VehicleReservationFilters) {
   }
   if (filters?.userId) {
     conditions.push(eq(vehicleReservations.userId, filters.userId));
+  }
+  if (filters?.driverId) {
+    conditions.push(eq(vehicleReservations.driverId, filters.driverId));
   }
   if (filters?.statuses && filters.statuses.length > 0) {
     conditions.push(inArray(vehicleReservations.status, filters.statuses as any));

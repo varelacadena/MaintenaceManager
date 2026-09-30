@@ -38,7 +38,10 @@ export function registerServiceRequestRoutes(app: Express) {
 
       let filters: { userId?: string; status?: string; limit?: number } = {};
 
-      if (currentUser?.role === "staff" || currentUser?.role === "technician" || currentUser?.role === "student") {
+      if (currentUser?.role === "staff") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (currentUser?.role === "technician" || currentUser?.role === "student") {
         filters.userId = userId;
       }
 
@@ -72,7 +75,10 @@ export function registerServiceRequestRoutes(app: Express) {
           return res.status(404).json({ message: "Request not found" });
         }
 
-        if (["staff", "technician", "student"].includes(currentUser?.role ?? "") && request.requesterId !== userId) {
+        if (currentUser?.role === "staff") {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+        if (["technician", "student"].includes(currentUser?.role ?? "") && request.requesterId !== userId) {
           return res.status(403).json({ message: "Forbidden: Cannot view this request" });
         }
 
@@ -96,7 +102,10 @@ export function registerServiceRequestRoutes(app: Express) {
           return res.status(404).json({ message: "Request not found" });
         }
 
-        if (["staff", "technician", "student"].includes(currentUser?.role ?? "") && request.requesterId !== userId) {
+        if (currentUser?.role === "staff") {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+        if (["technician", "student"].includes(currentUser?.role ?? "") && request.requesterId !== userId) {
           return res.status(403).json({ message: "Forbidden: Cannot view this request" });
         }
 

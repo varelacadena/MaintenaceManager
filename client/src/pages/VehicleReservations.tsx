@@ -216,6 +216,18 @@ export function VehicleReservationsContent() {
     },
   });
 
+  const resendLinkMutation = useMutation({
+    mutationFn: async (reservationId: string) => {
+      await apiRequest("POST", `/api/vehicle-reservations/${reservationId}/resend-link`);
+    },
+    onSuccess: () => {
+      toast({ title: "Link sent", description: "The private trip link was emailed to the driver." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not send the link", description: error.message, variant: "destructive" });
+    },
+  });
+
   const saveHandoffDetailsMutation = useMutation({
     mutationFn: async () => {
       if (!selectedReservationForHandoff) return;
@@ -346,9 +358,10 @@ export function VehicleReservationsContent() {
     return vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.vehicleId})` : "Unknown Vehicle";
   };
 
-  const getUserName = (userId: string) => {
-    const user = users?.find(u => u.id === userId);
-    return user ? getUserDisplayName(user) : "Unknown User";
+  const getUserName = (reservation: { userId: string | null; driverName?: string | null }) => {
+    if (reservation.driverName) return reservation.driverName;
+    const user = reservation.userId ? users?.find(u => u.id === reservation.userId) : undefined;
+    return user ? getUserDisplayName(user) : "Unknown";
   };
 
   const displayReservations = [...reservations].sort((a, b) => {
@@ -449,7 +462,7 @@ export function VehicleReservationsContent() {
                     )}
                     <span className="text-muted-foreground text-xs">·</span>
                     <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate">{getUserName(reservation.userId)}</span>
+                    <span className="text-sm font-medium truncate">{getUserName(reservation)}</span>
                   </div>
                   <Badge variant={statusColors[reservation.status]} data-testid={`badge-status-${reservation.id}`}>
                     {formatStatus(reservation.status)}
@@ -579,6 +592,17 @@ export function VehicleReservationsContent() {
                       </AlertDialogContent>
                     </AlertDialog>
                   </>
+                )}
+                {isFleetStaff && reservation.driverId && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-10"
+                    onClick={() => resendLinkMutation.mutate(reservation.id)}
+                    disabled={resendLinkMutation.isPending}
+                  >
+                    Resend link
+                  </Button>
                 )}
                 {isFleetStaff && (reservation.status === "pending" || reservation.status === "approved") && (
                   <Button

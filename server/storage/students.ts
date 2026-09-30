@@ -85,6 +85,13 @@ export async function clockOutStudentTimeEntry(
   return updated;
 }
 
+export async function listOpenStudentTimeEntries(): Promise<StudentTimeEntry[]> {
+  return db
+    .select()
+    .from(studentTimeEntries)
+    .where(isNull(studentTimeEntries.clockOutAt));
+}
+
 export async function listStudentTimeEntries(
   filters: StudentTimeRange & { studentId?: string } = {},
 ): Promise<StudentTimeEntry[]> {
@@ -155,10 +162,10 @@ export async function listStudentDailyRecaps(
   const clauses = [];
   if (filters.studentId) clauses.push(eq(studentDailyRecaps.studentId, filters.studentId));
   if (filters.startDate) {
-    clauses.push(gte(studentDailyRecaps.recapDate, filters.startDate.toISOString().slice(0, 10)));
+    clauses.push(gte(studentDailyRecaps.recapDate, localDateString(filters.startDate)));
   }
   if (filters.endDate) {
-    clauses.push(lte(studentDailyRecaps.recapDate, filters.endDate.toISOString().slice(0, 10)));
+    clauses.push(lte(studentDailyRecaps.recapDate, localDateString(filters.endDate)));
   }
 
   return db

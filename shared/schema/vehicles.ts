@@ -12,6 +12,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
+import { approvedDrivers } from "./drivers";
 
 export const vehicleStatusEnum = pgEnum("vehicle_status", [
   "available",
@@ -103,7 +104,13 @@ export const vehicleReservations = pgTable("vehicle_reservations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   reservationNumber: integer("reservation_number").notNull().default(sql`nextval('vehicle_reservation_number_seq')`),
   vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id),
+  driverId: varchar("driver_id").references(() => approvedDrivers.id, { onDelete: "restrict" }),
+  driverName: varchar("driver_name", { length: 200 }),
+  accessToken: varchar("access_token", { length: 64 }),
+  tripCode: varchar("trip_code", { length: 12 }),
+  linkRevokedAt: timestamp("link_revoked_at"),
+  revealedLockboxCode: varchar("revealed_lockbox_code", { length: 50 }),
   purpose: varchar("purpose", { length: 200 }).notNull(),
   passengerCount: integer("passenger_count").notNull(),
   notes: text("notes"),
@@ -132,7 +139,7 @@ export const vehicleCheckOutLogs = pgTable("vehicle_check_out_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   reservationId: varchar("reservation_id").notNull().references(() => vehicleReservations.id, { onDelete: "cascade" }),
   vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "restrict" }),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id),
   startMileage: integer("start_mileage").notNull(),
   fuelLevel: varchar("fuel_level", { length: 20 }).notNull(),
   cleanlinessConfirmed: boolean("cleanliness_confirmed").notNull().default(false),
@@ -159,7 +166,7 @@ export type VehicleCheckOutLog = typeof vehicleCheckOutLogs.$inferSelect;
 export const vehicleCheckInLogs = pgTable("vehicle_check_in_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "restrict" }),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id),
   checkOutLogId: varchar("check_out_log_id").notNull().references(() => vehicleCheckOutLogs.id, { onDelete: "cascade" }),
   checkInDate: timestamp("check_in_date").notNull().defaultNow(),
   endMileage: integer("end_mileage").notNull(),

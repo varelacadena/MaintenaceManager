@@ -254,7 +254,6 @@ export default function RequestAccess() {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="staff">Staff</SelectItem>
                   <SelectItem value="technician">Technician</SelectItem>
                   <SelectItem value="student">Student</SelectItem>
                 </SelectContent>

@@ -33,6 +33,7 @@ import { getServiceRequestNumber } from "@shared/recordNumbers";
 import type { Task, User as UserType, Property, ServiceRequest, VehicleReservation, AiAgentLog } from "@shared/schema";
 import TaskDetailDrawer from "@/components/dashboard/TaskDetailDrawer";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type AiStats = {
   pending: number;
@@ -135,11 +136,11 @@ export default function AdminDashboard({
   }, [tasks, today]);
 
   const kpiCards = [
-    { key: "openTasks", title: "Open Tasks", count: taskCounts.openTasks, icon: ClipboardList },
-    { key: "highPriority", title: "High Priority", count: taskCounts.highPriority, icon: AlertTriangle },
-    { key: "overdue", title: "Overdue", count: taskCounts.overdue, icon: Clock },
-    { key: "dueToday", title: "Due Today", count: taskCounts.dueToday, icon: Calendar },
-    { key: "completedToday", title: "Completed Today", count: taskCounts.completedToday, icon: CheckCircle2 },
+    { key: "openTasks", title: "Open Tasks", count: taskCounts.openTasks, icon: ClipboardList, color: "text-indigo-600", bgColor: "bg-indigo-100 dark:bg-indigo-900/20" },
+    { key: "highPriority", title: "High Priority", count: taskCounts.highPriority, icon: AlertTriangle, color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/20" },
+    { key: "overdue", title: "Overdue", count: taskCounts.overdue, icon: Clock, color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/20" },
+    { key: "dueToday", title: "Due Today", count: taskCounts.dueToday, icon: Calendar, color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/20" },
+    { key: "completedToday", title: "Completed Today", count: taskCounts.completedToday, icon: CheckCircle2, color: "text-emerald-600", bgColor: "bg-emerald-100 dark:bg-emerald-900/20" },
   ];
 
   const getKpiTasks = (key: string): Task[] => {
@@ -199,11 +200,13 @@ export default function AdminDashboard({
             <CardContent className="p-4 flex items-center justify-between gap-2">
               <div className="space-y-1 min-w-0">
                 <p className="text-xs font-medium text-muted-foreground truncate">{kpi.title}</p>
-                <p className="text-2xl font-semibold tabular-nums text-foreground">
+                <p className={cn("text-2xl font-semibold tabular-nums", kpi.color)}>
                   {kpi.count}
                 </p>
               </div>
-              <kpi.icon className="w-4 h-4 text-muted-foreground shrink-0" />
+              <div className={cn("p-2 rounded-full shrink-0", kpi.bgColor)}>
+                <kpi.icon className={cn("w-4 h-4", kpi.color)} />
+              </div>
             </CardContent>
           </Card>
         ))}

@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Clock, GraduationCap, BookOpen, Users } from "lucide-react";
@@ -5,7 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLiveNow } from "@/hooks/useLiveNow";
-import { elapsedMilliseconds, formatDurationMinutes, formatLiveDuration } from "@shared/studentPortal";
+import {
+  elapsedMilliseconds,
+  formatDurationMinutes,
+  formatLiveDuration,
+  formatWeekLabel,
+  studentAdminDateRange,
+  type StudentAdminRangePreset,
+} from "@shared/studentPortal";
+
+const RANGE_OPTIONS: { value: StudentAdminRangePreset; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "This week" },
+  { value: "lastWeek", label: "Last week" },
+  { value: "month", label: "This month" },
+  { value: "all", label: "All time" },
+];
 
 interface AdminStudentRow {
   id: string;
@@ -32,25 +48,27 @@ interface AdminStudentsResponse {
 
 export default function StudentsAdminPage() {
   const [, navigate] = useLocation();
+  const [rangePreset, setRangePreset] = useState<StudentAdminRangePreset>("week");
+  const range = useMemo(() => studentAdminDateRange(rangePreset), [rangePreset]);
+  const rangeLabel = range.startDate && range.endDate
+    ? rangePreset === "today"
+      ? "Today"
+      : formatWeekLabel(range.startDate, range.endDate)
+    : "All time";
   const { data, isLoading, isError, refetch } = useQuery<AdminStudentsResponse>({
-    queryKey: ["/api/admin/students"],
+    queryKey: ["/api/admin/students", range.startDate ?? "", range.endDate ?? ""],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (range.startDate) params.set("startDate", range.startDate);
+      if (range.endDate) params.set("endDate", range.endDate);
+      const query = params.toString();
+      const response = await fetch(`/api/admin/students${query ? `?${query}` : ""}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load students");
+      return response.json();
+    },
     staleTime: 15_000,
     refetchOnWindowFocus: true,
   });
-  const now = useLiveNow(Boolean(data?.students.some((student) => student.isClockedIn && student.clockInAt)));
-
-  if (isLoading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading students…</p>;
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="p-4 space-y-3">
-        <p className="text-sm text-muted-foreground">Could not load students.</p>
-        <Button type="button" onClick={() => void refetch()}>Retry</Button>
-      </div>
-    );
-  }
 
   return (
     <div className="p-3 md:p-0 space-y-4" data-testid="students-admin-page">
@@ -70,6 +88,48 @@ export default function StudentsAdminPage() {
           View in Analytics
         </Button>
       </div>
+
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-1 bg-muted rounded-md p-1" data-testid="students-range-filter">
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={rangePreset === option.value}
+              onClick={() => setRangePreset(option.value)}
+              className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                rangePreset === option.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover-elevate"
+              }`}
+              data-testid={`button-student-range-${option.value}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground" data-testid="text-student-range-label">{rangeLabel}</p>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading students…</p>
+      ) : isError || !data ? (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Could not load students.</p>
+          <Button type="button" onClick={() => void refetch()}>Retry</Button>
+        </div>
+      ) : (
+        <StudentsAdminBody data={data} />
+      )}
+    </div>
+  );
+}
+
+function StudentsAdminBody({ data }: { data: AdminStudentsResponse }) {
+  const now = useLiveNow(Boolean(data.students.some((student) => student.isClockedIn && student.clockInAt)));
+
+  return (
+    <>
 
       {(data.pendingEditCount ?? 0) > 0 && (
         <div
@@ -98,7 +158,7 @@ export default function StudentsAdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 pt-0">
-            <p className="text-2xl font-semibold">
+            <p className="text-2xl font-semibold" data-testid="text-time-in-range">
               {formatDurationMinutes(data.students.reduce((sum, row) => sum + (row.minutesInRange || Math.round(row.hoursInRange * 60)), 0))}
             </p>
           </CardContent>
@@ -106,11 +166,11 @@ export default function StudentsAdminPage() {
         <Card>
           <CardHeader className="p-3 pb-1">
             <CardTitle className="text-xs font-medium flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5" /> Recaps today
+              <BookOpen className="w-3.5 h-3.5" /> Recaps
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 pt-0">
-            <p className="text-2xl font-semibold">{data.recapsToday}</p>
+            <p className="text-2xl font-semibold" data-testid="text-recap-count">{data.recapCount}</p>
           </CardContent>
         </Card>
         <Card>
@@ -171,6 +231,6 @@ export default function StudentsAdminPage() {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

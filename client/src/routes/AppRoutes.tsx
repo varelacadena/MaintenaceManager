@@ -31,6 +31,7 @@ const Inventory = lazyWithRetry(() => import("@/pages/Inventory"));
 const MobileEquipmentPage = lazyWithRetry(() => import("@/pages/MobileEquipment"));
 const MobileEquipmentDetail = lazyWithRetry(() => import("@/pages/MobileEquipment/MobileEquipmentDetail"));
 const Vehicles = lazyWithRetry(() => import("@/pages/Vehicles"));
+const Drivers = lazyWithRetry(() => import("@/pages/Drivers"));
 const VehicleDetail = lazyWithRetry(() => import("@/pages/VehicleDetail"));
 const VehicleQRRedirect = lazyWithRetry(() => import("@/pages/VehicleQRRedirect"));
 const VehicleEdit = lazyWithRetry(() => import("@/pages/VehicleEdit"));
@@ -156,7 +157,7 @@ function TaskDetailRoute() {
 function RequestsRoute() {
   return (
     <DomainErrorBoundary domain="Service Requests">
-      <RoleGuard allowedRoles={["admin", "staff", "technician"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]}>
         <Requests />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -166,7 +167,7 @@ function RequestsRoute() {
 function RequestDetailRoute() {
   return (
     <DomainErrorBoundary domain="Service Requests">
-      <RoleGuard allowedRoles={["admin", "staff", "technician"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]}>
         <RequestDetail />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -176,7 +177,7 @@ function RequestDetailRoute() {
 function NewRequestRoute() {
   return (
     <DomainErrorBoundary domain="Service Requests">
-      <RoleGuard allowedRoles={["admin", "staff", "technician"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]}>
         <NewRequest />
       </RoleGuard>
     </DomainErrorBoundary>
@@ -282,6 +283,16 @@ function MobileEquipmentDetailRoute() {
     <DomainErrorBoundary domain="Tools & Equipment">
       <RoleGuard allowedRoles={["admin", "technician"]}>
         <MobileEquipmentDetail />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function DriversRoute() {
+  return (
+    <DomainErrorBoundary domain="Vehicle Fleet">
+      <RoleGuard allowedRoles={["admin", "technician"]} permission="fleet">
+        <Drivers />
       </RoleGuard>
     </DomainErrorBoundary>
   );
@@ -535,6 +546,7 @@ export function AppRoutes() {
       <Route path="/inventory" component={InventoryRoute} />
       <Route path="/tools-equipment" component={MobileEquipmentListRoute} />
       <Route path="/tools-equipment/:id" component={MobileEquipmentDetailRoute} />
+      <Route path="/drivers" component={DriversRoute} />
       <Route path="/vehicles" component={VehiclesRoute} />
       <Route path="/vehicles/:id" component={VehicleDetailRoute} />
       <Route path="/vehicles/:id/edit" component={VehicleEditRoute} />

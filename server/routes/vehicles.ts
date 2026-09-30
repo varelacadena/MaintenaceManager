@@ -524,7 +524,7 @@ export function registerVehicleRoutes(app: Express) {
         await syncVehicleStatus(updatedReservation.vehicleId);
       }
 
-      if (updates.status === "approved" && reservation.status !== "approved" && updatedReservation) {
+      if (updates.status === "approved" && reservation.status !== "approved" && updatedReservation && reservation.userId) {
         const reservationUser = await storage.getUser(reservation.userId);
         if (reservationUser) {
           let vehicleName = "Unassigned";
@@ -539,7 +539,7 @@ export function registerVehicleRoutes(app: Express) {
         }
       }
 
-      if (updates.status === "cancelled" && reservation.status !== "cancelled" && updatedReservation && reservation.userId !== userId) {
+      if (updates.status === "cancelled" && reservation.status !== "cancelled" && updatedReservation && reservation.userId && reservation.userId !== userId) {
         const reservationUser = await storage.getUser(reservation.userId);
         if (reservationUser) {
           let vehicleName = "Unassigned";

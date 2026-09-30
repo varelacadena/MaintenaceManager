@@ -58,6 +58,7 @@ const roleMenus = {
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Resource Library", url: "/resources", icon: BookOpen },
     { title: "Vehicles", url: "/vehicles", icon: Car },
+    { title: "Drivers", url: "/drivers", icon: Car },
     { title: "Tools & Equipment", url: "/tools-equipment", icon: Hammer },
     { title: "Properties", url: "/properties", icon: Map },
     { title: "Vendors", url: "/vendors", icon: Building2 },
@@ -69,15 +70,11 @@ const roleMenus = {
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
-    { title: "Vehicle Requests", url: "/my-reservations", icon: Car },
     { title: "Tools & Equipment", url: "/tools-equipment", icon: Hammer },
     { title: "Settings", url: "/settings", icon: Settings },
   ],
   staff: [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    { title: "My Requests", url: "/requests", icon: ClipboardList },
-    { title: "New Request", url: "/new-request", icon: Wrench },
-    { title: "Settings", url: "/settings", icon: Settings },
   ],
   student: [
     { title: "Daily Recap", url: "/work", icon: BookOpen },
@@ -105,6 +102,7 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
     }
     if (canManageFleet(user)) {
       extra.push({ title: "Vehicles", url: "/vehicles", icon: Car });
+      extra.push({ title: "Drivers", url: "/drivers", icon: Car });
     }
     if (canManageInventory(user)) {
       extra.push({ title: "Inventory", url: "/inventory", icon: Package });

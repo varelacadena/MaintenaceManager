@@ -428,16 +428,19 @@ export function registerStudentRoutes(app: Express) {
       const startDate = parseDateBoundary(req.query.startDate);
       const endDate = parseDateBoundary(req.query.endDate, true);
       const students = await studentStorage.listStudents();
-      const entries = await studentStorage.listStudentTimeEntries({ startDate, endDate });
-      const recaps = await studentStorage.listStudentDailyRecaps({ startDate, endDate });
-      const pendingEdits = await studentStorage.listStudentTimeEditRequests({ status: "pending" });
+      const [entries, openEntries, recaps, pendingEdits] = await Promise.all([
+        studentStorage.listStudentTimeEntries({ startDate, endDate }),
+        studentStorage.listOpenStudentTimeEntries(),
+        studentStorage.listStudentDailyRecaps({ startDate, endDate }),
+        studentStorage.listStudentTimeEditRequests({ status: "pending" }),
+      ]);
       const today = localDateString();
+      const openByStudent = new Map(openEntries.map((entry) => [entry.studentId, entry]));
 
       const now = Date.now();
       const rows = students.map((student) => {
         const studentEntries = entries.filter((entry) => entry.studentId === student.id);
-        const openEntry = studentEntries.find((entry) => !entry.clockOutAt);
-        const latestOpen = openEntry;
+        const openEntry = openByStudent.get(student.id);
         const hoursInRange = studentEntries.reduce(
           (sum, entry) =>
             sum + resolveEntryMinutes(entry.clockInAt, entry.clockOutAt, entry.durationMinutes, new Date(now)),
@@ -453,9 +456,9 @@ export function registerStudentRoutes(app: Express) {
           firstName: student.firstName,
           lastName: student.lastName,
           name: formatUserDisplayName(student),
-          isClockedIn: Boolean(latestOpen),
-          supervisorName: latestOpen?.supervisorName ?? studentEntries[0]?.supervisorName ?? null,
-          clockInAt: latestOpen?.clockInAt?.toISOString() ?? null,
+          isClockedIn: Boolean(openEntry),
+          supervisorName: openEntry?.supervisorName ?? studentEntries[0]?.supervisorName ?? null,
+          clockInAt: openEntry?.clockInAt?.toISOString() ?? null,
           hoursInRange: hoursFromMinutes(hoursInRange),
           minutesInRange: hoursInRange,
           recapCount: studentRecaps.length,

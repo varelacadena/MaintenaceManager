@@ -79,7 +79,7 @@ export default function Landing() {
     >
       <div className="absolute inset-0 bg-black/40" />
       <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/95 border-0 shadow-2xl">
-        <CardHeader className="space-y-3 pb-8 pt-8">
+        <CardHeader className="space-y-3 px-4 pb-6 pt-6 sm:px-6 sm:pb-8 sm:pt-8">
           <CardTitle className="text-3xl font-bold text-center tracking-tight text-foreground">
             Hartland Maintenance
           </CardTitle>
@@ -92,7 +92,7 @@ export default function Landing() {
             </div>
           )}
         </CardHeader>
-        <CardContent className="px-8 pb-8 space-y-5">
+        <CardContent className="px-4 pb-6 space-y-5 sm:px-8 sm:pb-8">
           <div className="space-y-2">
             <a
               href="/report"
@@ -100,6 +100,13 @@ export default function Landing() {
               data-testid="link-report-problem"
             >
               Report a problem
+            </a>
+            <a
+              href="/request-car"
+              className="inline-flex w-full items-center justify-center h-12 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors"
+              data-testid="link-request-car"
+            >
+              Request a car
             </a>
             <p className="text-center text-xs text-muted-foreground">No account needed</p>
           </div>

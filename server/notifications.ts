@@ -261,6 +261,26 @@ export async function notifyNewServiceRequest(
   }
 }
 
+export async function notifyDriverTripLink(
+  to: string,
+  driverName: string,
+  tripUrl: string,
+  purpose: string,
+  startDate: string,
+  endDate: string,
+  ns: NotificationService,
+): Promise<void> {
+  const subject = "Your vehicle request";
+  const body = `Hello ${driverName},\n\nWe received your vehicle request.\n\nPurpose: ${purpose}\nStart: ${startDate}\nEnd: ${endDate}\n\nOpen this private link to follow the request, check the car out, and check it back in:\n${tripUrl}\n\nIf you did not request a car, you can ignore this message or cancel the request from the link.`;
+  await sendTrackedEmail(ns, "driver_trip_link", to, driverName, subject, body, {
+    "{{driver_name}}": driverName,
+    "{{trip_url}}": tripUrl,
+    "{{purpose}}": purpose,
+    "{{start_date}}": startDate,
+    "{{end_date}}": endDate,
+  });
+}
+
 export async function notifyNewVehicleReservation(
   reservation: VehicleReservation,
   requester: User,

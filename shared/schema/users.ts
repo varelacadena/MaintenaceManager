@@ -31,7 +31,7 @@ export const users = pgTable("users", {
   phoneNumber: varchar("phone_number", { length: 20 }),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  role: varchar("role", { length: 20 }).notNull().default("staff"),
+  role: varchar("role", { length: 20 }).notNull().default("technician"),
   canManageEquipment: boolean("can_manage_equipment").notNull().default(false),
   canManageFleet: boolean("can_manage_fleet").notNull().default(false),
   canManageInventory: boolean("can_manage_inventory").notNull().default(false),

@@ -35,17 +35,13 @@ const formSchema = insertTaskSchema.extend({
   requiresPhoto: z.boolean().optional(),
   requiresEstimate: z.boolean().optional(),
   projectId: z.string().optional(),
-  contactType: z.enum(["requester", "staff", "other"]).optional(),
-  contactStaffId: z.string().optional(),
+  contactType: z.enum(["requester", "other"]).optional(),
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional().or(z.literal("")),
   contactPhone: z.string().optional(),
   isCampusWide: z.boolean().optional(),
   propertyIds: z.array(z.string()).optional(),
 }).refine((data) => {
-  if (data.contactType === "staff" && !data.contactStaffId) {
-    return false;
-  }
   if (data.contactType === "other" && !data.contactName) {
     return false;
   }
@@ -79,7 +75,7 @@ export function useNewTask() {
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [taskType, setTaskType] = useState<"one_time" | "recurring" | "reminder" | "project">("one_time");
   const [assignmentOption, setAssignmentOption] = useState<"student" | "technician" | "vendor" | "">("");
-  const [contactType, setContactType] = useState<"requester" | "staff" | "other" | "">("");
+  const [contactType, setContactType] = useState<"requester" | "other" | "">("");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isEquipmentDialogOpen, setIsEquipmentDialogOpen] = useState(false);
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
@@ -389,7 +385,6 @@ export function useNewTask() {
       recurringInterval: undefined,
       recurringEndDate: undefined,
       contactType: undefined,
-      contactStaffId: undefined,
       contactName: "",
       contactEmail: "",
       contactPhone: "",
@@ -463,7 +458,6 @@ export function useNewTask() {
         form.setValue("contactName", vendor.contactPerson || vendor.name);
         form.setValue("contactEmail", vendor.email || "");
         form.setValue("contactPhone", vendor.phoneNumber || "");
-        form.setValue("contactStaffId", undefined);
       }
     }
   }, [selectedVendorId, vendors, form]);
@@ -503,7 +497,6 @@ export function useNewTask() {
         recurringInterval: data.recurringInterval || undefined,
         recurringEndDate: data.recurringEndDate || undefined,
         contactType: data.contactType || undefined,
-        contactStaffId: data.contactStaffId || undefined,
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
@@ -643,7 +636,6 @@ export function useNewTask() {
     request,
     project,
     properties,
-    users,
     technicianUsers,
     studentUsers,
     vendors,

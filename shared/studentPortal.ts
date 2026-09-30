@@ -177,6 +177,31 @@ export function localWeekRange(anchor: Date = new Date()): {
   return { start, end, startDate: localDateString(start), endDate: localDateString(end) };
 }
 
+export type StudentAdminRangePreset = "today" | "week" | "lastWeek" | "month" | "all";
+
+/** Calendar bounds for the admin students list. Weeks run Monday through Sunday. */
+export function studentAdminDateRange(
+  preset: StudentAdminRangePreset,
+  now: Date = new Date(),
+): { startDate?: string; endDate?: string } {
+  if (preset === "all") return {};
+  if (preset === "today") {
+    const today = localDateString(now);
+    return { startDate: today, endDate: today };
+  }
+  if (preset === "lastWeek") {
+    const week = localWeekRange(addLocalDays(startOfLocalWeek(now), -1));
+    return { startDate: week.startDate, endDate: week.endDate };
+  }
+  if (preset === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { startDate: localDateString(start), endDate: localDateString(end) };
+  }
+  const week = localWeekRange(now);
+  return { startDate: week.startDate, endDate: week.endDate };
+}
+
 export function parseLocalDate(value: string | undefined | null, fallback: Date = new Date()): Date {
   if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [year, month, day] = value.split("-").map(Number);

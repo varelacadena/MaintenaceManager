@@ -270,7 +270,7 @@ export function UserDialogsExtra({ ctx }: { ctx: UsersContext }) {
                           lastName: selectedPendingUser.lastName || "",
                           email: selectedPendingUser.email || "",
                           phoneNumber: selectedPendingUser.phoneNumber || "",
-                          requestedRole: selectedPendingUser.requestedRole || "staff",
+                          requestedRole: selectedPendingUser.requestedRole === "staff" ? "technician" : (selectedPendingUser.requestedRole || "technician"),
                         });
                         setIsEditingPending(true);
                       }}
@@ -365,7 +365,6 @@ export function UserDialogsExtra({ ctx }: { ctx: UsersContext }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
                     <SelectItem value="technician">Technician</SelectItem>
                     <SelectItem value="student">Student</SelectItem>
                   </SelectContent>

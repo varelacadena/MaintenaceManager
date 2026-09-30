@@ -94,7 +94,7 @@ export function useUsers() {
   const [newPhoneNumber, setNewPhoneNumber] = useState("");
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
-  const [newRole, setNewRole] = useState("staff");
+  const [newRole, setNewRole] = useState("technician");
 
   const [editUsername, setEditUsername] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -437,7 +437,7 @@ export function useUsers() {
     setNewPhoneNumber("");
     setNewFirstName("");
     setNewLastName("");
-    setNewRole("staff");
+    setNewRole("technician");
   };
 
   const handleCreateUser = (e: React.FormEvent) => {

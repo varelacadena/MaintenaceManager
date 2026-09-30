@@ -1,4 +1,5 @@
 export * from "./users";
+export * from "./drivers";
 export * from "./facilities";
 export * from "./serviceRequests";
 export * from "./vendors";

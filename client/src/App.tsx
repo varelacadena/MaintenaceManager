@@ -30,6 +30,9 @@ const ForgotPassword = lazyWithRetry(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazyWithRetry(() => import("@/pages/ResetPassword"));
 const RequestAccess = lazyWithRetry(() => import("@/pages/RequestAccess"));
 const PublicReport = lazyWithRetry(() => import("@/pages/PublicReport"));
+const RequestCar = lazyWithRetry(() => import("@/pages/RequestCar"));
+const TripPass = lazyWithRetry(() => import("@/pages/TripPass"));
+const PublicVehicleCode = lazyWithRetry(() => import("@/pages/PublicVehicleCode"));
 const AdminTaskDetailPage = lazyWithRetry(() => import("@/pages/AdminTaskDetailPage"));
 const TaskDetail = lazyWithRetry(() => import("@/pages/TaskDetail"));
 const MobileTaskDetail = lazyWithRetry(() => import("@/components/MobileTaskDetail"));
@@ -88,11 +91,16 @@ function AuthenticatedApp() {
 
   const publicPath = typeof window !== "undefined" ? window.location.pathname : currentPath;
   const isPublicReport = publicPath === "/report";
+  const isRequestCar = publicPath === "/request-car";
+  const tripToken = publicPath.startsWith("/trip/") ? publicPath.split("/")[2] : "";
+  const publicVehicleMatch = publicPath.match(/^\/vehicles\/([^/]+)$/);
   const isPublicAuthPage =
     publicPath === "/forgot-password" ||
     publicPath === "/reset-password" ||
     publicPath === "/request-access" ||
-    isPublicReport;
+    isPublicReport ||
+    isRequestCar ||
+    Boolean(tripToken);
 
   if (isLoading && !isPublicAuthPage) {
     return <AuthShellSkeleton />;
@@ -106,12 +114,33 @@ function AuthenticatedApp() {
     );
   }
 
+  if (isRequestCar) {
+    return (
+      <Suspense fallback={<SuspenseFallback />}>
+        <RequestCar />
+      </Suspense>
+    );
+  }
+
+  if (tripToken) {
+    return (
+      <Suspense fallback={<SuspenseFallback />}>
+        <TripPass token={tripToken} />
+      </Suspense>
+    );
+  }
+
   if (!isAuthenticated) {
     const path = publicPath;
     if (path === "/forgot-password") return <Suspense fallback={<SuspenseFallback />}><ForgotPassword /></Suspense>;
     if (path === "/reset-password") return <Suspense fallback={<SuspenseFallback />}><ResetPassword /></Suspense>;
     if (path === "/request-access") return <Suspense fallback={<SuspenseFallback />}><RequestAccess /></Suspense>;
     if (path === "/report") return <Suspense fallback={<SuspenseFallback />}><PublicReport /></Suspense>;
+    if (path === "/request-car") return <Suspense fallback={<SuspenseFallback />}><RequestCar /></Suspense>;
+    if (tripToken) return <Suspense fallback={<SuspenseFallback />}><TripPass token={tripToken} /></Suspense>;
+    if (publicVehicleMatch) {
+      return <Suspense fallback={<SuspenseFallback />}><PublicVehicleCode vehicleId={publicVehicleMatch[1]} /></Suspense>;
+    }
     if (path && path !== "/" && path !== "/login") {
       const fullUrl = path + window.location.search + window.location.hash;
       sessionStorage.setItem("returnUrl", fullUrl);
