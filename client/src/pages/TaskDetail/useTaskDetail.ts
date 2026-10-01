@@ -656,6 +656,7 @@ export function useTaskDetail() {
 
       if (saveImmediately) {
         let failedCount = 0;
+        let lastUploadError = "Could not save file";
         for (const file of files) {
           try {
             await addUploadMutation.mutateAsync({
@@ -666,14 +667,15 @@ export function useTaskDetail() {
               label: file.fileName,
             });
             if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
-          } catch {
+          } catch (error) {
             failedCount += 1;
+            lastUploadError = error instanceof Error ? error.message : "Could not save file";
           }
         }
         if (failedCount > 0) {
           toast({
             title: "Upload failed",
-            description: `${failedCount} file(s) could not be saved`,
+            description: failedCount === 1 ? lastUploadError : `${failedCount} photos could not be saved. ${lastUploadError}`,
             variant: "destructive",
           });
         }

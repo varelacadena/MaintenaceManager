@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../replitAuth";
 import { canAccessTask } from "../middleware";
-import { handleRouteError, canAccessServiceRequest } from "../routeUtils";
+import { handleRouteError, canAccessServiceRequest, storageUploadFailure } from "../routeUtils";
 import {
   registerUpload,
   sendUploadAuthError,
@@ -53,6 +53,11 @@ export function registerUploadRoutes(app: Express) {
         isMock: false,
       });
     } catch (error) {
+      const storageFailure = storageUploadFailure(error);
+      if (storageFailure) {
+        console.error("Failed to get upload URL:", error);
+        return res.status(storageFailure.status).json({ message: storageFailure.message });
+      }
       handleRouteError(res, error, "Failed to get upload URL");
     }
   });

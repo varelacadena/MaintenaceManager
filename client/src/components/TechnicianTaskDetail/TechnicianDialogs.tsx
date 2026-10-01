@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
@@ -38,6 +39,9 @@ export interface TechnicianDialogsProps {
   notesReady: boolean;
   photoReady: boolean;
   handleNoteChange: (value: string) => void;
+  getUploadParameters: () => Promise<{ method: "PUT"; url: string; objectPath?: string }>;
+  handleAutoSaveUpload: (result: any) => void;
+  addUploadMutation: { isPending: boolean };
   isEstimateSheetOpen: boolean;
   setIsEstimateSheetOpen: (v: boolean) => void;
   quotes: Quote[];
@@ -83,6 +87,9 @@ export function TechnicianDialogs({
   notesReady,
   photoReady,
   handleNoteChange,
+  getUploadParameters,
+  handleAutoSaveUpload,
+  addUploadMutation,
   isEstimateSheetOpen,
   setIsEstimateSheetOpen,
   quotes,
@@ -312,6 +319,22 @@ export function TechnicianDialogs({
                   Add a work note before marking this task complete.
                 </p>
               )}
+            </div>
+            <div className="mb-4" data-testid="dialog-photo-upload">
+              <ObjectUploader
+                maxNumberOfFiles={5}
+                maxFileSize={10485760}
+                accept="image/*"
+                onGetUploadParameters={getUploadParameters}
+                onComplete={handleAutoSaveUpload}
+                buttonVariant="outline"
+                buttonClassName="w-full"
+                buttonTestId="button-dialog-photo"
+                isLoading={addUploadMutation.isPending}
+              >
+                <Camera className="w-4 h-4" />
+                Add a photo
+              </ObjectUploader>
             </div>
             <div className="space-y-2">
               {isTimerRunning && (

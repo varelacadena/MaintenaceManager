@@ -136,11 +136,11 @@ export default function AdminDashboard({
   }, [tasks, today]);
 
   const kpiCards = [
-    { key: "openTasks", title: "Open Tasks", count: taskCounts.openTasks, icon: ClipboardList, color: "text-indigo-600", bgColor: "bg-indigo-100 dark:bg-indigo-900/20" },
-    { key: "highPriority", title: "High Priority", count: taskCounts.highPriority, icon: AlertTriangle, color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/20" },
-    { key: "overdue", title: "Overdue", count: taskCounts.overdue, icon: Clock, color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/20" },
-    { key: "dueToday", title: "Due Today", count: taskCounts.dueToday, icon: Calendar, color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/20" },
-    { key: "completedToday", title: "Completed Today", count: taskCounts.completedToday, icon: CheckCircle2, color: "text-emerald-600", bgColor: "bg-emerald-100 dark:bg-emerald-900/20" },
+    { key: "openTasks", title: "Open Tasks", count: taskCounts.openTasks, icon: ClipboardList, cardClass: "border-indigo-200 bg-indigo-50", valueClass: "text-indigo-700", iconClass: "bg-indigo-200 text-indigo-700" },
+    { key: "highPriority", title: "High Priority", count: taskCounts.highPriority, icon: AlertTriangle, cardClass: "border-amber-200 bg-amber-50", valueClass: "text-amber-700", iconClass: "bg-amber-200 text-amber-700" },
+    { key: "overdue", title: "Overdue", count: taskCounts.overdue, icon: Clock, cardClass: "border-red-200 bg-red-50", valueClass: "text-red-700", iconClass: "bg-red-200 text-red-700" },
+    { key: "dueToday", title: "Due Today", count: taskCounts.dueToday, icon: Calendar, cardClass: "border-blue-200 bg-blue-50", valueClass: "text-blue-700", iconClass: "bg-blue-200 text-blue-700" },
+    { key: "completedToday", title: "Completed Today", count: taskCounts.completedToday, icon: CheckCircle2, cardClass: "border-emerald-200 bg-emerald-50", valueClass: "text-emerald-700", iconClass: "bg-emerald-200 text-emerald-700" },
   ];
 
   const getKpiTasks = (key: string): Task[] => {
@@ -193,19 +193,19 @@ export default function AdminDashboard({
         {kpiCards.map(kpi => (
           <Card
             key={kpi.key}
-            className="shadow-none cursor-pointer hover-elevate"
+            className={cn("cursor-pointer shadow-none hover-elevate", kpi.cardClass)}
             onClick={() => setKpiModal({ title: kpi.title, tasks: getKpiTasks(kpi.key) })}
             data-testid={`kpi-${kpi.key}`}
           >
             <CardContent className="p-4 flex items-center justify-between gap-2">
               <div className="space-y-1 min-w-0">
                 <p className="text-xs font-medium text-muted-foreground truncate">{kpi.title}</p>
-                <p className={cn("text-2xl font-semibold tabular-nums", kpi.color)}>
+                <p className={cn("text-2xl font-bold tabular-nums md:text-3xl", kpi.valueClass)}>
                   {kpi.count}
                 </p>
               </div>
-              <div className={cn("p-2 rounded-full shrink-0", kpi.bgColor)}>
-                <kpi.icon className={cn("w-4 h-4", kpi.color)} />
+              <div className={cn("shrink-0 rounded-full p-2", kpi.iconClass)}>
+                <kpi.icon className="h-5 w-5" />
               </div>
             </CardContent>
           </Card>

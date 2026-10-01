@@ -90,6 +90,45 @@ describe("registerUpload", () => {
     expect(result.error?.status).toBe(403);
   });
 
+  it("keeps a short link when the signed download URL is longer than the column", async () => {
+    mocks.getDownloadUrl.mockResolvedValue(`https://signed.example/${"a".repeat(1200)}`);
+
+    const result = await registerUpload("user-1", {
+      taskId: "task-1",
+      fileName: "photo.jpg",
+      fileType: "image/jpeg",
+      objectUrl: "https://example.com/storage/uploads/photo.jpg?token=long",
+      objectPath: "uploads/photo.jpg",
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(mocks.storage.createUpload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        objectPath: "uploads/photo.jpg",
+        objectUrl: "https://example.com/storage/uploads/photo.jpg",
+      })
+    );
+  });
+
+  it("stores the image proxy when every remote link is too long", async () => {
+    mocks.getDownloadUrl.mockResolvedValue(`https://signed.example/${"a".repeat(1200)}`);
+
+    const result = await registerUpload("user-1", {
+      taskId: "task-1",
+      fileName: "photo.jpg",
+      fileType: "image/jpeg",
+      objectUrl: `https://example.com/${"b".repeat(1200)}`,
+      objectPath: "uploads/photo.jpg",
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(mocks.storage.createUpload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        objectUrl: `/api/objects/image?path=${encodeURIComponent("uploads/photo.jpg")}`,
+      })
+    );
+  });
+
   it("rejects object paths outside uploads/", async () => {
     const result = await registerUpload("user-1", {
       taskId: "task-1",

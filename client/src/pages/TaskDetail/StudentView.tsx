@@ -250,6 +250,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 <ObjectUploader
                   maxNumberOfFiles={5}
                   maxFileSize={10485760}
+                  accept="image/*"
                   onGetUploadParameters={getUploadParameters}
                   onComplete={handleAutoSaveUpload}
                   onError={(error) => {

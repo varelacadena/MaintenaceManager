@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildDisplayUrlFromUpload,
   buildStoredImageUrl,
+  inferUploadFileType,
   mapUploaderResultToPending,
   mapUploaderResultForRegistration,
 } from "../uploadUtils";
@@ -38,6 +39,13 @@ describe("uploadUtils", () => {
     expect(buildStoredImageUrl("", "/api/objects/image?path=uploads%2Fx")).toBe(
       "/api/objects/image?path=uploads%2Fx"
     );
+  });
+
+  it("inferUploadFileType treats phone photos as images", () => {
+    expect(inferUploadFileType({ name: "IMG_2201.jpg", type: "" })).toBe("image/jpeg");
+    expect(inferUploadFileType({ name: "photo.heic", type: "" })).toBe("image/heic");
+    expect(inferUploadFileType({ name: "camera", type: "image/jpg" })).toBe("image/jpeg");
+    expect(inferUploadFileType({ name: "notes.txt", type: "" })).toBe("application/octet-stream");
   });
 
   it("mapUploaderResultForRegistration keeps raw storage URL for DB", () => {

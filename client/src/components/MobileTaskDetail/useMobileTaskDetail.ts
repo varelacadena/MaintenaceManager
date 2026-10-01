@@ -240,8 +240,12 @@ export function useMobileTaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
       toast({ title: "File uploaded" });
     },
-    onError: () => {
-      toast({ title: "Upload failed", description: "Could not save attachment", variant: "destructive" });
+    onError: (error) => {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Could not save attachment",
+        variant: "destructive",
+      });
     },
   });
 
@@ -286,11 +290,7 @@ export function useMobileTaskDetail() {
         try {
           await addUploadMutation.mutateAsync(registered);
         } catch {
-          toast({
-            title: "Upload failed",
-            description: "Could not save file",
-            variant: "destructive",
-          });
+          // onError already reports the server message
         }
       }
     }

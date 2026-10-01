@@ -59,13 +59,14 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
             <ObjectUploader
               maxNumberOfFiles={5}
               maxFileSize={10485760}
+              accept="image/*"
               onGetUploadParameters={getUploadParameters}
               onComplete={handleAutoSaveUpload}
               onError={(error) => {
                 toast({ title: "Upload failed", description: error.message, variant: "destructive" });
               }}
               buttonVariant="outline"
-              buttonClassName=""
+              buttonClassName="h-11 w-11 sm:w-11 min-h-11 shrink-0 p-0"
               buttonTestId="button-mobile-photos"
               isLoading={addUploadMutation.isPending}
             >

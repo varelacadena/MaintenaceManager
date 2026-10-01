@@ -516,7 +516,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id, "includeSubtasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
       toast({ title: "File uploaded" });
     },
   });
@@ -526,7 +526,7 @@ export function useTaskDetailMutations(deps: MutationDeps) {
       return await apiRequest("DELETE", `/api/uploads/${uploadId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id, "includeSubtasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/uploads/task", id] });
       toast({ title: "Attachment deleted" });
     },
     onError: () => {

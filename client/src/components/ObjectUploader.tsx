@@ -2,12 +2,15 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { inferUploadFileType } from "@/lib/uploadUtils";
 import { Loader2 } from "lucide-react";
 
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
   accept?: string;
+  /** Opens the device camera when the browser supports it. */
+  capture?: "environment" | "user";
   onGetUploadParameters: () => Promise<{
     method: "PUT";
     url: string;
@@ -27,6 +30,7 @@ export function ObjectUploader({
   maxNumberOfFiles = 1,
   maxFileSize = 10485760,
   accept = "*/*",
+  capture,
   onGetUploadParameters,
   onComplete,
   onError,
@@ -78,6 +82,7 @@ export function ObjectUploader({
         const params = await onGetUploadParameters();
         const url = params.url;
 
+        const fileType = inferUploadFileType(file);
         const isMock = url.startsWith("https://mock-storage.local/");
 
         if (isMock) {
@@ -86,7 +91,7 @@ export function ObjectUploader({
             file,
             name: file.name,
             fileName: file.name,
-            type: file.type || "application/octet-stream",
+            type: fileType,
             size: file.size || 0,
             url,
             objectUrl: url,
@@ -101,7 +106,7 @@ export function ObjectUploader({
           method: "PUT",
           body: file,
           headers: {
-            "Content-Type": file.type || "application/octet-stream",
+            "Content-Type": fileType,
           },
         });
 
@@ -109,19 +114,17 @@ export function ObjectUploader({
           throw new Error(`Upload failed: ${response.statusText}`);
         }
 
-        const fallbackPath = url.includes("?")
-          ? new URL(url).pathname.split("/").slice(2).join("/")
-          : url.split("/").slice(3).join("/");
+        const objectPath = params.objectPath?.startsWith("uploads/") ? params.objectPath : undefined;
         successful.push({
           file,
           name: file.name,
           fileName: file.name,
-          type: file.type || "application/octet-stream",
+          type: fileType,
           size: file.size || 0,
           uploadURL: url.split("?")[0],
           objectUrl: url.split("?")[0],
           url: url.split("?")[0],
-          objectPath: params.objectPath ?? fallbackPath,
+          objectPath,
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Upload failed";
@@ -160,8 +163,9 @@ export function ObjectUploader({
         type="file"
         multiple={maxNumberOfFiles > 1}
         onChange={handleFileChange}
-        style={{ display: "none" }}
         accept={accept}
+        capture={capture}
+        className="sr-only"
       />
       <Button
         type="button"

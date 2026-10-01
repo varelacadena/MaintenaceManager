@@ -10,7 +10,6 @@ import type { Task } from "@shared/schema";
 
 interface TechnicianBottomBarProps {
   task: Task;
-  taskStarted: boolean;
   isPaused: boolean;
   activeTimer: string | null;
   isEquipmentLoading: boolean;
@@ -29,7 +28,6 @@ interface TechnicianBottomBarProps {
 
 export function TechnicianBottomBar({
   task,
-  taskStarted,
   isPaused,
   activeTimer,
   isEquipmentLoading,
@@ -120,15 +118,11 @@ export function TechnicianBottomBar({
           </div>
         )}
 
-        <div
-          style={{
-            opacity: taskStarted ? 1 : 0.35,
-            pointerEvents: taskStarted ? "auto" : "none",
-          }}
-        >
+        <div className="shrink-0">
           <ObjectUploader
             maxNumberOfFiles={5}
             maxFileSize={10485760}
+            accept="image/*"
             onGetUploadParameters={getUploadParameters}
             onComplete={handleAutoSaveUpload}
             onError={(error) => {
@@ -139,18 +133,11 @@ export function TechnicianBottomBar({
               });
             }}
             buttonVariant="outline"
-            buttonClassName="flex items-center justify-center"
+            buttonClassName="h-11 w-11 sm:w-11 min-h-11 shrink-0 p-0"
             buttonTestId="bottom-button-camera"
             isLoading={addUploadMutation.isPending}
           >
-            <div
-              className={`flex items-center justify-center rounded-[10px] ${taskStarted ? "border-primary bg-primary/10" : "border-border"}`}
-              style={{ width: 42, height: 42, borderWidth: 1, borderStyle: "solid" }}
-            >
-              <Camera
-                className={`w-5 h-5 ${taskStarted ? "text-primary" : "text-muted-foreground"}`}
-              />
-            </div>
+            <Camera className="h-5 w-5 text-primary" />
           </ObjectUploader>
         </div>
       </div>

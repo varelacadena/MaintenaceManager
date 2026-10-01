@@ -145,34 +145,38 @@ export async function assertCanDownloadUpload(
   return false;
 }
 
+const OBJECT_URL_MAX = 1000;
+
+function fitsStoredObjectUrl(value: string | undefined): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= OBJECT_URL_MAX;
+}
+
 async function resolveObjectUrl(body: Record<string, unknown>): Promise<string | { error: { status: number; message: string } }> {
   const objectPath = body.objectPath as string | undefined;
   if (objectPath && !isAllowedObjectPath(objectPath)) {
     return { error: { status: 400, message: "Invalid upload path" } };
   }
+
+  let signedUrl: string | undefined;
   if (objectPath) {
     try {
       const { getDownloadUrl, getBucketId } = await import("./objectStorage");
       if (getBucketId()) {
-        return await getDownloadUrl(objectPath);
+        signedUrl = await getDownloadUrl(objectPath);
       }
     } catch {
-      // fall through to objectUrl handling
+      signedUrl = undefined;
     }
   }
+  if (fitsStoredObjectUrl(signedUrl)) return signedUrl;
 
-  let objectUrl = body.objectUrl as string;
-  if (objectUrl.includes("mock-storage.local") && objectPath) {
-    try {
-      const { getDownloadUrl, getBucketId } = await import("./objectStorage");
-      if (getBucketId()) {
-        objectUrl = await getDownloadUrl(objectPath);
-      }
-    } catch {
-      // keep original url
-    }
+  const rawUrl = typeof body.objectUrl === "string" ? body.objectUrl.split("?")[0] : "";
+  if (fitsStoredObjectUrl(rawUrl)) return rawUrl;
+  if (objectPath) {
+    const proxy = `/api/objects/image?path=${encodeURIComponent(objectPath)}`;
+    if (fitsStoredObjectUrl(proxy)) return proxy;
   }
-  return objectUrl;
+  return { error: { status: 400, message: "Upload link is too long to save" } };
 }
 
 function isResolveError(

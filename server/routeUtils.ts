@@ -15,6 +15,17 @@ function isDatabaseError(error: unknown): error is DatabaseError {
   return typeof error === "object" && error !== null && "code" in error;
 }
 
+export function storageUploadFailure(error: unknown): { status: number; message: string } | null {
+  const text = error instanceof Error ? error.message : String(error ?? "");
+  if (text.includes("exceed_storage_size_quota") || text.includes("storage size quota")) {
+    return {
+      status: 503,
+      message: "Photo storage is full. An admin needs to free space or raise the storage limit before new pictures can be saved.",
+    };
+  }
+  return null;
+}
+
 export function handleRouteError(res: Response, error: unknown, defaultMessage: string) {
   if (error instanceof z.ZodError) {
     return res.status(400).json({

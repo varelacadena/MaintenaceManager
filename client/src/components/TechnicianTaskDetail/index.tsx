@@ -132,7 +132,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
 
       <TechnicianBottomBar
         task={task}
-        taskStarted={hook.taskStarted}
         isPaused={hook.isPaused}
         activeTimer={props.activeTimer}
         isEquipmentLoading={isEquipmentLoading}
@@ -167,6 +166,9 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         notesReady={hook.notesReady}
         photoReady={hook.photoReady}
         handleNoteChange={hook.handleNoteChange}
+        getUploadParameters={getUploadParameters}
+        handleAutoSaveUpload={handleAutoSaveUpload}
+        addUploadMutation={addUploadMutation}
         isEstimateSheetOpen={hook.isEstimateSheetOpen}
         setIsEstimateSheetOpen={hook.setIsEstimateSheetOpen}
         quotes={quotes}

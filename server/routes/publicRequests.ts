@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
-import { handleRouteError } from "../routeUtils";
+import { handleRouteError, storageUploadFailure } from "../routeUtils";
 import { handleFacilityRouteError } from "../routeFacilityError";
 import { validateServiceRequestLocation } from "../facilityValidation";
 import { notificationService, notifyNewServiceRequest } from "../notifications";
@@ -115,6 +115,11 @@ export function registerPublicRequestRoutes(app: Express) {
         isMock: false,
       });
     } catch (error) {
+      const storageFailure = storageUploadFailure(error);
+      if (storageFailure) {
+        console.error("Failed to get upload URL:", error);
+        return res.status(storageFailure.status).json({ message: storageFailure.message });
+      }
       handleRouteError(res, error, "Failed to get upload URL");
     }
   });

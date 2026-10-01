@@ -70,6 +70,26 @@ export type UploaderFileResult = {
   objectPath?: string;
 };
 
+const IMAGE_TYPES_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  bmp: "image/bmp",
+};
+
+/** Phone cameras often omit a MIME type. Keep those files as images so they count and preview. */
+export function inferUploadFileType(file: { name?: string; type?: string }): string {
+  const declared = (file.type || "").trim().toLowerCase();
+  if (declared === "image/jpg") return "image/jpeg";
+  if (declared.startsWith("image/")) return declared;
+  const extension = (file.name || "").split(".").pop()?.toLowerCase() || "";
+  return IMAGE_TYPES_BY_EXTENSION[extension] || declared || "application/octet-stream";
+}
+
 function rawStorageUrl(file: UploaderFileResult): string {
   const rawUrl = file.objectUrl || file.url || file.uploadURL || "";
   return rawUrl.split("?")[0];
@@ -79,7 +99,7 @@ function rawStorageUrl(file: UploaderFileResult): string {
 export function mapUploaderResultForRegistration(file: UploaderFileResult) {
   return {
     fileName: file.fileName || file.name || "attachment",
-    fileType: file.type || "application/octet-stream",
+    fileType: inferUploadFileType({ name: file.fileName || file.name, type: file.type }),
     objectUrl: rawStorageUrl(file),
     objectPath: file.objectPath,
   };
@@ -91,11 +111,12 @@ export function mapUploaderResultToPending(
 ): PendingUploadPayload {
   const objectPath = file.objectPath;
   const fallbackUrl = rawStorageUrl(file);
+  const fileType = inferUploadFileType({ name: file.fileName || file.name, type: file.type });
   return {
     fileName: file.fileName || file.name || "attachment",
-    fileType: file.type || "application/octet-stream",
+    fileType,
     objectUrl: objectPath
-      ? buildDisplayUrlFromUpload(objectPath, fallbackUrl, file.type)
+      ? buildDisplayUrlFromUpload(objectPath, fallbackUrl, fileType)
       : fallbackUrl,
     objectPath,
     label,
