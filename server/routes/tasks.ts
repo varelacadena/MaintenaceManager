@@ -410,12 +410,6 @@ export function registerTaskRoutes(app: Express) {
 
       const task = await storage.createTask(taskData);
       try {
-        await storage.createTaskNote({
-          taskId: task.id,
-          userId,
-          content: workRecord,
-          noteType: "job_note",
-        });
         for (const photo of payload.photos) {
           await storage.createUpload({
             taskId: task.id,

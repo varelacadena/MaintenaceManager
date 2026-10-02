@@ -28,7 +28,7 @@ import {
 } from "@/lib/uploadUtils";
 import { toDisplayUrl } from "@/lib/imageUtils";
 
-const MIN_NOTE_LENGTH = 20;
+const MIN_DESCRIPTION_LENGTH = 20;
 
 type FieldJobForm = {
   name: string;
@@ -98,7 +98,7 @@ export default function TechnicianFieldJob() {
       invalidateTaskAfterMutation(task.id, { broad: true });
       toast({
         title: "Job added",
-        description: "The office can see the location, notes, and photo on this job.",
+        description: "The office can see the location, description, and photo on this job.",
       });
       navigate("/work", { replace: true });
     },
@@ -136,7 +136,7 @@ export default function TechnicianFieldJob() {
   const handleSubmit = () => {
     const title = form.name.trim();
     const spot = form.locationDetail.trim();
-    const notes = form.description.trim();
+    const description = form.description.trim();
 
     if (title.length < 3) {
       toast({
@@ -154,9 +154,9 @@ export default function TechnicianFieldJob() {
       });
       return;
     }
-    if (notes.length < MIN_NOTE_LENGTH) {
+    if (description.length < MIN_DESCRIPTION_LENGTH) {
       toast({
-        title: "Work notes required",
+        title: "Description required",
         description: "Write what you found and what needs to be done. A few words is not enough.",
         variant: "destructive",
       });
@@ -233,17 +233,17 @@ export default function TechnicianFieldJob() {
         </div>
 
         <div className={fieldCard}>
-          <Label htmlFor="field-job-description">Work notes</Label>
+          <Label htmlFor="field-job-description">Description</Label>
           <Textarea
             id="field-job-description"
             value={form.description}
             onChange={(event) => updateForm("description", event.target.value)}
-            placeholder="What is wrong, what you already checked, and what still needs to be done."
+            placeholder="What is wrong and what needs to be done."
             className="min-h-[120px] text-base sm:text-sm resize-y bg-background"
             data-testid="textarea-field-job-description"
           />
           <p className="text-xs text-muted-foreground">
-            Required. This is the record the office uses to track the job.
+            Required. This stays on the job as the description.
           </p>
         </div>
 
