@@ -55,9 +55,6 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
   const todayRecaps = recaps.filter((recap) => recap.recapDate === today);
   const earlierRecaps = recaps.filter((recap) => recap.recapDate !== today);
   const openEntry = clockQuery.data?.openEntry;
-  const hasShiftRecap = Boolean(
-    openEntry?.id && recaps.some((recap) => recap.timeEntryId === openEntry.id),
-  );
   const now = useLiveNow(Boolean(openEntry?.clockInAt));
   const elapsed = openEntry?.clockInAt
     ? formatLiveDuration(elapsedMilliseconds(openEntry.clockInAt, now))
@@ -74,7 +71,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
           Daily Recap
         </h1>
         <p className="text-sm text-muted-foreground">
-          Hi {user.firstName?.trim() || user.username?.trim() || "there"} — when you are done, write your recap. Clock out is the next step after that.
+          Hi {user.firstName?.trim() || user.username?.trim() || "there"} — when you are done, clock out. One short sentence in each box is enough.
         </p>
       </div>
 
@@ -93,10 +90,22 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
         </div>
       )}
 
+      {openEntry && (
+        <Button
+          type="button"
+          className="w-full h-12 text-base font-semibold"
+          onClick={() => setClockOutOpen(true)}
+          data-testid="button-start-clock-out"
+        >
+          <LogOut className="w-5 h-5 mr-2" />
+          Clock out
+        </Button>
+      )}
+
       <button
         type="button"
         onClick={() => navigate("/hours")}
-        className="w-full text-left rounded-xl border border-border bg-background p-4"
+        className="w-full text-left rounded-xl border border-border bg-background p-4 min-h-11"
         data-testid="button-open-hours"
       >
         <p className="text-sm text-muted-foreground">This week</p>
@@ -110,19 +119,6 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
         </p>
       </button>
 
-      {openEntry && (
-        <Button
-          type="button"
-          variant={hasShiftRecap ? "destructive" : "default"}
-          className="w-full h-12 text-base font-semibold"
-          onClick={() => setClockOutOpen(true)}
-          data-testid="button-start-clock-out"
-        >
-          {hasShiftRecap ? <LogOut className="w-5 h-5 mr-2" /> : <BookOpen className="w-5 h-5 mr-2" />}
-          {hasShiftRecap ? "Clock out" : "Write recap"}
-        </Button>
-      )}
-
       {recapsQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading recaps…</p>
       ) : recaps.length === 0 ? (
@@ -130,7 +126,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
           <BookOpen className="w-14 h-14 mx-auto mb-3 text-primary/70" />
           <p className="text-lg font-semibold">No recaps yet</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Write your recap when the shift is done. Clock out only appears after that recap is saved.
+            Clock out when the shift is done. One short sentence in each box is enough.
           </p>
         </div>
       ) : (
