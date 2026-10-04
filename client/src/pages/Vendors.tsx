@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Vendor } from "@shared/schema";
+import { VENDOR_TRADES, vendorTradeLabel, type Vendor, type VendorTradeSlug } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -28,6 +30,48 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const UNCATEGORIZED_TRADE = "uncategorized";
+
+function toggleTrade(current: VendorTradeSlug[], slug: VendorTradeSlug): VendorTradeSlug[] {
+  return current.includes(slug) ? current.filter((item) => item !== slug) : [...current, slug];
+}
+
+function TradePicker({
+  value,
+  onChange,
+  idPrefix,
+}: {
+  value: VendorTradeSlug[];
+  onChange: (next: VendorTradeSlug[]) => void;
+  idPrefix: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>Trades</Label>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {VENDOR_TRADES.map((trade) => {
+          const checked = value.includes(trade.slug);
+          return (
+            <label
+              key={trade.slug}
+              htmlFor={`${idPrefix}-trade-${trade.slug}`}
+              className="flex items-center gap-2 rounded-md border border-border px-2.5 py-2 text-sm cursor-pointer"
+            >
+              <Checkbox
+                id={`${idPrefix}-trade-${trade.slug}`}
+                checked={checked}
+                onCheckedChange={() => onChange(toggleTrade(value, trade.slug))}
+                data-testid={`${idPrefix}-trade-${trade.slug}`}
+              />
+              {trade.label}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Vendors() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -35,6 +79,7 @@ export default function Vendors() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<string | null>(null);
 
   // Create form states
   const [newName, setNewName] = useState("");
@@ -43,6 +88,7 @@ export default function Vendors() {
   const [newAddress, setNewAddress] = useState("");
   const [newContactPerson, setNewContactPerson] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [newTrades, setNewTrades] = useState<VendorTradeSlug[]>([]);
 
   // Edit form states
   const [editName, setEditName] = useState("");
@@ -51,6 +97,7 @@ export default function Vendors() {
   const [editAddress, setEditAddress] = useState("");
   const [editContactPerson, setEditContactPerson] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editTrades, setEditTrades] = useState<VendorTradeSlug[]>([]);
 
   const { data: vendors = [], isLoading } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
@@ -64,6 +111,7 @@ export default function Vendors() {
       address?: string;
       contactPerson?: string;
       notes?: string;
+      trades?: VendorTradeSlug[];
     }) => {
       const response = await apiRequest("POST", "/api/vendors", vendorData);
       return response.json();
@@ -128,6 +176,7 @@ export default function Vendors() {
     setNewAddress("");
     setNewContactPerson("");
     setNewNotes("");
+    setNewTrades([]);
   };
 
   const handleCreateVendor = (e: React.FormEvent) => {
@@ -139,6 +188,7 @@ export default function Vendors() {
       address: newAddress || undefined,
       contactPerson: newContactPerson || undefined,
       notes: newNotes || undefined,
+      trades: newTrades,
     });
   };
 
@@ -154,6 +204,7 @@ export default function Vendors() {
           address: editAddress,
           contactPerson: editContactPerson,
           notes: editNotes,
+          trades: editTrades,
         },
       });
     }
@@ -171,8 +222,35 @@ export default function Vendors() {
     setEditAddress(vendor.address || "");
     setEditContactPerson(vendor.contactPerson || "");
     setEditNotes(vendor.notes || "");
+    setEditTrades((vendor.trades ?? []).filter((trade): trade is VendorTradeSlug =>
+      VENDOR_TRADES.some((item) => item.slug === trade),
+    ));
     setIsEditDialogOpen(true);
   };
+
+  const tradeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const trade of VENDOR_TRADES) counts.set(trade.slug, 0);
+    let uncategorized = 0;
+    for (const vendor of vendors) {
+      const trades = vendor.trades ?? [];
+      if (trades.length === 0) uncategorized += 1;
+      for (const slug of trades) counts.set(slug, (counts.get(slug) ?? 0) + 1);
+    }
+    return { counts, uncategorized };
+  }, [vendors]);
+
+  const visibleVendors = vendors.filter((vendor) => {
+    if (!selectedTrade) return true;
+    if (selectedTrade === UNCATEGORIZED_TRADE) return (vendor.trades ?? []).length === 0;
+    return (vendor.trades ?? []).includes(selectedTrade);
+  });
+
+  const selectedTradeLabel = selectedTrade === UNCATEGORIZED_TRADE
+    ? "Uncategorized"
+    : selectedTrade
+      ? vendorTradeLabel(selectedTrade)
+      : "All Vendors";
 
   const openViewDialog = (vendor: Vendor) => {
     setSelectedVendor(vendor);
@@ -258,6 +336,7 @@ export default function Vendors() {
                   data-testid="input-new-vendor-address"
                 />
               </div>
+              <TradePicker value={newTrades} onChange={setNewTrades} idPrefix="new" />
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
@@ -289,15 +368,69 @@ export default function Vendors() {
         </Dialog>
       </div>
 
+      <Card data-testid="vendor-trade-filters">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Trades</CardTitle>
+          <p className="text-sm text-muted-foreground">Find a vendor by the work you need done.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={selectedTrade === null ? "default" : "outline"}
+              aria-pressed={selectedTrade === null}
+              onClick={() => setSelectedTrade(null)}
+              data-testid="filter-trade-all"
+            >
+              All
+              <span className="ml-1.5 tabular-nums">{vendors.length}</span>
+            </Button>
+            {tradeCounts.uncategorized > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant={selectedTrade === UNCATEGORIZED_TRADE ? "default" : "outline"}
+                aria-pressed={selectedTrade === UNCATEGORIZED_TRADE}
+                onClick={() => setSelectedTrade(selectedTrade === UNCATEGORIZED_TRADE ? null : UNCATEGORIZED_TRADE)}
+                data-testid="filter-trade-uncategorized"
+              >
+                Uncategorized
+                <span className="ml-1.5 tabular-nums">{tradeCounts.uncategorized}</span>
+              </Button>
+            )}
+            {VENDOR_TRADES.map((trade) => {
+              const count = tradeCounts.counts.get(trade.slug) ?? 0;
+              const selected = selectedTrade === trade.slug;
+              return (
+                <Button
+                  key={trade.slug}
+                  type="button"
+                  size="sm"
+                  variant={selected ? "default" : "outline"}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedTrade(selected ? null : trade.slug)}
+                  data-testid={`filter-trade-${trade.slug}`}
+                >
+                  {trade.label}
+                  <span className="ml-1.5 tabular-nums">{count}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
-          <CardTitle>All Vendors</CardTitle>
+          <CardTitle>{selectedTradeLabel}</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table className="min-w-[600px]">
+          <Table className="min-w-[720px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Vendor Name</TableHead>
+                <TableHead>Trades</TableHead>
                 <TableHead>Contact Person</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
@@ -305,16 +438,31 @@ export default function Vendors() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {vendors.length === 0 ? (
+              {visibleVendors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No vendors found. Add your first vendor to get started.
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    {vendors.length === 0
+                      ? "No vendors found. Add your first vendor to get started."
+                      : `No vendors listed for ${selectedTradeLabel}.`}
                   </TableCell>
                 </TableRow>
               ) : (
-                vendors.map((vendor) => (
+                visibleVendors.map((vendor) => (
                   <TableRow key={vendor.id} data-testid={`row-vendor-${vendor.id}`}>
                     <TableCell className="font-medium">{vendor.name}</TableCell>
+                    <TableCell>
+                      {(vendor.trades ?? []).length === 0 ? (
+                        <span className="text-muted-foreground">-</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {(vendor.trades ?? []).map((trade) => (
+                            <Badge key={trade} variant="secondary" data-testid={`badge-trade-${vendor.id}-${trade}`}>
+                              {vendorTradeLabel(trade)}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>{vendor.contactPerson || "-"}</TableCell>
                     <TableCell>{vendor.email || "-"}</TableCell>
                     <TableCell>{vendor.phoneNumber || "-"}</TableCell>
@@ -416,6 +564,7 @@ export default function Vendors() {
                 data-testid="input-edit-vendor-address"
               />
             </div>
+            <TradePicker value={editTrades} onChange={setEditTrades} idPrefix="edit" />
             <div className="space-y-2">
               <Label htmlFor="editNotes">Notes</Label>
               <Textarea
@@ -470,6 +619,18 @@ export default function Vendors() {
                   <p className="text-sm text-muted-foreground">Phone Number</p>
                   <p className="font-medium">{selectedVendor.phoneNumber || "-"}</p>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Trades</p>
+                {(selectedVendor.trades ?? []).length === 0 ? (
+                  <p className="font-medium">-</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(selectedVendor.trades ?? []).map((trade) => (
+                      <Badge key={trade} variant="secondary">{vendorTradeLabel(trade)}</Badge>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Contact Person</p>
