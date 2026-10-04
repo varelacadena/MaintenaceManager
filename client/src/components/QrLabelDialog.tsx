@@ -9,9 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AssetTagLabel } from "@/components/AssetTagLabel";
 import { QrPrintSizeSelector } from "@/components/QrPrintSizeSelector";
 import { useToast } from "@/hooks/use-toast";
-import { printQrLabelFromArea, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
+import type { AssetTagFields } from "@/lib/equipmentQrLabel";
+import { printAssetTagLabel, printQrLabelFromArea, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
 
 export type QrLabelLines = {
   primary: string;
@@ -24,7 +26,8 @@ interface QrLabelDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   qrValue: string;
-  label: QrLabelLines;
+  label?: QrLabelLines;
+  assetTag?: AssetTagFields;
   caption?: string;
   scanHint?: string;
   testIdPrefix?: string;
@@ -36,6 +39,7 @@ export function QrLabelDialog({
   title,
   qrValue,
   label,
+  assetTag,
   caption,
   scanHint,
   testIdPrefix = "qr-label",
@@ -45,15 +49,25 @@ export function QrLabelDialog({
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<QrPrintSize>("medium");
   const qrSize = QR_PRINT_SIZE_PX[size];
+  const description = assetTag?.id ?? label?.primary ?? title;
 
   const handlePrint = () => {
     const printArea = printAreaRef.current;
     if (!printArea) return;
 
-    const printed = printQrLabelFromArea(printArea, {
-      title: `${label.primary} QR`,
-      size,
-    });
+    const qrHtml = printArea.querySelector("svg")?.outerHTML ?? "";
+    if (assetTag && !qrHtml) return;
+
+    const printed = assetTag
+      ? printAssetTagLabel({
+          title: `${assetTag.id} asset tag`,
+          qrHtml,
+          fields: assetTag,
+        })
+      : printQrLabelFromArea(printArea, {
+          title: `${label?.primary ?? title} QR`,
+          size,
+        });
 
     if (!printed) {
       toast({
@@ -66,33 +80,41 @@ export function QrLabelDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm text-center" data-testid={`dialog-${testIdPrefix}`}>
+      <DialogContent className={assetTag ? "max-w-lg text-center" : "max-w-sm text-center"} data-testid={`dialog-${testIdPrefix}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center justify-center gap-2">
             <QrCode className="w-5 h-5 text-primary" />
             {title}
           </DialogTitle>
-          <DialogDescription>{label.primary}</DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4 py-2">
-          <div className="bg-white p-4 rounded-md border" id={printAreaId} ref={printAreaRef}>
-            <QRCode value={qrValue} size={qrSize} />
-            <div className="mt-2 text-center">
-              <p className="text-sm font-semibold font-mono text-black tracking-wide">{label.primary}</p>
-              {label.secondary && (
-                <p className="text-xs text-gray-600 mt-1">{label.secondary}</p>
-              )}
-              {label.serialNumber && (
-                <p className="text-xs text-gray-500 mt-1">SN: {label.serialNumber}</p>
-              )}
+          {assetTag ? (
+            <div id={printAreaId} ref={printAreaRef} className="w-full">
+              <AssetTagLabel fields={assetTag} qrValue={qrValue} />
             </div>
-          </div>
+          ) : (
+            <div className="bg-white p-4 rounded-md border" id={printAreaId} ref={printAreaRef}>
+              <QRCode value={qrValue} size={qrSize} />
+              <div className="mt-2 text-center">
+                <p className="text-sm font-semibold font-mono text-black tracking-wide">{label?.primary}</p>
+                {label?.secondary && (
+                  <p className="text-xs text-gray-600 mt-1">{label.secondary}</p>
+                )}
+                {label?.serialNumber && (
+                  <p className="text-xs text-gray-500 mt-1">SN: {label.serialNumber}</p>
+                )}
+              </div>
+            </div>
+          )}
 
-          <div className="space-y-2 w-full">
-            <p className="text-xs text-muted-foreground">Print size</p>
-            <QrPrintSizeSelector value={size} onChange={setSize} />
-          </div>
+          {!assetTag && (
+            <div className="space-y-2 w-full">
+              <p className="text-xs text-muted-foreground">Print size</p>
+              <QrPrintSizeSelector value={size} onChange={setSize} />
+            </div>
+          )}
 
           {caption && (
             <p className="text-xs text-muted-foreground px-2">{caption}</p>

@@ -38,7 +38,7 @@ import {
 } from "@/lib/mobileEquipmentConstants";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { QrLabelDialog } from "@/components/QrLabelDialog";
-import { getMobileEquipmentQrLabelLines } from "@/lib/mobileEquipmentQrLabel";
+import { getMobileEquipmentAssetTagFields } from "@/lib/mobileEquipmentQrLabel";
 import { mobileEquipmentQrUrl } from "@/lib/mobileEquipmentLinks";
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
@@ -339,8 +339,7 @@ export default function MobileEquipmentPage() {
           onOpenChange={setIsQrOpen}
           title="Tools & Equipment QR Code"
           qrValue={mobileEquipmentQrUrl(window.location.origin, qrItem.id)}
-          label={getMobileEquipmentQrLabelLines(qrItem)}
-          caption={qrItem.name}
+          assetTag={getMobileEquipmentAssetTagFields(qrItem)}
           scanHint="Scan to open this tool or equipment."
           testIdPrefix="mobile-equipment-qr"
         />

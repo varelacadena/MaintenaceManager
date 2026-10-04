@@ -72,6 +72,11 @@ export function suggestEquipmentAssetTag(params: {
   return nextEquipmentAssetTag(prefix, params.existingTags);
 }
 
+export function equipmentCategoryCode(category: string): string {
+  const key = category.toLowerCase();
+  return CATEGORY_ABBREV[key] ?? abbreviateTagPart(category.replace(/_/g, " "));
+}
+
 export function getEquipmentCategoryLabel(category: string): string {
   const labels: Record<string, string> = {
     hvac: "HVAC",

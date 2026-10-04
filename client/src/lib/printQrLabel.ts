@@ -1,3 +1,4 @@
+import type { AssetTagFields } from "@/lib/equipmentQrLabel";
 import { escapeHtml } from "@/lib/inventoryUtils";
 
 export type QrPrintSize = "small" | "medium" | "large";
@@ -54,6 +55,91 @@ function buildPrintDocument(options: PrintQrLabelOptions): string {
   <script>window.onload=function(){window.print();window.close();}</script>
 </body>
 </html>`;
+}
+
+export function buildAssetTagPrintDocument(options: {
+  title: string;
+  qrHtml: string;
+  fields: AssetTagFields;
+}): string {
+  const qrHtml = options.qrHtml
+    .replace(/\bwidth="[^"]*"/gi, 'width="17mm"')
+    .replace(/\bheight="[^"]*"/gi, 'height="17mm"')
+    .replace(/\sstyle="[^"]*"/gi, "");
+  const rows = [
+    ["ID", options.fields.id, true],
+    ["NAME", options.fields.name, false],
+    ["LOC", options.fields.location, false],
+    ["CAT", options.fields.category, true],
+  ] as const;
+
+  const body = rows
+    .map(
+      ([label, value, mono], index) => `<div class="row${index === rows.length - 1 ? " last" : ""}">
+        <div class="k">${label}</div>
+        <div class="v${mono ? " mono" : ""}">${escapeHtml(value)}</div>
+      </div>`,
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>${escapeHtml(options.title)}</title>
+  <style>
+    @page { size: 50mm 25mm; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 50mm; height: 25mm; overflow: hidden; }
+    .label {
+      width: 50mm; height: 25mm; border: 0.25mm solid #000; background: #fff; color: #000;
+      display: flex; flex-direction: column; font-family: Arial, Helvetica, sans-serif; overflow: hidden;
+    }
+    .head {
+      height: 4.2mm; border-bottom: 0.2mm solid #000; display: flex; align-items: center; justify-content: center;
+      font-size: 8pt; font-weight: 700; letter-spacing: 0.6pt;
+    }
+    .body { flex: 1; display: flex; min-height: 0; }
+    .rows { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .row { flex: 1; display: flex; min-height: 0; border-bottom: 0.2mm solid #000; }
+    .row.last { border-bottom: none; }
+    .k {
+      width: 8.5mm; border-right: 0.2mm solid #000; display: flex; align-items: center; justify-content: center;
+      font-size: 5.5pt; font-weight: 700;
+    }
+    .v {
+      flex: 1; min-width: 0; display: flex; align-items: center; padding: 0 0.7mm;
+      font-size: 6.5pt; font-weight: 700; white-space: nowrap; overflow: hidden;
+    }
+    .v.mono { font-family: "Courier New", Courier, monospace; font-size: 6pt; }
+    .qr {
+      width: 19mm; border-left: 0.2mm solid #000; display: flex; align-items: center; justify-content: center;
+    }
+    .qr svg, .qr img { width: 17mm !important; height: 17mm !important; display: block; }
+  </style>
+</head>
+<body>
+  <div class="label">
+    <div class="head">ASSET TAG</div>
+    <div class="body">
+      <div class="rows">${body}</div>
+      <div class="qr">${qrHtml}</div>
+    </div>
+  </div>
+  <script>window.onload=function(){window.print();window.close();}</script>
+</body>
+</html>`;
+}
+
+export function printAssetTagLabel(options: {
+  title: string;
+  qrHtml: string;
+  fields: AssetTagFields;
+}): boolean {
+  const w = window.open("", "_blank");
+  if (!w) return false;
+  w.document.write(buildAssetTagPrintDocument(options));
+  w.document.close();
+  return true;
 }
 
 export function printQrLabel(options: PrintQrLabelOptions): boolean {

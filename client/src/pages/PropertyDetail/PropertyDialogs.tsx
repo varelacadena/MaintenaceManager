@@ -10,7 +10,7 @@ import { FileAttachment } from "@/components/FileAttachment";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { equipmentKeys } from "@/lib/equipmentQueries";
 import { equipmentQrUrl } from "@/lib/propertyLinks";
-import { getEquipmentQrLabelLines } from "@/lib/equipmentQrLabel";
+import { getEquipmentAssetTagFields } from "@/lib/equipmentQrLabel";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import {
   getSignedUploadParameters,
@@ -597,8 +597,7 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
           onOpenChange={setIsQrDialogOpen}
           title="Equipment QR Code"
           qrValue={equipmentQrUrl(window.location.origin, qrEquipment.id)}
-          label={getEquipmentQrLabelLines(qrEquipment, spaces)}
-          caption={qrEquipment.name}
+          assetTag={getEquipmentAssetTagFields(qrEquipment, spaces)}
           scanHint="Scan to view equipment info, work history, and linked manuals."
           testIdPrefix="equipment-qr"
         />

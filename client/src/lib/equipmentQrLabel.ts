@@ -1,20 +1,33 @@
-import { getEquipmentCategoryLabel } from "@shared/equipmentAssetTag";
-import type { Equipment, Space } from "@shared/schema";
+import { equipmentCategoryCode } from "@shared/equipmentAssetTag";
 
-export function getEquipmentQrLabelLines(
-  equipment: Equipment,
-  spaces: Space[] = [],
-): { primary: string; secondary?: string; serialNumber?: string } {
+export type AssetTagFields = {
+  id: string;
+  name: string;
+  location: string;
+  category: string;
+};
+
+function shown(value: string | null | undefined): string {
+  const trimmed = value?.trim() ?? "";
+  return trimmed || "—";
+}
+
+export function formatEquipmentLabelLocation(space?: { name: string; floor?: string | null } | null): string {
+  const name = space?.name?.trim() ?? "";
+  if (!name) return "—";
+  const floor = space?.floor?.trim();
+  return floor ? `${name} · ${floor}` : name;
+}
+
+export function getEquipmentAssetTagFields(
+  equipment: { assetTag?: string | null; name: string; category: string; spaceId?: string | null },
+  spaces: { id: string; name: string; floor?: string | null }[] = [],
+): AssetTagFields {
   const space = equipment.spaceId ? spaces.find((item) => item.id === equipment.spaceId) : undefined;
-  const categoryLabel = getEquipmentCategoryLabel(equipment.category);
-  const locationParts = [
-    categoryLabel,
-    space ? `${space.name}${space.floor ? ` · ${space.floor}` : ""}` : null,
-  ].filter(Boolean);
-
   return {
-    primary: equipment.assetTag || equipment.name,
-    secondary: locationParts.length > 0 ? locationParts.join(" · ") : undefined,
-    serialNumber: equipment.serialNumber || undefined,
+    id: shown(equipment.assetTag),
+    name: shown(equipment.name),
+    location: formatEquipmentLabelLocation(space),
+    category: equipmentCategoryCode(equipment.category),
   };
 }

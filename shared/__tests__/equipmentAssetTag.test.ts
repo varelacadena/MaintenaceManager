@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   abbreviateTagPart,
   buildEquipmentAssetTagPrefix,
+  equipmentCategoryCode,
   nextEquipmentAssetTag,
   suggestEquipmentAssetTag,
 } from "../equipmentAssetTag";
@@ -27,6 +28,12 @@ describe("equipmentAssetTag", () => {
     expect(
       nextEquipmentAssetTag("LIBR-R2-HVAC", ["LIBR-R2-HVAC-01", "LIBR-R2-HVAC-02"]),
     ).toBe("LIBR-R2-HVAC-03");
+  });
+
+  it("uses the category code printed on the asset tag", () => {
+    expect(equipmentCategoryCode("hvac")).toBe("HVAC");
+    expect(equipmentCategoryCode("electrical")).toBe("ELEC");
+    expect(equipmentCategoryCode("custom_pump")).toBe("CP");
   });
 
   it("suggests first tag when none exist", () => {

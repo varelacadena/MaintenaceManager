@@ -1,19 +1,17 @@
 import { categoryLabel } from "@/lib/mobileEquipmentConstants";
-import type { MobileEquipment } from "@shared/schema";
+import type { AssetTagFields } from "@/lib/equipmentQrLabel";
 
-export function getMobileEquipmentQrLabelLines(equipment: MobileEquipment): {
-  primary: string;
-  secondary?: string;
-  serialNumber?: string;
-} {
-  const secondaryParts = [
-    categoryLabel(equipment.category),
-    equipment.currentLocationNotes?.trim() || null,
-  ].filter(Boolean);
-
+export function getMobileEquipmentAssetTagFields(equipment: {
+  assetTag?: string | null;
+  name: string;
+  category: string;
+  currentLocationNotes?: string | null;
+}): AssetTagFields {
+  const location = equipment.currentLocationNotes?.trim() || "—";
   return {
-    primary: equipment.assetTag?.trim() || equipment.name,
-    secondary: secondaryParts.length > 0 ? secondaryParts.join(" · ") : undefined,
-    serialNumber: equipment.serialNumber?.trim() || undefined,
+    id: equipment.assetTag?.trim() || "—",
+    name: equipment.name.trim() || "—",
+    location,
+    category: categoryLabel(equipment.category),
   };
 }

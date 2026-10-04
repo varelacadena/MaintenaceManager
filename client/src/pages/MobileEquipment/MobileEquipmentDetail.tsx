@@ -26,7 +26,7 @@ import { categoryLabel, statusLabel } from "@/lib/mobileEquipmentConstants";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { exitTo } from "@/lib/navigation";
 import { QrLabelDialog } from "@/components/QrLabelDialog";
-import { getMobileEquipmentQrLabelLines } from "@/lib/mobileEquipmentQrLabel";
+import { getMobileEquipmentAssetTagFields } from "@/lib/mobileEquipmentQrLabel";
 import { mobileEquipmentQrUrl } from "@/lib/mobileEquipmentLinks";
 
 type PartRow = {
@@ -176,8 +176,7 @@ export default function MobileEquipmentDetail() {
         onOpenChange={setIsQrOpen}
         title="Tools & Equipment QR Code"
         qrValue={mobileEquipmentQrUrl(window.location.origin, equipment.id)}
-        label={getMobileEquipmentQrLabelLines(equipment)}
-        caption={equipment.name}
+        assetTag={getMobileEquipmentAssetTagFields(equipment)}
         scanHint="Scan to open this tool or equipment."
         testIdPrefix="mobile-equipment-detail-qr"
       />
