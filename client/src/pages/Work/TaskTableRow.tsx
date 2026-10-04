@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
-import { urgencyConfig, taskStatusBadgeColors as taskStatusColors, statusDotColors, taskStatusConfig, getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { urgencyConfig, taskStatusBadgeColors as taskStatusColors, statusDotColors, taskStatusConfig, getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./constants";
@@ -184,7 +184,7 @@ export const TaskTableRow = memo(function TaskTableRow({
           >
             {assignee ? (
               <Avatar className="w-7 h-7 cursor-pointer" data-testid={`avatar-assignee-${task.id}`}>
-                <AvatarFallback className="bg-slate-600 text-white text-xs font-medium">
+                <AvatarFallback className={`${getAvatarColor(assignee.id)} text-white text-xs font-medium`}>
                   {assigneeInitials}
                 </AvatarFallback>
               </Avatar>
@@ -238,7 +238,7 @@ export const TaskTableRow = memo(function TaskTableRow({
             >
               <Badge
                 variant="outline"
-                className={`${taskStatusColors[task.status] || ""} text-xs font-medium cursor-pointer no-default-hover-elevate no-default-active-elevate`}
+                className={`${taskStatusColors[task.status] || ""} text-xs font-semibold uppercase tracking-wider cursor-pointer no-default-hover-elevate no-default-active-elevate`}
               >
                 <SelectValue />
               </Badge>

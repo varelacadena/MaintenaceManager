@@ -76,30 +76,30 @@ export const statusLabels: Record<string, string> = {
 
 export const urgencyConfig: Record<string, { color: string; label: string }> = {
   low: { color: "text-muted-foreground", label: "Low" },
-  medium: { color: "text-muted-foreground", label: "Medium" },
-  high: { color: "text-red-700 dark:text-red-400", label: "High" },
+  medium: { color: "text-amber-500 dark:text-amber-400", label: "Medium" },
+  high: { color: "text-red-500 dark:text-red-400", label: "High" },
 };
 
 export const taskStatusBadgeColors: Record<string, string> = {
-  not_started: "bg-muted text-muted-foreground border-border",
-  needs_estimate: "bg-muted text-foreground border-border",
-  waiting_approval: "bg-muted text-foreground border-border",
-  ready: "bg-muted text-foreground border-border",
-  in_progress: "bg-slate-800 text-white border-transparent dark:bg-slate-200 dark:text-slate-900",
-  on_hold: "bg-muted text-muted-foreground border-border",
-  completed: "bg-muted text-muted-foreground border-border",
-  cancelled: "bg-muted text-muted-foreground border-border",
+  not_started: "bg-gray-500 dark:bg-gray-600 text-white border-transparent",
+  needs_estimate: "bg-amber-500 dark:bg-amber-600 text-white border-transparent",
+  waiting_approval: "bg-purple-500 dark:bg-purple-600 text-white border-transparent",
+  ready: "bg-cyan-500 dark:bg-cyan-600 text-white border-transparent",
+  in_progress: "bg-rose-500 dark:bg-rose-600 text-white border-transparent",
+  on_hold: "bg-yellow-500 dark:bg-yellow-600 text-white border-transparent",
+  completed: "bg-emerald-500 dark:bg-emerald-600 text-white border-transparent",
+  cancelled: "bg-red-500 dark:bg-red-600 text-white border-transparent",
 };
 
 export const statusDotColors: Record<string, string> = {
-  not_started: "bg-stone-300 dark:bg-stone-600",
-  needs_estimate: "bg-stone-400 dark:bg-stone-500",
-  waiting_approval: "bg-stone-500 dark:bg-stone-400",
-  ready: "bg-stone-500 dark:bg-stone-400",
-  in_progress: "bg-slate-700 dark:bg-slate-300",
-  on_hold: "bg-stone-400 dark:bg-stone-500",
-  completed: "bg-stone-400 dark:bg-stone-500",
-  cancelled: "bg-stone-300 dark:bg-stone-600",
+  not_started: "bg-gray-400 dark:bg-gray-500",
+  needs_estimate: "bg-amber-500 dark:bg-amber-400",
+  waiting_approval: "bg-purple-500 dark:bg-purple-400",
+  ready: "bg-cyan-500 dark:bg-cyan-400",
+  in_progress: "bg-rose-500 dark:bg-rose-400",
+  on_hold: "bg-yellow-500 dark:bg-yellow-400",
+  completed: "bg-emerald-500 dark:bg-emerald-400",
+  cancelled: "bg-red-400 dark:bg-red-500",
 };
 
 export const taskStatusConfig = [
