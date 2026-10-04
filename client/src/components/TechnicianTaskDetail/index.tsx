@@ -37,7 +37,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const hook = useTechnicianTaskDetail(props);
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-muted/40 md:relative md:inset-auto md:z-auto md:min-h-full">
+    <div className="fixed inset-0 z-40 flex h-full min-h-0 flex-col bg-muted/40 md:relative md:inset-auto md:z-auto md:h-full">
       <TechnicianHero
         task={task}
         isPaused={hook.isPaused}
@@ -79,7 +79,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-36" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-2.5 py-2 space-y-2">
           {hook.activeTab === "task" ? (
             <TechnicianTaskTab

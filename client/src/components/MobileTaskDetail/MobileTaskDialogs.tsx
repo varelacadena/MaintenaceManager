@@ -51,11 +51,11 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
     <>
       {!isCompleted && (
         <div
-          className="fixed bottom-0 left-0 right-0 flex items-center gap-2 px-4 py-3"
-          style={{ backgroundColor: "#FFFFFF", borderTop: "1px solid #EEEEEE", zIndex: 50 }}
+          className="flex shrink-0 items-stretch gap-2 px-3 py-2"
+          style={{ backgroundColor: "#FFFFFF", borderTop: "1px solid #EEEEEE", paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}
           data-testid="mobile-bottom-bar"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-stretch gap-2">
             <ObjectUploader
               maxNumberOfFiles={5}
               maxFileSize={10485760}
@@ -66,37 +66,39 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
                 toast({ title: "Upload failed", description: error.message, variant: "destructive" });
               }}
               buttonVariant="outline"
-              buttonClassName="h-11 w-11 sm:w-11 min-h-11 shrink-0 p-0"
+              wrapperClassName="h-12 w-12 shrink-0"
+              buttonClassName="h-12 w-12 sm:h-12 sm:w-12 min-h-12 shrink-0 p-0 [&_svg]:!size-5"
               buttonTestId="button-mobile-photos"
+              buttonAriaLabel="Add photo"
               isLoading={addUploadMutation.isPending}
             >
-              <Camera className="w-4 h-4" />
+              <Camera />
             </ObjectUploader>
             <Button
               variant="outline"
-              size="icon"
+              className="h-12 w-12 shrink-0 p-0 [&_svg]:!size-5"
               style={{ borderColor: "#EEEEEE", color: "#6B7280" }}
               onClick={() => setIsScannerOpen(true)}
               data-testid="button-mobile-scan"
               aria-label="Scan"
             >
-              <ScanLine className="w-4 h-4" />
+              <ScanLine />
             </Button>
             <Button
               variant="outline"
-              size="icon"
+              className="h-12 w-12 shrink-0 p-0 [&_svg]:!size-5"
               style={{ borderColor: "#EEEEEE", color: "#6B7280" }}
               onClick={() => setIsNoteSheetOpen(true)}
               data-testid="button-mobile-note"
               aria-label="Note"
             >
-              <StickyNote className="w-4 h-4" />
+              <StickyNote />
             </Button>
           </div>
-          <div className="flex-1">
+          <div className="flex min-w-0 flex-1">
             {task.status === "not_started" ? (
               <Button
-                className="w-full"
+                className="h-12 w-full text-base"
                 style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
                 onClick={() => void handleStartTask()}
                 disabled={updateStatusMutation.isPending}
@@ -106,7 +108,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
               </Button>
             ) : task.status === "in_progress" ? (
               <Button
-                className="w-full"
+                className="h-12 w-full text-base"
                 style={{
                   backgroundColor: allSubtasksDone ? "#4338CA" : "#9CA3AF",
                   color: "#FFFFFF",
@@ -119,7 +121,7 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
               </Button>
             ) : task.status === "on_hold" ? (
               <Button
-                className="w-full"
+                className="h-12 w-full text-base"
                 style={{ backgroundColor: "#4338CA", color: "#FFFFFF" }}
                 onClick={() => updateStatusMutation.mutate("in_progress")}
                 disabled={updateStatusMutation.isPending}

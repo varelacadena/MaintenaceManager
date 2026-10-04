@@ -52,7 +52,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
   if (!task) return null;
 
   return (
-    <div className="flex flex-col h-full bg-background" style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}>
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
           <AdminViewHeader ctx={ctx} />
@@ -156,10 +156,10 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50 safe-area-inset-bottom">
-        <div className="flex items-center justify-around px-2 py-2 max-w-2xl mx-auto gap-2">
+      <div className="z-30 shrink-0 border-t border-border bg-background safe-area-inset-bottom">
+        <div className="mx-auto flex w-full max-w-2xl items-stretch gap-2 px-2 py-2">
           {isParentTask ? (
-            <div className="flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
+            <div className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2" data-testid="bottom-parent-info">
               <Layers className="w-5 h-5 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
             </div>
@@ -167,7 +167,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
             <Button
               variant="ghost"
               size="sm"
-              className="flex-1 h-14 flex-col gap-0.5 text-green-600 dark:text-green-400"
+              className="h-14 min-w-0 flex-1 flex-col gap-0.5 px-2 text-green-600 dark:text-green-400 [&_svg]:!size-5"
               disabled
               data-testid="bottom-button-done"
             >
@@ -178,7 +178,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
             <Button
               variant="default"
               size="sm"
-              className="flex-1 h-14 flex-col gap-0.5"
+              className="h-14 min-w-0 flex-1 flex-col gap-0.5 px-2 [&_svg]:!size-5"
               onClick={handleStartOrPause}
               disabled={stopTimerMutation.isPending}
               data-testid="bottom-button-pause"
@@ -191,7 +191,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 h-14 flex-col gap-0.5"
+                className="h-14 min-w-0 flex-1 flex-col gap-0.5 px-2 [&_svg]:!size-5"
                 onClick={handleStartOrPause}
                 disabled={startTimerMutation.isPending}
                 data-testid="bottom-button-resume"
@@ -202,7 +202,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
               <Button
                 variant="default"
                 size="sm"
-                className="flex-1 h-14 flex-col gap-0.5 bg-green-600"
+                className="h-14 min-w-0 flex-1 flex-col gap-0.5 bg-green-600 px-2 [&_svg]:!size-5"
                 onClick={handleComplete}
                 disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
                 title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
@@ -216,7 +216,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
             <Button
               variant="default"
               size="sm"
-              className="flex-1 h-14 flex-col gap-0.5"
+              className="h-14 min-w-0 flex-1 flex-col gap-0.5 px-2 [&_svg]:!size-5"
               onClick={handleStartOrPause}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-start"
@@ -235,7 +235,8 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
               toast({ title: "Upload failed", description: error.message, variant: "destructive" });
             }}
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-            buttonClassName="h-14 px-4 flex-col gap-0.5 w-full"
+            wrapperClassName="h-14 min-w-0 flex-1"
+            buttonClassName="h-14 w-full min-h-14 flex-col gap-0.5 px-2 [&_svg]:!size-5"
             buttonVariant="ghost"
             buttonTestId="bottom-button-upload"
             isLoading={addUploadMutation.isPending}
@@ -247,7 +248,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
           <Button
             variant="ghost"
             size="sm"
-            className="flex-col gap-0.5 h-14 px-3"
+            className="h-14 w-14 shrink-0 flex-col gap-0.5 p-0 [&_svg]:!size-5"
             onClick={() => setIsScanEquipmentOpen(true)}
             disabled={isEquipmentLoading}
             data-testid="bottom-button-scan-equipment"
@@ -263,7 +264,7 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 h-12 flex-col gap-0.5"
+            className="h-14 min-w-0 flex-1 flex-col gap-0.5 px-2 [&_svg]:!size-5"
             onClick={() => setIsAddNoteDialogOpen(true)}
             data-testid="bottom-button-add-note"
           >

@@ -20,8 +20,11 @@ interface ObjectUploaderProps {
   onComplete?: (result: any) => void;
   onError?: (error: Error) => void;
   buttonClassName?: string;
+  /** Classes for the wrapper around the file input and button. */
+  wrapperClassName?: string;
   buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost";
   buttonTestId?: string;
+  buttonAriaLabel?: string;
   isLoading?: boolean;
   children: ReactNode;
 }
@@ -35,8 +38,10 @@ export function ObjectUploader({
   onComplete,
   onError,
   buttonClassName,
+  wrapperClassName,
   buttonVariant,
   buttonTestId,
+  buttonAriaLabel,
   isLoading = false,
   children,
 }: ObjectUploaderProps) {
@@ -157,7 +162,7 @@ export function ObjectUploader({
       : "Uploading...";
 
   return (
-    <div>
+    <div className={cn("flex w-full sm:w-auto", wrapperClassName)}>
       <input
         ref={fileInputRef}
         type="file"
@@ -171,8 +176,9 @@ export function ObjectUploader({
         type="button"
         variant={buttonVariant ?? "default"}
         onClick={() => !isBusy && fileInputRef.current?.click()}
-        className={cn("w-full sm:w-auto min-h-10", buttonClassName)}
+        className={cn("h-full w-full sm:w-auto min-h-10", buttonClassName)}
         data-testid={buttonTestId ?? "button-upload"}
+        aria-label={buttonAriaLabel}
         disabled={isBusy}
       >
         {isBusy ? (

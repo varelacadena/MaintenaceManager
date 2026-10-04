@@ -43,10 +43,10 @@ export default function MobileTaskDetail() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ backgroundColor: "#F8F8F8" }} data-testid="mobile-task-detail">
+    <div className="flex h-svh min-h-0 flex-col" style={{ backgroundColor: "#F8F8F8" }} data-testid="mobile-task-detail">
       <MobileTaskHeader task={task} navigate={navigate} />
 
-      <div className="flex-1 overflow-y-auto pb-24 px-4 pt-4 space-y-3">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pt-4">
         <MobileStatusBar task={task} />
         <MobileTaskContent ctx={ctx} />
         <MobileTaskContentExtra ctx={ctx} />

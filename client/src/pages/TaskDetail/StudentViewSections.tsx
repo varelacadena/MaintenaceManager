@@ -47,9 +47,9 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
   if (!task) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50">
+    <div className="z-30 shrink-0 border-t border-border bg-background">
       <div
-        className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 pt-2.5 sm:pt-3 max-w-lg mx-auto"
+        className="mx-auto flex w-full max-w-lg items-stretch gap-2 px-3 pt-2 sm:px-4"
         style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}
       >
         {taskIsHelper ? (
@@ -59,7 +59,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
               <Button
                 size="lg"
                 variant="outline"
-                className="shrink-0 px-4"
+                className="h-14 w-14 shrink-0 p-0 [&_svg]:!size-5"
                 onClick={handleStartOrPause}
                 disabled={stopTimerMutation.isPending}
                 data-testid="bottom-button-helper-pause"
@@ -73,7 +73,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
               <Badge variant="outline" className="shrink-0" data-testid="badge-helper-status">Helper</Badge>
               <Button
                 size="lg"
-                className="min-w-0 flex-1 px-4"
+                className="h-14 min-w-0 flex-1 px-4 [&_svg]:!size-5"
                 onClick={handleStartOrPause}
                 disabled={startTimerMutation.isPending}
                 data-testid="bottom-button-helper-start"
@@ -84,14 +84,14 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             </div>
           )
         ) : isParentTask ? (
-          <div className="min-w-0 flex-1 flex items-center justify-center gap-2 py-2" data-testid="bottom-parent-info">
+          <div className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2" data-testid="bottom-parent-info">
             <Layers className="w-5 h-5 text-muted-foreground" />
             <span className="min-w-0 text-sm text-muted-foreground truncate">{completedSubTasks} of {subTasks.length} sub-tasks complete</span>
           </div>
         ) : task.status === "completed" ? (
           <Button
             size="lg"
-            className="min-w-0 flex-1 px-4 font-bold bg-green-600 text-white border-green-600"
+            className="h-14 min-w-0 flex-1 px-4 font-bold bg-green-600 text-white border-green-600 [&_svg]:!size-5"
             disabled
             data-testid="bottom-button-done"
           >
@@ -103,7 +103,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             <Button
               size="lg"
               variant="outline"
-              className="shrink-0 px-4"
+              className="h-14 w-14 shrink-0 p-0 [&_svg]:!size-5"
               onClick={handleStartOrPause}
               disabled={stopTimerMutation.isPending}
               data-testid="bottom-button-pause"
@@ -112,7 +112,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             </Button>
             <Button
               size="lg"
-              className="min-w-0 flex-1 px-4 text-sm sm:text-base font-bold bg-green-600 text-white border-green-600"
+              className="h-14 min-w-0 flex-1 px-3 text-base font-bold bg-green-600 text-white border-green-600 [&_svg]:!size-5"
               onClick={handleComplete}
               disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
               title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
@@ -127,7 +127,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             <Button
               size="lg"
               variant="outline"
-              className="shrink-0 px-4"
+              className="h-14 w-14 shrink-0 p-0 [&_svg]:!size-5"
               onClick={handleStartOrPause}
               disabled={startTimerMutation.isPending}
               data-testid="bottom-button-resume"
@@ -136,7 +136,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
             </Button>
             <Button
               size="lg"
-              className="min-w-0 flex-1 px-4 text-sm sm:text-base font-bold bg-green-600 text-white border-green-600"
+              className="h-14 min-w-0 flex-1 px-3 text-base font-bold bg-green-600 text-white border-green-600 [&_svg]:!size-5"
               onClick={handleComplete}
               disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
               title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
@@ -149,7 +149,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
         ) : task.status === "needs_estimate" || task.status === "waiting_approval" ? (
           <Button
             size="lg"
-            className="min-w-0 flex-1 px-4 font-bold"
+            className="h-14 min-w-0 flex-1 px-4 font-bold"
             disabled
             data-testid="bottom-button-estimate-required"
           >
@@ -158,7 +158,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
         ) : (
           <Button
             size="lg"
-            className="min-w-0 flex-1 px-4 font-bold"
+            className="h-14 min-w-0 flex-1 px-4 font-bold [&_svg]:!size-5"
             onClick={handleStartOrPause}
             disabled={startTimerMutation.isPending}
             data-testid="bottom-button-start"
@@ -170,7 +170,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
         <Button
           variant="ghost"
           size="sm"
-          className="flex-col gap-0.5 h-14 px-2.5 sm:px-3 shrink-0"
+          className="h-14 w-14 shrink-0 flex-col gap-0.5 p-0 [&_svg]:!size-5"
           onClick={() => setIsScanEquipmentOpen(true)}
           disabled={isEquipmentLoading}
           data-testid="bottom-button-scan-equipment"
