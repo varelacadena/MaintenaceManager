@@ -51,7 +51,8 @@ export const EQUIPMENT_CATEGORY_ICONS: Record<string, any> = {
 export const EQUIPMENT_CATEGORY_LABELS: Record<string, string> = {
   hvac: "HVAC", electrical: "Electrical", plumbing: "Plumbing",
   mechanical: "Mechanical", appliances: "Appliances", grounds: "Grounds",
-  janitorial: "Janitorial", structural: "Structural", water_treatment: "Water Treatment", general: "General",
+  janitorial: "Janitorial", structural: "Structural",   water_treatment: "Water Treatment", general: "General",
+  smoke_detector: "Smoke Detector", exit_sign: "Exit Sign",
 };
 
 export const RESOURCE_TYPE_ICONS: Record<string, any> = {

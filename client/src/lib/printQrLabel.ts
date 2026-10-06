@@ -3,6 +3,12 @@ import { escapeHtml } from "@/lib/inventoryUtils";
 
 export type QrPrintSize = "small" | "medium" | "large";
 
+/** Physical sticker used by the label printer. */
+export const QR_LABEL_WIDTH_MM = 50;
+export const QR_LABEL_HEIGHT_MM = 25;
+export const QR_LABEL_QR_MM = 17;
+export const QR_LABEL_QR_COLUMN_MM = 19;
+
 export const QR_PRINT_SIZE_PX: Record<QrPrintSize, number> = {
   small: 120,
   medium: 200,
@@ -63,8 +69,8 @@ export function buildAssetTagPrintDocument(options: {
   fields: AssetTagFields;
 }): string {
   const qrHtml = options.qrHtml
-    .replace(/\bwidth="[^"]*"/gi, 'width="17mm"')
-    .replace(/\bheight="[^"]*"/gi, 'height="17mm"')
+    .replace(/\bwidth="[^"]*"/gi, `width="${QR_LABEL_QR_MM}mm"`)
+    .replace(/\bheight="[^"]*"/gi, `height="${QR_LABEL_QR_MM}mm"`)
     .replace(/\sstyle="[^"]*"/gi, "");
   const rows = [
     ["ID", options.fields.id, true],
@@ -87,11 +93,11 @@ export function buildAssetTagPrintDocument(options: {
 <head>
   <title>${escapeHtml(options.title)}</title>
   <style>
-    @page { size: 50mm 25mm; margin: 0; }
+    @page { size: ${QR_LABEL_WIDTH_MM}mm ${QR_LABEL_HEIGHT_MM}mm; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; width: 50mm; height: 25mm; overflow: hidden; }
+    html, body { margin: 0; padding: 0; width: ${QR_LABEL_WIDTH_MM}mm; height: ${QR_LABEL_HEIGHT_MM}mm; overflow: hidden; }
     .label {
-      width: 50mm; height: 25mm; border: 0.25mm solid #000; background: #fff; color: #000;
+      width: ${QR_LABEL_WIDTH_MM}mm; height: ${QR_LABEL_HEIGHT_MM}mm; border: 0.25mm solid #000; background: #fff; color: #000;
       display: flex; flex-direction: column; font-family: Arial, Helvetica, sans-serif; overflow: hidden;
     }
     .head {
@@ -112,9 +118,9 @@ export function buildAssetTagPrintDocument(options: {
     }
     .v.mono { font-family: "Courier New", Courier, monospace; font-size: 6pt; }
     .qr {
-      width: 19mm; border-left: 0.2mm solid #000; display: flex; align-items: center; justify-content: center;
+      width: ${QR_LABEL_QR_COLUMN_MM}mm; border-left: 0.2mm solid #000; display: flex; align-items: center; justify-content: center;
     }
-    .qr svg, .qr img { width: 17mm !important; height: 17mm !important; display: block; }
+    .qr svg, .qr img { width: ${QR_LABEL_QR_MM}mm !important; height: ${QR_LABEL_QR_MM}mm !important; display: block; }
   </style>
 </head>
 <body>

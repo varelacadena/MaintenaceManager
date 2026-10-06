@@ -10,6 +10,8 @@ import {
   Camera,
   StickyNote,
   CircleHelp,
+  ScanLine,
+  AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
@@ -188,9 +190,38 @@ export function TechnicianDialogs({
               Don&apos;t forget
             </p>
             <p className="text-xs mb-4 text-muted-foreground">
-              Before you finish this task, please:
+              {task.lifeSafetyRound
+                ? "Scan each unit, or mark a problem, before this week can be finished."
+                : "Before you finish this task, please:"}
             </p>
             <ul className="space-y-3 mb-5">
+              {task.lifeSafetyRound ? (
+                <>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <ScanLine className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Scan the sticker on that unit</p>
+                      <p className="text-xs text-muted-foreground">
+                        A different sticker does not check the row.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <AlertTriangle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Mark a problem if it fails</p>
+                      <p className="text-xs text-muted-foreground">
+                        A short note opens a separate repair job.
+                      </p>
+                    </div>
+                  </li>
+                </>
+              ) : (
+                <>
               <li className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <StickyNote className="h-4 w-4 text-primary" />
@@ -213,6 +244,8 @@ export function TechnicianDialogs({
                   </p>
                 </div>
               </li>
+                </>
+              )}
             </ul>
             <div className="space-y-2">
               <button
@@ -254,7 +287,9 @@ export function TechnicianDialogs({
                 </p>
                 {isTimerRunning && (
                   <p className="text-xs mt-0.5 text-muted-foreground">
-                    Pause now, or complete with a work note.
+                    {task.lifeSafetyRound
+                      ? "Pause now, or finish after every unit is recorded."
+                      : "Pause now, or complete with a work note."}
                   </p>
                 )}
               </div>
@@ -272,11 +307,13 @@ export function TechnicianDialogs({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="space-y-2" data-testid="popover-complete-help">
-                  <p className="text-sm font-medium text-foreground">Work note required</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {task.lifeSafetyRound ? "Record every unit first" : "Work note required"}
+                  </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Write a short sentence about what you found and what you did.
-                    Example: &ldquo;Replaced the belt and tested the unit.&rdquo;
-                    &ldquo;Done&rdquo; or &ldquo;ok&rdquo; is not enough.
+                    {task.lifeSafetyRound
+                      ? "Scan each smoke detector and exit sign, or mark a problem. Then this week can be finished."
+                      : "Write a short sentence about what you found and what you did. Example: “Replaced the belt and tested the unit.” “Done” or “ok” is not enough."}
                   </p>
                   {task.instructions && (
                     <div
@@ -294,6 +331,11 @@ export function TechnicianDialogs({
                 </PopoverContent>
               </Popover>
             </div>
+            {task.lifeSafetyRound ? (
+              <p className="mb-4 text-sm text-muted-foreground">
+                Finish after every smoke detector and exit sign is scanned or marked as a problem.
+              </p>
+            ) : (
             <div className="mb-4">
               <label
                 htmlFor="completion-work-note"
@@ -320,6 +362,7 @@ export function TechnicianDialogs({
                 </p>
               )}
             </div>
+            )}
             <div className="mb-4" data-testid="dialog-photo-upload">
               <ObjectUploader
                 maxNumberOfFiles={5}

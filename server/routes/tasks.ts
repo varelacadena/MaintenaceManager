@@ -24,6 +24,9 @@ import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { toTaskListSummary } from "../taskDto";
 import { stopRecurringSeries } from "../recurringTaskScheduler";
+import { assertLifeSafetyReadyToFinish, createLifeSafetyTask } from "../lifeSafetyRounds";
+import { LIFE_SAFETY_OPEN_MESSAGE } from "@shared/lifeSafety";
+import { validatePropertyExists } from "../facilityValidation";
 
 async function rejectIfWorkNoteRequired(
   res: any,
@@ -48,6 +51,14 @@ async function rejectIfPhotoRequired(
   const uploads = await storage.getUploadsByTask(taskId);
   if (uploads.some(uploadIsCompletionPhoto)) return false;
   res.status(400).json({ message: PHOTO_REQUIRED_MESSAGE });
+  return true;
+}
+
+async function rejectIfLifeSafetyOpen(res: any, task: { id: string; lifeSafetyRound?: boolean | null }): Promise<boolean> {
+  if (!task.lifeSafetyRound) return false;
+  const message = await assertLifeSafetyReadyToFinish(task.id);
+  if (!message) return false;
+  res.status(400).json({ message: message || LIFE_SAFETY_OPEN_MESSAGE });
   return true;
 }
 
@@ -470,6 +481,35 @@ export function registerTaskRoutes(app: Express) {
 
       const validatedGroups = checklistGroupSchema.parse(checklistGroups);
 
+      if (taskData.lifeSafetyRound) {
+        const propertyIds = (taskData.propertyIds?.length ? taskData.propertyIds : taskData.propertyId ? [taskData.propertyId] : [])
+          .filter((id): id is string => !!id);
+        if (propertyIds.length === 0) {
+          return res.status(400).json({ message: "Choose a property for this life safety round" });
+        }
+        for (const propertyId of propertyIds) {
+          await validatePropertyExists(propertyId);
+        }
+        const created = [];
+        for (const propertyId of propertyIds) {
+          created.push(await createLifeSafetyTask({
+            ...taskData,
+            propertyId,
+            propertyIds: null,
+            checklistGroups: undefined,
+          } as any));
+        }
+        if (helperUserIds && Array.isArray(helperUserIds)) {
+          for (const createdTask of created) {
+            for (const helperId of helperUserIds) {
+              await storage.addTaskHelper(createdTask.id, helperId);
+            }
+          }
+        }
+        const first = created[0];
+        return res.status(201).json(created.length === 1 ? first : { ...first, createdTaskIds: created.map((item) => item.id) });
+      }
+
       let task;
       
       if (validatedGroups && validatedGroups.length > 0) {
@@ -699,7 +739,10 @@ export function registerTaskRoutes(app: Express) {
           }
         }
         if (currentTask?.status !== "completed") {
-          if (await rejectIfWorkNoteRequired(res, req.params.id, currentUser.role)) {
+          if (await rejectIfLifeSafetyOpen(res, currentTask)) {
+            return;
+          }
+          if (!currentTask?.lifeSafetyRound && await rejectIfWorkNoteRequired(res, req.params.id, currentUser.role)) {
             return;
           }
           if (await rejectIfPhotoRequired(res, req.params.id, currentUser.role, currentTask?.requiresPhoto)) {
@@ -1014,7 +1057,10 @@ export function registerTaskRoutes(app: Express) {
       }
 
       if (normalizedStatus === "completed" && task.status !== "completed") {
-        if (await rejectIfWorkNoteRequired(res, taskId, currentUser.role)) {
+        if (await rejectIfLifeSafetyOpen(res, task)) {
+          return;
+        }
+        if (!task.lifeSafetyRound && await rejectIfWorkNoteRequired(res, taskId, currentUser.role)) {
           return;
         }
         if (await rejectIfPhotoRequired(res, taskId, currentUser.role, task.requiresPhoto)) {

@@ -133,16 +133,16 @@ export const statusColors: Record<string, string> = {
 };
 
 export function getGradient(status: string, isPaused: boolean): string {
-  if (isPaused) return "linear-gradient(135deg, #374151 0%, #4B5563 100%)";
+  if (isPaused && status !== "completed") return "linear-gradient(135deg, #374151 0%, #4B5563 100%)";
   if (status === "in_progress") return "linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 55%, #3b82f6 100%)";
   if (status === "waiting_approval") return "linear-gradient(135deg, #92400E 0%, #D97706 60%, #F59E0B 100%)";
   return "linear-gradient(135deg, #3730A3 0%, #4338CA 60%, #6366F1 100%)";
 }
 
 export function getStatusLabel(status: string, isPaused: boolean): string {
+  if (status === "completed") return "Completed";
   if (isPaused) return "Paused";
   if (status === "in_progress") return "In Progress";
-  if (status === "completed") return "Completed";
   if (status === "waiting_approval") return "Waiting Approval";
   return "Not Started";
 }

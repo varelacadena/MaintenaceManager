@@ -65,8 +65,8 @@ export default function NewTask() {
 
             <div className="w-full lg:w-[65%] space-y-8 pb-12">
               <LeftColumnSections ctx={ctx} />
-              <NewTaskSubtaskSection ctx={ctx} />
-              <NewTaskChecklistSection ctx={ctx} />
+              {!ctx.lifeSafetyRound && <NewTaskSubtaskSection ctx={ctx} />}
+              {!ctx.lifeSafetyRound && <NewTaskChecklistSection ctx={ctx} />}
             </div>
 
             <div className="w-full lg:w-[35%]">

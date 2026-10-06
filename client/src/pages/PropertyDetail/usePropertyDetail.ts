@@ -26,6 +26,8 @@ export const EQUIPMENT_CATEGORIES = [
   { slug: "structural", label: "Structural" },
   { slug: "water_treatment", label: "Water Treatment" },
   { slug: "general", label: "General" },
+  { slug: "smoke_detector", label: "Smoke Detector" },
+  { slug: "exit_sign", label: "Exit Sign" },
 ] as const;
 
 export type EquipmentCategorySlug = typeof EQUIPMENT_CATEGORIES[number]["slug"];

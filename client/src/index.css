@@ -370,6 +370,34 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  /* Phone dialogs should fill the visible screen. The shared dialog
+     zoom/slide animation uses transform, which leaves these panels
+     scaled and shifted after the keyboard or visual viewport moves. */
+  @media (max-width: 639px) {
+    .mobile-sheet-panel[data-state="open"],
+    .mobile-sheet-panel[data-state="closed"],
+    .mobile-form-dialog[data-state="open"],
+    .mobile-form-dialog[data-state="closed"] {
+      animation: none !important;
+      transform: none !important;
+    }
+
+    .mobile-form-dialog[data-state="open"],
+    .mobile-form-dialog[data-state="closed"] {
+      left: 0 !important;
+      right: 0 !important;
+      top: auto !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      max-width: none !important;
+      max-height: 100dvh !important;
+      border-bottom-left-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+      border-top-left-radius: 1rem !important;
+      border-top-right-radius: 1rem !important;
+    }
+  }
+
   /* If there's a 1px border, adjust the inset so that it covers that parent's border */
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
   .border.active-elevate:not(.no-active-interaction-elevate)::after,

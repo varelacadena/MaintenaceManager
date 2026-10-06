@@ -90,7 +90,8 @@ function useKeyboardViewport(active: boolean) {
     const viewport = window.visualViewport;
 
     const update = () => {
-      if (!media.matches || !viewport) {
+      const keyboardOpen = !!viewport && viewport.height < window.innerHeight - 80;
+      if (!media.matches || !viewport || !keyboardOpen) {
         setBox((current) => (current ? null : current));
         return;
       }
@@ -190,15 +191,24 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
   });
 
   const scrollFieldIntoView = (event: FocusEvent<HTMLTextAreaElement>) => {
+    const field = event.currentTarget;
     window.setTimeout(() => {
-      event.target.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 250);
+      const scroller = field.closest("[data-clock-out-scroll]");
+      if (!(scroller instanceof HTMLElement)) return;
+      const fieldRect = field.getBoundingClientRect();
+      const scrollerRect = scroller.getBoundingClientRect();
+      if (fieldRect.bottom > scrollerRect.bottom - 12) {
+        scroller.scrollTop += fieldRect.bottom - scrollerRect.bottom + 16;
+      } else if (fieldRect.top < scrollerRect.top + 12) {
+        scroller.scrollTop -= scrollerRect.top - fieldRect.top + 16;
+      }
+    }, 280);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none p-0 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[min(40rem,calc(100dvh-2rem))] sm:w-[calc(100vw-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-0 [&>button]:right-2 [&>button]:top-[max(0.5rem,env(safe-area-inset-top))] [&>button]:z-10 [&>button]:flex [&>button]:h-11 [&>button]:w-11 [&>button]:items-center [&>button]:justify-center sm:[&>button]:top-3"
+        className="mobile-sheet-panel left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none p-0 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[min(40rem,calc(100dvh-2rem))] sm:w-[calc(100vw-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-0 [&>button]:right-2 [&>button]:top-[max(0.5rem,env(safe-area-inset-top))] [&>button]:z-10 [&>button]:flex [&>button]:h-11 [&>button]:w-11 [&>button]:items-center [&>button]:justify-center sm:[&>button]:top-3"
         style={
           keyboardViewport
             ? { height: keyboardViewport.height, maxHeight: keyboardViewport.height, top: keyboardViewport.top }
@@ -222,7 +232,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
           )}
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-2 sm:px-5">
+        <div data-clock-out-scroll className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-2 sm:px-5">
           <div className="space-y-1.5">
             <Label htmlFor="clock-out-did" className="flex items-center gap-1.5 text-base sm:text-sm">
               <FileText className="w-4 h-4" />
@@ -283,7 +293,7 @@ export function StudentClockOutDialog({ open, onOpenChange, onClockedOut }: Stud
         <div className="shrink-0 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
           <Button
             type="button"
-            className="w-full h-12 text-base font-semibold"
+            className="h-12 w-full text-base font-semibold [&_svg]:!size-5"
             onClick={() => clockOutMutation.mutate()}
             disabled={!recapReady || clockOutMutation.isPending}
             data-testid="button-clock-out"

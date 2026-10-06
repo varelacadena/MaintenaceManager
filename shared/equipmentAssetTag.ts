@@ -9,6 +9,8 @@ const CATEGORY_ABBREV: Record<string, string> = {
   structural: "STRU",
   water_treatment: "WTR",
   general: "GEN",
+  smoke_detector: "SMOK",
+  exit_sign: "EXIT",
 };
 
 export function abbreviateTagPart(text: string, maxLen = 4): string {
@@ -89,6 +91,8 @@ export function getEquipmentCategoryLabel(category: string): string {
     structural: "Structural",
     water_treatment: "Water Treatment",
     general: "General",
+    smoke_detector: "Smoke Detector",
+    exit_sign: "Exit Sign",
   };
   return labels[category.toLowerCase()] ?? category;
 }

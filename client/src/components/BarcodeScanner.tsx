@@ -352,12 +352,14 @@ export function BarcodeScanner({
                   onChange={(e) => setManualValue(e.target.value)}
                   placeholder="Barcode or QR code value"
                   onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+                  className="h-12 text-base"
                   data-testid="input-manual-barcode"
                   autoFocus
                 />
                 <Button
                   onClick={handleManualSubmit}
                   disabled={!manualValue.trim()}
+                  className="h-12 text-base"
                   data-testid="button-submit-manual-barcode"
                 >
                   Find
@@ -384,7 +386,7 @@ export function BarcodeScanner({
               <Button
                 variant="ghost"
                 size="sm"
-                className="shrink-0 text-muted-foreground"
+                className="h-11 shrink-0 text-muted-foreground"
                 onClick={() => {
                   activeRef.current = false;
                   stopLoop();

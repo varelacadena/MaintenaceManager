@@ -201,20 +201,20 @@ export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
   return (
     <>
       <Dialog open={isStopTimerDialogOpen} onOpenChange={setIsStopTimerDialogOpen}>
-        <DialogContent>
+        <DialogContent className="mobile-form-dialog">
           <DialogHeader>
             <DialogTitle>Stop Timer</DialogTitle>
             <DialogDescription>What would you like to do?</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 py-4">
-            <Button variant="outline" className="w-full justify-start"
+            <Button variant="outline" className="h-12 w-full justify-start text-base"
               onClick={() => handleComplete()}
               disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
               data-testid="button-stop-complete">
               <CheckCircle2 className="w-4 h-4 mr-2" />
               Complete Task
             </Button>
-            <Button variant="ghost" className="w-full"
+            <Button variant="ghost" className="h-12 w-full text-base"
               onClick={() => { if (activeTimer) { stopTimerMutation.mutate({ timerId: activeTimer }); } }}
               disabled={stopTimerMutation.isPending} data-testid="button-stop-pause">
               Just Pause Timer
@@ -223,9 +223,9 @@ export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
         </DialogContent>
       </Dialog>
       <Sheet open={isResourcesSheetOpen} onOpenChange={setIsResourcesSheetOpen}>
-        <SheetContent side="bottom" className="h-[70vh]">
+        <SheetContent side="bottom" className="h-[min(70dvh,calc(100dvh-1rem))]">
           <SheetHeader><SheetTitle>Resources ({allTaskResources.length})</SheetTitle></SheetHeader>
-          <div className="mt-4 overflow-y-auto max-h-[calc(70vh-80px)]">
+          <div className="mt-4 max-h-[calc(70dvh-5rem)] overflow-y-auto">
             <div className="divide-y">
               {[...allTaskResources].sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }))
                 .map((resource: any) => (<ResourceCard key={resource.id} resource={resource} variant="list" />))}

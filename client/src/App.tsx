@@ -1,4 +1,5 @@
 import { Suspense, useEffect } from "react";
+import { LogOut } from "lucide-react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -177,9 +178,9 @@ function AuthenticatedApp() {
             userInitials={userInitials}
           />
           <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-            <header className={`flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${(user?.role === "student" || user?.role === "technician") ? "py-1.5" : ""}`}>
-              <div className="flex items-center gap-1 sm:gap-3">
-                <SidebarTrigger className="md:hidden h-11 w-11 text-muted-foreground" data-testid="button-sidebar-toggle" />
+            <header className={`flex min-w-0 items-center justify-between gap-2 px-2 sm:px-6 py-2 sm:py-3 border-b border-border/40 bg-background ${(user?.role === "student" || user?.role === "technician") ? "py-1.5" : ""}`}>
+              <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
+                <SidebarTrigger className="md:hidden h-11 w-11 shrink-0 text-muted-foreground" data-testid="button-sidebar-toggle" />
                 {showGlobalBack && (
                   <button
                     onClick={() => goBack(setLocation, currentPath, user?.role)}
@@ -204,13 +205,13 @@ function AuthenticatedApp() {
                   </button>
                 )}
                 {(user?.role === "student" || user?.role === "technician") && (
-                  <span className="text-sm font-medium text-muted-foreground" data-testid="text-user-name">
+                  <span className="min-w-0 truncate text-sm font-medium text-muted-foreground" data-testid="text-user-name">
                     {userName}
                   </span>
                 )}
-                {user?.role === "student" && <StudentHeaderStatus />}
               </div>
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+                {user?.role === "student" && <StudentHeaderStatus />}
                 {user?.role !== "student" && user?.role !== "technician" && (
                   <Suspense fallback={null}>
                     <NotificationsWidget />
@@ -223,10 +224,12 @@ function AuthenticatedApp() {
                       await fetch("/api/logout", { method: "POST" });
                       window.location.href = "/";
                     }}
-                    className="min-h-11 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-auto sm:w-auto sm:min-h-11 sm:px-3 sm:py-2"
+                    aria-label="Sign out"
                     data-testid="button-logout"
                   >
-                    Sign out
+                    <LogOut className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Sign out</span>
                   </button>
                 )}
               </div>

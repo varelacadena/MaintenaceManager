@@ -75,6 +75,7 @@ export const tasks = pgTable("tasks", {
   parentTaskId: varchar("parent_task_id"),
   isCampusWide: boolean("is_campus_wide").default(false),
   propertyIds: text("property_ids").array(),
+  lifeSafetyRound: boolean("life_safety_round").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -118,6 +119,32 @@ export const taskNotes = pgTable("task_notes", {
 export const insertTaskNoteSchema = createInsertSchema(taskNotes).omit({ id: true, createdAt: true });
 export type InsertTaskNote = z.infer<typeof insertTaskNoteSchema>;
 export type TaskNote = typeof taskNotes.$inferSelect;
+
+export const lifeSafetyChecks = pgTable("life_safety_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  equipmentId: varchar("equipment_id").references(() => equipment.id, { onDelete: "set null" }),
+  equipmentName: varchar("equipment_name", { length: 200 }).notNull(),
+  assetTag: varchar("asset_tag", { length: 100 }),
+  category: varchar("category", { length: 50 }).notNull(),
+  spaceName: varchar("space_name", { length: 200 }),
+  floor: varchar("floor", { length: 50 }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  result: varchar("result", { length: 20 }).notNull().default("pending"),
+  problemNote: text("problem_note"),
+  checkedById: varchar("checked_by_id").references(() => users.id, { onDelete: "set null" }),
+  checkedByName: varchar("checked_by_name", { length: 200 }),
+  checkedAt: timestamp("checked_at"),
+  repairTaskId: varchar("repair_task_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLifeSafetyCheckSchema = createInsertSchema(lifeSafetyChecks).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertLifeSafetyCheck = z.infer<typeof insertLifeSafetyCheckSchema>;
+export type LifeSafetyCheck = typeof lifeSafetyChecks.$inferSelect;
 
 export const taskChecklistGroups = pgTable("task_checklist_groups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

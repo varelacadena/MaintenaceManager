@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Car, Calendar, ClipboardList, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon, LogIn, LogOut, Eye, Printer } from "lucide-react";
+import { Car, Calendar, ClipboardList, Edit, Trash2, Wrench, Plus, FileCheck, AlertTriangle as AlertTriangleIcon, LogIn, LogOut, Eye, Printer, Download } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import QRCode from "react-qr-code";
 import { QrPrintSizeSelector } from "@/components/QrPrintSizeSelector";
 import { useToast } from "@/hooks/use-toast";
-import { printQrLabelFromArea, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
+import { printQrLabelFromArea, QR_LABEL_HEIGHT_MM, QR_LABEL_WIDTH_MM, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
+import { downloadQrLabelJpeg } from "@/lib/qrLabelJpeg";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { toDisplayUrl } from "@/lib/imageUtils";
@@ -62,6 +63,7 @@ export default function VehicleDetail() {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [qrPrintSize, setQrPrintSize] = useState<QrPrintSize>("medium");
+  const [savingQrJpeg, setSavingQrJpeg] = useState(false);
 
   const deleteVehicleMutation = useMutation({
     mutationFn: async () => {
@@ -1061,29 +1063,61 @@ export default function VehicleDetail() {
                   <p className="text-xs text-muted-foreground text-center">Print size</p>
                   <QrPrintSizeSelector value={qrPrintSize} onChange={setQrPrintSize} />
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const printArea = document.getElementById("vehicle-qr-print-area");
-                    if (!printArea) return;
-                    const printed = printQrLabelFromArea(printArea, {
-                      title: `${vehicle.vehicleId} QR`,
-                      size: qrPrintSize,
-                    });
-                    if (!printed) {
-                      toast({
-                        title: "Popup blocked",
-                        description: "Allow popups to print QR codes.",
-                        variant: "destructive",
+                <p className="text-xs text-muted-foreground text-center">
+                  JPEG is {QR_LABEL_WIDTH_MM} × {QR_LABEL_HEIGHT_MM} mm, ready to upload to the label printer.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const printArea = document.getElementById("vehicle-qr-print-area");
+                      if (!printArea) return;
+                      const printed = printQrLabelFromArea(printArea, {
+                        title: `${vehicle.vehicleId} QR`,
+                        size: qrPrintSize,
                       });
-                    }
-                  }}
-                  data-testid="button-print-qr"
-                  className="w-full sm:w-auto"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print QR Code
-                </Button>
+                      if (!printed) {
+                        toast({
+                          title: "Popup blocked",
+                          description: "Allow popups to print QR codes.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    data-testid="button-print-qr"
+                    className="w-full sm:w-auto"
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print QR Code
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={savingQrJpeg}
+                    onClick={async () => {
+                      setSavingQrJpeg(true);
+                      try {
+                        await downloadQrLabelJpeg({
+                          qrValue: qrCodeUrl,
+                          fileName: vehicle.vehicleId,
+                          lines: [vehicle.vehicleId, [vehicle.make, vehicle.model].filter(Boolean).join(" ")].filter(Boolean),
+                        });
+                      } catch {
+                        toast({
+                          title: "Could not create JPEG",
+                          description: "Try the download again.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setSavingQrJpeg(false);
+                      }
+                    }}
+                    data-testid="button-download-qr"
+                    className="w-full sm:w-auto"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {savingQrJpeg ? "Saving…" : "Download JPEG"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

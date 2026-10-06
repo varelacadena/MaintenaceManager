@@ -27,6 +27,7 @@ import { AdminDialogsExtra } from "./AdminDialogsExtra";
 import { AdminDialogsB } from "./AdminDialogsB";
 import { AdminDetailSection } from "./AdminDetailSection";
 import { AdminCollapsibleSections } from "./AdminCollapsibleSections";
+import { LifeSafetyRoundPanel } from "@/components/LifeSafetyRoundPanel";
 import { AdminViewHeader } from "./AdminViewHeader";
 import type { TaskDetailContext } from "./useTaskDetail";
 
@@ -56,6 +57,10 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
           <AdminViewHeader ctx={ctx} />
+
+          {task.lifeSafetyRound && (
+            <LifeSafetyRoundPanel taskId={task.id} canRecord={task.status !== "completed"} />
+          )}
 
           {isParentTask && (
             <div className="space-y-3" data-testid="subtasks-section">

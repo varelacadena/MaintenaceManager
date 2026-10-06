@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import { Printer, QrCode } from "lucide-react";
+import { Download, Printer, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,8 @@ import { AssetTagLabel } from "@/components/AssetTagLabel";
 import { QrPrintSizeSelector } from "@/components/QrPrintSizeSelector";
 import { useToast } from "@/hooks/use-toast";
 import type { AssetTagFields } from "@/lib/equipmentQrLabel";
-import { printAssetTagLabel, printQrLabelFromArea, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
+import { printAssetTagLabel, printQrLabelFromArea, QR_LABEL_HEIGHT_MM, QR_LABEL_WIDTH_MM, QR_PRINT_SIZE_PX, type QrPrintSize } from "@/lib/printQrLabel";
+import { downloadQrLabelJpeg } from "@/lib/qrLabelJpeg";
 
 export type QrLabelLines = {
   primary: string;
@@ -48,6 +49,7 @@ export function QrLabelDialog({
   const printAreaId = useId().replace(/:/g, "");
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<QrPrintSize>("medium");
+  const [savingJpeg, setSavingJpeg] = useState(false);
   const qrSize = QR_PRINT_SIZE_PX[size];
   const description = assetTag?.id ?? label?.primary ?? title;
 
@@ -75,6 +77,32 @@ export function QrLabelDialog({
         description: "Allow popups to print labels.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDownloadJpeg = async () => {
+    const lines = [
+      label?.primary,
+      caption && caption !== label?.primary ? caption : undefined,
+      label?.secondary,
+      label?.serialNumber ? `SN: ${label.serialNumber}` : undefined,
+    ].filter((line): line is string => Boolean(line));
+
+    setSavingJpeg(true);
+    try {
+      await downloadQrLabelJpeg(
+        assetTag
+          ? { qrValue, fileName: assetTag.id, assetTag }
+          : { qrValue, fileName: label?.primary || title, lines },
+      );
+    } catch {
+      toast({
+        title: "Could not create JPEG",
+        description: "Try the download again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingJpeg(false);
     }
   };
 
@@ -123,7 +151,10 @@ export function QrLabelDialog({
             <p className="text-xs text-muted-foreground px-2">{scanHint}</p>
           )}
 
-          <div className="flex gap-2">
+          <p className="text-xs text-muted-foreground px-2">
+            JPEG is {QR_LABEL_WIDTH_MM} × {QR_LABEL_HEIGHT_MM} mm, ready to upload to the label printer.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -132,6 +163,16 @@ export function QrLabelDialog({
             >
               <Printer className="w-3.5 h-3.5 mr-1.5" />
               Print Label
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadJpeg}
+              disabled={savingJpeg}
+              data-testid={`button-download-${testIdPrefix}`}
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {savingJpeg ? "Saving…" : "Download JPEG"}
             </Button>
             <Button
               variant="ghost"

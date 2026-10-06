@@ -10,6 +10,7 @@ import { buildDisplayUrlFromUpload } from "@/lib/uploadUtils";
 import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import { format } from "date-fns";
 import type { Task, TaskNote, Upload } from "@shared/schema";
+import { LifeSafetyRoundPanel } from "@/components/LifeSafetyRoundPanel";
 import type { ChecklistGroupWithItems, TaskHelperDisplay } from "./types";
 
 interface TechnicianTaskTabProps {
@@ -100,6 +101,10 @@ export function TechnicianTaskTab({
             </p>
           </div>
         </div>
+      )}
+
+      {task.lifeSafetyRound && (
+        <LifeSafetyRoundPanel taskId={task.id} canRecord={!isCompleted} />
       )}
 
       {task.instructions && (
@@ -339,7 +344,7 @@ export function TechnicianTaskTab({
         <textarea
           value={noteText}
           onChange={(e) => handleNoteChange(e.target.value)}
-          placeholder="Type what you did... required before you can finish"
+          placeholder={task.lifeSafetyRound ? "Optional note for this week" : "Type what you did... required before you can finish"}
           rows={3}
           className="w-full resize-none bg-transparent outline-none text-foreground"
           style={{

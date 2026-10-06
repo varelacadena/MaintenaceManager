@@ -150,14 +150,14 @@ export default function StudentHours() {
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" size="icon" aria-label="Previous week" onClick={() => shiftWeek(-7)} data-testid="button-week-prev">
-          <ChevronLeft className="w-5 h-5" />
+        <Button type="button" variant="ghost" size="icon" className="h-12 w-12 shrink-0 [&_svg]:!size-5" aria-label="Previous week" onClick={() => shiftWeek(-7)} data-testid="button-week-prev">
+          <ChevronLeft />
         </Button>
         <p className="text-sm font-medium text-center" data-testid="text-week-label">
           {data ? formatWeekLabel(data.weekStartDate, data.weekEndDate) : "This week"}
         </p>
-        <Button type="button" variant="ghost" size="icon" aria-label="Next week" onClick={() => shiftWeek(7)} data-testid="button-week-next">
-          <ChevronRight className="w-5 h-5" />
+        <Button type="button" variant="ghost" size="icon" className="h-12 w-12 shrink-0 [&_svg]:!size-5" aria-label="Next week" onClick={() => shiftWeek(7)} data-testid="button-week-next">
+          <ChevronRight />
         </Button>
       </div>
 
@@ -242,7 +242,7 @@ export default function StudentHours() {
       )}
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="mobile-form-dialog max-h-[min(100dvh,40rem)] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request a time edit</DialogTitle>
             <DialogDescription>
@@ -262,6 +262,7 @@ export default function StudentHours() {
               id="student-edit-reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
+              className="min-h-[5.5rem] text-base"
               placeholder="Forgot to clock out, left early, etc."
               data-testid="input-edit-reason"
             />

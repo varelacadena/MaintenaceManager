@@ -16,7 +16,7 @@ export function StudentHeaderStatus() {
   return (
     <Link
       href="/clock-out"
-      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-3 text-sm font-medium text-emerald-800 dark:text-emerald-200"
+      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-3 text-sm font-medium text-emerald-800 dark:text-emerald-200"
       data-testid="link-student-clock-status"
     >
       <Clock className="w-3.5 h-3.5" />

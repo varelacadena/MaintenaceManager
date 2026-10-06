@@ -91,6 +91,8 @@ export function NewTaskEquipmentDialog({ ctx }: NewTaskEquipmentDialogProps) {
                       <SelectItem value="landscaping">Landscaping</SelectItem>
                       <SelectItem value="diagrams">Diagrams</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="smoke_detector">Smoke Detector</SelectItem>
+                      <SelectItem value="exit_sign">Exit Sign</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

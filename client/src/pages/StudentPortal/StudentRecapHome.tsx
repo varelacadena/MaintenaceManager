@@ -93,7 +93,7 @@ export function StudentRecapHome({ user }: StudentRecapHomeProps) {
       {openEntry && (
         <Button
           type="button"
-          className="w-full h-12 text-base font-semibold"
+          className="h-12 w-full text-base font-semibold [&_svg]:!size-5"
           onClick={() => setClockOutOpen(true)}
           data-testid="button-start-clock-out"
         >

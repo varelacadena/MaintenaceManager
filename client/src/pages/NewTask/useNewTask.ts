@@ -41,6 +41,7 @@ const formSchema = insertTaskSchema.extend({
   contactPhone: z.string().optional(),
   isCampusWide: z.boolean().optional(),
   propertyIds: z.array(z.string()).optional(),
+  lifeSafetyRound: z.boolean().optional(),
 }).refine((data) => {
   if (data.contactType === "other" && !data.contactName) {
     return false;
@@ -390,8 +391,19 @@ export function useNewTask() {
       contactPhone: "",
       isCampusWide: false,
       propertyIds: [],
+      lifeSafetyRound: false,
     },
   });
+
+  const lifeSafetyRound = !!form.watch("lifeSafetyRound");
+
+  const { data: lifeSafetyEquipment = [] } = useQuery<Equipment[]>({
+    queryKey: equipmentKeys.list({ propertyId: selectedPropertyId, lifeSafety: true }),
+    enabled: lifeSafetyRound && !!selectedPropertyId && locationScope === "single",
+    queryFn: () => fetchEquipmentList({ propertyId: selectedPropertyId }),
+  });
+  const lifeSafetyDetectors = lifeSafetyEquipment.filter((item) => item.category.toLowerCase() === "smoke_detector").length;
+  const lifeSafetySigns = lifeSafetyEquipment.filter((item) => item.category.toLowerCase() === "exit_sign").length;
 
   const showVehicle = isAutoShopName(selectedProperty?.name);
 
@@ -500,7 +512,8 @@ export function useNewTask() {
         contactName: data.contactName || undefined,
         contactEmail: data.contactEmail || undefined,
         contactPhone: data.contactPhone || undefined,
-        checklistGroups: checklistGroups.length > 0 ? checklistGroups : undefined,
+        checklistGroups: data.lifeSafetyRound ? undefined : (checklistGroups.length > 0 ? checklistGroups : undefined),
+        lifeSafetyRound: !!data.lifeSafetyRound,
         projectId: data.projectId || projectId || undefined,
         estimatedHours: data.estimatedHours ?? undefined,
         isCampusWide: data.isCampusWide || false,
@@ -509,7 +522,24 @@ export function useNewTask() {
         areaId: request?.areaId || undefined,
       };
 
-      if (isSingleScope) {
+      if (data.lifeSafetyRound) {
+        taskData.taskType = "recurring";
+        taskData.recurringFrequency = "weekly";
+        taskData.recurringInterval = 1;
+        taskData.spaceId = undefined;
+        taskData.equipmentId = undefined;
+        taskData.vehicleId = undefined;
+        taskData.isCampusWide = false;
+        if (!taskData.name?.trim()) taskData.name = "Weekly life safety";
+        if (!taskData.description?.trim()) {
+          taskData.description = "Sound each smoke detector alarm. Confirm each exit sign is lit. Scan the sticker on that unit.";
+        }
+        if (!taskData.estimatedCompletionDate) taskData.estimatedCompletionDate = taskData.initialDate;
+        if (locationScope === "multiple" && selectedPropertyIds.length > 0) {
+          taskData.propertyIds = selectedPropertyIds;
+          taskData.propertyId = undefined;
+        }
+      } else if (isSingleScope) {
         if (isSingleAsset) {
           const asset = selectedAssets[0];
           if (asset.type === "equipment") {
@@ -526,7 +556,7 @@ export function useNewTask() {
       const response = await apiRequest("POST", "/api/tasks", taskData);
       const parentTask = await response.json();
 
-      if (isMultiAsset) {
+      if (!data.lifeSafetyRound && isMultiAsset) {
         for (const asset of selectedAssets) {
           await apiRequest("POST", `/api/tasks/${parentTask.id}/subtasks`, {
             equipmentId: asset.type === "equipment" ? asset.id : undefined,
@@ -535,7 +565,7 @@ export function useNewTask() {
         }
       }
 
-      const validSubTasks = pendingSubTasks.filter(st => st.name.trim());
+      const validSubTasks = data.lifeSafetyRound ? [] : pendingSubTasks.filter(st => st.name.trim());
       if (validSubTasks.length > 0) {
         for (const subTask of validSubTasks) {
           await apiRequest("POST", `/api/tasks/${parentTask.id}/subtasks`, {
@@ -564,6 +594,12 @@ export function useNewTask() {
           title: "Request Approved",
           description: "Task created successfully. The service request has been marked as approved.",
         });
+      } else if (data.lifeSafetyRound && Array.isArray((data as { createdTaskIds?: string[] }).createdTaskIds) && (data as { createdTaskIds: string[] }).createdTaskIds.length > 1) {
+        const count = (data as { createdTaskIds: string[] }).createdTaskIds.length;
+        toast({
+          title: "Life safety rounds created",
+          description: `${count} weekly jobs were created, one for each property.`,
+        });
       } else {
         const assetCount = selectedAssets.length;
         const manualSubTaskCount = pendingSubTasks.filter(st => st.name.trim()).length;
@@ -586,7 +622,43 @@ export function useNewTask() {
     },
   });
 
+  const enableLifeSafetyRound = (enabled: boolean) => {
+    form.setValue("lifeSafetyRound", enabled);
+    if (!enabled) return;
+    form.setValue("taskType", "recurring");
+    setTaskType("recurring");
+    form.setValue("recurringFrequency", "weekly");
+    form.setValue("recurringInterval", 1);
+    form.setValue("spaceId", "");
+    form.setValue("equipmentId", undefined);
+    form.setValue("vehicleId", undefined);
+    form.setValue("isCampusWide", false);
+    setSelectedAssets([]);
+    setChecklistGroups([]);
+    setPendingSubTasks([]);
+    if (locationScope === "campus") setLocationScope("single");
+    if (!form.getValues("name")?.trim()) form.setValue("name", "Weekly life safety");
+    if (!form.getValues("description")?.trim()) {
+      form.setValue("description", "Sound each smoke detector alarm. Confirm each exit sign is lit. Scan the sticker on that unit.");
+    }
+    const start = form.getValues("initialDate");
+    if (!form.getValues("estimatedCompletionDate") && start) {
+      form.setValue("estimatedCompletionDate", start);
+    }
+  };
+
   const handleSubmit = (data: FormData) => {
+    if (data.lifeSafetyRound) {
+      const propertyIds = locationScope === "multiple" ? selectedPropertyIds : [data.propertyId].filter(Boolean);
+      if (propertyIds.length === 0) {
+        toast({
+          title: "Property required",
+          description: "Choose the property for this life safety round.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const hasInvalidSubTasks = pendingSubTasks.some(st => st.name.length > 0 && !st.name.trim());
     if (hasInvalidSubTasks) {
       toast({
@@ -646,6 +718,10 @@ export function useNewTask() {
     showVehicle,
     spaces,
     equipment,
+    lifeSafetyRound,
+    lifeSafetyDetectors,
+    lifeSafetySigns,
+    enableLifeSafetyRound,
     checklistGroups, setChecklistGroups,
     isChecklistDialogOpen, setIsChecklistDialogOpen,
     editingChecklistIndex, setEditingChecklistIndex,

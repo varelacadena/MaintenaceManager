@@ -41,9 +41,10 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
     equipmentForm, setPendingEquipmentFiles,
     setIsEquipmentDialogOpen, setIsSpaceDialogOpen,
     taskType,
+    lifeSafetyRound, lifeSafetyDetectors, lifeSafetySigns, enableLifeSafetyRound,
   } = ctx;
 
-  const hideSpaceAndEquipment = user?.role === "technician";
+  const hideSpaceAndEquipment = user?.role === "technician" || lifeSafetyRound;
 
   return (
     <>
@@ -53,6 +54,42 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
           <h2 className="text-lg font-semibold">Details</h2>
         </div>
         <div className="space-y-4">
+          <div
+            role="checkbox"
+            aria-checked={lifeSafetyRound}
+            tabIndex={0}
+            className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left min-h-12 cursor-pointer ${lifeSafetyRound ? "border-primary bg-primary/5" : "border-border"}`}
+            data-testid="button-life-safety-round"
+            onClick={() => enableLifeSafetyRound(!lifeSafetyRound)}
+            onKeyDown={(event) => {
+              if (event.key === " " || event.key === "Enter") {
+                event.preventDefault();
+                enableLifeSafetyRound(!lifeSafetyRound);
+              }
+            }}
+          >
+            <Checkbox
+              checked={lifeSafetyRound}
+              tabIndex={-1}
+              className="mt-1 pointer-events-none"
+            />
+            <span>
+              <span className="block text-base font-medium">Life safety round</span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                Weekly smoke detector and exit sign check. The list comes from the property.
+              </span>
+            </span>
+          </div>
+          {lifeSafetyRound && locationScope === "single" && selectedPropertyId && (
+            <p className="text-sm text-muted-foreground" data-testid="text-life-safety-count">
+              {lifeSafetyDetectors} smoke detector{lifeSafetyDetectors === 1 ? "" : "s"} and {lifeSafetySigns} exit sign{lifeSafetySigns === 1 ? "" : "s"} will be on this list.
+            </p>
+          )}
+          {lifeSafetyRound && locationScope === "multiple" && (
+            <p className="text-sm text-muted-foreground">
+              Each property gets its own weekly job. The list is the smoke detectors and exit signs on that property.
+            </p>
+          )}
           <FormField
             control={form.control}
             name="name"
@@ -140,6 +177,7 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
           onSelectedPropertyIdsChange={setSelectedPropertyIds}
           showVehicle={showVehicle}
           hideSpaceAndEquipment={hideSpaceAndEquipment}
+          hideCampusScope={lifeSafetyRound}
         />
       </section>
 
@@ -150,7 +188,13 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
         </div>
         <div className="space-y-4">
           <TaskDateFields form={form} />
-          <TaskRecurringFields form={form} taskType={taskType} />
+          {lifeSafetyRound ? (
+            <p className="text-sm text-muted-foreground rounded-lg border bg-muted/50 p-4">
+              This repeats every week. The next week is created even if this round is still open. Change who it is assigned to on the open job when the usual person should change.
+            </p>
+          ) : (
+            <TaskRecurringFields form={form} taskType={taskType} />
+          )}
         </div>
       </section>
     </>

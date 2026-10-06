@@ -2,6 +2,7 @@ import { db } from "./db";
 import { tasks } from "@shared/schema";
 import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { log } from "./vite";
+import { createDueLifeSafetyRounds } from "./lifeSafetyRounds";
 
 // Calculate the next occurrence date based on frequency and interval
 function calculateNextDate(
@@ -49,6 +50,7 @@ async function processRecurringTasks(): Promise<void> {
     const now = new Date();
 
     for (const task of completedRecurringTasks) {
+      if (task.lifeSafetyRound) continue;
       // Check if recurring end date has passed
       if (task.recurringEndDate) {
         const endDate = new Date(task.recurringEndDate);
@@ -148,6 +150,11 @@ async function processRecurringTasks(): Promise<void> {
 
       await db.insert(tasks).values(newTask);
       log(`Created recurring task instance: ${task.name} - Next due: ${nextDueDate.toISOString()}`);
+    }
+
+    const lifeSafetyCreated = await createDueLifeSafetyRounds();
+    if (lifeSafetyCreated > 0) {
+      log(`Created ${lifeSafetyCreated} life safety round${lifeSafetyCreated === 1 ? "" : "s"}`);
     }
   } catch (error) {
     console.error("Error processing recurring tasks:", error);

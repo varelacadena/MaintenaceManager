@@ -58,6 +58,7 @@ interface TaskLocationFieldsProps {
   onSelectedPropertyIdsChange: (ids: string[]) => void;
   showVehicle?: boolean;
   hideSpaceAndEquipment?: boolean;
+  hideCampusScope?: boolean;
 }
 
 const MAX_VISIBLE_TAGS = 3;
@@ -87,6 +88,7 @@ export function TaskLocationFields({
   onSelectedPropertyIdsChange,
   showVehicle = false,
   hideSpaceAndEquipment = false,
+  hideCampusScope = false,
 }: TaskLocationFieldsProps) {
   const [multiSelectOpen, setMultiSelectOpen] = useState(false);
   const [propertySearch, setPropertySearch] = useState("");
@@ -212,6 +214,7 @@ export function TaskLocationFields({
             <span className="hidden sm:inline">Multiple Properties</span>
             <span className="sm:hidden">Multiple</span>
           </Button>
+          {!hideCampusScope && (
           <Button
             type="button"
             variant={locationScope === "campus" ? "default" : "outline"}
@@ -222,6 +225,7 @@ export function TaskLocationFields({
             <span className="hidden sm:inline">All Campus</span>
             <span className="sm:hidden">All</span>
           </Button>
+          )}
         </div>
       </div>
 

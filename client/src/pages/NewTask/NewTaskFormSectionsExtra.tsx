@@ -75,7 +75,8 @@ export function RightColumnSidebar({ ctx }: NewTaskFormSectionsProps) {
                     field.onChange(value);
                     setTaskType(value as "one_time" | "recurring" | "reminder" | "project");
                   }}
-                  value={field.value}
+                  value={ctx.lifeSafetyRound ? "recurring" : field.value}
+                  disabled={ctx.lifeSafetyRound}
                 >
                   <FormControl>
                     <SelectTrigger className="bg-background" data-testid="select-task-type">

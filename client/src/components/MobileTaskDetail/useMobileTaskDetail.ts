@@ -378,7 +378,7 @@ export function useMobileTaskDetail() {
       });
       return;
     }
-    if (roleRequiresWorkNoteOnCompletion(user?.role)) {
+    if (!task?.lifeSafetyRound && roleRequiresWorkNoteOnCompletion(user?.role)) {
       const hasSavedNote = hasWorkExplanation(notes);
       const hasDraftNote = isWorkExplanationContent(noteText);
       if (!hasSavedNote && !hasDraftNote) {

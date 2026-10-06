@@ -86,7 +86,7 @@ export function StudentClockInGate({ enabled }: StudentClockInGateProps) {
       aria-modal="true"
       aria-labelledby="student-clock-in-title"
     >
-      <div className="w-full max-w-sm rounded-2xl border bg-background p-5 shadow-xl space-y-4">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-4 overflow-y-auto rounded-2xl border bg-background p-5 shadow-xl">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <LogIn className="w-5 h-5 text-primary" />

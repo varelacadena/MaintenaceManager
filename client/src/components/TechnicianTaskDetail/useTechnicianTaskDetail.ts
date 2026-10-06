@@ -215,7 +215,7 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     props.confirmLeave();
   };
 
-  const notesReady = isWorkExplanationContent(noteText) || hasWorkExplanation(notes);
+  const notesReady = !!task.lifeSafetyRound || isWorkExplanationContent(noteText) || hasWorkExplanation(notes);
   const photoReady = !task.requiresPhoto || uploads.some(uploadIsCompletionPhoto);
   const completionNoteValue = isSystemGeneratedNoteContent(noteText) ? "" : noteText;
 

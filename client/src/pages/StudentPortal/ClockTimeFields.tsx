@@ -40,6 +40,7 @@ export function ClockTimeFields({
           id={`${idPrefix}-clock-in`}
           type="datetime-local"
           step={0.001}
+          className="h-12 text-base"
           value={clockIn}
           onChange={(event) => onClockInChange(event.target.value)}
           data-testid={`${idPrefix}-clock-in`}
@@ -51,6 +52,7 @@ export function ClockTimeFields({
           id={`${idPrefix}-clock-out`}
           type="datetime-local"
           step={0.001}
+          className="h-12 text-base"
           value={clockOut}
           onChange={(event) => onClockOutChange(event.target.value)}
           data-testid={`${idPrefix}-clock-out`}
