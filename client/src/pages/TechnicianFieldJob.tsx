@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Camera, Plus, Send, X } from "lucide-react";
+import { ArrowLeft, Camera, Send, X } from "lucide-react";
 import type { Property, Task, Vehicle } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
   mapUploaderResultToPending,
 } from "@/lib/uploadUtils";
 import { toDisplayUrl } from "@/lib/imageUtils";
+import { addCalendarDays, localDayKey, rollingTechDays } from "@/pages/Work/techWorkSchedule";
 
 const MIN_DESCRIPTION_LENGTH = 20;
 
@@ -37,6 +38,7 @@ type FieldJobForm = {
   urgency: "low" | "medium" | "high";
   propertyId: string;
   vehicleId: string;
+  workDate: string;
 };
 
 type PendingPhoto = {
@@ -54,6 +56,7 @@ const defaultForm: FieldJobForm = {
   urgency: "medium",
   propertyId: "",
   vehicleId: "",
+  workDate: "",
 };
 
 const fieldCard = "rounded-lg border bg-card p-4 space-y-2";
@@ -62,8 +65,11 @@ const touchControl = "h-11 text-base sm:text-sm bg-background";
 export default function TechnicianFieldJob() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [form, setForm] = useState<FieldJobForm>(defaultForm);
+  const [form, setForm] = useState<FieldJobForm>(() => ({ ...defaultForm, workDate: localDayKey(new Date()) }));
+  const [laterDay, setLaterDay] = useState(false);
+  const workDays = useMemo(() => rollingTechDays(new Date()), []);
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
+  const [photoUploadBusy, setPhotoUploadBusy] = useState(false);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -83,6 +89,7 @@ export default function TechnicianFieldJob() {
         locationDetail: form.locationDetail.trim(),
         description: form.description.trim(),
         urgency: form.urgency,
+        workDate: form.workDate,
         propertyId: form.propertyId,
         vehicleId: form.vehicleId || undefined,
         photos: pendingPhotos.map((photo) => ({
@@ -98,7 +105,7 @@ export default function TechnicianFieldJob() {
       invalidateTaskAfterMutation(task.id, { broad: true });
       toast({
         title: "Job added",
-        description: "The office can see the location, description, and photo on this job.",
+        description: "The office can see the location and description on this job.",
       });
       navigate("/work", { replace: true });
     },
@@ -162,6 +169,10 @@ export default function TechnicianFieldJob() {
       });
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.workDate)) {
+      toast({ title: "Work day required", description: "Choose the day you will do this job.", variant: "destructive" });
+      return;
+    }
     if (!form.propertyId) {
       toast({ title: "Building required", description: "Select where this job is.", variant: "destructive" });
       return;
@@ -170,23 +181,23 @@ export default function TechnicianFieldJob() {
       toast({ title: "Vehicle required", description: "Select the vehicle this work is for.", variant: "destructive" });
       return;
     }
-    if (pendingPhotos.length === 0) {
-      toast({
-        title: "Photo required",
-        description: "Add a photo so the office can see the problem.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     createFieldJobMutation.mutate();
   };
 
   return (
-    <div className="min-h-full flex flex-col max-w-lg mx-auto w-full">
+    <div className="flex h-full min-h-0 flex-col max-w-lg mx-auto w-full min-w-0 overflow-hidden">
       <div className="border-b px-4 py-4">
         <div className="flex items-center gap-2">
-          <Plus className="w-5 h-5 text-muted-foreground shrink-0" />
+          <button
+            type="button"
+            onClick={() => navigate("/work")}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label="Back to My Tasks"
+            data-testid="button-back-field-job"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <h1 className="text-lg font-semibold tracking-tight">Add job</h1>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
@@ -194,10 +205,7 @@ export default function TechnicianFieldJob() {
         </p>
       </div>
 
-      <div
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
-        style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3">
         <div className={fieldCard}>
           <Label htmlFor="field-job-name">Job title</Label>
           <Input
@@ -248,8 +256,8 @@ export default function TechnicianFieldJob() {
         </div>
 
         <div className={fieldCard}>
-          <Label>Photo</Label>
-          <p className="text-xs text-muted-foreground">Required. Show the problem.</p>
+          <Label>Photo <span className="font-normal text-muted-foreground">(optional)</span></Label>
+          <p className="text-xs text-muted-foreground">A picture helps the office see the problem. You can add one later.</p>
           <ObjectUploader
             maxNumberOfFiles={5}
             maxFileSize={10485760}
@@ -264,7 +272,9 @@ export default function TechnicianFieldJob() {
               });
             }}
             buttonVariant="outline"
-            buttonClassName="w-full h-11"
+            wrapperClassName="w-full sm:w-full"
+            buttonClassName="h-auto min-h-11 w-full sm:w-full whitespace-normal px-3"
+            onBusyChange={setPhotoUploadBusy}
           >
             <Camera className="w-4 h-4 mr-2" />
             {pendingPhotos.length === 0 ? "Take or upload a photo" : "Add another photo"}
@@ -305,7 +315,7 @@ export default function TechnicianFieldJob() {
                 key={level}
                 type="button"
                 variant="outline"
-                className={`h-11 ${form.urgency === level ? "bg-foreground text-background border-foreground hover:bg-foreground hover:text-background" : ""}`}
+                className={`h-11 px-2 ${form.urgency === level ? "bg-foreground text-background border-foreground hover:bg-foreground hover:text-background" : ""}`}
                 onClick={() => updateForm("urgency", level)}
                 data-testid={`button-field-job-urgency-${level}`}
               >
@@ -313,19 +323,54 @@ export default function TechnicianFieldJob() {
               </Button>
             ))}
           </div>
-          <Select
-            value={form.urgency}
-            onValueChange={(value) => updateForm("urgency", value as FieldJobForm["urgency"])}
+        </div>
+
+        <div className={fieldCard}>
+          <Label>Work day</Label>
+          <div className="grid grid-cols-7 gap-1">
+            {workDays.map((day) => {
+              const selected = !laterDay && form.workDate === day.key;
+              return (
+                <Button
+                  key={day.key}
+                  type="button"
+                  variant="outline"
+                  className={`h-14 w-full min-w-0 px-0 flex-col gap-0.5 whitespace-normal ${selected ? "bg-foreground text-background border-foreground hover:bg-foreground hover:text-background" : ""}`}
+                  onClick={() => {
+                    setLaterDay(false);
+                    updateForm("workDate", day.key);
+                  }}
+                  data-testid={`button-field-job-day-${day.key}`}
+                >
+                  <span className="text-[10px] leading-none">{day.short}</span>
+                  <span className="text-sm leading-none font-semibold">{day.dateNum}</span>
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className={`h-11 w-full ${laterDay ? "bg-foreground text-background border-foreground hover:bg-foreground hover:text-background" : ""}`}
+            onClick={() => {
+              setLaterDay(true);
+              updateForm("workDate", addCalendarDays(workDays[0].key, 7));
+            }}
+            data-testid="button-field-job-day-later"
           >
-            <SelectTrigger className={`${touchControl} hidden`} data-testid="select-field-job-urgency">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Normal</SelectItem>
-              <SelectItem value="high">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
+            Later
+          </Button>
+          {laterDay && (
+            <Input
+              type="date"
+              min={addCalendarDays(workDays[0].key, 7)}
+              value={form.workDate}
+              onChange={(event) => updateForm("workDate", event.target.value)}
+              className={`${touchControl} w-full min-w-0 max-w-full`}
+              data-testid="input-field-job-work-date"
+            />
+          )}
+          <p className="text-xs text-muted-foreground">This is the day the job shows on My Tasks. If it is still open the next morning, it moves to that day.</p>
         </div>
 
         <div className={fieldCard}>
@@ -379,15 +424,15 @@ export default function TechnicianFieldJob() {
       </div>
 
       <div
-        className="fixed inset-x-0 bottom-0 z-30 border-t bg-background px-4 pt-3"
+        className="shrink-0 border-t bg-background px-4 pt-3"
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
       >
-        <div className="mx-auto max-w-lg">
+        <div className="mx-auto w-full">
           <Button
             type="button"
             className="w-full h-11"
             onClick={handleSubmit}
-            disabled={createFieldJobMutation.isPending}
+            disabled={createFieldJobMutation.isPending || photoUploadBusy}
             data-testid="button-field-job-submit"
           >
             {createFieldJobMutation.isPending ? (

@@ -62,6 +62,17 @@ async function rejectIfLifeSafetyOpen(res: any, task: { id: string; lifeSafetyRo
   return true;
 }
 
+function parseFieldWorkDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day, 12, 0, 0, 0);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
 export function registerTaskRoutes(app: Express) {
   const fieldJobSchema = z.object({
     name: z
@@ -79,6 +90,7 @@ export function registerTaskRoutes(app: Express) {
       .trim()
       .min(20, "Describe what you found and what needs to be done"),
     urgency: z.enum(["low", "medium", "high"]).default("medium"),
+    workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the day you will do this job"),
     propertyId: z.string().trim().min(1, "Building is required"),
     vehicleId: z.string().trim().optional().or(z.literal("")),
     photos: z
@@ -90,7 +102,9 @@ export function registerTaskRoutes(app: Express) {
           objectPath: z.string().trim().optional(),
         }),
       )
-      .min(1, "Add a photo of the problem"),
+      .max(5, "You can attach up to 5 photos")
+      .optional()
+      .default([]),
   });
 
   app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
@@ -392,7 +406,16 @@ export function registerTaskRoutes(app: Express) {
       }
 
       const workRecord = `Where: ${payload.locationDetail}\n\n${payload.description}`;
-      const today = new Date();
+      const workDay = parseFieldWorkDate(payload.workDate);
+      if (!workDay) {
+        return res.status(400).json({ message: "Pick the day you will do this job." });
+      }
+      const earliest = new Date();
+      earliest.setHours(0, 0, 0, 0);
+      earliest.setDate(earliest.getDate() - 1);
+      if (workDay < earliest) {
+        return res.status(400).json({ message: "Pick today or a later day." });
+      }
       const taskData = insertTaskSchema.parse({
         name: payload.name,
         description: workRecord,
@@ -406,9 +429,8 @@ export function registerTaskRoutes(app: Express) {
         assignedPool: null,
         status: "not_started",
         createdById: userId,
-        initialDate: today,
-        estimatedCompletionDate: today,
-        requiresPhoto: true,
+        initialDate: workDay,
+        requiresPhoto: false,
         requiresEstimate: false,
         estimateStatus: "none",
       });

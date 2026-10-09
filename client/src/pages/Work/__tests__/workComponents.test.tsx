@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ReactElement } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import type { Task, User } from "@shared/schema";
@@ -98,7 +100,15 @@ describe("TechnicianWorkView", () => {
   beforeEach(() => {
     cleanup();
     sessionStorage.clear();
+    localStorage.clear();
   });
+
+  function renderTech(ui: ReactElement) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  }
 
   it("opens the guided add job flow from My Tasks", () => {
     const navigate = vi.fn();
@@ -117,13 +127,13 @@ describe("TechnicianWorkView", () => {
       },
     ] as Task[];
 
-    render(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+    renderTech(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
 
     fireEvent.click(screen.getByTestId("button-add-field-job"));
     expect(navigate).toHaveBeenCalledWith("/work/add-job");
   });
 
-  it("keeps the date filter after remounting, like opening a task and coming back", () => {
+  it("keeps the list or week choice after remounting", () => {
     const navigate = vi.fn();
     const user = { id: "tech-1", role: "technician" } as User;
     const tasks = [
@@ -140,13 +150,73 @@ describe("TechnicianWorkView", () => {
       },
     ] as Task[];
 
-    const { unmount } = render(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
-    fireEvent.click(screen.getByTestId("button-filter-week"));
-    expect(screen.getByTestId("button-filter-week")).toHaveAttribute("aria-pressed", "true");
+    const { unmount } = renderTech(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+    fireEvent.click(screen.getByTestId("button-view-week"));
+    expect(screen.getByTestId("button-view-week")).toHaveAttribute("aria-pressed", "true");
 
     unmount();
-    render(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
-    expect(screen.getByTestId("button-filter-week")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("button-filter-today")).toHaveAttribute("aria-pressed", "false");
+    renderTech(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+    expect(screen.getByTestId("button-view-week")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("button-view-list")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("draws one week dot per job on that day", () => {
+    const navigate = vi.fn();
+    const user = { id: "tech-1", role: "technician" } as User;
+    const friday = new Date();
+    friday.setDate(friday.getDate() + 2);
+    friday.setHours(12, 0, 0, 0);
+    const tasks = ["a", "b", "c", "d", "e", "f"].map((id) => ({
+      id,
+      name: `Job ${id}`,
+      description: "Task description",
+      urgency: "medium",
+      initialDate: friday,
+      estimatedCompletionDate: friday,
+      assignedToId: "tech-1",
+      status: "not_started",
+      taskType: "one_time",
+    })) as Task[];
+
+    renderTech(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+    fireEvent.click(screen.getByTestId("button-view-week"));
+
+    const year = friday.getFullYear();
+    const month = String(friday.getMonth() + 1).padStart(2, "0");
+    const day = String(friday.getDate()).padStart(2, "0");
+    const meter = screen.getByTestId(`tech-week-meter-${year}-${month}-${day}`);
+    expect(meter.children).toHaveLength(6);
+    expect(screen.getByTestId(`tech-week-count-${year}-${month}-${day}`)).toHaveTextContent("6");
+  });
+
+  it("opens a work day from Reschedule without opening the task", () => {
+    const navigate = vi.fn();
+    const user = { id: "tech-1", role: "technician" } as User;
+    const past = new Date();
+    past.setDate(past.getDate() - 4);
+    past.setHours(12, 0, 0, 0);
+    const tasks = [
+      {
+        id: "late-1",
+        name: "Boiler leak",
+        description: "Task description",
+        urgency: "high",
+        initialDate: past,
+        estimatedCompletionDate: past,
+        assignedToId: "tech-1",
+        status: "not_started",
+        taskType: "one_time",
+      },
+    ] as Task[];
+
+    renderTech(<TechnicianWorkView user={user} tasks={tasks} navigate={navigate} />);
+
+    expect(screen.queryByTestId("place-days-late-1")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-reschedule-late-1"));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId("place-days-late-1").children).toHaveLength(7);
+
+    fireEvent.click(screen.getByTestId("tech-task-card-late-1"));
+    expect(navigate).toHaveBeenCalledWith("/tasks/late-1");
   });
 });
