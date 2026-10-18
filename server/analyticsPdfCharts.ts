@@ -28,6 +28,7 @@ type JsPdfDoc = {
   rect: (x: number, y: number, w: number, h: number, style?: string) => void;
   circle?: (x: number, y: number, r: number, style?: string) => void;
   line: (x1: number, y1: number, x2: number, y2: number, style?: string) => void;
+  triangle?: (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style?: string) => void;
   splitTextToSize: (text: string, maxWidth: number) => string | string[];
 };
 
@@ -81,6 +82,32 @@ export function consolidateSlices(slices: ChartSlice[], maxSlices = 7): ChartSli
   return [...keep, { label: "Other", value: otherVal, color: [107, 114, 128] }];
 }
 
+function fillWedge(
+  doc: JsPdfDoc,
+  cx: number,
+  cy: number,
+  radius: number,
+  startDeg: number,
+  sweep: number,
+  rgb: [number, number, number],
+) {
+  doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+  const steps = Math.max(6, Math.ceil(Math.abs(sweep) / 4));
+  for (let step = 0; step < steps; step++) {
+    const a0 = ((startDeg + (sweep * step) / steps - 90) * Math.PI) / 180;
+    const a1 = ((startDeg + (sweep * (step + 1)) / steps - 90) * Math.PI) / 180;
+    doc.triangle?.(
+      cx,
+      cy,
+      cx + radius * Math.cos(a0),
+      cy + radius * Math.sin(a0),
+      cx + radius * Math.cos(a1),
+      cy + radius * Math.sin(a1),
+      "F",
+    );
+  }
+}
+
 /** Height in mm consumed below startY */
 export function drawPieChart(
   doc: JsPdfDoc,
@@ -112,32 +139,17 @@ export function drawPieChart(
     return chartH;
   }
 
-  if (data.length === 1) {
-    const rgb = data[0].color ?? CHART_PALETTE[0];
-    doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-    const ops: ([string] | [string, number, number])[] = [["M", cx, cy]];
-    for (let s = 0; s <= 36; s++) {
-      const rad = (((s * 360) / 36 - 90) * Math.PI) / 180;
-      ops.push(["L", cx + radius * Math.cos(rad), cy + radius * Math.sin(rad)]);
-    }
-    ops.push(["Z"]);
-    doc.path(ops as Parameters<typeof doc.path>[0], "F");
-  } else {
+  const largest = data.reduce((best, slice) => (slice.value > best.value ? slice : best), data[0]);
+  doc.setFillColor(...(largest.color ?? CHART_PALETTE[0]));
+  doc.circle?.(cx, cy, radius, "F");
+  if (data.length > 1) {
     let angle = 0;
     data.forEach((slice, i) => {
       const sweep = (slice.value / total) * 360;
-      if (sweep <= 0) return;
-      const rgb = slice.color ?? CHART_PALETTE[i % CHART_PALETTE.length];
-      doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-      const ops: ([string] | [string, number, number])[] = [["M", cx, cy]];
-      const steps = Math.max(14, Math.ceil(sweep / 3));
-      for (let s = 0; s <= steps; s++) {
-        const deg = angle + (sweep * s) / steps;
-        const rad = ((deg - 90) * Math.PI) / 180;
-        ops.push(["L", cx + radius * Math.cos(rad), cy + radius * Math.sin(rad)]);
+      if (sweep > 0 && slice !== largest) {
+        const rgb = slice.color ?? CHART_PALETTE[i % CHART_PALETTE.length];
+        fillWedge(doc, cx, cy, radius + 0.3, angle, sweep, rgb);
       }
-      ops.push(["Z"]);
-      doc.path(ops as Parameters<typeof doc.path>[0], "F");
       angle += sweep;
     });
   }
@@ -198,6 +210,7 @@ export function drawBarChart(
   const maxVal = Math.max(...data.map((d) => d.value), 1);
   const slot = plotW / data.length;
   const barW = Math.min(slot * 0.55, 14);
+  let maxLabelLines = 1;
 
   doc.setDrawColor(220, 220, 220);
   doc.line(startX + 4, bottom, startX + 4 + plotW, bottom);
@@ -211,12 +224,13 @@ export function drawBarChart(
     doc.setFontSize(6);
     doc.setTextColor(40);
     doc.text(String(bar.value), x + barW / 2, bottom - h - 2, { align: "center" } as Record<string, unknown>);
-    const labelLines = doc.splitTextToSize(bar.label, barW + 4) as string[];
+    const labelLines = doc.splitTextToSize(bar.label, Math.max(barW + 6, 16)) as string[];
     doc.setTextColor(80);
     doc.text(labelLines, x + barW / 2, bottom + 3, { align: "center" } as Record<string, unknown>);
+    maxLabelLines = Math.max(maxLabelLines, labelLines.length);
   });
 
-  return chartH;
+  return bottom - startY + 3 + maxLabelLines * 3.2 + 3;
 }
 
 /** Grouped bars (e.g. created vs completed per month). */
@@ -269,20 +283,19 @@ export function drawGroupedBarChart(
     doc.setFontSize(5.5);
     doc.setTextColor(80);
     const lbl = item.label.length > 7 ? item.label.slice(-7) : item.label;
-    doc.text(lbl, gx + groupW / 2, bottom + 3, { align: "center" } as Record<string, unknown>);
+    doc.text(lbl, gx + groupW / 2, bottom + 3.5, { align: "center" } as Record<string, unknown>);
   });
 
-  // Legend
+  const legendY = bottom + 10;
   let lx = startX + 4;
-  const ly = startY + chartH - 4;
   doc.setFontSize(6);
   series.forEach((s) => {
     doc.setFillColor(s.color[0], s.color[1], s.color[2]);
-    doc.rect(lx, ly - 2, 2.5, 2.5, "F");
+    doc.rect(lx, legendY - 2, 2.5, 2.5, "F");
     doc.setTextColor(60);
-    doc.text(s.name, lx + 4, ly);
-    lx += doc.splitTextToSize(s.name, 40).length > 1 ? 28 : 22;
+    doc.text(s.name, lx + 4, legendY);
+    lx += 4 + (doc.splitTextToSize(s.name, 80) as string[])[0].length * 1.4 + 6;
   });
 
-  return chartH + 4;
+  return legendY - startY + 4;
 }

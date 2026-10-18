@@ -404,7 +404,10 @@ export function CountBarChart({
         <CardTitle className="text-xs sm:text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 pt-0">
-        <ResponsiveContainer width="100%" height={isVertical ? 220 : 200}>
+        <ResponsiveContainer
+          width="100%"
+          height={isVertical ? Math.min(520, Math.max(220, chartData.length * 36 + 24)) : 200}
+        >
           <BarChart data={chartData} layout={isVertical ? "vertical" : "horizontal"}>
             <CartesianGrid strokeDasharray="3 3" horizontal={!isVertical} />
             {isVertical ? (

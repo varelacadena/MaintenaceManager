@@ -10,30 +10,62 @@ import {
   timeEntries,
 } from "@shared/schema";
 import type { AnalyticsFilters } from "./analyticsService";
-import { and, eq, gte, inArray, lte, or, sql, count, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, or, sql, count, type SQL } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
+import { parseCsvIds, parseDateBasis, parseLocalDayEnd, parseLocalDayStart, parsePropertyIds } from "./localDates";
+
+function applyTaskDateBasis(parts: SQL[], filters: AnalyticsFilters) {
+  const basis = parseDateBasis(filters.dateBasis);
+  const start = filters.startDate ? parseLocalDayStart(filters.startDate) : undefined;
+  const end = filters.endDate ? parseLocalDayEnd(filters.endDate) : undefined;
+  if (!start && !end) return;
+
+  if (basis === "completed") {
+    if (start) parts.push(gte(tasks.actualCompletionDate, start));
+    if (end) parts.push(lte(tasks.actualCompletionDate, end));
+    return;
+  }
+  if (basis === "due") {
+    if (start) parts.push(gte(tasks.estimatedCompletionDate, start));
+    if (end) parts.push(lte(tasks.estimatedCompletionDate, end));
+    return;
+  }
+  if (basis === "created") {
+    if (start) parts.push(gte(tasks.createdAt, start));
+    if (end) parts.push(lte(tasks.createdAt, end));
+    return;
+  }
+  if (end) parts.push(lte(tasks.createdAt, end));
+  if (start) {
+    parts.push(or(isNull(tasks.actualCompletionDate), gte(tasks.actualCompletionDate, start))!);
+  }
+}
 
 export function buildTaskWhere(filters: AnalyticsFilters): SQL | undefined {
   const parts: SQL[] = [];
-  if (filters.startDate) {
-    parts.push(gte(tasks.createdAt, new Date(filters.startDate)));
-  }
-  if (filters.endDate) {
-    const end = new Date(filters.endDate);
-    end.setHours(23, 59, 59, 999);
-    parts.push(lte(tasks.createdAt, end));
-  }
-  if (filters.propertyId) {
+  applyTaskDateBasis(parts, filters);
+  const propertyIds = parsePropertyIds(filters.propertyId);
+  if (propertyIds.length === 1) {
     parts.push(
       or(
-        eq(tasks.propertyId, filters.propertyId),
-        sql`${filters.propertyId} = ANY(${tasks.propertyIds})`
+        eq(tasks.propertyId, propertyIds[0]),
+        sql`${propertyIds[0]} = ANY(${tasks.propertyIds})`
+      )!
+    );
+  } else if (propertyIds.length > 1) {
+    const idList = sql.join(propertyIds.map((id) => sql`${id}`), sql`, `);
+    parts.push(
+      or(
+        inArray(tasks.propertyId, propertyIds),
+        sql`${tasks.propertyIds} && ARRAY[${idList}]::text[]`
       )!
     );
   }
   if (filters.spaceId) parts.push(eq(tasks.spaceId, filters.spaceId));
   if (filters.areaId) parts.push(eq(tasks.areaId, filters.areaId));
-  if (filters.technicianId) parts.push(eq(tasks.assignedToId, filters.technicianId));
+  const technicianIds = parseCsvIds(filters.technicianId);
+  if (technicianIds.length === 1) parts.push(eq(tasks.assignedToId, technicianIds[0]));
+  else if (technicianIds.length > 1) parts.push(inArray(tasks.assignedToId, technicianIds));
   if (filters.equipmentId) parts.push(eq(tasks.equipmentId, filters.equipmentId));
   if (filters.status) parts.push(eq(tasks.status, filters.status as any));
   if (filters.urgency) parts.push(eq(tasks.urgency, filters.urgency as any));
@@ -43,14 +75,14 @@ export function buildTaskWhere(filters: AnalyticsFilters): SQL | undefined {
 export function buildServiceRequestWhere(filters: AnalyticsFilters): SQL | undefined {
   const parts: SQL[] = [];
   if (filters.startDate) {
-    parts.push(gte(serviceRequests.createdAt, new Date(filters.startDate)));
+    parts.push(gte(serviceRequests.createdAt, parseLocalDayStart(filters.startDate)));
   }
   if (filters.endDate) {
-    const end = new Date(filters.endDate);
-    end.setHours(23, 59, 59, 999);
-    parts.push(lte(serviceRequests.createdAt, end));
+    parts.push(lte(serviceRequests.createdAt, parseLocalDayEnd(filters.endDate)));
   }
-  if (filters.propertyId) parts.push(eq(serviceRequests.propertyId, filters.propertyId));
+  const requestPropertyIds = parsePropertyIds(filters.propertyId);
+  if (requestPropertyIds.length === 1) parts.push(eq(serviceRequests.propertyId, requestPropertyIds[0]));
+  else if (requestPropertyIds.length > 1) parts.push(inArray(serviceRequests.propertyId, requestPropertyIds));
   if (filters.spaceId) parts.push(eq(serviceRequests.spaceId, filters.spaceId));
   if (filters.areaId) parts.push(eq(serviceRequests.areaId, filters.areaId));
   if (filters.urgency) {

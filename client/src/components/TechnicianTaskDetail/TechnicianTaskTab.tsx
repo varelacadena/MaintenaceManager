@@ -6,6 +6,7 @@ import {
   Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { uploadIsCompletionPhoto } from "@shared/taskCompletion";
 import { buildDisplayUrlFromUpload } from "@/lib/uploadUtils";
 import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import { format } from "date-fns";
@@ -418,6 +419,11 @@ export function TechnicianTaskTab({
               })}
             </div>
           </div>
+        )}
+        {!task.lifeSafetyRound && !isCompleted && !uploads.some(uploadIsCompletionPhoto) && (
+          <p className="text-xs text-muted-foreground mt-3" data-testid="text-photo-required">
+            A photo of the finished work is required before you can finish. Use the camera button.
+          </p>
         )}
       </div>
     </>

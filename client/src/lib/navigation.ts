@@ -96,7 +96,7 @@ export function getParentRoute(pathname: string, role?: string): string {
   }
 
   if (/^\/projects\/[^/]+$/.test(path)) {
-    return "/work?tab=projects";
+    return "/work";
   }
 
   if (/^\/properties\/[^/]+$/.test(path)) {

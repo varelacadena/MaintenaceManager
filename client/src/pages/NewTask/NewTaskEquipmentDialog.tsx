@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Upload, Paperclip, Trash2 } from "lucide-react";
+import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
 import type { NewTaskContext } from "./useNewTask";
 
 interface NewTaskEquipmentDialogProps {
@@ -168,10 +169,11 @@ export function NewTaskEquipmentDialog({ ctx }: NewTaskEquipmentDialogProps) {
                 ref={equipmentFileInputRef}
                 type="file"
                 multiple
-                onChange={(e) => {
+                onChange={async (e) => {
                   const files = e.target.files;
                   if (files) {
-                    setPendingEquipmentFiles(prev => [...prev, ...Array.from(files)]);
+                    const prepared = await Promise.all(Array.from(files).map((file) => preparePhotoForUpload(file)));
+                    setPendingEquipmentFiles(prev => [...prev, ...prepared]);
                   }
                   if (equipmentFileInputRef.current) {
                     equipmentFileInputRef.current.value = "";

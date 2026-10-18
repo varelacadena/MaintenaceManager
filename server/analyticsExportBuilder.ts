@@ -1,8 +1,9 @@
 import type { AnalyticsFilters } from "./analyticsService";
+import { DATE_BASIS_LABEL, parseCsvIds, parseDateBasis, parsePropertyIds } from "./localDates";
 import { analyticsService } from "./analyticsService";
 import { db } from "./db";
 import { properties, areas, spaces, users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import {
   type BarSeries,
   type ChartSlice,
@@ -125,11 +126,14 @@ async function resolveFilterMetadata(filters: AnalyticsFilters): Promise<(string
     ["Field", "Value"],
     ["Generated", new Date().toLocaleString()],
     ["Date range", formatDateRange(filters)],
+    ["Dates mean", DATE_BASIS_LABEL[parseDateBasis(filters.dateBasis)]],
   ];
 
-  if (filters.propertyId) {
-    const [p] = await db.select().from(properties).where(eq(properties.id, filters.propertyId));
-    rows.push(["Property", p?.name ?? filters.propertyId]);
+  const selectedPropertyIds = parsePropertyIds(filters.propertyId);
+  if (selectedPropertyIds.length) {
+    const matches = await db.select().from(properties).where(inArray(properties.id, selectedPropertyIds));
+    const names = selectedPropertyIds.map((id) => matches.find((property) => property.id === id)?.name ?? id);
+    rows.push(["Property", names.join(", ")]);
   }
   if (filters.spaceId) {
     const [s] = await db.select().from(spaces).where(eq(spaces.id, filters.spaceId));
@@ -139,10 +143,14 @@ async function resolveFilterMetadata(filters: AnalyticsFilters): Promise<(string
     const [a] = await db.select().from(areas).where(eq(areas.id, filters.areaId));
     rows.push(["Area", a?.name ?? filters.areaId]);
   }
-  if (filters.technicianId) {
-    const [u] = await db.select().from(users).where(eq(users.id, filters.technicianId));
-    const name = u ? [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username : filters.technicianId;
-    rows.push(["Technician", name]);
+  const selectedTechnicianIds = parseCsvIds(filters.technicianId);
+  if (selectedTechnicianIds.length) {
+    const matches = await db.select().from(users).where(inArray(users.id, selectedTechnicianIds));
+    const names = selectedTechnicianIds.map((id) => {
+      const person = matches.find((user) => user.id === id);
+      return person ? [person.firstName, person.lastName].filter(Boolean).join(" ") || person.username : id;
+    });
+    rows.push(["People", names.join(", ")]);
   }
   if (filters.status) rows.push(["Status", statusLabel(filters.status)]);
   if (filters.urgency) rows.push(["Priority", filters.urgency]);
@@ -1170,12 +1178,62 @@ async function buildProjectsSheets(filters: AnalyticsFilters, title: string): Pr
   return [info, summary, statusSheet, prioritySheet, budgetSheet, detailSheet];
 }
 
+function stripColumns(rows: (string | number)[][], pattern: RegExp): (string | number)[][] {
+  if (rows.length === 0) return rows;
+  const keep = rows[0].map((cell) => !pattern.test(String(cell)));
+  if (keep.every(Boolean)) return rows;
+  return rows.map((row) => row.filter((_, index) => keep[index] !== false));
+}
+
+function stripCostColumns(rows: (string | number)[][]): (string | number)[][] {
+  return stripColumns(rows, /cost|budget|labor/i);
+}
+
+function applyColumnOptions(rows: (string | number)[][], filters: AnalyticsFilters): (string | number)[][] {
+  let next = rows;
+  if (filters.includeCost === false) next = stripCostColumns(next);
+  if (filters.includeStudents !== true) next = stripColumns(next, /clock|recap/i);
+  return next;
+}
+
+function selectSheets(sheets: ExportSheet[], filters: AnalyticsFilters): ExportSheet[] {
+  let selected = sheets;
+  if (filters.sheets && filters.sheets.length > 0) {
+    const allow = new Set(filters.sheets.map((name) => name.toLowerCase()));
+    const matched = selected.filter((sheet) => allow.has(sheet.name.toLowerCase()));
+    if (matched.length > 0) selected = matched;
+  }
+  if (filters.includeCost === false) {
+    const withoutCost = selected.filter((sheet) => !/cost|budget/i.test(sheet.name));
+    if (withoutCost.length > 0) selected = withoutCost;
+  }
+  return selected.map((sheet) => ({ ...sheet, rows: applyColumnOptions(sheet.rows, filters) }));
+}
+
+function selectPdfBlocks(blocks: PdfBlock[], filters: AnalyticsFilters): PdfBlock[] {
+  return blocks.flatMap((block) => {
+    if (filters.includeCharts === false && (block.kind === "pie" || block.kind === "bar" || block.kind === "grouped-bar")) {
+      return [];
+    }
+    if (filters.includeCost === false && /cost|budget|labor/i.test(block.heading)) {
+      return [];
+    }
+    if (filters.includeCost === false && block.kind === "table") {
+      return [{ ...block, rows: applyColumnOptions(block.rows, filters) }];
+    }
+    if (block.kind === "table" && filters.includeStudents !== true) {
+      return [{ ...block, rows: applyColumnOptions(block.rows, filters) }];
+    }
+    return [block];
+  });
+}
+
 export async function buildExcelBuffer(dataType: string, filters: AnalyticsFilters): Promise<Buffer> {
   const XLSX = await import("xlsx");
   const { sheets } = await buildExportSheets(dataType, filters);
   const workbook = XLSX.utils.book_new();
 
-  for (const sheet of sheets) {
+  for (const sheet of selectSheets(sheets, filters)) {
     const worksheet = XLSX.utils.aoa_to_sheet(sheet.rows);
     XLSX.utils.book_append_sheet(workbook, worksheet, sanitizeSheetName(sheet.name));
   }
@@ -1240,7 +1298,7 @@ export async function buildPdfBuffer(dataType: string, filters: AnalyticsFilters
   const { default: autoTable } = await import("jspdf-autotable");
   const title = REPORT_TITLES[dataType] ?? "Analytics Report";
   const metaRows = await resolveFilterMetadata(filters);
-  const blocks = await buildPdfBlocks(dataType, filters);
+  const blocks = selectPdfBlocks(await buildPdfBlocks(dataType, filters), filters);
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -1332,7 +1390,7 @@ export async function buildPdfBuffer(dataType: string, filters: AnalyticsFilters
 
     if (block.kind === "pie" || block.kind === "bar" || block.kind === "grouped-bar") {
       renderExplanation(block.explanation);
-      ensureSpace(60);
+      ensureSpace(block.kind === "grouped-bar" ? 78 : 72);
       if (block.kind === "pie") {
         y += drawPieChart(doc, margin, y, contentWidth, block.slices);
       } else if (block.kind === "bar") {
@@ -1482,7 +1540,7 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
           kind: "grouped-bar",
           heading: "Chart: monthly created vs completed",
           explanation:
-            "Blue bars are new work created each month; green bars are completions. When blue exceeds green for several months, backlog is likely growing.",
+            "Blue is the month the work order was opened. Green is the month it was finished. A job can appear in two different months.",
           items: wo.monthlyTrend.map((m) => ({
             label: m.month,
             values: [m.count, m.completed],
@@ -1574,12 +1632,12 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
           rows: [
             ["Name", "Status", "Priority", "Assigned", "Building", "Area", "Due", "Completed"],
             ...wo.detailedRecords.map((r) => [
-              truncate(r.name, 40),
+              r.name,
               statusLabel(r.status),
               r.urgency,
-              truncate(r.assignedToName || "—", 20),
-              truncate(r.propertyName, 18),
-              truncate(r.areaName, 15),
+              r.assignedToName || "—",
+              r.propertyName,
+              r.areaName,
               fmtDate(r.estimatedCompletionDate),
               fmtDate(r.actualCompletionDate),
             ]),

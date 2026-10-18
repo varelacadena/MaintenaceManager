@@ -474,7 +474,7 @@ function EmergencyContactsRedirectRoute() {
 function ProjectsRedirectRoute() {
   return (
     <DomainErrorBoundary domain="Projects">
-      <RedirectTo to="/work?tab=projects" />
+      <RedirectTo to="/work" />
     </DomainErrorBoundary>
   );
 }

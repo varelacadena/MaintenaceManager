@@ -18,8 +18,9 @@ import {
   studentDailyRecaps,
 } from "@shared/schema";
 import { computeDurationMinutes, hoursFromMinutes } from "@shared/studentPortal";
+import { parseCsvIds, parseLocalDayEnd, parseLocalDayStart, parsePropertyIds } from "./localDates";
 import { compareVehicleIds } from "@shared/vehicleSort";
-import { eq, and, gte, lte, sql, count, desc } from "drizzle-orm";
+import { eq, and, gte, lte, sql, count, desc, inArray } from "drizzle-orm";
 import {
   buildTaskWhere,
   buildServiceRequestWhere,
@@ -51,6 +52,13 @@ export interface AnalyticsFilters {
   status?: string;
   urgency?: string;
   roleType?: "all" | "technician" | "student";
+  dateBasis?: "active" | "completed" | "due" | "created";
+  /** Spreadsheet sheet names to keep. Omit to include every sheet. */
+  sheets?: string[];
+  includeCharts?: boolean;
+  includeCost?: boolean;
+  /** Team export keeps clock hours and recap counts only when this is true. */
+  includeStudents?: boolean;
 }
 
 export interface DetailedWorkOrder {
@@ -770,8 +778,14 @@ export class AnalyticsService {
       teamMembers = [...technicians, ...students];
     }
     
-    if (filters.technicianId) {
-      teamMembers = teamMembers.filter(m => m.id === filters.technicianId);
+    const selectedTechnicianIds = parseCsvIds(filters.technicianId);
+    if (selectedTechnicianIds.length) {
+      teamMembers = teamMembers.filter((member) => selectedTechnicianIds.includes(member.id));
+      const missingIds = selectedTechnicianIds.filter((id) => !teamMembers.some((member) => member.id === id));
+      if (missingIds.length) {
+        const extras = await db.select().from(users).where(inArray(users.id, missingIds));
+        teamMembers = [...teamMembers, ...extras];
+      }
     }
 
     const allTasks = await fetchFilteredTasks(filters);
@@ -911,8 +925,9 @@ export class AnalyticsService {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    const equipmentList = filters.propertyId
-      ? allEquipment.filter((eq) => eq.propertyId === filters.propertyId)
+    const selectedPropertyIds = parsePropertyIds(filters.propertyId);
+    const equipmentList = selectedPropertyIds.length
+      ? allEquipment.filter((eq) => selectedPropertyIds.includes(eq.propertyId))
       : allEquipment;
 
     for (const eq of equipmentList) {
@@ -1007,8 +1022,9 @@ export class AnalyticsService {
     const allTimeEntries = await fetchTimeEntriesForTasks(taskIds);
 
     const results: FacilityInsights[] = [];
-    const propertiesToProcess = filters.propertyId
-      ? propertiesList.filter((p) => p.id === filters.propertyId)
+    const selectedPropertyIds = parsePropertyIds(filters.propertyId);
+    const propertiesToProcess = selectedPropertyIds.length
+      ? propertiesList.filter((p) => selectedPropertyIds.includes(p.id))
       : propertiesList;
 
     const taskMatchesProperty = (task: (typeof allTasks)[number], propertyId: string) =>
@@ -1656,12 +1672,10 @@ export class AnalyticsService {
 
     const now = new Date();
 
-    const periodEnd = filters.endDate ? new Date(filters.endDate) : now;
-    periodEnd.setHours(23, 59, 59, 999);
+    const periodEnd = filters.endDate ? parseLocalDayEnd(filters.endDate) : now;
     const periodStart = filters.startDate
-      ? new Date(filters.startDate)
-      : new Date(periodEnd.getTime() - 30 * 24 * 60 * 60 * 1000);
-    periodStart.setHours(0, 0, 0, 0);
+      ? parseLocalDayStart(filters.startDate)
+      : new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate() - 30, 0, 0, 0, 0);
 
     const reservationOverlapsPeriod = (start: Date, end: Date) =>
       end.getTime() >= periodStart.getTime() && start.getTime() <= periodEnd.getTime();
@@ -1696,13 +1710,13 @@ export class AnalyticsService {
 
     let filteredMaintenanceLogs = allMaintenanceLogs;
     if (filters.startDate) {
-      const startDate = new Date(filters.startDate);
+      const startDate = parseLocalDayStart(filters.startDate);
       filteredMaintenanceLogs = filteredMaintenanceLogs.filter(
         (log) => log.maintenanceDate && new Date(log.maintenanceDate) >= startDate,
       );
     }
     if (filters.endDate) {
-      const endDate = new Date(filters.endDate);
+      const endDate = parseLocalDayEnd(filters.endDate);
       filteredMaintenanceLogs = filteredMaintenanceLogs.filter(
         (log) => log.maintenanceDate && new Date(log.maintenanceDate) <= endDate,
       );
@@ -2084,16 +2098,16 @@ export class AnalyticsService {
     let filtered = allProjects;
 
     if (filters.startDate) {
-      const start = new Date(filters.startDate);
+      const start = parseLocalDayStart(filters.startDate);
       filtered = filtered.filter((p) => p.createdAt && new Date(p.createdAt) >= start);
     }
     if (filters.endDate) {
-      const end = new Date(filters.endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = parseLocalDayEnd(filters.endDate);
       filtered = filtered.filter((p) => p.createdAt && new Date(p.createdAt) <= end);
     }
-    if (filters.propertyId) {
-      filtered = filtered.filter((p) => p.propertyId === filters.propertyId);
+    const projectPropertyIds = parsePropertyIds(filters.propertyId);
+    if (projectPropertyIds.length) {
+      filtered = filtered.filter((p) => p.propertyId && projectPropertyIds.includes(p.propertyId));
     }
     if (filters.spaceId) {
       filtered = filtered.filter((p) => p.spaceId === filters.spaceId);
@@ -2214,10 +2228,10 @@ export class AnalyticsService {
 
     const usageConditions = [sql`${partsUsed.inventoryItemId} IS NOT NULL`];
     if (filters?.startDate) {
-      usageConditions.push(gte(partsUsed.createdAt, new Date(filters.startDate)));
+      usageConditions.push(gte(partsUsed.createdAt, parseLocalDayStart(filters.startDate)));
     }
     if (filters?.endDate) {
-      usageConditions.push(lte(partsUsed.createdAt, new Date(filters.endDate + "T23:59:59")));
+      usageConditions.push(lte(partsUsed.createdAt, parseLocalDayEnd(filters.endDate)));
     }
 
     const usageRows = await db

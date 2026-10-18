@@ -289,7 +289,7 @@ export function TechnicianDialogs({
                   <p className="text-xs mt-0.5 text-muted-foreground">
                     {task.lifeSafetyRound
                       ? "Pause now, or finish after every unit is recorded."
-                      : "Pause now, or complete with a work note."}
+                      : "Pause now, or finish with a work note and a photo."}
                   </p>
                 )}
               </div>
@@ -308,12 +308,12 @@ export function TechnicianDialogs({
                 </PopoverTrigger>
                 <PopoverContent align="end" className="space-y-2" data-testid="popover-complete-help">
                   <p className="text-sm font-medium text-foreground">
-                    {task.lifeSafetyRound ? "Record every unit first" : "Work note required"}
+                    {task.lifeSafetyRound ? "Record every unit first" : "Work note and photo required"}
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {task.lifeSafetyRound
                       ? "Scan each smoke detector and exit sign, or mark a problem. Then this week can be finished."
-                      : "Write a short sentence about what you found and what you did. Example: “Replaced the belt and tested the unit.” “Done” or “ok” is not enough."}
+                      : "Write a short sentence about what you found and what you did, and add a photo of the finished work. Example: “Replaced the belt and tested the unit.” “Done” or “ok” is not enough."}
                   </p>
                   {task.instructions && (
                     <div
@@ -364,6 +364,9 @@ export function TechnicianDialogs({
             </div>
             )}
             <div className="mb-4" data-testid="dialog-photo-upload">
+              <p className="text-xs font-medium text-foreground mb-1.5">
+                Photo of the work {!task.lifeSafetyRound && <span className="text-destructive">*</span>}
+              </p>
               <ObjectUploader
                 maxNumberOfFiles={5}
                 maxFileSize={10485760}
@@ -371,12 +374,13 @@ export function TechnicianDialogs({
                 onGetUploadParameters={getUploadParameters}
                 onComplete={handleAutoSaveUpload}
                 buttonVariant="outline"
-                buttonClassName="w-full"
+                wrapperClassName="w-full sm:w-full"
+                buttonClassName="h-auto min-h-11 w-full sm:w-full whitespace-normal px-3"
                 buttonTestId="button-dialog-photo"
                 isLoading={addUploadMutation.isPending}
               >
                 <Camera className="w-4 h-4" />
-                Add a photo
+                {task.lifeSafetyRound ? "Add a photo" : "Add a photo of the work"}
               </ObjectUploader>
             </div>
             <div className="space-y-2">
@@ -407,10 +411,10 @@ export function TechnicianDialogs({
               )}
               {!estimateBlocksCompletion && !photoReady && (
                 <p className="text-xs text-center mt-1 text-muted-foreground" data-testid="text-photo-required-hint">
-                  Add a photo before marking this task complete.
+                  Add a photo of the finished work before marking this task complete.
                 </p>
               )}
-              {!estimateBlocksCompletion && photoReady && !notesReady && (
+              {!estimateBlocksCompletion && !notesReady && (
                 <p className="text-xs text-center mt-1 text-muted-foreground" data-testid="text-note-required-hint">
                   {completionNoteValue.trim()
                     ? "Add a bit more detail so the note is a real explanation."

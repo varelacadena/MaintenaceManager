@@ -15,20 +15,15 @@ test.describe("Work page – admin", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("loads Work hub with tasks tab and search", async ({ page }) => {
+  test("loads Work hub with search and filters", async ({ page }) => {
     await expect(page.getByTestId("text-page-title")).toHaveText("Work");
-    await expect(page.getByTestId("work-tabs")).toBeVisible();
-    await expect(page.getByTestId("tab-tasks")).toBeVisible();
     await expect(page.getByTestId("input-search-work")).toBeVisible();
+    await expect(page.getByTestId("button-filters")).toBeVisible();
+    await expect(page.getByTestId("button-create-task")).toBeVisible();
   });
 
-  test("can switch to Projects tab", async ({ page }) => {
-    await page.getByTestId("tab-projects").click();
-    await expect(page.getByTestId("input-search-projects")).toBeVisible();
-  });
-
-  test("status group headers are keyboard accessible", async ({ page }) => {
-    const toggle = page.getByTestId("toggle-group-in_progress");
+  test("project folders expand in the same list", async ({ page }) => {
+    const toggle = page.locator("[data-testid^='toggle-project-']").first();
     if (!(await toggle.isVisible())) {
       test.skip();
     }

@@ -31,8 +31,8 @@ import { getDateLabel } from "./helpers";
 import {
   hasWorkExplanation,
   isWorkExplanationContent,
+  missingCompletionPhoto,
   roleRequiresWorkNoteOnCompletion,
-  uploadIsCompletionPhoto,
   PHOTO_REQUIRED_MESSAGE,
   WORK_NOTE_REQUIRED_MESSAGE,
 } from "@shared/taskCompletion";
@@ -790,7 +790,12 @@ export function useTaskDetail() {
       });
       return;
     }
-    if (task?.requiresPhoto && !uploads.some(uploadIsCompletionPhoto)) {
+    if (missingCompletionPhoto({
+      role: user?.role,
+      lifeSafetyRound: task?.lifeSafetyRound,
+      requiresPhoto: task?.requiresPhoto,
+      uploads,
+    })) {
       toast({
         title: "Photo required",
         description: PHOTO_REQUIRED_MESSAGE,

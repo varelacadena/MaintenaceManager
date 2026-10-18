@@ -53,6 +53,10 @@ export function overviewAnalysis(
   ];
 }
 
+function countWord(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 export function workOrdersAnalysis(wo: WorkOrderOverview, range: string): AnalysisSection[] {
   const statusTop = dominantLabel(
     wo.byStatus.map((s) => ({ label: s.status.replace(/_/g, " "), value: s.count })),
@@ -71,9 +75,9 @@ export function workOrdersAnalysis(wo: WorkOrderOverview, range: string): Analys
     {
       title: "Volume & completion",
       paragraphs: [
-        `${wo.totalWorkOrders} work orders are in scope. ${wo.completedWorkOrders} (${wo.completionRate}%) are done, ${wo.inProgressWorkOrders} are in progress, ${wo.notStartedWorkOrders} have not started, and ${wo.onHoldWorkOrders} are on hold.`,
+        `${countWord(wo.totalWorkOrders, "work order is", "work orders are")} in scope. ${countWord(wo.completedWorkOrders, "is", "are")} done (${wo.completionRate}%), ${countWord(wo.inProgressWorkOrders, "is", "are")} in progress, ${countWord(wo.notStartedWorkOrders, "has", "have")} not started, and ${countWord(wo.onHoldWorkOrders, "is", "are")} on hold.`,
         wo.overdueWorkOrders > 0
-          ? `${wo.overdueWorkOrders} orders are overdue and need attention — prioritize these when assigning technicians.`
+          ? `${countWord(wo.overdueWorkOrders, "order is", "orders are")} overdue and still open.`
           : "No overdue work orders in this filtered set.",
       ],
     },
@@ -89,7 +93,7 @@ export function workOrdersAnalysis(wo: WorkOrderOverview, range: string): Analys
         buildingTop
           ? `Most activity is at ${buildingTop.label} (${buildingTop.share}% of orders). The bar chart ranks buildings by volume.`
           : "The building bar chart shows where maintenance effort is concentrated.",
-        "The monthly trend chart compares new work created each month with work completed — widening gaps mean backlog may be growing.",
+        "The monthly chart shows when these work orders were opened and when they were finished. A job opened in one month and finished in another is counted in both months.",
       ],
     },
   ];

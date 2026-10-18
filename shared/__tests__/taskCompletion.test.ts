@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  completionPhotoIsRequired,
   hasWorkExplanation,
   isSystemGeneratedNoteContent,
   isWorkExplanationContent,
+  missingCompletionPhoto,
   roleRequiresPhotoOnCompletion,
   roleRequiresWorkNoteOnCompletion,
   uploadIsCompletionPhoto,
@@ -51,5 +53,24 @@ describe("taskCompletion work notes", () => {
     expect(roleRequiresPhotoOnCompletion("admin")).toBe(false);
     expect(uploadIsCompletionPhoto({ fileType: "image/jpeg" })).toBe(true);
     expect(uploadIsCompletionPhoto({ fileType: "application/pdf" })).toBe(false);
+  });
+
+  it("always requires a completion photo from technicians, and from students only when the task asks", () => {
+    expect(completionPhotoIsRequired({ role: "technician", requiresPhoto: false })).toBe(true);
+    expect(completionPhotoIsRequired({ role: "technician", lifeSafetyRound: true })).toBe(false);
+    expect(completionPhotoIsRequired({ role: "student", requiresPhoto: true })).toBe(true);
+    expect(completionPhotoIsRequired({ role: "student", requiresPhoto: false })).toBe(false);
+    expect(completionPhotoIsRequired({ role: "admin", requiresPhoto: true })).toBe(false);
+  });
+
+  it("treats any image on the task as the completion photo", () => {
+    expect(missingCompletionPhoto({
+      role: "technician",
+      uploads: [{ fileType: "application/pdf" }],
+    })).toBe(true);
+    expect(missingCompletionPhoto({
+      role: "technician",
+      uploads: [{ fileType: "image/jpeg" }],
+    })).toBe(false);
   });
 });

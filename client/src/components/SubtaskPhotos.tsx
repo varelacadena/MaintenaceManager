@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getSignedUploadParameters } from "@/lib/uploadUtils";
+import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
+import { getSignedUploadParameters, inferUploadFileType } from "@/lib/uploadUtils";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 import type { Upload } from "@shared/schema";
@@ -33,11 +34,13 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
   const photos = uploads?.filter(u => u.fileType.startsWith("image/")) || [];
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const selected = event.target.files?.[0];
+    if (!selected) return;
 
     setIsUploading(true);
     try {
+      const file = await preparePhotoForUpload(selected);
+      const fileType = inferUploadFileType(file);
       const { url: uploadURL, objectPath } = await getSignedUploadParameters();
 
       const isMock = uploadURL.startsWith("https://mock-storage.local/");
@@ -47,7 +50,7 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
         const uploadRes = await fetch(uploadURL, {
           method: "PUT",
           body: file,
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": fileType },
         });
         if (!uploadRes.ok) throw new Error("Upload failed");
         objectUrl = uploadURL.split("?")[0];
@@ -56,7 +59,7 @@ export function SubtaskPhotos({ subtaskId, disabled, testIdPrefix = "subtask" }:
       await apiRequest("PUT", "/api/uploads", {
         taskId: subtaskId,
         fileName: file.name,
-        fileType: file.type || "image/jpeg",
+        fileType,
         objectUrl,
         objectPath,
         label: file.name,

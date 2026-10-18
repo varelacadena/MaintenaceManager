@@ -37,9 +37,12 @@ const VALID_TABS: ReportTab[] = [
   "projects",
 ];
 
+export type AnalyticsView = "analytics" | "xlsx" | "pdf";
+
 const FILTER_KEYS: (keyof FilterState)[] = [
   "startDate",
   "endDate",
+  "dateBasis",
   "propertyId",
   "spaceId",
   "areaId",
@@ -51,6 +54,7 @@ const FILTER_KEYS: (keyof FilterState)[] = [
 export const EMPTY_FILTERS: FilterState = {
   startDate: "",
   endDate: "",
+  dateBasis: "active",
   propertyId: "",
   spaceId: "",
   areaId: "",
@@ -60,9 +64,14 @@ export const EMPTY_FILTERS: FilterState = {
 };
 
 function parseFilters(params: URLSearchParams): FilterState {
+  const basis = params.get("dateBasis");
   return {
     startDate: params.get("startDate") ?? "",
     endDate: params.get("endDate") ?? "",
+    dateBasis:
+      basis === "completed" || basis === "due" || basis === "created" || basis === "active"
+        ? basis
+        : "active",
     propertyId: params.get("propertyId") ?? "",
     spaceId: params.get("spaceId") ?? "",
     areaId: params.get("areaId") ?? "",
@@ -77,7 +86,13 @@ function parseTab(params: URLSearchParams): ReportTab {
   if (tab && VALID_TABS.includes(tab as ReportTab)) {
     return tab as ReportTab;
   }
-  return "key-metrics";
+  return "work-orders";
+}
+
+function parseView(params: URLSearchParams): AnalyticsView {
+  const view = params.get("view");
+  if (view === "xlsx" || view === "pdf") return view;
+  return "analytics";
 }
 
 function parseRole(params: URLSearchParams): RoleFilter {
@@ -98,17 +113,26 @@ interface AnalyticsFilterContextValue {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   navigateToReport: (tab: ReportTab, scope?: ReportScopePatch) => void;
+  view: AnalyticsView;
+  setView: (view: AnalyticsView) => void;
   filters: FilterState;
   setFilters: (filters: FilterState) => void;
   clearFilters: () => void;
   roleFilter: RoleFilter;
   setRoleFilter: (role: RoleFilter) => void;
   buildQueryString: (extra?: Record<string, string>) => string;
+  /** The dashboard bar owns filters. Embedded report filter rails stay hidden. */
+  shell: true;
 }
 
 function writeFiltersToParams(next: URLSearchParams, filterState: FilterState) {
   FILTER_KEYS.forEach((key) => {
     const value = filterState[key];
+    if (key === "dateBasis") {
+      if (value && value !== "active") next.set(key, value);
+      else next.delete(key);
+      return;
+    }
     if (value) next.set(key, value);
     else next.delete(key);
   });
@@ -122,6 +146,7 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
 
   const params = useMemo(() => new URLSearchParams(search), [search]);
   const activeTab = useMemo(() => parseTab(params), [params]);
+  const view = useMemo(() => parseView(params), [params]);
   const filters = useMemo(() => parseFilters(params), [params]);
   const roleFilter = useMemo(() => parseRole(params), [params]);
 
@@ -131,10 +156,12 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       mutate(next);
 
       FILTER_KEYS.forEach((key) => {
+        if (key === "dateBasis" && next.get(key) === "active") next.delete(key);
         if (!next.get(key)) next.delete(key);
       });
       if (!next.get("role") || next.get("role") === "all") next.delete("role");
-      if (!next.get("tab") || next.get("tab") === "key-metrics") next.delete("tab");
+      if (!next.get("tab") || next.get("tab") === "work-orders") next.delete("tab");
+      if (!next.get("view") || next.get("view") === "analytics") next.delete("view");
 
       const qs = next.toString();
       setLocation(qs ? `/analytics?${qs}` : "/analytics", { replace: true });
@@ -145,7 +172,7 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
   const setActiveTab = useCallback(
     (tab: ReportTab) => {
       setAnalyticsUrl((next) => {
-        if (tab === "key-metrics") next.delete("tab");
+        if (tab === "work-orders") next.delete("tab");
         else next.set("tab", tab);
         const sanitized = sanitizeFiltersForTab(tab, parseFilters(next));
         writeFiltersToParams(next, sanitized);
@@ -157,7 +184,7 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
   const navigateToReport = useCallback(
     (tab: ReportTab, scope?: ReportScopePatch) => {
       setAnalyticsUrl((next) => {
-        if (tab === "key-metrics") next.delete("tab");
+        if (tab === "work-orders") next.delete("tab");
         else next.set("tab", tab);
 
         const resetScope = scope?.resetScope !== false;
@@ -175,14 +202,20 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
     [setAnalyticsUrl],
   );
 
+  const setView = useCallback(
+    (nextView: AnalyticsView) => {
+      setAnalyticsUrl((next) => {
+        if (nextView === "analytics") next.delete("view");
+        else next.set("view", nextView);
+      });
+    },
+    [setAnalyticsUrl],
+  );
+
   const setFilters = useCallback(
     (nextFilters: FilterState) => {
       setAnalyticsUrl((next) => {
-        FILTER_KEYS.forEach((key) => {
-          const value = nextFilters[key];
-          if (value) next.set(key, value);
-          else next.delete(key);
-        });
+        writeFiltersToParams(next, nextFilters);
       });
     },
     [setAnalyticsUrl],
@@ -212,7 +245,11 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       const query = new URLSearchParams();
       FILTER_KEYS.forEach((key) => {
         const value = filters[key];
-        if (value) query.append(key, value);
+        if (!value || (key === "dateBasis" && value === "active")) return;
+        if (key === "dateBasis" && activeTab !== "key-metrics" && activeTab !== "work-orders" && activeTab !== "technicians" && activeTab !== "assets" && activeTab !== "facilities" && activeTab !== "alerts") {
+          return;
+        }
+        query.append(key, value);
       });
       if (extra) {
         Object.entries(extra).forEach(([key, value]) => {
@@ -221,7 +258,7 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       }
       return query.toString();
     },
-    [filters],
+    [filters, activeTab],
   );
 
   const value = useMemo(
@@ -229,17 +266,22 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       activeTab,
       setActiveTab,
       navigateToReport,
+      view,
+      setView,
       filters,
       setFilters,
       clearFilters,
       roleFilter,
       setRoleFilter,
       buildQueryString,
+      shell: true as const,
     }),
     [
       activeTab,
       setActiveTab,
       navigateToReport,
+      view,
+      setView,
       filters,
       setFilters,
       clearFilters,

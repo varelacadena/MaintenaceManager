@@ -1,4 +1,5 @@
 import { getUserDisplayName } from "@/utils/taskUtils";
+import { useAnalyticsFilters } from "@/pages/analytics/useAnalyticsFilters";
 import { useQuery } from "@tanstack/react-query";
 import { parse, format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ interface User {
 export interface FilterState {
   startDate: string;
   endDate: string;
+  dateBasis: "active" | "completed" | "due" | "created";
   propertyId: string;
   spaceId: string;
   areaId: string;
@@ -108,39 +110,45 @@ interface AnalyticsFiltersProps {
   exportOptions?: string[];
 }
 
+function localYmd(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 const datePresets = [
   { label: "Today", getValue: () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localYmd(new Date());
     return { startDate: today, endDate: today };
   }},
   { label: "Last 7 Days", getValue: () => {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 7);
-    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+    return { startDate: localYmd(start), endDate: localYmd(end) };
   }},
   { label: "Last 30 Days", getValue: () => {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 30);
-    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+    return { startDate: localYmd(start), endDate: localYmd(end) };
   }},
   { label: "This Month", getValue: () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+    return { startDate: localYmd(start), endDate: localYmd(end) };
   }},
   { label: "Last Month", getValue: () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const end = new Date(now.getFullYear(), now.getMonth(), 0);
-    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+    return { startDate: localYmd(start), endDate: localYmd(end) };
   }},
   { label: "This Year", getValue: () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
-    return { startDate: start.toISOString().split('T')[0], endDate: now.toISOString().split('T')[0] };
+    return { startDate: localYmd(start), endDate: localYmd(now) };
   }},
   { label: "All Time", getValue: () => ({ startDate: "", endDate: "" }) },
 ];
@@ -157,6 +165,7 @@ export default function AnalyticsFilters({
   urgencyFilterVariant = "task",
   exportOptions = [],
 }: AnalyticsFiltersProps) {
+  const { shell } = useAnalyticsFilters();
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
@@ -193,6 +202,7 @@ export default function AnalyticsFilters({
 
   const clearFilters = () => {
     onFilterChange({
+      ...filters,
       startDate: "",
       endDate: "",
       propertyId: "",
@@ -280,6 +290,8 @@ export default function AnalyticsFilters({
       updateFilter(key, "");
     }
   };
+
+  if (shell) return null;
 
   return (
     <div className="space-y-2 mb-4">

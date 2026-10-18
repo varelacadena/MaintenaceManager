@@ -13,6 +13,8 @@ import type { User, Vendor, ServiceRequest, Property, Equipment, Space, Checklis
 import { z } from "zod";
 import type { SelectedAsset } from "@/components/task-form/TaskLocationFields";
 import { isAutoShopName } from "@/lib/autoShopUtils";
+import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
+import { inferUploadFileType } from "@/lib/uploadUtils";
 
 const equipmentFormSchema = insertEquipmentSchema.omit({ propertyId: true }).extend({
   name: z.string().min(1, "Name is required"),
@@ -262,8 +264,10 @@ export function useNewTask() {
       const filesToUpload = [...pendingEquipmentFiles];
       
       if (filesToUpload.length > 0) {
-        for (const file of filesToUpload) {
+        for (const selected of filesToUpload) {
           try {
+            const file = await preparePhotoForUpload(selected);
+            const fileType = inferUploadFileType(file);
             const uploadUrlRes = await fetch("/api/objects/upload", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -280,7 +284,7 @@ export function useNewTask() {
             const uploadRes = await fetch(uploadURL, {
               method: "PUT",
               body: file,
-              headers: { "Content-Type": file.type || "application/octet-stream" },
+              headers: { "Content-Type": fileType },
             });
             
             if (!uploadRes.ok) {
@@ -294,7 +298,7 @@ export function useNewTask() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 fileName: file.name,
-                fileType: file.type || "application/octet-stream",
+                fileType,
                 objectUrl: uploadURL.split("?")[0],
                 objectPath: objectPath,
                 equipmentId: newEquipment.id,

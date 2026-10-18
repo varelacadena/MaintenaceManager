@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
 import { inferUploadFileType } from "@/lib/uploadUtils";
 import { Loader2 } from "lucide-react";
 
@@ -26,6 +28,8 @@ interface ObjectUploaderProps {
   buttonTestId?: string;
   buttonAriaLabel?: string;
   isLoading?: boolean;
+  /** Fired when an upload or follow-up save starts and finishes. */
+  onBusyChange?: (busy: boolean) => void;
   children: ReactNode;
 }
 
@@ -43,6 +47,7 @@ export function ObjectUploader({
   buttonTestId,
   buttonAriaLabel,
   isLoading = false,
+  onBusyChange,
   children,
 }: ObjectUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +72,7 @@ export function ObjectUploader({
     });
 
     for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
+      const file = await preparePhotoForUpload(selectedFiles[i]);
 
       setUploadState({
         isUploading: true,
@@ -156,10 +161,42 @@ export function ObjectUploader({
   };
 
   const isBusy = isLoading || uploadState.isUploading;
+  const onBusyChangeRef = useRef(onBusyChange);
+  onBusyChangeRef.current = onBusyChange;
+  useEffect(() => {
+    onBusyChangeRef.current?.(isBusy);
+    return () => {
+      if (isBusy) onBusyChangeRef.current?.(false);
+    };
+  }, [isBusy]);
+
   const uploadLabel =
     uploadState.total > 1
       ? `Uploading ${uploadState.current} of ${uploadState.total}...`
       : "Uploading...";
+  const statusLabel = uploadState.isUploading ? uploadLabel : "Saving...";
+
+  const statusBanner = isBusy && typeof document !== "undefined"
+    ? createPortal(
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="upload-status-banner"
+          className="pointer-events-none fixed z-[200] flex justify-center"
+          style={{
+            left: "max(0.75rem, env(safe-area-inset-left, 0px))",
+            right: "max(0.75rem, env(safe-area-inset-right, 0px))",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.75rem)",
+          }}
+        >
+          <div className="flex w-full max-w-md items-center gap-2 overflow-visible rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium text-foreground shadow-lg">
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            <span className="min-w-0 leading-snug break-words">{statusLabel}</span>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <div className={cn("flex w-full sm:w-auto", wrapperClassName)}>
@@ -178,18 +215,16 @@ export function ObjectUploader({
         onClick={() => !isBusy && fileInputRef.current?.click()}
         className={cn("h-full w-full sm:w-auto min-h-10", buttonClassName)}
         data-testid={buttonTestId ?? "button-upload"}
-        aria-label={buttonAriaLabel}
+        aria-label={isBusy ? statusLabel : buttonAriaLabel}
         disabled={isBusy}
       >
         {isBusy ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {uploadState.isUploading ? uploadLabel : "Loading..."}
-          </>
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           children
         )}
       </Button>
+      {statusBanner}
     </div>
   );
 }

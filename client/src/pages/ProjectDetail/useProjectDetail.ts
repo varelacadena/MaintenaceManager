@@ -12,6 +12,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { Project, Task, Property, User, ProjectComment, Upload } from "@shared/schema";
 import { format } from "date-fns";
 import { getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
+import { inferUploadFileType } from "@/lib/uploadUtils";
 
 export type StatusType = "not_started" | "needs_estimate" | "waiting_approval" | "ready" | "in_progress" | "on_hold" | "completed";
 
@@ -152,16 +154,18 @@ export function useProjectDetail() {
     input.type = "file";
     input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+      const selected = input.files?.[0];
+      if (!selected) return;
       try {
+        const file = await preparePhotoForUpload(selected);
+        const fileType = inferUploadFileType(file);
         const res = await apiRequest("POST", "/api/objects/upload", {});
         const { uploadURL, objectPath } = await res.json();
 
         await fetch(uploadURL, {
           method: "PUT",
           body: file,
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": fileType },
         });
 
         const commentRes = await apiRequest("POST", `/api/projects/${projectId}/comments`, {
@@ -171,7 +175,7 @@ export function useProjectDetail() {
 
         await apiRequest("POST", `/api/projects/${projectId}/uploads`, {
           fileName: file.name,
-          fileType: file.type,
+          fileType,
           objectUrl: uploadURL.split("?")[0],
           objectPath,
           projectCommentId: comment.id,
@@ -196,21 +200,23 @@ export function useProjectDetail() {
     input.type = "file";
     input.accept = "image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt";
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+      const selected = input.files?.[0];
+      if (!selected) return;
       try {
+        const file = await preparePhotoForUpload(selected);
+        const fileType = inferUploadFileType(file);
         const res = await apiRequest("POST", "/api/objects/upload", {});
         const { uploadURL, objectPath } = await res.json();
 
         await fetch(uploadURL, {
           method: "PUT",
           body: file,
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": fileType },
         });
 
         uploadToProjectMutation.mutate({
           fileName: file.name,
-          fileType: file.type,
+          fileType,
           objectUrl: uploadURL.split("?")[0],
           objectPath,
         });

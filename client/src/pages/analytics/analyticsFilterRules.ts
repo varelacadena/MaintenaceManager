@@ -50,7 +50,7 @@ export const TAB_FILTER_RULES: Record<ReportTab, TabFilterRules> = {
   technicians: {
     allowedStatuses: WORK_ORDER_STATUS_VALUES,
     allowedUrgencies: TASK_URGENCY_VALUES,
-    allowTechnician: false,
+    allowTechnician: true,
   },
   assets: {
     allowedStatuses: WORK_ORDER_STATUS_VALUES,
@@ -60,7 +60,7 @@ export const TAB_FILTER_RULES: Record<ReportTab, TabFilterRules> = {
   facilities: {
     allowedStatuses: WORK_ORDER_STATUS_VALUES,
     allowedUrgencies: TASK_URGENCY_VALUES,
-    allowTechnician: false,
+    allowTechnician: true,
   },
   fleet: {
     allowedStatuses: null,

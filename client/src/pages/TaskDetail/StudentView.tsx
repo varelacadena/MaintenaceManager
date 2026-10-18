@@ -18,6 +18,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
+import { uploadIsCompletionPhoto } from "@shared/taskCompletion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { statusColors } from "./constants";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
@@ -245,7 +246,14 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
             </div>
 
             <div className="space-y-3">
-              <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Photos</p>
+              <p className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                Photos {task.requiresPhoto && !task.lifeSafetyRound && <span className="text-destructive">*</span>}
+              </p>
+              {task.requiresPhoto && !task.lifeSafetyRound && !uploads.some(uploadIsCompletionPhoto) && (
+                <p className="text-xs text-muted-foreground -mt-1" data-testid="text-student-photo-required">
+                  Required before you can finish. Show the work.
+                </p>
+              )}
               <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
                 <ObjectUploader
                   maxNumberOfFiles={5}
@@ -257,7 +265,8 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                     toast({ title: "Upload failed", description: error.message, variant: "destructive" });
                   }}
                   buttonVariant="outline"
-                  buttonClassName="h-14 flex-col gap-1 w-full"
+                  wrapperClassName="w-full sm:w-full"
+                  buttonClassName="h-auto min-h-14 w-full sm:w-full flex-col gap-1 whitespace-normal px-3 py-2"
                   buttonTestId="button-take-photo"
                   isLoading={addUploadMutation.isPending}
                 >

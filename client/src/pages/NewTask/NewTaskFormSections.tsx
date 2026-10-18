@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, MapPin, Calendar } from "lucide-react";
+import { Check, FileText, MapPin, Calendar } from "lucide-react";
 import { TaskLocationFields } from "@/components/task-form/TaskLocationFields";
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
@@ -68,11 +68,12 @@ export function LeftColumnSections({ ctx }: NewTaskFormSectionsProps) {
               }
             }}
           >
-            <Checkbox
-              checked={lifeSafetyRound}
-              tabIndex={-1}
-              className="mt-1 pointer-events-none"
-            />
+            <span
+              aria-hidden
+              className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-primary ${lifeSafetyRound ? "bg-primary text-primary-foreground" : "bg-background"}`}
+            >
+              {lifeSafetyRound ? <Check className="h-4 w-4" /> : null}
+            </span>
             <span>
               <span className="block text-base font-medium">Life safety round</span>
               <span className="mt-0.5 block text-sm text-muted-foreground">
@@ -351,6 +352,11 @@ export function ContactOptionsSection({ ctx }: NewTaskFormSectionsProps) {
                 </FormItem>
               )}
             />
+          )}
+          {assignmentOption === "technician" && (
+            <p className="text-xs text-muted-foreground" data-testid="text-tech-photo-always-required">
+              Technicians always add a photo of the finished work before they can complete the task.
+            </p>
           )}
         </div>
       </div>

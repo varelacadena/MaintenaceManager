@@ -10,7 +10,7 @@ import { notificationService, notifyTaskCreated, notifyStatusChange, notifyTaskA
 import { insertTaskSchema, insertPartUsedSchema, insertTaskNoteSchema, partsUsed } from "@shared/schema";
 import {
   hasWorkExplanation,
-  roleRequiresPhotoOnCompletion,
+  completionPhotoIsRequired,
   roleRequiresWorkNoteOnCompletion,
   uploadIsCompletionPhoto,
   PHOTO_REQUIRED_MESSAGE,
@@ -44,10 +44,15 @@ async function rejectIfPhotoRequired(
   res: any,
   taskId: string,
   role: string | undefined,
-  requiresPhoto: boolean | null | undefined,
+  task: { lifeSafetyRound?: boolean | null; requiresPhoto?: boolean | null } | null | undefined,
 ): Promise<boolean> {
-  if (!requiresPhoto) return false;
-  if (!roleRequiresPhotoOnCompletion(role)) return false;
+  if (!completionPhotoIsRequired({
+    role,
+    lifeSafetyRound: task?.lifeSafetyRound,
+    requiresPhoto: task?.requiresPhoto,
+  })) {
+    return false;
+  }
   const uploads = await storage.getUploadsByTask(taskId);
   if (uploads.some(uploadIsCompletionPhoto)) return false;
   res.status(400).json({ message: PHOTO_REQUIRED_MESSAGE });
@@ -767,7 +772,7 @@ export function registerTaskRoutes(app: Express) {
           if (!currentTask?.lifeSafetyRound && await rejectIfWorkNoteRequired(res, req.params.id, currentUser.role)) {
             return;
           }
-          if (await rejectIfPhotoRequired(res, req.params.id, currentUser.role, currentTask?.requiresPhoto)) {
+          if (await rejectIfPhotoRequired(res, req.params.id, currentUser.role, currentTask)) {
             return;
           }
         }
@@ -1085,7 +1090,7 @@ export function registerTaskRoutes(app: Express) {
         if (!task.lifeSafetyRound && await rejectIfWorkNoteRequired(res, taskId, currentUser.role)) {
           return;
         }
-        if (await rejectIfPhotoRequired(res, taskId, currentUser.role, task.requiresPhoto)) {
+        if (await rejectIfPhotoRequired(res, taskId, currentUser.role, task)) {
           return;
         }
       }

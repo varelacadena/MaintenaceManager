@@ -6,7 +6,7 @@ import {
   hasWorkExplanation,
   isSystemGeneratedNoteContent,
   isWorkExplanationContent,
-  uploadIsCompletionPhoto,
+  missingCompletionPhoto,
   PHOTO_REQUIRED_MESSAGE,
   WORK_NOTE_REQUIRED_MESSAGE,
 } from "@shared/taskCompletion";
@@ -216,7 +216,12 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   };
 
   const notesReady = !!task.lifeSafetyRound || isWorkExplanationContent(noteText) || hasWorkExplanation(notes);
-  const photoReady = !task.requiresPhoto || uploads.some(uploadIsCompletionPhoto);
+  const photoReady = !missingCompletionPhoto({
+    role: "technician",
+    lifeSafetyRound: task.lifeSafetyRound,
+    requiresPhoto: task.requiresPhoto,
+    uploads,
+  });
   const completionNoteValue = isSystemGeneratedNoteContent(noteText) ? "" : noteText;
 
   const handleMarkComplete = async () => {

@@ -4,6 +4,29 @@ import { requireAdmin } from "../middleware";
 import { handleRouteError } from "../routeUtils";
 import type { AnalyticsFilters } from "../analyticsService";
 
+function readDateBasis(query: Request["query"]): AnalyticsFilters["dateBasis"] {
+  const value = query.dateBasis;
+  if (value === "completed" || value === "due" || value === "created" || value === "active") return value;
+  return undefined;
+}
+
+function readSheets(query: Request["query"]): string[] | undefined {
+  const raw = query.sheets;
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+  const names = raw.split(",").map((name) => name.trim()).filter(Boolean);
+  return names.length > 0 ? names : undefined;
+}
+
+function readExportOptions(query: Request["query"]): Pick<AnalyticsFilters, "dateBasis" | "sheets" | "includeCharts" | "includeCost" | "includeStudents"> {
+  return {
+    dateBasis: readDateBasis(query),
+    sheets: readSheets(query),
+    includeCharts: query.charts === "0" ? false : undefined,
+    includeCost: query.cost === "0" ? false : undefined,
+    includeStudents: query.students === "1" ? true : undefined,
+  };
+}
+
 function parseTaskAnalyticsFilters(query: Request["query"]): AnalyticsFilters {
   return {
     startDate: query.startDate as string | undefined,
@@ -16,6 +39,7 @@ function parseTaskAnalyticsFilters(query: Request["query"]): AnalyticsFilters {
     status: query.status as string | undefined,
     urgency: query.urgency as string | undefined,
     roleType: query.roleType as AnalyticsFilters["roleType"],
+    ...readExportOptions(query),
   };
 }
 
@@ -28,6 +52,7 @@ function parseDatePropertyFilters(query: Request["query"]): AnalyticsFilters {
     areaId: query.areaId as string | undefined,
     status: query.status as string | undefined,
     urgency: query.urgency as string | undefined,
+    ...readExportOptions(query),
   };
 }
 
@@ -35,6 +60,8 @@ function parseFleetDateFilters(query: Request["query"]): AnalyticsFilters {
   return {
     startDate: query.startDate as string | undefined,
     endDate: query.endDate as string | undefined,
+    propertyId: query.propertyId as string | undefined,
+    ...readExportOptions(query),
   };
 }
 

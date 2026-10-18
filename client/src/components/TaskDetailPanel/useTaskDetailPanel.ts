@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getSignedUploadParameters } from "@/lib/uploadUtils";
+import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
+import { getSignedUploadParameters, inferUploadFileType } from "@/lib/uploadUtils";
 import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
@@ -21,7 +22,7 @@ import type {
   TaskChecklistItem,
 } from "@shared/schema";
 import { panelStatusDotStyle, panelStatusPillStyle, panelStatusLabels, priorityConfig, getAvatarHexColor as getAvatarColorForId, getInitials, getUserDisplayName } from "@/utils/taskUtils";
-import { PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
+import { missingCompletionPhoto, PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
 import { buildManualTimeEntryRange, durationFromHoursAndMinutes, splitMinutes } from "@/lib/timeEntryUtils";
 import { getTaskDateInputValue } from "@/lib/taskCalendarDates";
 
@@ -379,10 +380,12 @@ export function useTaskDetailPanel({
   });
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const selected = event.target.files?.[0];
+    if (!selected) return;
     setIsFileUploading(true);
     try {
+      const file = await preparePhotoForUpload(selected);
+      const fileType = inferUploadFileType(file);
       const { url: uploadURL, objectPath } = await getSignedUploadParameters();
       const isMock = uploadURL.startsWith("https://mock-storage.local/");
       let objectUrl = uploadURL;
@@ -390,15 +393,15 @@ export function useTaskDetailPanel({
         const uploadRes = await fetch(uploadURL, {
           method: "PUT",
           body: file,
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": fileType },
         });
         if (!uploadRes.ok) throw new Error("Upload failed");
         objectUrl = uploadURL.split("?")[0];
       }
-      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+      const previewUrl = fileType.startsWith("image/") ? URL.createObjectURL(file) : undefined;
       setPendingUploadForLabel({
         fileName: file.name,
-        fileType: file.type || "application/octet-stream",
+        fileType,
         objectUrl,
         objectPath,
         previewUrl,
@@ -518,7 +521,12 @@ export function useTaskDetailPanel({
       });
       return;
     }
-    if (task?.requiresPhoto && imgCount === 0) {
+    if (missingCompletionPhoto({
+      role: user?.role,
+      lifeSafetyRound: task?.lifeSafetyRound,
+      requiresPhoto: task?.requiresPhoto,
+      uploads,
+    })) {
       toast({
         title: "Photo required",
         description: PHOTO_REQUIRED_MESSAGE,

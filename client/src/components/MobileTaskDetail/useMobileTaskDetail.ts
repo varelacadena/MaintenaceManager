@@ -12,6 +12,7 @@ import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote } 
 import {
   hasWorkExplanation,
   isWorkExplanationContent,
+  missingCompletionPhoto,
   roleRequiresWorkNoteOnCompletion,
   PHOTO_REQUIRED_MESSAGE,
   WORK_NOTE_REQUIRED_MESSAGE,
@@ -369,8 +370,12 @@ export function useMobileTaskDetail() {
       });
       return;
     }
-    const photoCount = (uploads || []).filter((u) => (u.fileType || "").startsWith("image/")).length;
-    if (task?.requiresPhoto && photoCount === 0) {
+    if (missingCompletionPhoto({
+      role: user?.role,
+      lifeSafetyRound: task?.lifeSafetyRound,
+      requiresPhoto: task?.requiresPhoto,
+      uploads: uploads || [],
+    })) {
       toast({
         title: "Photo required",
         description: PHOTO_REQUIRED_MESSAGE,
