@@ -15,7 +15,7 @@ export function toWorkStatus(status: string | null | undefined): WorkStatus | nu
 export const WORK_STATUS_LABEL: Record<WorkStatus, string> = {
   not_started: "Not started",
   in_progress: "In progress",
-  completed: "Done",
+  completed: "Completed",
 };
 
 export function startOfToday(now = new Date()): number {

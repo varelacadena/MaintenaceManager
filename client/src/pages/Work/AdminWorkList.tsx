@@ -14,6 +14,7 @@ import { dateInputValueToTaskTimestamp, toCalendarDate } from "@/lib/taskCalenda
 import { getUserDisplayName } from "@/utils/taskUtils";
 import type { Project, Property, Task, User as AppUser } from "@shared/schema";
 import type { WorkContext } from "./useWorkAdmin";
+import { WorkStatusGroupHeader, workStatusGroupPanelId } from "./WorkStatusGroupHeader";
 import {
   WORK_STATUS_LABEL,
   byName,
@@ -26,7 +27,12 @@ import {
 } from "./workListModel";
 
 const pill =
-  "inline-flex h-7 items-center gap-1 rounded-full border border-border bg-background px-2.5 text-xs text-foreground hover:bg-muted";
+  "inline-flex h-7 max-w-full items-center gap-1 rounded-full border border-border bg-background px-2.5 text-xs text-foreground hover:bg-muted";
+
+const rowGrid =
+  "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,11rem)_minmax(0,9rem)_7.5rem_2.25rem] lg:items-center lg:gap-x-3";
+
+const STACKS: WorkStatus[] = ["not_started", "in_progress", "completed"];
 
 function compactDate(value: Date | string | null | undefined): string {
   const date = toCalendarDate(value);
@@ -38,16 +44,6 @@ function statusDotClass(status: WorkStatus): string {
   if (status === "completed") return "bg-green-600";
   if (status === "in_progress") return "bg-blue-600";
   return "bg-muted-foreground";
-}
-
-function StatusMark({ status, created }: { status: WorkStatus; created: Date | string | null | undefined }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-      <span className={`h-1.5 w-1.5 rounded-full ${statusDotClass(status)}`} />
-      <span>{WORK_STATUS_LABEL[status]}</span>
-      <span>· Created {compactDate(created)}</span>
-    </span>
-  );
 }
 
 function ChoiceList({
@@ -67,10 +63,10 @@ function ChoiceList({
       <PopoverTrigger asChild>
         <button type="button" className={pill} data-testid={testId}>
           <MapPin className="h-3 w-3 shrink-0" />
-          <span className="max-w-[140px] truncate">{current?.label || "None"}</span>
+          <span className="max-w-[42vw] truncate sm:max-w-[140px]">{current?.label || "None"}</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-1">
+      <PopoverContent align="start" className="w-[min(16rem,calc(100vw-2rem))] p-1">
         <div className="max-h-64 overflow-auto">
           {options.map((option) => (
             <button
@@ -106,10 +102,10 @@ function PersonList({
       <PopoverTrigger asChild>
         <button type="button" className={pill} data-testid={testId}>
           <User className="h-3 w-3 shrink-0" />
-          <span className="max-w-[120px] truncate">{current?.label || "Unassigned"}</span>
+          <span className="max-w-[32vw] truncate sm:max-w-[120px]">{current?.label || "Unassigned"}</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-52 p-1">
+      <PopoverContent align="start" className="w-[min(13rem,calc(100vw-2rem))] p-1">
         <div className="max-h-64 overflow-auto">
           {options.map((option) => (
             <button
@@ -213,7 +209,7 @@ function TaskMoreMenu({ task, technicians }: { task: Task; technicians: AppUser[
           <MoreHorizontal className="h-3.5 w-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 max-h-[70vh] overflow-auto space-y-3">
+      <PopoverContent align="end" className="w-[min(20rem,calc(100vw-2rem))] max-h-[70vh] overflow-auto space-y-3">
         <label className="block space-y-1">
           <span className="text-xs text-muted-foreground">Title</span>
           <Input
@@ -257,7 +253,7 @@ function TaskMoreMenu({ task, technicians }: { task: Task; technicians: AppUser[
             );
           })}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
           <div className="space-y-1">
             <span className="text-xs text-muted-foreground">Start date</span>
             <DateButton
@@ -321,7 +317,6 @@ function TaskRow({
   nested,
   properties,
   technicians,
-  showStatus,
   onProperty,
   onAssignee,
   onDue,
@@ -330,12 +325,10 @@ function TaskRow({
   nested?: boolean;
   properties: Property[];
   technicians: AppUser[];
-  showStatus: boolean;
   onProperty: (propertyId: string) => void;
   onAssignee: (userId: string) => void;
   onDue: (iso: string | null) => void;
 }) {
-  const status = toWorkStatus(task.status);
   const overdue = isWorkOverdue(task.estimatedCompletionDate, task.status);
   const propertyOptions = [
     { id: "__none__", label: "No property" },
@@ -355,20 +348,15 @@ function TaskRow({
 
   return (
     <div
-      className={`border-t border-border py-2 ${nested ? "pl-8 pr-3" : "px-3"} md:grid md:grid-cols-[minmax(220px,1fr)_190px_150px_130px_36px] md:items-center md:gap-3`}
+      className={`border-t border-border py-2 ${nested ? "pl-6 pr-3 sm:pl-8" : "px-3"} ${rowGrid}`}
       data-testid={`row-task-${task.id}`}
     >
       <div className="min-w-0">
-        <Link href={`/tasks/${task.id}`} className="font-semibold hover:underline" data-testid={`link-task-${task.id}`}>
+        <Link href={`/tasks/${task.id}`} className="block break-words font-semibold hover:underline" data-testid={`link-task-${task.id}`}>
           {task.name}
         </Link>
-        {showStatus && status ? (
-          <div className="mt-0.5">
-            <StatusMark status={status} created={task.createdAt} />
-          </div>
-        ) : null}
       </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 md:contents">
+      <div className="mt-1.5 flex w-full min-w-0 flex-wrap items-center gap-1.5 lg:contents">
         <ChoiceList
           value={task.propertyId || "__none__"}
           options={propertyOptions}
@@ -377,7 +365,7 @@ function TaskRow({
         />
         <PersonList value={task.assignedToId || "__none__"} options={techOptions} onPick={onAssignee} testId={`button-tech-${task.id}`} />
         <DateButton value={task.estimatedCompletionDate} overdue={overdue} onPick={onDue} testId={`button-due-${task.id}`} align="end" />
-        <div className="ml-auto md:ml-0">
+        <div className="ml-auto lg:ml-0">
           <TaskMoreMenu task={task} technicians={technicians} />
         </div>
       </div>
@@ -400,7 +388,12 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
     tasksError,
   } = ctx;
 
-  const [statuses, setStatuses] = useState<WorkStatus[]>(["not_started", "in_progress"]);
+  const [statuses, setStatuses] = useState<WorkStatus[]>(STACKS);
+  const [collapsedStacks, setCollapsedStacks] = useState<Record<WorkStatus, boolean>>({
+    not_started: false,
+    in_progress: false,
+    completed: true,
+  });
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [techIds, setTechIds] = useState<string[]>(() => (ctx.techFilter ? [ctx.techFilter] : []));
   const [propertyIds, setPropertyIds] = useState<string[]>([]);
@@ -418,54 +411,56 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/projects"] }),
   });
 
-  const showStatus = statuses.length !== 1;
-  const statusDefault = statuses.length === 2 && statuses.includes("not_started") && statuses.includes("in_progress");
+  const statusDefault = STACKS.every((status) => statuses.includes(status));
   const filterCount = (statusDefault ? 0 : 1) + (overdueOnly ? 1 : 0) + techIds.length + propertyIds.length;
 
-  const taskMatches = (task: Task) =>
+  const taskInStack = (task: Task, stack: WorkStatus) =>
+    toWorkStatus(task.status) === stack &&
     taskVisible({
       status: task.status,
       due: task.estimatedCompletionDate,
       assigneeId: task.assignedToId,
       propertyId: task.propertyId,
       name: task.name,
-      statuses,
+      statuses: [stack],
       overdueOnly,
       techIds,
       propertyIds,
       query: searchQuery,
     });
 
-  const rows = (() => {
+  const stacks = STACKS.filter((stack) => statuses.includes(stack)).map((stack) => {
     const list = tasks || [];
-    const projectRows = (projects || [])
-      .map((project) => {
-        const children = list.filter((task) => task.projectId === project.id && !task.parentTaskId);
-        const matchingChildren = children.filter(
-          (task) => taskMatches(task) || (subTasksMap[task.id] || []).some(taskMatches),
-        );
-        const status = toWorkStatus(project.status);
-        const self =
-          !!status &&
-          (statuses.length === 0 || statuses.includes(status)) &&
-          (!overdueOnly || isWorkOverdue(project.targetEndDate, project.status)) &&
-          (propertyIds.length === 0 || propertyIds.includes(project.propertyId || "")) &&
-          (techIds.length === 0 || matchingChildren.length > 0) &&
-          (!searchQuery.trim() || project.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
-        if (matchingChildren.length === 0 && !self) return null;
-        return {
-          kind: "project" as const,
-          project,
-          children: matchingChildren,
-          overdue: isWorkOverdue(project.targetEndDate, project.status),
-          due: dueStamp(project.targetEndDate),
-          name: project.name,
-        };
-      })
-      .filter((row): row is NonNullable<typeof row> => !!row);
+    const inStack = (task: Task) => taskInStack(task, stack);
 
-    const standalone = list
-      .filter((task) => !task.projectId && !task.parentTaskId && taskMatches(task))
+    const projectRows = (projects || []).flatMap((project) => {
+      const matching = list.filter((task) => task.projectId === project.id && inStack(task));
+      const matchingIds = new Set(matching.map((task) => task.id));
+      const children = matching.filter((task) => !task.parentTaskId || !matchingIds.has(task.parentTaskId));
+      const query = searchQuery.trim().toLowerCase();
+      const self =
+        children.length === 0 &&
+        toWorkStatus(project.status) === stack &&
+        (!overdueOnly || isWorkOverdue(project.targetEndDate, project.status)) &&
+        (propertyIds.length === 0 || propertyIds.includes(project.propertyId || "")) &&
+        techIds.length === 0 &&
+        (!query || project.name.toLowerCase().includes(query));
+      if (children.length === 0 && !self) return [];
+      return [{
+        kind: "project" as const,
+        project,
+        children,
+        jobCount: matching.length,
+        overdue: isWorkOverdue(project.targetEndDate, project.status),
+        due: dueStamp(project.targetEndDate),
+        name: project.name,
+      }];
+    });
+
+    const loose = list.filter((task) => !task.projectId && inStack(task));
+    const looseIds = new Set(loose.map((task) => task.id));
+    const standalone = loose
+      .filter((task) => !task.parentTaskId || !looseIds.has(task.parentTaskId))
       .map((task) => ({
         kind: "task" as const,
         task,
@@ -474,8 +469,11 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
         name: task.name,
       }));
 
-    return [...projectRows, ...standalone].sort(compareWorkItems);
-  })();
+    const rows = [...projectRows, ...standalone].sort(compareWorkItems);
+    const emptyProjects = projectRows.filter((row) => row.children.length === 0).length;
+    return { stack, rows, count: list.filter(inStack).length + emptyProjects };
+  });
+  const visibleJobs = stacks.reduce((sum, stack) => sum + stack.count, 0);
 
   const propertyOptions = [...properties].sort((a, b) => byName(a.name, b.name));
   const techOptions = [...technicianUsers].sort((a, b) => byName(getUserDisplayName(a), getUserDisplayName(b)));
@@ -485,9 +483,9 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">Work</h1>
+    <div className="min-w-0 max-w-full space-y-4 p-3 sm:p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold md:text-2xl" data-testid="text-page-title">Work</h1>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" className="rounded-full" onClick={() => setProjectDialogOpen(true)} data-testid="button-new-project">
             <Plus className="mr-1 h-4 w-4" />
@@ -502,7 +500,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card">
+      <div className="min-w-0 rounded-xl border bg-card">
         <div className="flex items-center gap-2 p-3">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -522,7 +520,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
                 Filters{filterCount > 0 ? ` · ${filterCount}` : ""}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-[min(40rem,calc(100vw-2rem))] p-3">
+            <PopoverContent align="end" className="max-h-[70vh] w-[min(40rem,calc(100vw-2rem))] overflow-auto p-3">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -577,15 +575,14 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
           </Popover>
         </div>
 
-        <div className="hidden px-3 pb-2 text-xs text-muted-foreground md:grid md:grid-cols-[minmax(220px,1fr)_190px_150px_130px_36px] md:gap-3">
-          <span>Name</span>
-          <span>Property</span>
-          <span>Technician</span>
-          <span>Date</span>
-          <span />
-        </div>
+        {!tasksError && visibleJobs === 0 ? (
+          <div className="border-t px-3 py-8 text-sm text-muted-foreground" data-testid="work-tasks-empty-search">
+            Nothing matches.
+          </div>
+        ) : null}
 
-        {(() => {
+        {stacks.filter(({ count }) => count > 0 || (!searchQuery.trim() && !overdueOnly && techIds.length === 0 && propertyIds.length === 0)).map(({ stack, rows, count }) => {
+          const collapsed = collapsedStacks[stack] || count === 0;
           const renderTask = (task: Task, nested = false) => (
             <div key={task.id}>
               <TaskRow
@@ -593,85 +590,100 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
                 nested={nested}
                 properties={properties}
                 technicians={technicianUsers}
-                showStatus={showStatus}
                 onProperty={(propertyId) => handlePropertyChange(task.id, propertyId)}
                 onAssignee={(userId) => handleAssigneeChange(task.id, userId)}
                 onDue={(iso) => patchTask.mutate({ taskId: task.id, data: { estimatedCompletionDate: iso } })}
               />
-              {(subTasksMap[task.id] || []).filter(taskMatches).map((child) => renderTask(child, true))}
+              {(subTasksMap[task.id] || []).filter((child) => taskInStack(child, stack)).map((child) => renderTask(child, true))}
             </div>
           );
-          return !tasksError && rows.length === 0 ? (
-          <div className="border-t px-3 py-8 text-sm text-muted-foreground" data-testid="work-tasks-empty-search">
-            Nothing matches.
-          </div>
-        ) : (
-          rows.map((row) => {
-            if (row.kind === "task") {
-              return renderTask(row.task);
-            }
-            const project = row.project;
-            const open = !!openProjects[project.id];
-            const status = toWorkStatus(project.status);
-            return (
-              <div key={project.id} className="border-t bg-muted/40" data-testid={`row-project-${project.id}`}>
-                <div className="px-3 py-2 md:grid md:grid-cols-[minmax(220px,1fr)_190px_150px_130px_36px] md:items-center md:gap-3">
-                  <div className="flex min-w-0 items-start gap-1">
-                    <button
-                      type="button"
-                      className="mt-0.5 rounded-full p-1 hover:bg-muted"
-                      aria-expanded={open}
-                      aria-label={open ? `Collapse ${project.name}` : `Expand ${project.name}`}
-                      onClick={() => setOpenProjects((current) => ({ ...current, [project.id]: !current[project.id] }))}
-                      data-testid={`toggle-project-${project.id}`}
-                    >
-                      {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </button>
-                    <div className="min-w-0">
-                      <Link href={`/projects/${project.id}`} className="font-semibold hover:underline">
-                        {project.name}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {row.children.length} job{row.children.length === 1 ? "" : "s"}
-                      </p>
-                      {showStatus && status ? <StatusMark status={status} created={project.createdAt} /> : null}
-                    </div>
-                  </div>
-                  <div className="mt-1.5 md:mt-0">
-                    <ChoiceList
-                      value={project.propertyId || "__none__"}
-                      options={[
-                        { id: "__none__", label: "No property" },
-                        ...propertyOptions.map((property) => ({
-                          id: property.id,
-                          label: property.name,
-                          detail: property.address || undefined,
-                        })),
-                      ]}
-                      onPick={(propertyId) =>
-                        patchProject.mutate({
-                          projectId: project.id,
-                          data: { propertyId: propertyId === "__none__" ? null : propertyId },
-                        })
-                      }
-                      testId={`button-project-property-${project.id}`}
-                    />
-                  </div>
-                  <span className="hidden md:block" />
-                  <DateButton
-                    value={project.targetEndDate}
-                    overdue={row.overdue}
-                    onPick={(iso) => patchProject.mutate({ projectId: project.id, data: { targetEndDate: iso } })}
-                    testId={`button-project-date-${project.id}`}
-                    align="end"
-                  />
-                </div>
-                {open ? row.children.map((task) => renderTask(task, true)) : null}
+          return (
+            <section key={stack} data-testid={`group-${stack}`}>
+              <div className="sticky top-0 z-10 border-t bg-card">
+                <WorkStatusGroupHeader
+                  statusKey={stack}
+                  label={WORK_STATUS_LABEL[stack]}
+                  count={count}
+                  isCollapsed={collapsed}
+                  isEmpty={count === 0}
+                  onToggle={() => setCollapsedStacks((current) => ({ ...current, [stack]: !current[stack] }))}
+                />
               </div>
-            );
-          })
-        );
-        })()}
+              {!collapsed ? (
+                <div id={workStatusGroupPanelId(stack)}>
+                  <div className={`hidden px-3 pb-1 text-xs text-muted-foreground lg:grid ${rowGrid}`}>
+                    <span>Name</span>
+                    <span>Property</span>
+                    <span>Technician</span>
+                    <span>Date</span>
+                    <span />
+                  </div>
+                  {rows.map((row) => {
+                    if (row.kind === "task") return renderTask(row.task);
+                    const project = row.project;
+                    const openKey = `${stack}:${project.id}`;
+                    const open = !!openProjects[openKey];
+                    return (
+                      <div key={project.id} className="border-t bg-muted/40" data-testid={`row-project-${project.id}`}>
+                        <div className={`px-3 py-2 ${rowGrid}`}>
+                          <div className="flex min-w-0 items-start gap-1">
+                            <button
+                              type="button"
+                              className="mt-0.5 shrink-0 rounded-full p-1 hover:bg-muted"
+                              aria-expanded={open}
+                              aria-label={open ? `Collapse ${project.name}` : `Expand ${project.name}`}
+                              onClick={() => setOpenProjects((current) => ({ ...current, [openKey]: !current[openKey] }))}
+                              data-testid={`toggle-project-${project.id}`}
+                            >
+                              {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </button>
+                            <div className="min-w-0">
+                              <Link href={`/projects/${project.id}`} className="block break-words font-semibold hover:underline">
+                                {project.name}
+                              </Link>
+                              <p className="text-xs text-muted-foreground">
+                                {row.jobCount} job{row.jobCount === 1 ? "" : "s"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-1.5 flex w-full min-w-0 flex-wrap items-center gap-1.5 lg:contents">
+                            <ChoiceList
+                              value={project.propertyId || "__none__"}
+                              options={[
+                                { id: "__none__", label: "No property" },
+                                ...propertyOptions.map((property) => ({
+                                  id: property.id,
+                                  label: property.name,
+                                  detail: property.address || undefined,
+                                })),
+                              ]}
+                              onPick={(propertyId) =>
+                                patchProject.mutate({
+                                  projectId: project.id,
+                                  data: { propertyId: propertyId === "__none__" ? null : propertyId },
+                                })
+                              }
+                              testId={`button-project-property-${project.id}`}
+                            />
+                            <span className="hidden lg:block" />
+                            <DateButton
+                              value={project.targetEndDate}
+                              overdue={row.overdue}
+                              onPick={(iso) => patchProject.mutate({ projectId: project.id, data: { targetEndDate: iso } })}
+                              testId={`button-project-date-${project.id}`}
+                              align="end"
+                            />
+                          </div>
+                        </div>
+                        {open ? row.children.map((task) => renderTask(task, true)) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+          );
+        })}
       </div>
     </div>
   );
