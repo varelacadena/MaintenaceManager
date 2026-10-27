@@ -18,6 +18,18 @@ export const WORK_STATUS_LABEL: Record<WorkStatus, string> = {
   completed: "Completed",
 };
 
+export const WORK_STACK_MARK: Record<WorkStatus, string> = {
+  not_started: "bg-yellow-500",
+  in_progress: "bg-cyan-500",
+  completed: "bg-emerald-600",
+};
+
+export const WORK_STACK_LINE: Record<WorkStatus, string> = {
+  not_started: "border-yellow-500",
+  in_progress: "border-cyan-500",
+  completed: "border-emerald-600",
+};
+
 export function startOfToday(now = new Date()): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
@@ -66,6 +78,7 @@ export function taskVisible(input: {
   techIds: readonly string[];
   propertyIds: readonly string[];
   query: string;
+  taskPropertyIds?: readonly string[] | null;
   now?: Date;
 }): boolean {
   const status = toWorkStatus(input.status);
@@ -73,7 +86,10 @@ export function taskVisible(input: {
   if (input.statuses.length > 0 && !input.statuses.includes(status)) return false;
   if (input.overdueOnly && !isWorkOverdue(input.due, input.status, input.now)) return false;
   if (input.techIds.length > 0 && !input.techIds.includes(input.assigneeId || "")) return false;
-  if (input.propertyIds.length > 0 && !input.propertyIds.includes(input.propertyId || "")) return false;
+  if (input.propertyIds.length > 0) {
+    const onTask = [input.propertyId, ...(input.taskPropertyIds || [])].filter((id): id is string => !!id);
+    if (!onTask.some((id) => input.propertyIds.includes(id))) return false;
+  }
   const q = input.query.trim().toLowerCase();
   if (q && !input.name.toLowerCase().includes(q)) return false;
   return true;

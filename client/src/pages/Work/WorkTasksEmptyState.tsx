@@ -62,7 +62,7 @@ export function WorkTasksEmptyState({
         Create a standalone task or add work under a project.
       </p>
       <div className="flex flex-col sm:flex-row gap-2 justify-center">
-        <Link href="/tasks/new">
+        <Link href="/work#work-task-composer">
           <Button data-testid="button-empty-new-task">
             <Plus className="w-4 h-4 mr-2" />
             New Task

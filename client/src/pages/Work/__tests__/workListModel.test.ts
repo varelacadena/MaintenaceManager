@@ -57,7 +57,8 @@ describe("work list filters", () => {
     expect(taskVisible({ ...base, statuses: ["completed"] })).toBe(false);
     expect(taskVisible({ ...base, techIds: ["varela"] })).toBe(false);
     expect(taskVisible({ ...base, techIds: ["ivan"] })).toBe(true);
-    expect(taskVisible({ ...base, propertyIds: ["mansion"] })).toBe(false);
+    expect(taskVisible({ ...base, propertyIds: ["mansion"], propertyId: null, taskPropertyIds: ["mansion", "gym"] })).toBe(true);
+    expect(taskVisible({ ...base, propertyIds: ["duplex"], propertyId: null, taskPropertyIds: ["mansion"] })).toBe(false);
     expect(taskVisible({ ...base, query: "door" })).toBe(true);
     expect(taskVisible({ ...base, query: "window" })).toBe(false);
   });

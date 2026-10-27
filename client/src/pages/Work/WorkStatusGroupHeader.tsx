@@ -9,6 +9,7 @@ interface WorkStatusGroupHeaderProps {
   isCollapsed: boolean;
   isEmpty: boolean;
   onToggle: () => void;
+  markerClassName?: string;
 }
 
 export function WorkStatusGroupHeader({
@@ -18,6 +19,7 @@ export function WorkStatusGroupHeader({
   isCollapsed,
   isEmpty,
   onToggle,
+  markerClassName,
 }: WorkStatusGroupHeaderProps) {
   const isExpanded = !isCollapsed;
   const panelId = `work-group-panel-${statusKey}`;
@@ -42,7 +44,7 @@ export function WorkStatusGroupHeader({
         <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
       )}
       <span
-        className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColors[statusKey]}`}
+        className={`w-2.5 h-2.5 rounded-full shrink-0 ${markerClassName || statusDotColors[statusKey] || "bg-muted-foreground"}`}
         aria-hidden
       />
       <span className="text-sm font-medium">{label}</span>

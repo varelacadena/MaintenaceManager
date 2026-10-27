@@ -10,6 +10,7 @@ import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQu
 import { exitTo } from "@/lib/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Task, User, Property, Project } from "@shared/schema";
+import { useSessionState } from "@/hooks/useSessionState";
 import { matchesTechFilter, UNASSIGNED_TECH_ID, loadTechFilter, saveTechFilter, loadWorkTab, saveWorkTab } from "./workFilters";
 import {
   unifiedStatusConfig,
@@ -48,7 +49,7 @@ export function useWorkAdmin() {
   const collapsedDefaultsApplied = useRef(!!loadCollapsedGroupsFromStorage());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedParentTasks, setExpandedParentTasks] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useSessionState("work-search", "");
   const [techFilter, setTechFilter] = useState(() =>
     new URLSearchParams(window.location.search).get("techId") || loadTechFilter()
   );
@@ -57,8 +58,8 @@ export function useWorkAdmin() {
       ? "projects"
       : loadWorkTab()
   );
-  const [projectStatusFilter, setProjectStatusFilter] = useState<string>("all");
-  const [projectSearchQuery, setProjectSearchQuery] = useState("");
+  const [projectStatusFilter, setProjectStatusFilter] = useSessionState("work-project-status", "all");
+  const [projectSearchQuery, setProjectSearchQuery] = useSessionState("work-project-search", "");
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     taskId: string;
@@ -244,7 +245,9 @@ export function useWorkAdmin() {
 
   const handlePropertyChange = (taskId: string, propertyId: string) => {
     const data: Record<string, unknown> =
-      propertyId === "__none__" ? { propertyId: null } : { propertyId };
+      propertyId === "__none__"
+        ? { propertyId: null, propertyIds: null }
+        : { propertyId, propertyIds: null };
     updateTaskMutation.mutate({ taskId, data });
   };
 

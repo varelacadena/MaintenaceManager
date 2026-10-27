@@ -19,7 +19,7 @@ test.describe("Work page – admin", () => {
     await expect(page.getByTestId("text-page-title")).toHaveText("Work");
     await expect(page.getByTestId("input-search-work")).toBeVisible();
     await expect(page.getByTestId("button-filters")).toBeVisible();
-    await expect(page.getByTestId("button-create-task")).toBeVisible();
+    await expect(page.getByTestId("work-task-composer")).toBeVisible();
   });
 
   test("project folders expand in the same list", async ({ page }) => {
