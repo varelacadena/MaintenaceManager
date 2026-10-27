@@ -13,24 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
+import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
-import { taskDeleteWarning, getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
 import { format } from "date-fns";
 import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem } from "@shared/schema";
 import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";
@@ -214,12 +205,17 @@ export function TaskEditMode({
   }, [task.id, originalChecklistGroups, checklistsFetched, checklistsLoaded]);
 
   const deleteTaskMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/tasks/${taskId}`);
+    mutationFn: async (scope: TaskDeleteScope = "one") => {
+      const res = await apiRequest("DELETE", taskDeleteUrl(taskId, scope));
+      return res.json() as Promise<{ deleted?: number }>;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateTaskAfterMutation(taskId, { broad: true });
-      toast({ title: "Task deleted" });
+      const deleted = result?.deleted ?? 1;
+      toast({
+        title: deleted > 1 ? `Deleted ${deleted} tasks` : "Task deleted",
+        description: deleted > 1 ? "Open copies of this job were removed. Finished copies were kept." : undefined,
+      });
       if (onDeleted) onDeleted();
       else onCancel();
     },
@@ -711,27 +707,15 @@ export function TaskEditMode({
         </div>
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {taskDeleteWarning(task)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-delete-cancel">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTaskMutation.mutate()}
-              disabled={deleteTaskMutation.isPending}
-              style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
-              data-testid="button-delete-confirm"
-            >
-              {deleteTaskMutation.isPending ? "Deleting..." : "Delete task"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteTaskDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        task={task}
+        pending={deleteTaskMutation.isPending}
+        onConfirm={(scope) => deleteTaskMutation.mutate(scope)}
+        confirmTestId="button-delete-confirm"
+        cancelTestId="button-delete-cancel"
+      />
     </div>
   );
 }

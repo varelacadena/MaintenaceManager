@@ -15,6 +15,7 @@ import {
   Paperclip,
   XCircle,
 } from "lucide-react";
+import { useGoBack } from "@/hooks/useGoBack";
 import { getServiceRequestNumber } from "@shared/recordNumbers";
 
 type RequestDetailSubmitterProps = Pick<
@@ -25,7 +26,6 @@ type RequestDetailSubmitterProps = Pick<
   | "space"
   | "linkedTask"
   | "linkedTaskLoaded"
-  | "navigate"
   | "getStatusLabel"
   | "getStatusVariant"
   | "getPriorityColor"
@@ -39,12 +39,12 @@ export function RequestDetailSubmitter({
   space,
   linkedTask,
   linkedTaskLoaded,
-  navigate,
   getStatusLabel,
   getStatusVariant,
   getPriorityColor,
   getUrgencyLabel,
 }: RequestDetailSubmitterProps) {
+  const back = useGoBack();
   if (!request) return null;
 
   const submittedDate = request.createdAt
@@ -100,11 +100,11 @@ export function RequestDetailSubmitter({
         variant="ghost"
         size="sm"
         className="gap-1.5 px-0 text-muted-foreground hover:text-foreground"
-        onClick={() => navigate("/requests")}
+        onClick={back}
         data-testid="button-back-to-requests"
       >
         <ArrowLeft className="h-4 w-4" />
-        My requests
+        Back
       </Button>
 
       <Card className={`border ${statusMessage.className}`}>

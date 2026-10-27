@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, ChevronLeft, ChevronRight, Clock, PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useToast } from "@/hooks/use-toast";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -43,7 +43,7 @@ function statusLabel(status: string) {
 }
 
 export default function StudentHours() {
-  const [, navigate] = useLocation();
+  const back = useGoBack();
   const { toast } = useToast();
   const [weekStart, setWeekStart] = useState(() => localWeekRange().startDate);
   const hoursQuery = useStudentHours(true, weekStart);
@@ -135,11 +135,11 @@ export default function StudentHours() {
       <div>
         <button
           type="button"
-          onClick={() => navigate("/work")}
+          onClick={back}
           className="mb-2 inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
           data-testid="button-back-hours"
         >
-          <ArrowLeft className="w-4 h-4 mr-1" /> Recap
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </button>
         <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
           Hours

@@ -247,7 +247,7 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                 data-testid="button-panel-close"
               >
                 <ArrowLeft className="w-4 h-4 shrink-0" />
-                <span className="truncate">Return to Work</span>
+                <span className="truncate">Back</span>
               </button>
               {adminActionsMenu}
             </div>

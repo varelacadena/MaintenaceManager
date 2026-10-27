@@ -1,16 +1,6 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Clock,
   User,
@@ -31,11 +21,13 @@ import {
 import { statusColors, urgencyColors } from "./constants";
 import { MultiPropertyDisplay } from "./helpers";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
-import { formatTaskReferenceId, getUserDisplayName, taskDeleteWarning } from "@/utils/taskUtils";
+import { formatTaskReferenceId, getUserDisplayName } from "@/utils/taskUtils";
+import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 
 export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const {
     task, user,
     property, multiProperties,
@@ -81,30 +73,24 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
           </div>
 
           {isTechnicianOrAdmin && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-delete-task">
-                  <Trash2 className="w-5 h-5 text-destructive" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Task?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {taskDeleteWarning(task)}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteTaskMutation.mutate()}
-                    className="bg-destructive text-destructive-foreground"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => setDeleteOpen(true)}
+                data-testid="button-delete-task"
+              >
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </Button>
+              <DeleteTaskDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                task={task}
+                pending={deleteTaskMutation.isPending}
+                onConfirm={(scope) => deleteTaskMutation.mutate(scope)}
+              />
+            </>
           )}
         </div>
 

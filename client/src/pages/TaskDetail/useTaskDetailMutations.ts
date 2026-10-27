@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
+import { taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
 import type {
   Task,
   TimeEntry,
@@ -561,15 +562,20 @@ export function useTaskDetailMutations(deps: MutationDeps) {
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("DELETE", `/api/tasks/${id}`);
+    mutationFn: async (scope: TaskDeleteScope = "one") => {
+      const res = await apiRequest("DELETE", taskDeleteUrl(id!, scope));
+      return res.json() as Promise<{ deleted?: number }>;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateTaskAfterMutation(id, { broad: true });
       if (task?.projectId) {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", task.projectId, "tasks"] });
       }
-      toast({ title: "Task deleted" });
+      const deleted = result?.deleted ?? 1;
+      toast({
+        title: deleted > 1 ? `Deleted ${deleted} tasks` : "Task deleted",
+        description: deleted > 1 ? "Open copies of this job were removed. Finished copies were kept." : undefined,
+      });
       navigate("/work", { replace: true });
     },
     onError: () => toast({ title: "Failed to delete task", variant: "destructive" }),

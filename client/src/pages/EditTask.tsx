@@ -66,6 +66,10 @@ const formSchema = insertTaskSchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
+type LoadedTask = Task & {
+  helpers?: { userId: string }[];
+};
+
 export default function EditTask() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -85,7 +89,7 @@ export default function EditTask() {
   const initialAssetsRef = useRef<AssetWithSubtaskId[]>([]);
   const multiAssetMode = selectedAssets.length > 0;
 
-  const { data: task, isLoading: taskLoading } = useQuery<Task>({
+  const { data: task, isLoading: taskLoading } = useQuery<LoadedTask>({
     queryKey: ["/api/tasks", id],
   });
 
@@ -277,8 +281,8 @@ export default function EditTask() {
 
       form.setValue("createdById", task.createdById);
 
-      if (taskExt.helpers) {
-        setSelectedHelperIds(taskExt.helpers.map((h) => h.userId));
+      if (task.helpers) {
+        setSelectedHelperIds(task.helpers.map((helper) => helper.userId));
       }
 
       setIsTaskLoaded(true);

@@ -178,7 +178,7 @@ export function ProjectRowGroup({
       </TableRow>
 
       {isExpanded &&
-        childTasks.map((task, idx) => {
+        childTasks.map((task) => {
           const childSubTasks = subTasksMap[task.id] || [];
           if (childSubTasks.length > 0) {
             return (
@@ -217,7 +217,6 @@ export function ProjectRowGroup({
               handlePropertyChange={handlePropertyChange}
               handleInlineEdit={handleInlineEdit}
               indentLevel={1}
-              rowIndex={idx}
               isAdmin={isAdmin}
               onReviewEstimates={onReviewEstimates}
               onSelectTask={onSelectTask}

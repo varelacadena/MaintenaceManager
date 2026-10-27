@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Plus, QrCode, Search, Wrench } from "lucide-react";
@@ -62,10 +63,10 @@ export default function MobileEquipmentPage() {
   const { user } = useAuth();
   const canManage = canEditEquipment(user);
   const { toast } = useToast();
-  const [searchInput, setSearchInput] = useState("");
-  const [partNumberInput, setPartNumberInput] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchInput, setSearchInput] = useSessionState("tools-search", "");
+  const [partNumberInput, setPartNumberInput] = useSessionState("tools-part", "");
+  const [categoryFilter, setCategoryFilter] = useSessionState("tools-category", "all");
+  const [statusFilter, setStatusFilter] = useSessionState("tools-status", "all");
   const [createOpen, setCreateOpen] = useState(false);
   const [qrItem, setQrItem] = useState<MobileEquipment | null>(null);
   const [isQrOpen, setIsQrOpen] = useState(false);

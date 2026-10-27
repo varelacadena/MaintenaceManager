@@ -1,16 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Trash2,
   Camera,
   ScanLine,
@@ -23,7 +13,7 @@ import { ObjectUploader } from "../ObjectUploader";
 import { BarcodeScanner } from "../BarcodeScanner";
 import { format } from "date-fns";
 import { resolveTimeEntryUserName } from "@/lib/displayNames";
-import { taskDeleteWarning } from "@/utils/taskUtils";
+import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import type { MobileTaskDetailProps } from "./types";
 
 interface MobileTaskDialogsProps {
@@ -134,26 +124,14 @@ export function MobileTaskDialogs({ ctx }: MobileTaskDialogsProps) {
         </div>
       )}
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              {taskDeleteWarning(task)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTaskMutation.mutate()}
-              style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
-              data-testid="button-confirm-mobile-delete"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteTaskDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        task={task}
+        pending={deleteTaskMutation.isPending}
+        onConfirm={(scope) => deleteTaskMutation.mutate(scope)}
+        confirmTestId="button-confirm-mobile-delete"
+      />
 
       {isNoteSheetOpen && (
         <div

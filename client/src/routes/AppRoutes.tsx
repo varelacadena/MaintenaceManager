@@ -13,7 +13,6 @@ const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Work = lazyWithRetry(() => import("@/pages/Work"));
 const GrabAJob = lazyWithRetry(() => import("@/pages/GrabAJob"));
 const TechnicianFieldJob = lazyWithRetry(() => import("@/pages/TechnicianFieldJob"));
-const NewTask = lazyWithRetry(() => import("@/pages/NewTask"));
 const EditTask = lazyWithRetry(() => import("@/pages/EditTask"));
 const TaskDetail = lazyWithRetry(() => import("@/pages/TaskDetail"));
 const MobileTaskDetail = lazyWithRetry(() => import("@/components/MobileTaskDetail"));
@@ -125,13 +124,12 @@ function TasksRedirectRoute() {
 }
 
 function NewTaskRoute() {
-  return (
-    <DomainErrorBoundary domain="Work Orders & Tasks">
-      <RoleGuard allowedRoles={["admin"]}>
-        <NewTask />
-      </RoleGuard>
-    </DomainErrorBoundary>
-  );
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    const search = window.location.search;
+    exitTo(setLocation, search ? `/work${search}` : "/work");
+  }, [setLocation]);
+  return null;
 }
 
 function EditTaskRoute() {

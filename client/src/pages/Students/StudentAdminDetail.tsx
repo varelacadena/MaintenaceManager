@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import {
   Dialog,
@@ -74,6 +75,7 @@ function recapShiftLabel(recap: StudentRecapDto, entries: StudentTimeEntryDto[])
 }
 
 export default function StudentAdminDetail() {
+  const back = useGoBack();
   const [, params] = useRoute("/students/:id");
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -243,11 +245,11 @@ export default function StudentAdminDetail() {
         <div>
           <button
             type="button"
-            onClick={() => navigate("/students")}
+            onClick={back}
             className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
             data-testid="button-back-students"
           >
-            <ArrowLeft className="w-4 h-4 mr-1" /> Students
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </button>
           <h1 className="text-xl md:text-2xl font-semibold" data-testid="text-page-title">
             {data.student.name}

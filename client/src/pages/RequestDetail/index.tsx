@@ -1,3 +1,4 @@
+import { useGoBack } from "@/hooks/useGoBack";
 import { useRequestDetail } from "./useRequestDetail";
 import { RequestDetailMobile } from "./RequestDetailMobile";
 import { RequestDetailDesktop } from "./RequestDetailDesktop";
@@ -7,7 +8,8 @@ import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 
 export default function RequestDetail() {
   const hook = useRequestDetail();
-  const { isMobile, isLoading, isError, error, refetch, request, navigate } = hook;
+  const back = useGoBack();
+  const { isMobile, isLoading, isError, error, refetch, request } = hook;
 
   if (isLoading) {
     return (
@@ -25,7 +27,7 @@ export default function RequestDetail() {
           message={error instanceof Error ? error.message : "Something went wrong."}
           onRetry={() => refetch()}
         />
-        <Button variant="outline" className="mt-4 w-full" onClick={() => navigate("/requests")}>
+        <Button variant="outline" className="mt-4 w-full" onClick={back}>
           Back to Requests
         </Button>
       </div>
@@ -36,7 +38,7 @@ export default function RequestDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-muted-foreground">Request not found</p>
-        <Button variant="outline" onClick={() => navigate("/requests")} data-testid="button-back-to-requests">
+        <Button variant="outline" onClick={back} data-testid="button-back-to-requests">
           Back to Requests
         </Button>
       </div>
@@ -52,7 +54,6 @@ export default function RequestDetail() {
         space={hook.space}
         linkedTask={hook.linkedTask}
         linkedTaskLoaded={hook.linkedTaskLoaded}
-        navigate={hook.navigate}
         getStatusLabel={hook.getStatusLabel}
         getStatusVariant={hook.getStatusVariant}
         getPriorityColor={hook.getPriorityColor}

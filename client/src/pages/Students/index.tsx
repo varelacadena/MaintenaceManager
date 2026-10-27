@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Clock, GraduationCap, BookOpen, Users } from "lucide-react";
@@ -48,7 +49,12 @@ interface AdminStudentsResponse {
 
 export default function StudentsAdminPage() {
   const [, navigate] = useLocation();
-  const [rangePreset, setRangePreset] = useState<StudentAdminRangePreset>("week");
+  const [rangePreset, setRangePreset] = useSessionState<StudentAdminRangePreset>(
+    "students-range",
+    "week",
+    (value): value is StudentAdminRangePreset =>
+      value === "today" || value === "week" || value === "lastWeek" || value === "month" || value === "all",
+  );
   const range = useMemo(() => studentAdminDateRange(rangePreset), [rangePreset]);
   const rangeLabel = range.startDate && range.endDate
     ? rangePreset === "today"

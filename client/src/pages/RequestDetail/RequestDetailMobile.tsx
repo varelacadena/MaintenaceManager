@@ -125,7 +125,7 @@ export function RequestDetailMobile({
                 )}
                 {canReviewRequest && (
                 <>
-                <Link href={`/tasks/new?requestId=${id}`}>
+                <Link href={`/work?requestId=${id}`}>
                   <Button 
                     size="sm"
                     className="h-7 px-2 text-xs"
@@ -212,7 +212,7 @@ export function RequestDetailMobile({
                 </Link>
               )}
               {canReplaceMissingTask && (
-                <Link href={`/tasks/new?requestId=${id}`}>
+                <Link href={`/work?requestId=${id}`}>
                   <Button size="sm" className="w-full gap-1.5" data-testid="button-replace-missing-task-mobile">
                     <ClipboardList className="h-3.5 w-3.5" />
                     Create task

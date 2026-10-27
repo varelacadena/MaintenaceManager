@@ -30,12 +30,12 @@ function SheetPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="h-9 min-w-[11rem] justify-between font-normal" data-testid="report-sheets">
+        <Button type="button" variant="outline" className="h-11 w-full min-w-0 justify-between font-normal md:h-9 md:w-auto md:min-w-[11rem]" data-testid="report-sheets">
           <span className="truncate">{label}</span>
           <ChevronDown className="h-4 w-4 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-2" align="start">
+      <PopoverContent className="w-[min(18rem,calc(100vw-1.5rem))] p-2" align="start" collisionPadding={12}>
         <div className="max-h-64 overflow-auto space-y-1">
           {sheets.map((sheet) => {
             const checked = selected.includes(sheet);
@@ -75,6 +75,7 @@ export default function ReportsBuilder() {
   const [includeCharts, setIncludeCharts] = useState(true);
   const [includeCost, setIncludeCost] = useState(true);
   const [includeStudents, setIncludeStudents] = useState(false);
+  const [includePhotos, setIncludePhotos] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -104,6 +105,9 @@ export default function ReportsBuilder() {
       if (view === "pdf" && !includeCharts) params.set("charts", "0");
       if (!includeCost) params.set("cost", "0");
       if (activeTab === "technicians" && includeStudents) params.set("students", "1");
+      if (view === "pdf" && includePhotos && (activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities")) {
+        params.set("photos", "1");
+      }
       await downloadAnalyticsExport(EXPORT_TYPES[activeTab], view === "pdf" ? "pdf" : "xlsx", params.toString());
     } catch (error) {
       toast({
@@ -146,11 +150,11 @@ export default function ReportsBuilder() {
         </div>
       )}
       {view === "pdf" && (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1">
+        <div className="grid grid-cols-2 items-end gap-2 md:flex md:flex-wrap">
+          <label className="col-span-2 flex min-w-0 flex-col gap-1 md:col-span-1">
             <span className="text-[11px] font-medium text-muted-foreground">Reader</span>
             <Select value={reader} onValueChange={(value) => setReader(value as typeof reader)}>
-              <SelectTrigger className="h-9 w-[12rem]" data-testid="report-reader">
+              <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[12rem]" data-testid="report-reader">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -173,9 +177,19 @@ export default function ReportsBuilder() {
             Cost
           </label>
           {activeTab === "technicians" && (
-            <label className="flex items-center gap-2 h-9 text-sm">
+            <label className="col-span-2 flex items-center gap-2 text-sm md:col-span-1">
               <Checkbox checked={includeStudents} onCheckedChange={(value) => setIncludeStudents(value === true)} />
               Student hours and recaps
+            </label>
+          )}
+          {(activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities") && (
+            <label className="col-span-2 flex items-center gap-2 text-sm md:col-span-1">
+              <Checkbox
+                checked={includePhotos}
+                onCheckedChange={(value) => setIncludePhotos(value === true)}
+                data-testid="report-photos"
+              />
+              Photos from finished jobs
             </label>
           )}
         </div>
@@ -186,7 +200,7 @@ export default function ReportsBuilder() {
           Student hours and recaps
         </label>
       )}
-      <Button type="button" onClick={() => void download()} disabled={busy || (view === "xlsx" && selected.length === 0)} data-testid="report-download">
+      <Button type="button" className="h-11 w-full md:h-10 md:w-auto" onClick={() => void download()} disabled={busy || (view === "xlsx" && selected.length === 0)} data-testid="report-download">
         {busy ? "Preparing…" : view === "pdf" ? "Download PDF" : "Download spreadsheet"}
       </Button>
     </div>

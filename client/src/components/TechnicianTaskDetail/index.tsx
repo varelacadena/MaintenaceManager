@@ -13,7 +13,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
     task, multiProperties = [], parts, quotes, vendors, inventoryItems, taskHelpers = [],
     checklistGroups, subTasks, uploads, notes, allTaskResources, propertyResources, previousWork, users,
-    isSubTask, completedSubTasks, subTaskProgress,
+    completedSubTasks, subTaskProgress,
     totalChecklistItems, completedChecklistItems, estimateBlocksCompletion,
     startTimerMutation, stopTimerMutation, addPartMutation, addUploadMutation,
     toggleChecklistItemMutation, createQuoteMutation, deleteUploadMutation,
@@ -41,14 +41,12 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       <TechnicianHero
         task={task}
         isPaused={hook.isPaused}
-        isSubTask={isSubTask}
         locationText={hook.locationText}
         vehicleText={hook.vehicleText}
         locationExpanded={hook.locationExpanded}
         setLocationExpanded={hook.setLocationExpanded}
         hasMoreBuildings={hook.hasMoreBuildings}
         multiProperties={multiProperties}
-        safeNavigate={safeNavigate}
         taskStarted={hook.taskStarted}
         elapsedSeconds={hook.elapsedSeconds}
       />

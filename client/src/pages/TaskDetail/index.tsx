@@ -2,12 +2,14 @@ import { TechnicianTaskDetail } from "@/components/TechnicianTaskDetail";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useTaskDetail } from "./useTaskDetail";
 import { StudentView } from "./StudentView";
 import { AdminView } from "./AdminView";
 
 export default function TaskDetail() {
   const ctx = useTaskDetail();
+  const back = useGoBack();
 
   if (ctx.isLoading) {
     return (
@@ -26,7 +28,7 @@ export default function TaskDetail() {
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
           <p className="text-lg font-medium">Task not found</p>
-          <Button variant="outline" onClick={() => ctx.navigate("/work")} className="mt-4" data-testid="button-back-to-tasks">
+          <Button variant="outline" onClick={back} className="mt-4" data-testid="button-back-to-tasks">
             Back to Tasks
           </Button>
         </div>

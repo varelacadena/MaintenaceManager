@@ -113,6 +113,7 @@ export async function getTasks(filters?: {
       parentTaskId: tasks.parentTaskId,
       isCampusWide: tasks.isCampusWide,
       propertyIds: tasks.propertyIds,
+      lifeSafetyRound: tasks.lifeSafetyRound,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
     })

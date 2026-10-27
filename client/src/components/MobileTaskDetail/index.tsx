@@ -44,7 +44,7 @@ export default function MobileTaskDetail() {
 
   return (
     <div className="flex h-svh min-h-0 flex-col" style={{ backgroundColor: "#F8F8F8" }} data-testid="mobile-task-detail">
-      <MobileTaskHeader task={task} navigate={navigate} />
+      <MobileTaskHeader task={task} />
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pt-4">
         <MobileStatusBar task={task} />

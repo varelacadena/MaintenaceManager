@@ -1,20 +1,21 @@
 import { ArrowLeft, Flag, Calendar } from "lucide-react";
 import type { Task } from "@shared/schema";
+import { useGoBack } from "@/hooks/useGoBack";
 import { statusDotColors, statusPillStyles, statusLabels, priorityColors } from "./types";
 
 interface MobileTaskHeaderProps {
   task: Task;
-  navigate: (path: string, options?: { replace?: boolean }) => void;
 }
 
-export function MobileTaskHeader({ task, navigate }: MobileTaskHeaderProps) {
+export function MobileTaskHeader({ task }: MobileTaskHeaderProps) {
+  const back = useGoBack();
   return (
     <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #EEEEEE" }}>
       <button
-        onClick={() => navigate("/work", { replace: true })}
+        onClick={back}
         className="p-1"
         data-testid="button-back"
-        aria-label="Back to work"
+        aria-label="Back"
       >
         <ArrowLeft className="w-5 h-5" style={{ color: "#1A1A1A" }} />
       </button>

@@ -1,3 +1,5 @@
+import { backInApp } from "./navigationHistory";
+
 /** Whether a sidebar nav item should appear active for the current route. */
 export function isNavItemActive(location: string, itemUrl: string): boolean {
   if (location === itemUrl) return true;
@@ -161,23 +163,22 @@ export function hasPageBackControl(pathname: string, role?: string): boolean {
   return false;
 }
 
-/** Global header Back: route-aware exit, with browser fallback only when already at the mapped parent. */
+/**
+ * Header and page Back buttons.
+ * Returns to the previous page in this visit. If the page was opened directly
+ * (refresh, link, notification), goes to the parent route instead.
+ */
 export function goBack(
   setLocation: SetLocationFn,
   pathname: string,
   role?: string,
 ): void {
+  if (backInApp()) return;
   const path = pathname.split("?")[0].replace(/\/$/, "") || "/";
   const parent = getParentRoute(pathname, role);
-
   if (parent === path) {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      exitTo(setLocation, "/");
-    }
+    exitTo(setLocation, "/");
     return;
   }
-
   exitTo(setLocation, parent);
 }

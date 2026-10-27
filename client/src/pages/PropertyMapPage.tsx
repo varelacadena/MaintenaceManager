@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useSessionState } from "@/hooks/useSessionState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,6 +70,14 @@ const allTypes = Object.keys(typeConfig) as PropertyType[];
 
 type SortKey = "name" | "type" | "lastWorkDate" | "equipmentCount";
 
+function isSortKey(value: unknown): value is SortKey {
+  return value === "name" || value === "type" || value === "lastWorkDate" || value === "equipmentCount";
+}
+
+function isPropertyTab(value: unknown): value is PropertyType | "all" {
+  return value === "all" || (typeof value === "string" && propertyTypeValues.includes(value as PropertyType));
+}
+
 const formSchema = insertPropertySchema.extend({
   name: z.string().min(1, "Name is required"),
   type: z.enum(propertyTypeValues),
@@ -81,10 +90,10 @@ export default function PropertyMapPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<PropertyType | "all">("all");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortAsc, setSortAsc] = useState(true);
+  const [searchQuery, setSearchQuery] = useSessionState("properties-search", "");
+  const [activeTab, setActiveTab] = useSessionState<PropertyType | "all">("properties-type", "all", isPropertyTab);
+  const [sortKey, setSortKey] = useSessionState<SortKey>("properties-sort", "name", isSortKey);
+  const [sortAsc, setSortAsc] = useSessionState("properties-sort-asc", true, (value): value is boolean => typeof value === "boolean");
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [creationMode, setCreationMode] = useState<PropertyType | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);

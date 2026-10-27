@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { toDisplayUrl } from "@/lib/imageUtils";
@@ -92,11 +93,12 @@ export function usePropertyDetail() {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
-  const [equipmentSearch, setEquipmentSearch] = useState("");
-  const [spaceSearch, setSpaceSearch] = useState("");
-  const [taskSearch, setTaskSearch] = useState("");
+  const propertyKey = id ? `property:${id}` : "property:draft";
+  const [selectedCategory, setSelectedCategory] = useSessionState<string | null>(`${propertyKey}:category`, null);
+  const [selectedSpaceId, setSelectedSpaceId] = useSessionState<string | null>(`${propertyKey}:space`, null);
+  const [equipmentSearch, setEquipmentSearch] = useSessionState(`${propertyKey}:equipment-search`, "");
+  const [spaceSearch, setSpaceSearch] = useSessionState(`${propertyKey}:space-search`, "");
+  const [taskSearch, setTaskSearch] = useSessionState(`${propertyKey}:task-search`, "");
   const [summaryTaskId, setSummaryTaskId] = useState<string | null>(null);
   const [qrEquipment, setQrEquipment] = useState<Equipment | null>(null);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
@@ -107,7 +109,7 @@ export function usePropertyDetail() {
   const [pendingEquipmentUploads, setPendingEquipmentUploads] = useState<PendingEquipmentUpload[]>([]);
   const equipmentImagePathRef = useRef<string>("");
   const manufacturerImagePathRef = useRef<string>("");
-  const [activeTab, setActiveTab] = useState<string>("equipment");
+  const [activeTab, setActiveTab] = useSessionState(`${propertyKey}:tab`, "");
 
   const {
     data: property,
@@ -149,16 +151,16 @@ export function usePropertyDetail() {
   const isBuilding = property?.type === "building";
 
   useEffect(() => {
-    if (property) {
-      setActiveTab(property.type === "building" ? "spaces" : "equipment");
-    }
-  }, [property?.id]);
+    if (!property || activeTab) return;
+    setActiveTab(property.type === "building" ? "spaces" : "equipment");
+  }, [property, activeTab, setActiveTab]);
 
   useEffect(() => {
-    if (!isBuilding && activeTab === "spaces") {
+    if (!property) return;
+    if (property.type !== "building" && activeTab === "spaces") {
       setActiveTab("equipment");
     }
-  }, [isBuilding, activeTab]);
+  }, [property, activeTab, setActiveTab]);
 
   const {
     data: spaces = [],

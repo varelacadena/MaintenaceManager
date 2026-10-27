@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSignedUploadParameters, mapUploaderResultForRegistration } from "@/lib/uploadUtils";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
+import { taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote } from "@shared/schema";
@@ -202,12 +203,17 @@ export function useMobileTaskDetail() {
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/tasks/${id}`);
+    mutationFn: async (scope: TaskDeleteScope = "one") => {
+      const res = await apiRequest("DELETE", taskDeleteUrl(id!, scope));
+      return res.json() as Promise<{ deleted?: number }>;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateTaskAfterMutation(id);
-      toast({ title: "Task deleted" });
+      const deleted = result?.deleted ?? 1;
+      toast({
+        title: deleted > 1 ? `Deleted ${deleted} tasks` : "Task deleted",
+        description: deleted > 1 ? "Open copies of this job were removed. Finished copies were kept." : undefined,
+      });
       navigate("/work", { replace: true });
     },
     onError: () => {

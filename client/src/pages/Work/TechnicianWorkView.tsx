@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useMutation } from "@tanstack/react-query";
 import { Building2, Calendar, CheckCircle2, Plus } from "lucide-react";
 import type { Property, Task, User } from "@shared/schema";
@@ -291,7 +292,7 @@ function WeekStrip({
 export function TechnicianWorkView({ user, tasks, properties, navigate }: TechnicianWorkViewProps) {
   const { toast } = useToast();
   const [view, setView] = useState<TechWorkView>(loadTechWorkView);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useSessionState<string | null>("tech-work-selected-day", null);
   const [scheduleTaskId, setScheduleTaskId] = useState<string | null>(null);
   const plan = useMemo(
     () => buildTechWorkPlan(filterTechnicianWorkTasks(tasks, user.id), new Date()),

@@ -21,7 +21,7 @@ import type {
   TaskChecklistGroup,
   TaskChecklistItem,
 } from "@shared/schema";
-import { panelStatusDotStyle, panelStatusPillStyle, panelStatusLabels, priorityConfig, getAvatarHexColor as getAvatarColorForId, getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { panelStatusDotStyle, panelStatusPillStyle, panelStatusLabels, priorityConfig, getAvatarHexColor as getAvatarColorForId, getInitials, getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
 import { missingCompletionPhoto, PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
 import { buildManualTimeEntryRange, durationFromHoursAndMinutes, splitMinutes } from "@/lib/timeEntryUtils";
 import { getTaskDateInputValue } from "@/lib/taskCalendarDates";
@@ -249,12 +249,17 @@ export function useTaskDetailPanel({
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/tasks/${taskId}`);
+    mutationFn: async (scope: TaskDeleteScope = "one") => {
+      const res = await apiRequest("DELETE", taskDeleteUrl(taskId, scope));
+      return res.json() as Promise<{ deleted?: number }>;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateTaskAfterMutation(taskId, { broad: true });
-      toast({ title: "Task deleted", description: "Task has been permanently removed." });
+      const deleted = result?.deleted ?? 1;
+      toast({
+        title: deleted > 1 ? `Deleted ${deleted} tasks` : "Task deleted",
+        description: deleted > 1 ? "Open copies of this job were removed. Finished copies were kept." : "Task has been permanently removed.",
+      });
       onClose();
     },
     onError: () => {

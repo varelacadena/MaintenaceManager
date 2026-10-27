@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { tasks } from "@shared/schema";
-import { eq, and, isNotNull, ne } from "drizzle-orm";
+import { eq, and, isNotNull, ne, inArray } from "drizzle-orm";
 import { log } from "./vite";
 import { createDueLifeSafetyRounds } from "./lifeSafetyRounds";
 
@@ -177,16 +177,14 @@ export function startRecurringTaskScheduler(): void {
   log("Recurring task scheduler started (runs every hour)");
 }
 
-// Clear the schedule on every matching occurrence so a deleted open task is not recreated.
-export async function stopRecurringSeries(task: {
+function seriesMatchConditions(task: {
   name: string;
   propertyId: string | null;
   areaId: string | null;
-}): Promise<number> {
+}) {
   const conditions = [
     eq(tasks.taskType, "recurring"),
     eq(tasks.name, task.name),
-    isNotNull(tasks.recurringFrequency),
   ];
 
   if (task.propertyId) {
@@ -196,6 +194,75 @@ export async function stopRecurringSeries(task: {
   if (task.areaId) {
     conditions.push(eq(tasks.areaId, task.areaId));
   }
+
+  return conditions;
+}
+
+export type SeriesDeleteTarget = {
+  id: string;
+  projectId: string | null;
+  requestId: string | null;
+};
+
+// The task being deleted, every other open copy of that job, and their subtasks.
+// Finished copies stay, except the one the user chose to delete.
+export async function listSeriesDeleteTargets(task: {
+  id: string;
+  name: string;
+  propertyId: string | null;
+  areaId: string | null;
+  projectId: string | null;
+  requestId: string | null;
+}): Promise<SeriesDeleteTarget[]> {
+  const openCopies = await db
+    .select({
+      id: tasks.id,
+      projectId: tasks.projectId,
+      requestId: tasks.requestId,
+    })
+    .from(tasks)
+    .where(and(...seriesMatchConditions(task), ne(tasks.status, "completed")));
+
+  const byId = new Map<string, SeriesDeleteTarget>();
+  for (const copy of openCopies) byId.set(copy.id, copy);
+  byId.set(task.id, {
+    id: task.id,
+    projectId: task.projectId,
+    requestId: task.requestId,
+  });
+
+  let frontier = Array.from(byId.keys());
+  while (frontier.length > 0) {
+    const children = await db
+      .select({
+        id: tasks.id,
+        projectId: tasks.projectId,
+        requestId: tasks.requestId,
+      })
+      .from(tasks)
+      .where(inArray(tasks.parentTaskId, frontier));
+    frontier = [];
+    for (const child of children) {
+      if (!byId.has(child.id)) {
+        byId.set(child.id, child);
+        frontier.push(child.id);
+      }
+    }
+  }
+
+  return Array.from(byId.values());
+}
+
+// Clear the schedule on every matching occurrence so a deleted open task is not recreated.
+export async function stopRecurringSeries(task: {
+  name: string;
+  propertyId: string | null;
+  areaId: string | null;
+}): Promise<number> {
+  const conditions = [
+    ...seriesMatchConditions(task),
+    isNotNull(tasks.recurringFrequency),
+  ];
 
   const updated = await db
     .update(tasks)

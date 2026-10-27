@@ -29,7 +29,7 @@ import { BarcodeScanner } from "../BarcodeScanner";
 import { UploadLabelDialog } from "@/components/UploadLabelDialog";
 import { ManualTimeLogFields } from "@/components/ManualTimeLogFields";
 import { durationFromHoursAndMinutes } from "@/lib/timeEntryUtils";
-import { taskDeleteWarning } from "@/utils/taskUtils";
+import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
 interface TaskDetailPanelDialogsProps {
@@ -39,27 +39,13 @@ interface TaskDetailPanelDialogsProps {
 export function TaskDetailPanelDialogs({ ctx }: TaskDetailPanelDialogsProps) {
   return (
     <>
-      <AlertDialog open={ctx.deleteDialogOpen} onOpenChange={ctx.setDeleteDialogOpen}>
-        <AlertDialogContent data-testid="dialog-delete-task">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {ctx.task ? taskDeleteWarning(ctx.task) : "This permanently removes the task."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => ctx.deleteTaskMutation.mutate()}
-              disabled={ctx.deleteTaskMutation.isPending}
-              data-testid="button-confirm-delete"
-              style={{ backgroundColor: "#D94F4F", color: "#FFFFFF" }}
-            >
-              {ctx.deleteTaskMutation.isPending ? "Deleting..." : "Delete task"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteTaskDialog
+        open={ctx.deleteDialogOpen}
+        onOpenChange={ctx.setDeleteDialogOpen}
+        task={ctx.task}
+        pending={ctx.deleteTaskMutation.isPending}
+        onConfirm={(scope) => ctx.deleteTaskMutation.mutate(scope)}
+      />
 
       <Dialog open={ctx.isAddNoteDialogOpen} onOpenChange={ctx.setIsAddNoteDialogOpen}>
         <DialogContent data-testid="dialog-add-note">

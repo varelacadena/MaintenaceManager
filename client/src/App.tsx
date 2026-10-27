@@ -1,7 +1,7 @@
 import { Suspense, useEffect } from "react";
 import { LogOut } from "lucide-react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +17,8 @@ import PwaInstallBanner from "./components/PwaInstallBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DomainErrorBoundary from "@/components/DomainErrorBoundary";
 import { goBack, hasPageBackControl } from "@/lib/navigation";
+import { fullLocation, trackLocation } from "@/lib/navigationHistory";
+import { installScrollMemory } from "@/lib/scrollMemory";
 import { formatUserDisplayName } from "@shared/displayNames";
 import { getInitials } from "@/utils/taskUtils";
 import { queryClient } from "./lib/queryClient";
@@ -75,6 +77,9 @@ function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const isMobileView = useIsMobile();
   const [currentPath, setLocation] = useLocation();
+  const search = useSearch();
+  trackLocation(fullLocation(currentPath, search));
+  installScrollMemory();
   useStudentDailySession(user?.role === "student");
 
   useEffect(() => {
@@ -156,7 +161,6 @@ function AuthenticatedApp() {
   const showGlobalBack = user?.role !== "student" &&
     user?.role !== "technician" &&
     !hasPageBackControl(currentPath, user?.role);
-  const isAdminTaskDetail = user?.role === "admin" && /^\/tasks\/[^/]+$/.test(currentPath);
 
   if (isMobileTaskDetail) {
     if (user?.role === "technician") {
@@ -201,7 +205,7 @@ function AuthenticatedApp() {
                     >
                       <path d="m15 18-6-6 6-6" />
                     </svg>
-                    <span className="hidden sm:inline">{isAdminTaskDetail ? "Return to Work" : "Back"}</span>
+                    <span className="hidden sm:inline">Back</span>
                   </button>
                 )}
                 {(user?.role === "student" || user?.role === "technician") && (

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
@@ -64,6 +65,7 @@ const touchControl = "h-11 text-base sm:text-sm bg-background";
 
 export default function TechnicianFieldJob() {
   const [, navigate] = useLocation();
+  const back = useGoBack();
   const { toast } = useToast();
   const [form, setForm] = useState<FieldJobForm>(() => ({ ...defaultForm, workDate: localDayKey(new Date()) }));
   const [laterDay, setLaterDay] = useState(false);
@@ -191,9 +193,9 @@ export default function TechnicianFieldJob() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate("/work")}
+            onClick={back}
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-            aria-label="Back to My Tasks"
+            aria-label="Back"
             data-testid="button-back-field-job"
           >
             <ArrowLeft className="w-5 h-5" />

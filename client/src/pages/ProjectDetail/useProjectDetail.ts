@@ -404,8 +404,8 @@ export function useProjectDetail() {
     return acc;
   }, {});
 
-  const getSenderInfo = (senderId: string) => {
-    const u = allUsers?.find(u => u.id === senderId);
+  const getSenderInfo = (senderId: string | null) => {
+    const u = senderId ? allUsers?.find(u => u.id === senderId) : undefined;
     if (!u) return { name: "Unknown", initials: "?" };
     return { name: getUserDisplayName(u), initials: getInitials(u) };
   };

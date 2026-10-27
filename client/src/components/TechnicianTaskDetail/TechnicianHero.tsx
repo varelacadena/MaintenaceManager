@@ -5,6 +5,7 @@ import {
   Globe,
   Car,
 } from "lucide-react";
+import { useGoBack } from "@/hooks/useGoBack";
 import { formatTaskReferenceId } from "@/utils/taskUtils";
 import { getGradient, getStatusLabel, formatElapsed } from "./types";
 import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
@@ -13,14 +14,12 @@ import type { Task, Property } from "@shared/schema";
 interface TechnicianHeroProps {
   task: Task;
   isPaused: boolean;
-  isSubTask: boolean;
   locationText: string;
   vehicleText: string;
   locationExpanded: boolean;
   setLocationExpanded: (v: boolean) => void;
   hasMoreBuildings: boolean;
   multiProperties: Property[];
-  safeNavigate: (path: string) => void;
   taskStarted: boolean;
   elapsedSeconds: number;
 }
@@ -28,17 +27,16 @@ interface TechnicianHeroProps {
 export function TechnicianHero({
   task,
   isPaused,
-  isSubTask,
   locationText,
   vehicleText,
   locationExpanded,
   setLocationExpanded,
   hasMoreBuildings,
   multiProperties,
-  safeNavigate,
   taskStarted,
   elapsedSeconds,
 }: TechnicianHeroProps) {
+  const back = useGoBack();
   const taskName = task.name?.trim() || "Untitled task";
 
   return (
@@ -59,13 +57,8 @@ export function TechnicianHero({
               height: 28,
               backgroundColor: "rgba(255,255,255,0.18)",
             }}
-            onClick={() => {
-              if (isSubTask && task.parentTaskId) {
-                safeNavigate(`/tasks/${task.parentTaskId}`);
-              } else {
-                safeNavigate("/work");
-              }
-            }}
+            onClick={back}
+            aria-label="Back"
             data-testid="button-back"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-white" />

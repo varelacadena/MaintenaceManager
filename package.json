@@ -24,7 +24,6 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/utilities": "^3.2.2",
-    "@supabase/storage-js": "^2.7.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@playwright/test": "^1.58.2",
@@ -55,6 +54,7 @@
     "@radix-ui/react-toggle": "^1.1.3",
     "@radix-ui/react-toggle-group": "^1.1.3",
     "@radix-ui/react-tooltip": "^1.2.0",
+    "@supabase/storage-js": "^2.7.1",
     "@tanstack/react-query": "^5.60.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/leaflet": "^1.9.15",
@@ -73,8 +73,8 @@
     "cross-env": "^7.0.3",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.7",
-    "drizzle-orm": "^0.39.1",
     "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.1",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
@@ -109,6 +109,7 @@
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.4",
     "resend": "^4.0.0",
+    "sharp": "^0.35.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.2.5",
@@ -122,6 +123,8 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "4.17.21",
     "@types/express-session": "^1.18.0",
@@ -134,15 +137,13 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
     "esbuild": "^0.25.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
     "vite": "^5.4.20",
-    "vitest": "^3.2.4",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "jsdom": "^26.1.0"
+    "vitest": "^3.2.4"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

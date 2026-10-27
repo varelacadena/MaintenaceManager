@@ -25,6 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Search, Trash2, ClipboardList } from "lucide-react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -47,7 +48,7 @@ export default function Requests() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useSessionState("requests-search", "");
   const [statusFilter, setStatusFilter] = useState(() => {
     try {
       return sessionStorage.getItem("requests-status-filter") || "pending";

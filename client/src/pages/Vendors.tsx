@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { VENDOR_TRADES, vendorTradeLabel, type Vendor, type VendorTradeSlug } from "@shared/schema";
@@ -79,7 +80,7 @@ export default function Vendors() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
-  const [selectedTrade, setSelectedTrade] = useState<string | null>(null);
+  const [selectedTrade, setSelectedTrade] = useSessionState<string | null>("vendors-trade", null);
 
   // Create form states
   const [newName, setNewName] = useState("");

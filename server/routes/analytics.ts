@@ -17,13 +17,14 @@ function readSheets(query: Request["query"]): string[] | undefined {
   return names.length > 0 ? names : undefined;
 }
 
-function readExportOptions(query: Request["query"]): Pick<AnalyticsFilters, "dateBasis" | "sheets" | "includeCharts" | "includeCost" | "includeStudents"> {
+function readExportOptions(query: Request["query"]): Pick<AnalyticsFilters, "dateBasis" | "sheets" | "includeCharts" | "includeCost" | "includeStudents" | "includePhotos"> {
   return {
     dateBasis: readDateBasis(query),
     sheets: readSheets(query),
     includeCharts: query.charts === "0" ? false : undefined,
     includeCost: query.cost === "0" ? false : undefined,
     includeStudents: query.students === "1" ? true : undefined,
+    includePhotos: query.photos === "1" ? true : undefined,
   };
 }
 

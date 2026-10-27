@@ -1,3 +1,4 @@
+import type { jsPDF } from "jspdf";
 import type { AnalyticsFilters } from "./analyticsService";
 import { DATE_BASIS_LABEL, parseCsvIds, parseDateBasis, parsePropertyIds } from "./localDates";
 import { analyticsService } from "./analyticsService";
@@ -28,6 +29,7 @@ import {
   techniciansAnalysis,
   workOrdersAnalysis,
 } from "./analyticsPdfNarratives";
+import { prepareFinishedJobPhotos, type PhotoJobSeed, type PreparedPhotoJob } from "./analyticsPdfPhotos";
 
 export interface ExportSheet {
   name: string;
@@ -1253,7 +1255,36 @@ type PdfBlock =
       items: GroupedBarItem[];
       series: BarSeries[];
     }
-  | { kind: "table"; heading: string; rows: (string | number)[][] };
+  | { kind: "table"; heading: string; rows: (string | number)[][] }
+  | { kind: "photos"; heading: string; note: string | null; jobs: PreparedPhotoJob[] };
+
+async function finishedPhotosBlock(seeds: PhotoJobSeed[]): Promise<PdfBlock> {
+  const prepared = await prepareFinishedJobPhotos(seeds);
+  if (prepared.jobs.length === 0) {
+    return {
+      kind: "text",
+      heading: "Photos from finished jobs",
+      paragraphs: ["None of the finished jobs in this report have a photo."],
+    };
+  }
+  return {
+    kind: "photos",
+    heading: "Photos from finished jobs",
+    note: prepared.note,
+    jobs: prepared.jobs,
+  };
+}
+
+function drawPhoto(doc: jsPDF, image: PreparedPhotoJob["images"][number], x: number, y: number, maxW: number, maxH: number) {
+  const ratio = image.width / image.height;
+  let drawW = maxW;
+  let drawH = drawW / ratio;
+  if (drawH > maxH) {
+    drawH = maxH;
+    drawW = drawH * ratio;
+  }
+  doc.addImage(image.jpeg, "JPEG", x, y, drawW, drawH, undefined, "FAST");
+}
 
 function wrapPdfText(doc: { splitTextToSize: (text: string, maxWidth: number) => string | string[] }, text: string, maxWidth: number): string[] {
   return doc.splitTextToSize(text, maxWidth) as string[];
@@ -1346,7 +1377,7 @@ export async function buildPdfBuffer(dataType: string, filters: AnalyticsFilters
   };
 
   for (const block of blocks) {
-    ensureSpace(14);
+    ensureSpace(block.kind === "photos" ? 78 : 14);
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(block.heading, margin, y);
@@ -1399,6 +1430,55 @@ export async function buildPdfBuffer(dataType: string, filters: AnalyticsFilters
         y += drawGroupedBarChart(doc, margin, y, contentWidth, block.items, block.series);
       }
       y += 6;
+      continue;
+    }
+
+    if (block.kind === "photos") {
+      for (const job of block.jobs) {
+        const imageH = 52;
+        ensureSpace(18 + imageH + 12);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0);
+        const titleLines = wrapPdfText(doc, job.title, contentWidth);
+        doc.text(titleLines.slice(0, 2), margin, y);
+        y += Math.min(titleLines.length, 2) * 4.5 + 1;
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(80);
+        doc.text(wrapPdfText(doc, job.meta, contentWidth).slice(0, 2), margin, y);
+        y += 5;
+        const gap = 4;
+        const boxW = job.images.length === 1 ? contentWidth * 0.62 : (contentWidth - gap) / 2;
+        job.images.forEach((image, index) => {
+          const x = margin + index * (boxW + gap);
+          try {
+            drawPhoto(doc, image, x, y, boxW, imageH);
+          } catch (error) {
+            console.error("Could not draw a task photo:", error);
+          }
+          doc.setFontSize(7);
+          doc.setTextColor(90);
+          const caption = wrapPdfText(doc, image.caption, boxW)[0] ?? "";
+          doc.text(caption, x, y + imageH + 4);
+        });
+        y += imageH + 8;
+        doc.setFontSize(8);
+        doc.setTextColor(80);
+        doc.text(job.countLine, margin, y);
+        y += 7;
+      }
+      if (block.note) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(80);
+        const lines = wrapPdfText(doc, block.note, contentWidth);
+        ensureSpace(lines.length * 4 + 2);
+        doc.text(lines, margin, y);
+        y += lines.length * 4 + 2;
+      }
+      doc.setTextColor(0);
+      y += 4;
       continue;
     }
 
@@ -1643,6 +1723,20 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
             ]),
           ],
         },
+        ...(filters.includePhotos
+          ? [
+              await finishedPhotosBlock(
+                wo.detailedRecords
+                  .filter((record) => record.status === "completed")
+                  .map((record) => ({
+                    taskId: record.id,
+                    title: record.name,
+                    meta: `${record.propertyName} · ${record.assignedToName || "Unassigned"} · Completed ${fmtDate(record.actualCompletionDate) || "—"}`,
+                    completedAt: record.actualCompletionDate,
+                  })),
+              ),
+            ]
+          : []),
       ];
     }
     case "technicians-detailed": {
@@ -1719,6 +1813,22 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
             ),
           ],
         },
+        ...(filters.includePhotos
+          ? [
+              await finishedPhotosBlock(
+                techs.flatMap((member) =>
+                  member.taskDetails
+                    .filter((task) => task.status === "completed")
+                    .map((task) => ({
+                      taskId: task.taskId,
+                      title: task.taskName,
+                      meta: `${member.technicianName} · ${task.propertyName} · Completed ${fmtDate(task.completionDate) || "—"}`,
+                      completedAt: task.completionDate,
+                    })),
+                ),
+              ),
+            ]
+          : []),
       ];
     }
     case "assets": {
@@ -1873,6 +1983,22 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
             ),
           ],
         },
+        ...(filters.includePhotos
+          ? [
+              await finishedPhotosBlock(
+                facilities.flatMap((facility) =>
+                  facility.workOrderDetails
+                    .filter((job) => job.status === "completed")
+                    .map((job) => ({
+                      taskId: job.taskId,
+                      title: job.taskName,
+                      meta: `${facility.propertyName} · ${job.assignedToName || "Unassigned"} · Completed ${fmtDate(job.completionDate) || "—"}`,
+                      completedAt: job.completionDate,
+                    })),
+                ),
+              ),
+            ]
+          : []),
       ];
     }
     case "fleet-detailed": {

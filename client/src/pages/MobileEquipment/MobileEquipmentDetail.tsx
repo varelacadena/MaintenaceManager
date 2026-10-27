@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, Plus, QrCode, Trash2, Wrench } from "lucide-react";
@@ -24,7 +24,7 @@ import { canEditEquipment } from "@/lib/equipmentAccess";
 import type { MobileEquipment, MobileEquipmentMaintenanceLogWithParts } from "@shared/schema";
 import { categoryLabel, statusLabel } from "@/lib/mobileEquipmentConstants";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
-import { exitTo } from "@/lib/navigation";
+import { useGoBack } from "@/hooks/useGoBack";
 import { QrLabelDialog } from "@/components/QrLabelDialog";
 import { getMobileEquipmentAssetTagFields } from "@/lib/mobileEquipmentQrLabel";
 import { mobileEquipmentQrUrl } from "@/lib/mobileEquipmentLinks";
@@ -47,7 +47,7 @@ const emptyPart = (): PartRow => ({
 
 export default function MobileEquipmentDetail() {
   const { id } = useParams<{ id: string }>();
-  const [, setLocation] = useLocation();
+  const back = useGoBack();
   const { user } = useAuth();
   const canManage = canEditEquipment(user);
   const { toast } = useToast();
@@ -146,7 +146,7 @@ export default function MobileEquipmentDetail() {
   return (
     <div className="space-y-4 p-4 max-w-3xl mx-auto">
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => exitTo(setLocation, "/tools-equipment")}>
+        <Button variant="ghost" size="icon" onClick={back} aria-label="Back">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">

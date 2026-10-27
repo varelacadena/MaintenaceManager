@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,10 +38,19 @@ export function useInventory() {
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [stockFilter, setStockFilter] = useState<"all" | "low">("all");
-  const [sortKey, setSortKey] = useState<InventorySortKey>("name-asc");
+  const [sortKey, setSortKey] = useSessionState<InventorySortKey>(
+    "inventory-sort",
+    "name-asc",
+    (value): value is InventorySortKey =>
+      value === "name-asc" || value === "name-desc" || value === "qty-asc" || value === "qty-desc",
+  );
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useSessionState(
+    "inventory-page",
+    0,
+    (value): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0,
+  );
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -119,9 +129,14 @@ export function useInventory() {
     }
   }, [stockFilter, activeCategory, debouncedSearch, urlSearch, setLocation]);
 
+  const skipPageReset = useRef(true);
   useEffect(() => {
+    if (skipPageReset.current) {
+      skipPageReset.current = false;
+      return;
+    }
     setPage(0);
-  }, [activeCategory, stockFilter, debouncedSearch, sortKey]);
+  }, [activeCategory, stockFilter, debouncedSearch, sortKey, setPage]);
 
   const queryFilters = {
     activeCategory,

@@ -8,9 +8,16 @@ import { UserDialogsExtra } from './UserDialogsExtra';
 import { UsersTabContent, PendingTabContent, CredentialsTabContent } from './UserTable';
 import { PermissionsTabContent } from './UserPermissionsTab';
 import { DestructiveDeleteDialog } from "@/components/DestructiveDeleteDialog";
+import { useSessionState } from "@/hooks/useSessionState";
 
 export default function Users() {
   const ctx = useUsers();
+  const [userTab, setUserTab] = useSessionState(
+    "users-tab",
+    "users",
+    (value): value is string =>
+      value === "users" || value === "pending" || value === "permissions" || value === "credentials",
+  );
   const { isLoading, users, pendingUsers, setIsCreateDialogOpen } = ctx;
 
   if (isLoading) {
@@ -97,7 +104,7 @@ export default function Users() {
         </Card>
       </div>
 
-      <Tabs defaultValue="users" data-testid="tabs-user-management">
+      <Tabs value={userTab} onValueChange={setUserTab} data-testid="tabs-user-management">
         <TabsList>
           <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
           <TabsTrigger value="pending" data-testid="tab-pending" className="gap-1.5">

@@ -2,11 +2,12 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { TaskDetailPanel } from "@/components/TaskDetailPanel";
 import type { User, Property } from "@shared/schema";
-import { exitTo } from "@/lib/navigation";
+import { useGoBack } from "@/hooks/useGoBack";
 
 export default function AdminTaskDetailPage() {
   const params = useParams<{ id: string }>();
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
+  const back = useGoBack();
   const taskId = params.id || location.split("/tasks/")[1]?.split("?")[0]?.split("/")[0] || "";
 
   const { data: allUsers = [] } = useQuery<User[]>({
@@ -25,7 +26,7 @@ export default function AdminTaskDetailPage() {
       <TaskDetailPanel
         taskId={taskId}
         isFullscreen={true}
-        onClose={() => exitTo(setLocation, "/work")}
+        onClose={back}
         onToggleFullscreen={() => {}}
         allUsers={allUsers}
         properties={properties}

@@ -210,21 +210,32 @@ export function getUserDisplayName(user: {
   return user.email || user.role || "Unknown";
 }
 
-/** Short, human-friendly task reference derived from the UUID (first 8 chars). */
+export type TaskDeleteScope = "one" | "series";
+
+export function taskOffersSeriesDelete(task: { taskType?: string | null } | null | undefined): boolean {
+  return task?.taskType === "recurring";
+}
+
+export function taskDeleteUrl(taskId: string, scope: TaskDeleteScope = "one"): string {
+  return scope === "series" ? `/api/tasks/${taskId}?scope=series` : `/api/tasks/${taskId}`;
+}
+
 export function taskDeleteWarning(task: {
   taskType?: string | null;
   recurringFrequency?: string | null;
   status?: string | null;
 }): string {
-  const stopsSeries =
-    task.taskType === "recurring" &&
-    !!task.recurringFrequency &&
-    task.status !== "completed";
-  if (stopsSeries) {
-    return "This recurring task will be deleted, and no future occurrence will be created.";
+  if (task.taskType === "recurring") {
+    const stopsSchedule = !!task.recurringFrequency && task.status !== "completed";
+    const scheduleNote = stopsSchedule
+      ? " Deleting it also stops the schedule, so another copy is not created."
+      : "";
+    return `Remove only this task, or this task and every other open copy of the same job. Finished copies stay.${scheduleNote}`;
   }
   return "This permanently removes the task, including its subtasks, notes, and attachments.";
 }
+
+/** Short, human-friendly task reference derived from the UUID (first 8 chars). */
 
 export function formatTaskReferenceId(taskId: string): string {
   if (!taskId) return "";

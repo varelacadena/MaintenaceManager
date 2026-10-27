@@ -59,6 +59,8 @@ export interface AnalyticsFilters {
   includeCost?: boolean;
   /** Team export keeps clock hours and recap counts only when this is true. */
   includeStudents?: boolean;
+  /** PDF prints up to two photos from each finished job when this is true. */
+  includePhotos?: boolean;
 }
 
 export interface DetailedWorkOrder {
@@ -755,7 +757,7 @@ export class AnalyticsService {
     const includeDetails = options.includeDetails !== false;
     const roleType = filters.roleType || "all";
     
-    let teamMembers;
+    let teamMembers: Array<typeof users.$inferSelect>;
     if (roleType === "technician") {
       teamMembers = await db
         .select()

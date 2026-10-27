@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSessionState } from "@/hooks/useSessionState";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   DragEndEvent,
@@ -84,9 +85,9 @@ async function invalidateResourceQueries(
 
 export function useResourceLibrary() {
   const { toast } = useToast();
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [search, setSearch] = useSessionState("resources-search", "");
+  const [typeFilter, setTypeFilter] = useSessionState("resources-type", "all");
+  const [categoryFilter, setCategoryFilter] = useSessionState("resources-category", "all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editResource, setEditResource] = useState<Resource | null>(null);
@@ -101,7 +102,7 @@ export function useResourceLibrary() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [currentFolderId, setCurrentFolderId] = useSessionState<string | null>("resources-folder", null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [editingFolder, setEditingFolder] = useState<ResourceFolder | null>(null);

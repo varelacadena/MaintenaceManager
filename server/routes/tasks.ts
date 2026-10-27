@@ -23,7 +23,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { toTaskListSummary } from "../taskDto";
-import { stopRecurringSeries } from "../recurringTaskScheduler";
+import { listSeriesDeleteTargets, stopRecurringSeries } from "../recurringTaskScheduler";
 import { assertLifeSafetyReadyToFinish, createLifeSafetyTask } from "../lifeSafetyRounds";
 import { LIFE_SAFETY_OPEN_MESSAGE } from "@shared/lifeSafety";
 import { validatePropertyExists } from "../facilityValidation";
@@ -756,7 +756,10 @@ export function registerTaskRoutes(app: Express) {
 
       if (updateData.status === "completed") {
         const currentTask = await storage.getTask(req.params.id);
-        if (currentTask?.requiresEstimate) {
+        if (!currentTask) {
+          return res.status(404).json({ message: "Task not found" });
+        }
+        if (currentTask.requiresEstimate) {
           const taskQuotes = await storage.getQuotesByTaskId(req.params.id);
           if (taskQuotes.length === 0) {
             return res.status(400).json({ message: "Submit an estimate before completing this task" });
@@ -765,11 +768,11 @@ export function registerTaskRoutes(app: Express) {
             return res.status(400).json({ message: "Estimates must be approved before completing this task" });
           }
         }
-        if (currentTask?.status !== "completed") {
+        if (currentTask.status !== "completed") {
           if (await rejectIfLifeSafetyOpen(res, currentTask)) {
             return;
           }
-          if (!currentTask?.lifeSafetyRound && await rejectIfWorkNoteRequired(res, req.params.id, currentUser.role)) {
+          if (!currentTask.lifeSafetyRound && await rejectIfWorkNoteRequired(res, req.params.id, currentUser.role)) {
             return;
           }
           if (await rejectIfPhotoRequired(res, req.params.id, currentUser.role, currentTask)) {
@@ -903,30 +906,51 @@ export function registerTaskRoutes(app: Express) {
   app.delete("/api/tasks/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const taskToDelete = await storage.getTask(req.params.id);
-      if (
-        taskToDelete?.taskType === "recurring" &&
-        taskToDelete.recurringFrequency &&
-        taskToDelete.status !== "completed"
-      ) {
+      if (!taskToDelete) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const scope = Array.isArray(req.query.scope) ? req.query.scope[0] : req.query.scope;
+      const deleteSeries = scope === "series" && taskToDelete.taskType === "recurring";
+      const stopSchedule =
+        taskToDelete.taskType === "recurring" &&
+        (deleteSeries || (!!taskToDelete.recurringFrequency && taskToDelete.status !== "completed"));
+
+      if (stopSchedule) {
         await stopRecurringSeries(taskToDelete);
       }
-      await storage.deleteTask(req.params.id);
 
-      if (taskToDelete?.projectId) {
-        await syncProjectStatusFromTasks(taskToDelete.projectId);
+      const targets = deleteSeries
+        ? await listSeriesDeleteTargets(taskToDelete)
+        : [{
+            id: taskToDelete.id,
+            projectId: taskToDelete.projectId,
+            requestId: taskToDelete.requestId,
+          }];
+
+      const projectIds = new Set<string>();
+      const requestIds = new Set<string>();
+      for (const target of targets) {
+        await storage.deleteTask(target.id);
+        if (target.projectId) projectIds.add(target.projectId);
+        if (target.requestId) requestIds.add(target.requestId);
       }
 
-      if (taskToDelete?.requestId) {
-        const stillLinked = await storage.getTaskByRequestId(taskToDelete.requestId);
+      for (const projectId of Array.from(projectIds)) {
+        await syncProjectStatusFromTasks(projectId);
+      }
+
+      for (const requestId of Array.from(requestIds)) {
+        const stillLinked = await storage.getTaskByRequestId(requestId);
         if (!stillLinked) {
-          const linkedRequest = await storage.getServiceRequest(taskToDelete.requestId);
+          const linkedRequest = await storage.getServiceRequest(requestId);
           if (linkedRequest?.status === "converted_to_task") {
-            await storage.updateServiceRequestStatus(taskToDelete.requestId, "under_review");
+            await storage.updateServiceRequestStatus(requestId, "under_review");
           }
         }
       }
 
-      res.json({ success: true });
+      res.json({ success: true, deleted: targets.length });
     } catch (error) {
       handleRouteError(res, error, "Failed to delete task");
     }

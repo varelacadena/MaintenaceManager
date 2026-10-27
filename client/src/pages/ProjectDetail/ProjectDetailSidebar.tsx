@@ -20,7 +20,7 @@ interface ProjectDetailSidebarProps {
   setRightTab: (tab: string) => void;
   comments?: ProjectComment[];
   commentsByDate: Record<string, ProjectComment[]>;
-  getSenderInfo: (senderId: string) => { name: string; initials: string };
+  getSenderInfo: (senderId: string | null) => { name: string; initials: string };
   getCommentAttachments: (commentId: string) => Upload[];
   getImageUrl: (upload: Upload) => string;
   commentText: string;
@@ -112,7 +112,7 @@ export function ProjectDetailSidebar({
                     return (
                       <div key={comment.id} className="flex gap-2 py-1.5" data-testid={`comment-${comment.id}`}>
                         <Avatar className="w-7 h-7 shrink-0">
-                          <AvatarFallback className={`${getAvatarColor(comment.senderId)} text-white text-xs font-medium`}>
+                          <AvatarFallback className={`${getAvatarColor(comment.senderId || comment.id)} text-white text-xs font-medium`}>
                             {sender.initials}
                           </AvatarFallback>
                         </Avatar>

@@ -7,6 +7,7 @@ export type TaskListSummary = {
   urgency: Task["urgency"];
   areaId: string | null;
   propertyId: string | null;
+  propertyIds: string[] | null;
   assignedToId: string | null;
   assignedVendorId: string | null;
   initialDate: Date | null;
@@ -35,6 +36,7 @@ export function toTaskListSummary(
     urgency: task.urgency,
     areaId: task.areaId,
     propertyId: task.propertyId,
+    propertyIds: task.propertyIds ?? null,
     assignedToId: task.assignedToId,
     assignedVendorId: task.assignedVendorId,
     initialDate: task.initialDate,

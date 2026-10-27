@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { statusColors, priorityColors } from "@/lib/constants";
 import { format } from "date-fns";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useProjectDetail } from "./useProjectDetail";
 import { ProjectTaskTableRow } from "./ProjectTaskTableRow";
 import { MobileTaskCard } from "./MobileTaskCard";
@@ -23,6 +24,7 @@ import { ProjectDetailDialogs } from "./ProjectDetailDialogs";
 import { ProjectDetailSidebar } from "./ProjectDetailSidebar";
 
 export default function ProjectDetail() {
+  const back = useGoBack();
   const ctx = useProjectDetail();
   const {
     user, isMobile, isAdmin, isLoading, projectId, project, tasks, analytics,
@@ -64,12 +66,10 @@ export default function ProjectDetail() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <h2 className="text-xl font-semibold">Project not found</h2>
-        <Link href="/work">
-          <Button variant="outline" className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Work
-          </Button>
-        </Link>
+        <Button variant="outline" className="mt-4" onClick={back}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
       </div>
     );
   }
@@ -87,7 +87,7 @@ export default function ProjectDetail() {
             <Edit className="w-4 h-4 mr-2" />
             Edit
           </Button>
-          <Link href={`/tasks/new?projectId=${projectId}`}>
+          <Link href={`/work?projectId=${projectId}`}>
             <Button data-testid="button-add-task">
               <Plus className="w-4 h-4 mr-2" />
               New task
@@ -179,7 +179,7 @@ export default function ProjectDetail() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle className="text-lg">Tasks</CardTitle>
-              <Link href={`/tasks/new?projectId=${projectId}`}>
+              <Link href={`/work?projectId=${projectId}`}>
                 <Button size="sm" data-testid="button-add-task-inline">
                   <Plus className="w-4 h-4 mr-1" />
                   Add task
