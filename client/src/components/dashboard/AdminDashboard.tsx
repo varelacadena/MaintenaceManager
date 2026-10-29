@@ -181,7 +181,7 @@ export default function AdminDashboard({
           </h1>
           <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
         </div>
-        <Link href="/work">
+        <Link href="/work#work-task-composer">
           <Button data-testid="button-new-task">
             <Plus className="w-4 h-4 mr-2" />
             New Task

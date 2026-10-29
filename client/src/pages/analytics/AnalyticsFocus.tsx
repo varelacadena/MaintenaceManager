@@ -78,6 +78,10 @@ interface WorkOrderOverview {
   completionRate: number;
   overdueWorkOrders: number;
   avgResolutionTimeHours: number;
+  laborCost: number;
+  partsCost: number;
+  storeCost: number;
+  totalCost: number;
   byStatus: { status: string; count: number }[];
   detailedRecords: {
     id: string;
@@ -140,6 +144,7 @@ function WorkOrderFocus({ query }: { query: string }) {
         <Figure label="On hold" value={String(data.onHoldWorkOrders)} />
         <Figure label="Past due" value={String(data.overdueWorkOrders)} />
         <Figure label="Avg hours to finish" value={String(data.avgResolutionTimeHours)} />
+        <Figure label="Total cost" value={data.totalCost.toLocaleString("en-US", { style: "currency", currency: "USD" })} />
       </div>
       <StatusPieChart data={data.byStatus} title="Status" formatStatusLabel={statusLabel} />
       <Card>

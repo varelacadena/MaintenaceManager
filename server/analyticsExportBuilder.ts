@@ -325,6 +325,14 @@ async function buildWorkOrdersSheets(filters: AnalyticsFilters, title: string): 
       ["Overdue (past due date, not completed)", wo.overdueWorkOrders, ""],
       ["Avg resolution time (hours)", wo.avgResolutionTimeHours, "Created → completed"],
       ["Avg response time (hours)", wo.avgResponseTimeHours, "Created → start"],
+      ...(filters.includeCost === false
+        ? []
+        : [
+            ["Labor cost", wo.laborCost, "Logged time at $15 an hour"],
+            ["Parts cost", wo.partsCost, "Inventory parts used on these jobs"],
+            ["Store cost", wo.storeCost, "Store purchases on these jobs"],
+            ["Total cost", wo.totalCost, "Labor, parts, and store purchases"],
+          ]),
     ],
   };
 
@@ -1645,6 +1653,19 @@ async function buildPdfBlocks(dataType: string, filters: AnalyticsFilters): Prom
             ["Avg response (hrs)", wo.avgResponseTimeHours, ""],
           ],
         },
+        ...(filters.includeCost === false
+          ? []
+          : [{
+              kind: "table" as const,
+              heading: "Cost",
+              rows: [
+                ["Amount", "Dollars", "What it includes"],
+                ["Labor", wo.laborCost, "Logged time at $15 an hour"],
+                ["Parts", wo.partsCost, "Inventory parts used on these jobs"],
+                ["Store purchases", wo.storeCost, "Purchases recorded on these jobs"],
+                ["Total", wo.totalCost, "Labor, parts, and store purchases. Receipts are not in this report."],
+              ],
+            }]),
         {
           kind: "table",
           heading: "By status",

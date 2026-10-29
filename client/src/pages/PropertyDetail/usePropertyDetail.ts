@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { equipmentKeys, fetchEquipmentList, invalidateEquipmentQueries } from "@/lib/equipmentQueries";
 import { buildStoredImageUrl, mapUploaderResultForRegistration } from "@/lib/uploadUtils";
 import { formatUserDisplayName, formatEquipmentDisplayName, resolveUserDisplayName } from "@/lib/displayNames";
+import { sortByName } from "@/lib/propertyDisplayUtils";
 import type { Property, Equipment, Task, InsertEquipment, InsertProperty, Space, InsertSpace, User as UserType } from "@shared/schema";
 import { insertEquipmentSchema, insertSpaceSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -163,7 +164,7 @@ export function usePropertyDetail() {
   }, [property, activeTab, setActiveTab]);
 
   const {
-    data: spaces = [],
+    data: loadedSpaces = [],
     isError: isSpacesError,
     refetch: refetchSpaces,
   } = useQuery<Space[]>({
@@ -174,6 +175,7 @@ export function usePropertyDetail() {
       return response.json();
     },
   });
+  const spaces = sortByName(loadedSpaces);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

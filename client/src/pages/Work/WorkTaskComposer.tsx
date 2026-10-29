@@ -16,6 +16,7 @@ import { invalidateTaskLists } from "@/lib/taskQueryInvalidation";
 import { dateInputValueToTaskTimestamp } from "@/lib/taskCalendarDates";
 import { getSignedUploadParameters, inferUploadFileType } from "@/lib/uploadUtils";
 import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
+import { sortByName } from "@/lib/propertyDisplayUtils";
 import { getUserDisplayName } from "@/utils/taskUtils";
 import type { Equipment, Project, Property, ServiceRequest, Space, User, Vendor } from "@shared/schema";
 
@@ -72,7 +73,7 @@ function propertyFace(ids: string[], properties: Property[]): string {
   return `${first} +${ids.length - 1}`;
 }
 
-export function WorkTaskComposer() {
+export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const acceptRef = useRef("image/*");
@@ -322,6 +323,7 @@ export function WorkTaskComposer() {
         variant: created.uploadFailed ? "destructive" : undefined,
       });
       reset();
+      onClose();
     },
     onError: (error: Error) => {
       toast({ title: "Could not create the task", description: error.message, variant: "destructive" });
@@ -519,7 +521,7 @@ export function WorkTaskComposer() {
           </PopoverTrigger>
           <PopoverContent align="end" className={`${menuClass} max-h-72 overflow-auto`}>
             <p className="px-2.5 py-1 text-xs text-muted-foreground">Check every property on this task</p>
-            {properties.map((property) => {
+            {sortByName(properties).map((property) => {
               const checked = propertyIds.includes(property.id);
               return (
                 <label key={property.id} className={`flex items-center gap-2 rounded-md border-l-2 px-2.5 py-2 text-sm ${checked ? "border-primary bg-muted" : "border-transparent"}`}>
@@ -631,7 +633,7 @@ export function WorkTaskComposer() {
                   <OptionList
                     title="Space"
                     selected={spaceId}
-                    options={[{ id: "", label: "None" }, ...spaces.map((space) => ({ id: space.id, label: space.name }))]}
+                    options={[{ id: "", label: "None" }, ...sortByName(spaces).map((space) => ({ id: space.id, label: space.name }))]}
                     onPick={setSpaceId}
                   />
                 ) : null}
@@ -639,7 +641,7 @@ export function WorkTaskComposer() {
                   <OptionList
                     title="Equipment"
                     selected={equipmentId}
-                    options={[{ id: "", label: "None" }, ...equipment.map((item) => ({ id: item.id, label: item.name }))]}
+                    options={[{ id: "", label: "None" }, ...sortByName(equipment).map((item) => ({ id: item.id, label: item.name }))]}
                     onPick={setEquipmentId}
                   />
                 ) : null}
@@ -678,11 +680,22 @@ export function WorkTaskComposer() {
             )}
           </PopoverContent>
         </Popover>
-
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 min-h-9 flex-1 rounded-lg px-2 text-xs sm:h-8 sm:min-h-8 sm:flex-none"
+          onClick={onClose}
+          data-testid="button-cancel-task"
+        >
+          Cancel
+        </Button>
         <Button
           type="button"
           size="sm"
-          className="h-9 min-h-9 w-full rounded-lg px-2 text-xs sm:h-8 sm:min-h-8 sm:w-auto"
+          className="h-9 min-h-9 flex-1 rounded-lg px-2 text-xs sm:h-8 sm:min-h-8 sm:flex-none"
           disabled={(!name.trim() && !lifeSafety) || createTask.isPending}
           onClick={() => createTask.mutate()}
           data-testid="button-submit"

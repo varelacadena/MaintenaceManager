@@ -10,6 +10,7 @@ import { registerInventoryRoutes } from "./routes/inventory";
 import { registerFacilityRoutes } from "./routes/facilities";
 import { registerServiceRequestRoutes } from "./routes/serviceRequests";
 import { registerTaskRoutes } from "./routes/tasks";
+import { registerTaskPurchaseRoutes } from "./routes/taskPurchases";
 import { registerLifeSafetyRoutes } from "./routes/lifeSafety";
 import { registerUploadRoutes } from "./routes/uploads";
 import { registerNotificationRoutes } from "./routes/notifications";
@@ -43,6 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerFacilityRoutes(app);
   registerServiceRequestRoutes(app);
   registerTaskRoutes(app);
+  registerTaskPurchaseRoutes(app);
   registerLifeSafetyRoutes(app);
   registerUploadRoutes(app);
   registerNotificationRoutes(app);

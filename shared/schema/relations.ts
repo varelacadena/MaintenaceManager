@@ -14,6 +14,7 @@ import {
   vehicleMaintenanceSchedules, vehicleDocuments,
 } from "./vehicles";
 import { inventoryItems, partsUsed } from "./inventory";
+import { taskPurchases } from "./purchases";
 import { notifications } from "./messaging";
 import { uploads, emergencyContacts } from "./misc";
 import {
@@ -188,6 +189,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   subTasks: many(tasks, { relationName: "task_subtasks" }),
   timeEntries: many(timeEntries),
   partsUsed: many(partsUsed),
+  taskPurchases: many(taskPurchases),
   taskNotes: many(taskNotes),
   uploads: many(uploads),
   checklistGroups: many(taskChecklistGroups),
@@ -201,6 +203,17 @@ export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
   }),
   user: one(users, {
     fields: [timeEntries.userId],
+    references: [users.id],
+  }),
+}));
+
+export const taskPurchasesRelations = relations(taskPurchases, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskPurchases.taskId],
+    references: [tasks.id],
+  }),
+  createdBy: one(users, {
+    fields: [taskPurchases.createdById],
     references: [users.id],
   }),
 }));

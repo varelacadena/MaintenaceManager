@@ -14,6 +14,7 @@ import {
   vehicleMaintenanceLogs,
   spaces,
   projects,
+  taskPurchases,
   studentTimeEntries,
   studentDailyRecaps,
 } from "@shared/schema";
@@ -105,6 +106,10 @@ export interface WorkOrderOverview {
   byTaskType: { taskType: string; count: number }[];
   byCategory: { category: string; count: number }[];
   byRequesterRole: { role: string; count: number }[];
+  laborCost: number;
+  partsCost: number;
+  storeCost: number;
+  totalCost: number;
   detailedRecords: DetailedWorkOrder[];
 }
 
@@ -680,6 +685,31 @@ export class AnalyticsService {
       count: Number(r.value),
     }));
 
+    const matchingTasks = await db.select({ id: tasks.id }).from(tasks).where(where);
+    const matchingIds = matchingTasks.map((row) => row.id);
+    let laborCost = 0;
+    let partsCost = 0;
+    let storeCost = 0;
+    if (matchingIds.length > 0) {
+      const [timeRow] = await db
+        .select({ minutes: sql<number>`coalesce(sum(${timeEntries.durationMinutes}), 0)` })
+        .from(timeEntries)
+        .where(inArray(timeEntries.taskId, matchingIds));
+      const [partsRow] = await db
+        .select({ cost: sql<number>`coalesce(sum(${partsUsed.cost}), 0)` })
+        .from(partsUsed)
+        .where(inArray(partsUsed.taskId, matchingIds));
+      const [storeRow] = await db
+        .select({ cost: sql<number>`coalesce(sum(${taskPurchases.amount}), 0)` })
+        .from(taskPurchases)
+        .where(inArray(taskPurchases.taskId, matchingIds));
+      const cents = (value: number) => Math.round(value * 100) / 100;
+      laborCost = cents((Number(timeRow?.minutes) || 0) / 60 * 15);
+      partsCost = cents(Number(partsRow?.cost) || 0);
+      storeCost = cents(Number(storeRow?.cost) || 0);
+    }
+    const totalCost = Math.round((laborCost + partsCost + storeCost) * 100) / 100;
+
     let detailedRecords: DetailedWorkOrder[] = [];
     if (includeDetails) {
       const usersList = await db.select().from(users);
@@ -746,6 +776,10 @@ export class AnalyticsService {
         role: REQUESTER_ROLE_LABELS[r.role] ?? formatTaskTypeLabel(r.role),
         count: r.count,
       })),
+      laborCost,
+      partsCost,
+      storeCost,
+      totalCost,
       detailedRecords,
     };
   }
@@ -943,7 +977,7 @@ export class AnalyticsService {
 
       const partsCost = equipmentParts.reduce((sum, p) => sum + (p.cost || 0), 0);
       const laborHours = equipmentTime.reduce((sum, te) => sum + (te.durationMinutes || 0), 0) / 60;
-      const laborCost = laborHours * 50;
+      const laborCost = laborHours * 15;
 
       const lastTask = equipmentTasks
         .filter(t => t.status === "completed" && t.actualCompletionDate)
@@ -957,7 +991,7 @@ export class AnalyticsService {
         const taskPartsCost = taskParts.reduce((sum, p) => sum + (p.cost || 0), 0);
         const taskLaborMinutes = taskTime.reduce((sum, te) => sum + (te.durationMinutes || 0), 0);
         const taskLaborHours = taskLaborMinutes / 60;
-        const taskLaborCost = taskLaborHours * 50;
+        const taskLaborCost = taskLaborHours * 15;
 
         const rawServiceDate = task.actualCompletionDate || task.initialDate;
 
@@ -1048,7 +1082,7 @@ export class AnalyticsService {
 
       const partsCost = propertyParts.reduce((sum, p) => sum + (p.cost || 0), 0);
       const laborHours = propertyTime.reduce((sum, te) => sum + (te.durationMinutes || 0), 0) / 60;
-      const laborCost = laborHours * 50;
+      const laborCost = laborHours * 15;
 
       const workOrderDetails: FacilityWorkOrder[] = includeDetails
         ? propertyTasks
@@ -1331,6 +1365,10 @@ export class AnalyticsService {
         data.push(["Overdue:", String(completeData.overdueWorkOrders), "", "", "", "", "", "", "", "", "", ""]);
         data.push(["Avg Resolution Time:", `${completeData.avgResolutionTimeHours} hours`, "", "", "", "", "", "", "", "", "", ""]);
         data.push(["Avg Response Time:", `${completeData.avgResponseTimeHours} hours`, "", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Labor cost:", completeData.laborCost.toFixed(2), "Logged time at $15 an hour", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Parts cost:", completeData.partsCost.toFixed(2), "Inventory parts", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Store cost:", completeData.storeCost.toFixed(2), "Store purchases", "", "", "", "", "", "", "", "", ""]);
+        data.push(["Total cost:", completeData.totalCost.toFixed(2), "Labor, parts, and store purchases", "", "", "", "", "", "", "", "", ""]);
         data.push(["", "", "", "", "", "", "", "", "", "", "", ""]);
         
         data.push(["=== STATUS BREAKDOWN ===", "Count", "Percentage", "", "", "", "", "", "", "", "", ""]);

@@ -3,6 +3,7 @@ import { format, parse } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sortByName } from "@/lib/propertyDisplayUtils";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +35,7 @@ const AREAS: { id: ReportTab; label: string }[] = [
   { id: "requests", label: "Requests" },
   { id: "alerts", label: "Alerts" },
   { id: "projects", label: "Projects" },
+  { id: "purchases", label: "Purchases" },
 ];
 
 const VIEWS: { id: AnalyticsView; label: string }[] = [
@@ -99,7 +101,7 @@ function BuildingPicker({
       </PopoverTrigger>
       <PopoverContent className="w-[min(18rem,calc(100vw-1.5rem))] p-2" align="start" collisionPadding={12}>
         <div className="max-h-[min(16rem,50vh)] overflow-auto space-y-1">
-          {properties.map((property) => {
+          {sortByName(properties).map((property) => {
             const checked = selected.includes(property.id);
             return (
               <label key={property.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent">
@@ -334,6 +336,7 @@ export default function AnalyticsToolbar() {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 items-end gap-2 md:flex md:flex-wrap">
+        {activeTab !== "purchases" && (
         <Field label="View" testId="analytics-view">
           <Select value={view} onValueChange={(value) => setView(value as AnalyticsView)}>
             <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[10.5rem]">
@@ -348,6 +351,7 @@ export default function AnalyticsToolbar() {
             </SelectContent>
           </Select>
         </Field>
+        )}
         <Field label="Area" testId="analytics-area">
           <Select value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
             <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[11.5rem]">

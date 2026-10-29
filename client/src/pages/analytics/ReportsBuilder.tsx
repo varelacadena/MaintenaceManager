@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -66,8 +67,105 @@ function SheetPicker({
   );
 }
 
+function money(value: number): string {
+  return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
+function ReportPreview({
+  view,
+  activeTab,
+  query,
+  period,
+  buildings,
+  sheets,
+  includeCharts,
+  includeCost,
+  includePhotos,
+}: {
+  view: "xlsx" | "pdf";
+  activeTab: string;
+  query: string;
+  period: string;
+  buildings: string;
+  sheets: string[];
+  includeCharts: boolean;
+  includeCost: boolean;
+  includePhotos: boolean;
+}) {
+  const workOrders = activeTab === "work-orders";
+  const { data } = useQuery({
+    queryKey: ["/api/analytics/work-orders", "preview", query],
+    enabled: workOrders,
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/work-orders?${query}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not preview the report");
+      return response.json() as Promise<{
+        totalWorkOrders: number;
+        completedWorkOrders: number;
+        overdueWorkOrders: number;
+        laborCost: number;
+        partsCost: number;
+        storeCost: number;
+        totalCost: number;
+      }>;
+    },
+  });
+
+  const lines: { label: string; value: string }[] = [
+    { label: "Period", value: period },
+    { label: "Buildings", value: buildings },
+  ];
+  if (workOrders && data) {
+    lines.push(
+      { label: "Work orders", value: String(data.totalWorkOrders) },
+      { label: "Completed", value: String(data.completedWorkOrders) },
+      { label: "Past due", value: String(data.overdueWorkOrders) },
+    );
+    if (view === "xlsx" || includeCost) {
+      lines.push(
+        { label: "Labor", value: money(data.laborCost) },
+        { label: "Parts", value: money(data.partsCost) },
+        { label: "Store purchases", value: money(data.storeCost) },
+        { label: "Total cost", value: money(data.totalCost) },
+      );
+    }
+  }
+
+  const pieces = view === "xlsx"
+    ? sheets
+    : [
+        "Cover and written summary",
+        ...(includeCharts ? ["Charts"] : []),
+        ...(includeCost ? ["Cost totals"] : []),
+        ...(includePhotos ? ["Photos from finished jobs"] : []),
+      ];
+
+  return (
+    <div className="rounded-lg border border-border p-3 space-y-3" data-testid="report-preview">
+      <p className="text-sm font-medium">Preview for these filters</p>
+      <ul className="space-y-1.5">
+        {lines.map((line) => (
+          <li key={line.label} className="flex items-start justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">{line.label}</span>
+            <span className="text-right font-medium break-words">{line.value}</span>
+          </li>
+        ))}
+      </ul>
+      <div>
+        <p className="text-[11px] font-medium text-muted-foreground mb-1">
+          {view === "xlsx" ? "Sheets in the file" : "Sections in the PDF"}
+        </p>
+        <p className="text-sm break-words">{pieces.join(" · ")}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function ReportsBuilder() {
   const { activeTab, view, filters, buildQueryString, roleFilter } = useAnalyticsFilters();
+  const { data: properties = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/properties"],
+  });
   const { toast } = useToast();
   const sheets = SHEETS_BY_TAB[activeTab];
   const [selected, setSelected] = useState<string[]>(sheets);
@@ -93,6 +191,21 @@ export default function ReportsBuilder() {
     return "Active in the period";
   }, [filters.dateBasis]);
 
+  const period = TASK_DATE_TABS.includes(activeTab)
+    ? `${basisLabel}${filters.startDate || filters.endDate ? `, ${filters.startDate || "…"} to ${filters.endDate || "…"}` : ", all dates"}`
+    : filters.startDate || filters.endDate
+      ? `${filters.startDate || "…"} to ${filters.endDate || "…"}`
+      : "All dates";
+  const selectedBuildings = filters.propertyId ? filters.propertyId.split(",").filter(Boolean) : [];
+  const buildings = selectedBuildings.length === 0
+    ? "All buildings"
+    : selectedBuildings
+        .map((id) => properties.find((property) => property.id === id)?.name ?? "1 building")
+        .join(", ");
+  const previewQuery = buildQueryString(
+    activeTab === "technicians" && roleFilter !== "all" ? { roleType: roleFilter } : undefined,
+  );
+
   const download = async () => {
     setBusy(true);
     try {
@@ -103,7 +216,7 @@ export default function ReportsBuilder() {
         params.set("sheets", selected.join(","));
       }
       if (view === "pdf" && !includeCharts) params.set("charts", "0");
-      if (!includeCost) params.set("cost", "0");
+      if (view === "pdf" && !includeCost) params.set("cost", "0");
       if (activeTab === "technicians" && includeStudents) params.set("students", "1");
       if (view === "pdf" && includePhotos && (activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities")) {
         params.set("photos", "1");
@@ -200,6 +313,17 @@ export default function ReportsBuilder() {
           Student hours and recaps
         </label>
       )}
+      <ReportPreview
+        view={view === "pdf" ? "pdf" : "xlsx"}
+        activeTab={activeTab}
+        query={previewQuery}
+        period={period}
+        buildings={buildings}
+        sheets={view === "xlsx" ? selected : []}
+        includeCharts={includeCharts}
+        includeCost={includeCost}
+        includePhotos={includePhotos && (activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities")}
+      />
       <Button type="button" className="h-11 w-full md:h-10 md:w-auto" onClick={() => void download()} disabled={busy || (view === "xlsx" && selected.length === 0)} data-testid="report-download">
         {busy ? "Preparing…" : view === "pdf" ? "Download PDF" : "Download spreadsheet"}
       </Button>

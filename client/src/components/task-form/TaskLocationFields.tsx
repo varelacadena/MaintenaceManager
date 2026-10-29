@@ -101,6 +101,7 @@ export function TaskLocationFields({
     .map((a) => a.id);
 
   const sortedProperties = sortByName(properties);
+  const sortedEquipment = sortByName(equipment);
   const filteredProperties = propertySearch.trim()
     ? sortedProperties.filter((p) => propertyMatchesSearch(p, propertySearch))
     : sortedProperties;
@@ -523,7 +524,7 @@ export function TaskLocationFields({
                         </SelectItem>
                       )}
                       <SelectItem value="__none__">None</SelectItem>
-                      {equipment
+                      {sortedEquipment
                         .filter((item) => !alreadySelectedEquipmentIds.includes(item.id))
                         .map((item) => (
                           <SelectItem key={item.id} value={item.id}>
@@ -594,7 +595,7 @@ export function TaskLocationFields({
                             </SelectItem>
                           )}
                           <SelectItem value="__none__">None</SelectItem>
-                          {equipment.map((item) => (
+                          {sortedEquipment.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.name}
                             </SelectItem>

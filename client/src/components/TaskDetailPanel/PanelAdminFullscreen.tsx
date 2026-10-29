@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +18,8 @@ import {
   Plus,
   MoreVertical,
   MapPin,
+  Printer,
+  Receipt,
   User as UserIcon,
   Play,
   Loader2,
@@ -48,6 +50,8 @@ import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
 import { PanelFileInput } from "./PanelFileInput";
 import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
 import { EditableDateCell } from "@/components/EditableDateCell";
+import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
+import { StoreRunPanel } from "@/components/StoreRuns";
 import { TaskDetailPanelDialogs } from "./TaskDetailPanelDialogs";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { Link } from "wouter";
@@ -139,6 +143,7 @@ function getPropertyCoordinates(property?: Property | null): { lat: number; lng:
 
 export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAdminFullscreenProps) {
   const { toast } = useToast();
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const {
     isMobile, task, subtasks, uploads, taskParts, taskNotes,
     timeEntries, totalMinutes, statusPill, statusDot, statusLabel,
@@ -249,6 +254,18 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                 <ArrowLeft className="w-4 h-4 shrink-0" />
                 <span className="truncate">Back</span>
               </button>
+              {task.status === "completed" && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={() => setSummaryOpen(true)}
+                  aria-label="Print summary"
+                  data-testid="button-print-task"
+                >
+                  <Printer className="w-4 h-4" />
+                </Button>
+              )}
               {adminActionsMenu}
             </div>
           )}
@@ -314,6 +331,17 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                   >
                     {updateStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                     Complete Task
+                  </Button>
+                )}
+                {task.status === "completed" && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSummaryOpen(true)}
+                    aria-label="Print summary"
+                    data-testid="button-print-task"
+                  >
+                    <Printer className="w-4 h-4" />
                   </Button>
                 )}
                 <Button variant="outline" className="gap-2" onClick={() => setIsEditMode(true)} data-testid="button-admin-edit">
@@ -500,6 +528,13 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
                   ))}
                 </ul>
               )}
+            </DossierCard>
+
+            <DossierCard
+              title="Store runs"
+              icon={<Receipt className="w-4 h-4" />}
+            >
+              <StoreRunPanel taskId={task.id} />
             </DossierCard>
 
             <DossierCard
@@ -800,6 +835,11 @@ export function PanelAdminFullscreen({ ctx, onClose, allUsers, taskId }: PanelAd
 
       <PanelFileInput fileInputRef={fileInputRef} onChange={handleFileUpload} />
       <TaskDetailPanelDialogs ctx={ctx} />
+      <CompletedTaskSummary
+        taskId={task.id}
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+      />
     </div>
   );
 }

@@ -20,7 +20,8 @@ export type ReportTab =
   | "inventory"
   | "requests"
   | "alerts"
-  | "projects";
+  | "projects"
+  | "purchases";
 
 export type RoleFilter = "all" | "technician" | "student";
 
@@ -35,6 +36,7 @@ const VALID_TABS: ReportTab[] = [
   "requests",
   "alerts",
   "projects",
+  "purchases",
 ];
 
 export type AnalyticsView = "analytics" | "xlsx" | "pdf";

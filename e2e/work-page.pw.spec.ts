@@ -19,6 +19,8 @@ test.describe("Work page – admin", () => {
     await expect(page.getByTestId("text-page-title")).toHaveText("Work");
     await expect(page.getByTestId("input-search-work")).toBeVisible();
     await expect(page.getByTestId("button-filters")).toBeVisible();
+    await expect(page.getByTestId("work-task-composer")).toBeHidden();
+    await page.getByTestId("button-new-task").click();
     await expect(page.getByTestId("work-task-composer")).toBeVisible();
   });
 

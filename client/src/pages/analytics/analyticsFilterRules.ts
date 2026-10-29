@@ -87,6 +87,11 @@ export const TAB_FILTER_RULES: Record<ReportTab, TabFilterRules> = {
     allowedUrgencies: PROJECT_PRIORITY_VALUES,
     allowTechnician: false,
   },
+  purchases: {
+    allowedStatuses: null,
+    allowedUrgencies: null,
+    allowTechnician: false,
+  },
 };
 
 function isAllowed(value: string, allowed: readonly string[] | null): boolean {

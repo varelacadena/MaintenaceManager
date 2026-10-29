@@ -436,6 +436,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>(remembered?.openProjects ?? {});
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
   const [filtersPlace, setFiltersPlace] = useState<{ top: number; right: number; wide: boolean; maxHeight: number } | null>(null);
@@ -443,6 +444,18 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
   useEffect(() => {
     saveWorkListView({ statuses, collapsedStacks, overdueOnly, techIds, propertyIds, openProjects });
   }, [statuses, collapsedStacks, overdueOnly, techIds, propertyIds, openProjects]);
+
+  useEffect(() => {
+    const openIfAsked = () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("requestId") || params.get("projectId") || window.location.hash === "#work-task-composer") {
+        setComposerOpen(true);
+      }
+    };
+    openIfAsked();
+    window.addEventListener("hashchange", openIfAsked);
+    return () => window.removeEventListener("hashchange", openIfAsked);
+  }, []);
 
   useEffect(() => {
     if (!filtersOpen) return;
@@ -603,6 +616,17 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold md:text-2xl" data-testid="text-page-title">Work</h1>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 min-h-8 rounded-full px-3 text-xs sm:h-9 sm:min-h-9 sm:px-4 sm:text-sm"
+            aria-expanded={composerOpen}
+            data-testid="button-new-task"
+            onClick={() => setComposerOpen((open) => !open)}
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            New
+          </Button>
           <Button type="button" variant="outline" size="sm" className="h-8 min-h-8 rounded-full px-3 text-xs sm:h-9 sm:min-h-9 sm:px-4 sm:text-sm" onClick={() => setProjectDialogOpen(true)} data-testid="button-new-project">
             <Plus className="mr-1 h-3.5 w-3.5" />
             Project
@@ -611,7 +635,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
       </div>
 
       <div className="min-w-0 rounded-xl border bg-card">
-        <WorkTaskComposer />
+        {composerOpen ? <WorkTaskComposer onClose={() => setComposerOpen(false)} /> : null}
         <div className="flex flex-wrap items-center gap-2 p-3">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

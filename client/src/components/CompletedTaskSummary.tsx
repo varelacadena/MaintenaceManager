@@ -32,7 +32,7 @@ import {
   ChevronRight,
   StickyNote,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid, parse } from "date-fns";
 import type {
   Task,
   TimeEntry,
@@ -44,6 +44,7 @@ import type {
   User as UserType,
   Vehicle,
   TaskNote,
+  TaskPurchase,
 } from "@shared/schema";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -164,6 +165,12 @@ function SummaryContent({
     enabled: !!taskId,
   });
 
+  const canSeePurchases = user?.role === "admin" || user?.role === "technician";
+  const { data: purchases = [] } = useQuery<TaskPurchase[]>({
+    queryKey: ["/api/tasks", taskId, "purchases"],
+    enabled: !!taskId && canSeePurchases,
+  });
+
   const { data: uploads = [] } = useQuery<Upload[]>({
     queryKey: ["/api/uploads/task", taskId],
     enabled: !!taskId,
@@ -210,11 +217,15 @@ function SummaryContent({
 
   const totalMinutes = timeEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
 
-  const partsCost = parts.reduce((sum, p) => sum + (p.cost * parseFloat(String(p.quantity))), 0);
+  // Stored part cost is already the line total (unit price × quantity).
+  const partsCost = parts.reduce((sum, part) => sum + (part.cost || 0), 0);
+  const purchasesCost = purchases.reduce((sum, purchase) => sum + (Number(purchase.amount) || 0), 0);
+  // Same rate the facilities and asset reports use.
+  const laborRate = 15;
+  const laborCost = (totalMinutes / 60) * laborRate;
+  const jobCost = partsCost + laborCost + purchasesCost;
 
   const approvedQuote = quotes.find(q => q.status === "approved");
-  const quoteCost = approvedQuote?.estimatedCost || 0;
-  const totalCost = partsCost + quoteCost;
 
   const imageUploads = uploads.filter(u => isImageFile(u.fileType));
   const documentUploads = uploads.filter(u => !isImageFile(u.fileType));
@@ -344,6 +355,84 @@ function SummaryContent({
         </CardContent>
       </Card>
 
+      {showCost && (
+        <Card data-testid="section-cost">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              Cost
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3" data-testid="text-labor-cost">
+                <span className="text-muted-foreground">Labor · {formatDuration(totalMinutes)} at ${laborRate}/hour</span>
+                <span>${laborCost.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3" data-testid="text-parts-cost">
+                <span className="text-muted-foreground">Parts</span>
+                <span>${partsCost.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3" data-testid="text-purchases-cost">
+                <span className="text-muted-foreground">Store runs</span>
+                <span>${purchasesCost.toFixed(2)}</span>
+              </div>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between text-base font-semibold" data-testid="text-job-cost">
+              <span>Total</span>
+              <span>${jobCost.toFixed(2)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {canSeePurchases && purchases.length > 0 && (
+        <Card data-testid="section-store-runs-summary">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              Store runs
+            </h3>
+            <div className="space-y-3">
+              {purchases.map((purchase) => {
+                const day = parse(purchase.purchasedOn, "yyyy-MM-dd", new Date());
+                return (
+                  <div key={purchase.id} className="text-sm" data-testid={`summary-store-run-${purchase.id}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium break-words">{purchase.storeName}</p>
+                        <p className="text-muted-foreground break-words">{purchase.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isValid(day) ? format(day, "MMM d, yyyy") : purchase.purchasedOn}
+                        </p>
+                      </div>
+                      <p className="font-medium shrink-0">${Number(purchase.amount).toFixed(2)}</p>
+                    </div>
+                    {purchase.receiptObjectPath && (
+                      purchase.receiptFileType?.startsWith("image/") ? (
+                        <img
+                          src={`/api/task-purchases/${purchase.id}/receipt`}
+                          alt={purchase.receiptFileName || "Receipt"}
+                          className="mt-2 max-h-48 rounded-md border border-border"
+                        />
+                      ) : (
+                        <a
+                          href={`/api/task-purchases/${purchase.id}/receipt`}
+                          className="text-xs text-primary underline"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {purchase.receiptFileName || "Receipt"}
+                        </a>
+                      )
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {timeEntries.length > 0 && (
         <Card data-testid="section-time">
           <CardContent className="p-4 space-y-3">
@@ -461,8 +550,9 @@ function SummaryContent({
                 )}
               </div>
               {parts.map((part) => {
-                const qty = parseFloat(String(part.quantity));
-                const lineTotal = part.cost * qty;
+                const qty = parseFloat(String(part.quantity)) || 0;
+                const lineTotal = part.cost || 0;
+                const unitCost = qty > 0 ? lineTotal / qty : lineTotal;
                 return (
                   <div
                     key={part.id}
@@ -477,7 +567,7 @@ function SummaryContent({
                     <span className="text-right">{qty}</span>
                     {showCost && (
                       <>
-                        <span className="text-right">${part.cost.toFixed(2)}</span>
+                        <span className="text-right">${unitCost.toFixed(2)}</span>
                         <span className="text-right font-medium">${lineTotal.toFixed(2)}</span>
                       </>
                     )}
@@ -516,13 +606,6 @@ function SummaryContent({
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {showCost && (parts.length > 0 || approvedQuote) && (
-        <div className="flex items-center justify-between px-1 text-base font-semibold" data-testid="text-grand-total">
-          <span>Grand Total</span>
-          <span>${totalCost.toFixed(2)}</span>
-        </div>
       )}
 
       {(imageUploads.length > 0 || documentUploads.length > 0) && (

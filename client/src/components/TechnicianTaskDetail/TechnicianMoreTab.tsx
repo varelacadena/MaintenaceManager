@@ -17,6 +17,7 @@ import { toDisplayUrl } from "@/lib/imageUtils";
 import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import type { Task, PartUsed, Quote, Equipment } from "@shared/schema";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
+import { StoreRunMoreRow } from "@/components/StoreRuns";
 
 const EQUIPMENT_CATEGORY_LABELS: Record<string, string> = {
   hvac: "HVAC", electrical: "Electrical", plumbing: "Plumbing",
@@ -280,6 +281,8 @@ export function TechnicianMoreTab({
           </span>
           <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
         </button>
+
+        <StoreRunMoreRow taskId={task.id} />
 
         {previousWork.length > 0 && (
           <button

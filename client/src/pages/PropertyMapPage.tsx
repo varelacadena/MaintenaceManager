@@ -67,6 +67,9 @@ const typeConfig: Record<PropertyType, { icon: typeof Building2; label: string; 
 };
 
 const allTypes = Object.keys(typeConfig) as PropertyType[];
+const typesByName = [...allTypes].sort((a, b) =>
+  typeConfig[a].label.localeCompare(typeConfig[b].label, undefined, { sensitivity: "base" }),
+);
 
 type SortKey = "name" | "type" | "lastWorkDate" | "equipmentCount";
 
@@ -311,7 +314,7 @@ export default function PropertyMapPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    {allTypes.map((type) => {
+                    {typesByName.map((type) => {
                       const cfg = typeConfig[type];
                       const Icon = cfg.icon;
                       return (
@@ -557,13 +560,9 @@ export default function PropertyMapPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="building">Building</SelectItem>
-                        <SelectItem value="lawn">Lawn</SelectItem>
-                        <SelectItem value="parking">Parking</SelectItem>
-                        <SelectItem value="recreation">Recreation</SelectItem>
-                        <SelectItem value="utility">Utility</SelectItem>
-                        <SelectItem value="road">Road</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {typesByName.map((type) => (
+                          <SelectItem key={type} value={type}>{typeConfig[type].label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

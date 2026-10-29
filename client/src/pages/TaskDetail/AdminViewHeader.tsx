@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Globe,
+  Printer,
   Users,
   ArrowLeft,
 } from "lucide-react";
@@ -72,6 +73,18 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
             </p>
           </div>
 
+          {task.status === "completed" && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={() => setSummaryTaskId(task.id)}
+              aria-label="Print summary"
+              data-testid="button-print-task"
+            >
+              <Printer className="w-4 h-4" />
+            </Button>
+          )}
           {isTechnicianOrAdmin && (
             <>
               <Button

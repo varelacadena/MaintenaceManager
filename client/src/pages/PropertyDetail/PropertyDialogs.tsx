@@ -147,13 +147,17 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="building">Building</SelectItem>
-                        <SelectItem value="lawn">Lawn</SelectItem>
-                        <SelectItem value="parking">Parking</SelectItem>
-                        <SelectItem value="recreation">Recreation</SelectItem>
-                        <SelectItem value="utility">Utility</SelectItem>
-                        <SelectItem value="road">Road</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {[
+                          ["building", "Building"],
+                          ["lawn", "Lawn"],
+                          ["other", "Other"],
+                          ["parking", "Parking"],
+                          ["recreation", "Recreation"],
+                          ["road", "Road"],
+                          ["utility", "Utility"],
+                        ].map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -242,7 +246,9 @@ export function PropertyDialogs({ ctx }: { ctx: PropertyDetailContext }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {EQUIPMENT_CATEGORIES.map((cat) => (
+                        {[...EQUIPMENT_CATEGORIES]
+                          .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+                          .map((cat) => (
                           <SelectItem key={cat.slug} value={cat.slug}>{cat.label}</SelectItem>
                         ))}
                       </SelectContent>
