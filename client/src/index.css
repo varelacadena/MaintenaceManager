@@ -450,3 +450,48 @@
   border: none !important;
   padding: 0 !important;
 }
+
+/* The completed-task report is copied out of the side panel before print
+   so a fixed, viewport-height sheet cannot clip it to one screen. */
+#task-summary-print-root {
+  display: none;
+}
+
+@media print {
+  body.printing-task-summary {
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+  }
+
+  body.printing-task-summary > *:not(#task-summary-print-root) {
+    display: none !important;
+  }
+
+  body.printing-task-summary #task-summary-print-root {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #task-summary-print-root * {
+    color: #111827 !important;
+  }
+
+  #task-summary-print-root img {
+    max-width: 100% !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #task-summary-print-root .print\:hidden {
+    display: none !important;
+  }
+}

@@ -110,7 +110,6 @@ const cacheableReferenceApiPaths = new Set([
   "/api/areas",
   "/api/properties",
   "/api/resource-categories",
-  "/api/resource-folders",
 ]);
 
 // Keep mutable API responses fresh, but allow short private caching for stable reference data.

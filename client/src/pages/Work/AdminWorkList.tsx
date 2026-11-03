@@ -802,7 +802,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
           );
           return (
             <section key={stack} className="bg-muted/30" data-testid={`group-${stack}`}>
-              <div className={`sticky top-0 z-10 border-t border-b-2 bg-muted/60 ${WORK_STACK_LINE[stack]}`}>
+              <div className={`border-t border-b-2 bg-muted ${WORK_STACK_LINE[stack]}`}>
                 <WorkStatusGroupHeader
                   statusKey={stack}
                   label={WORK_STATUS_LABEL[stack]}

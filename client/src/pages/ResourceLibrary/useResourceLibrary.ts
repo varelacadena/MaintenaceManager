@@ -152,33 +152,31 @@ export function useResourceLibrary() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (currentFolderId) params.set("parentId", currentFolderId);
-      const res = await fetch(`/api/resource-folders?${params.toString()}`, { credentials: "include" });
+      const res = await fetch(`/api/resource-folders?${params.toString()}`, { credentials: "include", cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch folders");
       return res.json();
     },
-    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: folderDetail, isError: isFolderDetailError, refetch: refetchFolderDetail } = useQuery<ResourceFolder & { breadcrumbs: { id: string; name: string }[] }>({
+  const { data: folderDetail, isError: isFolderDetailError, isFetched: isFolderDetailFetched, refetch: refetchFolderDetail } = useQuery<(ResourceFolder & { breadcrumbs: { id: string; name: string }[] }) | null>({
     queryKey: ["/api/resource-folders", "detail", currentFolderId],
     queryFn: async () => {
-      const res = await fetch(`/api/resource-folders/${currentFolderId}`, { credentials: "include" });
+      const res = await fetch(`/api/resource-folders/${currentFolderId}`, { credentials: "include", cache: "no-store" });
+      if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch folder");
       return res.json();
     },
     enabled: !!currentFolderId,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { data: allFolders = [] } = useQuery<ResourceFolder[]>({
     queryKey: ["/api/resource-folders", "all"],
     queryFn: async () => {
-      const res = await fetch(`/api/resource-folders?all=true`, { credentials: "include" });
+      const res = await fetch(`/api/resource-folders?all=true`, { credentials: "include", cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch folders");
       return res.json();
     },
     enabled: dialogOpen,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
@@ -197,6 +195,12 @@ export function useResourceLibrary() {
     const selected = allEquipment.find((item) => item.id === editResource.equipmentId);
     if (selected) setEquipmentSearch(selected.name);
   }, [editResource?.equipmentId, allEquipment]);
+
+  useEffect(() => {
+    if (!currentFolderId || !isFolderDetailFetched || folderDetail !== null) return;
+    setCurrentFolderId(null);
+    toast({ title: "That folder is no longer available", description: "Showing the library root." });
+  }, [currentFolderId, folderDetail, isFolderDetailFetched, setCurrentFolderId, toast]);
 
   const createCategoryMutation = useMutation({
     mutationFn: (data: { name: string; color: string }) =>
@@ -263,14 +267,28 @@ export function useResourceLibrary() {
   const createFolderMutation = useMutation({
     mutationFn: (data: { name: string; parentId: string | null }) =>
       apiRequest("POST", "/api/resource-folders", data),
-    onSuccess: async () => {
+    onSuccess: async (response, variables) => {
+      const created = (await response.json()) as ResourceFolder;
+      queryClient.setQueryData<ResourceFolder[]>(
+        ["/api/resource-folders", variables.parentId],
+        (current) => {
+          const list = current ?? [];
+          return list.some((folder) => folder.id === created.id) ? list : [...list, created];
+        },
+      );
       setFolderDialogOpen(false);
       setFolderName("");
       setEditingFolder(null);
+      setSearch("");
       toast({ title: "Folder created" });
       await queryClient.invalidateQueries({ queryKey: ["/api/resource-folders"] });
     },
-    onError: () => toast({ title: "Failed to create folder", variant: "destructive" }),
+    onError: (error: Error) =>
+      toast({
+        title: "Failed to create folder",
+        description: error.message,
+        variant: "destructive",
+      }),
   });
 
   const updateFolderMutation = useMutation({

@@ -46,7 +46,7 @@ import type {
   TaskNote,
   TaskPurchase,
 } from "@shared/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 import { urgencyBadgeStyles as urgencyColors, statusBadgeStyles as statusColors, statusLabels, formatTaskReferenceId, getUserDisplayName } from "@/utils/taskUtils";
@@ -69,31 +69,94 @@ function isImageFile(fileType: string): boolean {
   return fileType.startsWith("image/");
 }
 
+const TASK_SUMMARY_PRINT_ROOT_ID = "task-summary-print-root";
+
+function mountTaskSummaryPrintRoot() {
+  const source = document.querySelector<HTMLElement>("[data-print-summary] .task-summary-body");
+  if (!source) return;
+  let mount = document.getElementById(TASK_SUMMARY_PRINT_ROOT_ID);
+  if (!mount) {
+    mount = document.createElement("div");
+    mount.id = TASK_SUMMARY_PRINT_ROOT_ID;
+    mount.setAttribute("aria-hidden", "true");
+    document.body.appendChild(mount);
+  }
+  if (mount.innerHTML !== source.innerHTML) {
+    mount.innerHTML = source.innerHTML;
+  }
+  document.body.classList.add("printing-task-summary");
+}
+
+function removeTaskSummaryPrintRoot() {
+  document.getElementById(TASK_SUMMARY_PRINT_ROOT_ID)?.remove();
+  document.body.classList.remove("printing-task-summary");
+}
+
 export function CompletedTaskSummary({ taskId, open, onOpenChange }: CompletedTaskSummaryProps) {
   const { downloadFile } = useFileDownload();
   const [subSummaryTaskId, setSubSummaryTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      removeTaskSummaryPrintRoot();
+      return;
+    }
+
+    let observer: MutationObserver | null = null;
+    let attempts = 0;
+
+    const sync = () => {
+      mountTaskSummaryPrintRoot();
+      if (observer) return;
+      const source = document.querySelector("[data-print-summary] .task-summary-body");
+      if (!source) return;
+      observer = new MutationObserver(() => mountTaskSummaryPrintRoot());
+      observer.observe(source, { childList: true, subtree: true, characterData: true });
+    };
+
+    sync();
+    const timer = window.setInterval(() => {
+      sync();
+      attempts += 1;
+      if (observer || attempts > 20) window.clearInterval(timer);
+    }, 150);
+    window.addEventListener("beforeprint", sync);
+
+    return () => {
+      window.clearInterval(timer);
+      observer?.disconnect();
+      window.removeEventListener("beforeprint", sync);
+      removeTaskSummaryPrintRoot();
+    };
+  }, [open, subSummaryTaskId]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  if (subSummaryTaskId) {
-    return (
-      <>
-        <Sheet open={open} onOpenChange={(o) => {
-          if (!o) setSubSummaryTaskId(null);
-          onOpenChange(o);
-        }}>
-          <SheetContent
-            side="right"
-            className="w-full sm:max-w-2xl overflow-y-auto print:overflow-visible print:max-w-none print:w-full print:shadow-none print:border-none"
-            data-testid="sheet-completed-task-summary"
-          >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Sub-Task Summary</SheetTitle>
-              <SheetDescription>Sub-task details</SheetDescription>
-            </SheetHeader>
-            <div className="mb-4">
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setSubSummaryTaskId(null);
+        onOpenChange(next);
+      }}
+    >
+      <SheetContent
+        side="right"
+        data-print-summary=""
+        className="flex w-full max-w-3xl flex-col gap-0 overflow-hidden p-0"
+        data-testid="sheet-completed-task-summary"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>{subSummaryTaskId ? "Sub-Task Summary" : "Task Summary"}</SheetTitle>
+          <SheetDescription>
+            {subSummaryTaskId ? "Sub-task details" : "Completed task details"}
+          </SheetDescription>
+        </SheetHeader>
+        <div className="task-summary-body min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-12">
+          {subSummaryTaskId ? (
+            <div className="mb-4 print:hidden">
               <Button
                 variant="ghost"
                 size="sm"
@@ -103,35 +166,14 @@ export function CompletedTaskSummary({ taskId, open, onOpenChange }: CompletedTa
                 Back to parent summary
               </Button>
             </div>
-            <SummaryContent
-              taskId={subSummaryTaskId}
-              onSubTaskClick={setSubSummaryTaskId}
-              onPrint={handlePrint}
-              onDownload={downloadFile}
-            />
-          </SheetContent>
-        </Sheet>
-      </>
-    );
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-2xl overflow-y-auto print:overflow-visible print:max-w-none print:w-full print:shadow-none print:border-none"
-        data-testid="sheet-completed-task-summary"
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>Task Summary</SheetTitle>
-          <SheetDescription>Completed task details</SheetDescription>
-        </SheetHeader>
-        <SummaryContent
-          taskId={taskId}
-          onSubTaskClick={setSubSummaryTaskId}
-          onPrint={handlePrint}
-          onDownload={downloadFile}
-        />
+          ) : null}
+          <SummaryContent
+            taskId={subSummaryTaskId ?? taskId}
+            onSubTaskClick={setSubSummaryTaskId}
+            onPrint={handlePrint}
+            onDownload={downloadFile}
+          />
+        </div>
       </SheetContent>
     </Sheet>
   );

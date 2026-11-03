@@ -97,10 +97,17 @@ export function registerResourceRoutes(app: Express) {
   app.post("/api/resource-folders", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { name, parentId } = req.body;
-      if (!name || typeof name !== "string") {
+      if (!name || typeof name !== "string" || !name.trim()) {
         return res.status(400).json({ message: "Folder name is required" });
       }
-      const folder = await storage.createResourceFolder({ name: name.trim(), parentId: parentId || null });
+      const parent = typeof parentId === "string" && parentId.trim() ? parentId.trim() : null;
+      if (parent) {
+        const existing = await storage.getResourceFolderById(parent);
+        if (!existing) {
+          return res.status(400).json({ message: "Parent folder not found" });
+        }
+      }
+      const folder = await storage.createResourceFolder({ name: name.trim(), parentId: parent });
       res.status(201).json(folder);
     } catch (error) {
       handleRouteError(res, error, "Failed to create resource folder");

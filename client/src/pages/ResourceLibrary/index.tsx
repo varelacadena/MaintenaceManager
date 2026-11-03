@@ -311,26 +311,28 @@ export default function ResourceLibrary() {
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
             .map(folder => (
               <DroppableFolder key={folder.id} folder={folder}>
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover-elevate"
-                  onClick={() => navigateToFolder(folder.id)}
-                  data-testid={`folder-item-${folder.id}`}
-                >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                    <Folder className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" data-testid={`text-folder-name-${folder.id}`}>
-                      {folder.name}
-                    </p>
-                  </div>
+                <div className="relative flex items-center hover-elevate">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+                    onClick={() => navigateToFolder(folder.id)}
+                    data-testid={`folder-item-${folder.id}`}
+                  >
+                    <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                      <Folder className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" data-testid={`text-folder-name-${folder.id}`}>
+                        {folder.name}
+                      </p>
+                    </div>
+                  </button>
                   <FolderActionMenu
                     folder={folder}
                     onRename={openRenameFolder}
                     onDelete={(id) => setDeleteFolderId(id)}
                   />
-                </button>
+                </div>
               </DroppableFolder>
             ))}
           {[...filtered]
