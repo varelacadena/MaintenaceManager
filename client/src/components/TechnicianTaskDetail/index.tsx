@@ -32,7 +32,7 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     pendingQuoteFiles,
   } = props;
 
-  const resourcesForSheet = props.equipment ? propertyResources : allTaskResources;
+  const resourcesForSheet = allTaskResources;
 
   const hook = useTechnicianTaskDetail(props);
 

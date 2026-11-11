@@ -32,7 +32,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { insertTaskSchema } from "@shared/schema";
-import type { Property, Equipment, User, Vendor, Task, Space, Vehicle } from "@shared/schema";
+import type { Property, Equipment, User, Vendor, Task, Space, Vehicle, Resource } from "@shared/schema";
 import { z } from "zod";
 import { TaskLocationFields, type SelectedAsset } from "@/components/task-form/TaskLocationFields";
 import { isAutoShopName } from "@/lib/autoShopUtils";
@@ -41,7 +41,9 @@ import {
   syncTaskAssets,
   type AssetWithSubtaskId,
 } from "@/lib/taskAssetSubtasks";
+import { TaskAttachmentEditor } from "@/components/task-form/TaskAttachmentEditor";
 import { TaskDateFields } from "@/components/task-form/TaskDateFields";
+import { TaskResourcePicker } from "@/components/task-form/TaskResourcePicker";
 import { TaskRecurringFields } from "@/components/task-form/TaskRecurringFields";
 import { SpaceDialog } from "@/components/task-form/SpaceDialog";
 import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue } from "@/lib/taskCalendarDates";
@@ -85,6 +87,8 @@ export default function EditTask() {
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isSpaceDialogOpen, setIsSpaceDialogOpen] = useState(false);
   const [selectedHelperIds, setSelectedHelperIds] = useState<string[]>([]);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
+  const [resourcesLoaded, setResourcesLoaded] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<SelectedAsset[]>([]);
   const initialAssetsRef = useRef<AssetWithSubtaskId[]>([]);
   const multiAssetMode = selectedAssets.length > 0;
@@ -128,6 +132,16 @@ export default function EditTask() {
 
   const { data: allVehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/for-task-selection"],
+  });
+
+  const { data: assignedResources = [], isSuccess: resourcesFetched } = useQuery<Resource[]>({
+    queryKey: ["/api/tasks", id, "library-resources"],
+    enabled: !!id,
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/tasks/${id}/resources`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
   });
 
   const showVehicle = isAutoShopName(selectedProperty?.name);
@@ -290,6 +304,17 @@ export default function EditTask() {
   }, [task, subtasks, subtasksLoading, form, isTaskLoaded]);
 
   useEffect(() => {
+    setResourcesLoaded(false);
+    setSelectedResourceIds([]);
+  }, [id]);
+
+  useEffect(() => {
+    if (!resourcesFetched || resourcesLoaded) return;
+    setSelectedResourceIds(assignedResources.map((resource) => resource.id));
+    setResourcesLoaded(true);
+  }, [id, assignedResources, resourcesFetched, resourcesLoaded]);
+
+  useEffect(() => {
     if (!showVehicle) {
       form.setValue("vehicleId", undefined);
       setSelectedAssets((prev) => prev.filter((asset) => asset.type !== "vehicle"));
@@ -363,11 +388,16 @@ export default function EditTask() {
         initialAssetsRef.current = selectedAssets.map((asset) => ({ ...asset }));
       }
 
+      if (resourcesLoaded && id) {
+        await apiRequest("PUT", `/api/tasks/${id}/resources`, { resourceIds: selectedResourceIds });
+      }
+
       return updatedTask;
     },
     onSuccess: async () => {
       invalidateTaskAfterMutation(id, { broad: true });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "library-resources"] });
 
       toast({
         title: "Task Updated",
@@ -820,6 +850,14 @@ export default function EditTask() {
                 />
               </div>
             </div>
+
+            {id ? <TaskAttachmentEditor taskId={id} variant="page" /> : null}
+
+            <TaskResourcePicker
+              selectedIds={selectedResourceIds}
+              onChange={setSelectedResourceIds}
+              variant="page"
+            />
 
             <div className="flex gap-4">
               <Button

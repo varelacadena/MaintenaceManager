@@ -172,7 +172,7 @@ export default function TechnicianFieldJob() {
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.workDate)) {
-      toast({ title: "Work day required", description: "Choose the day you will do this job.", variant: "destructive" });
+      toast({ title: "Due date required", description: "Choose the day this job is due.", variant: "destructive" });
       return;
     }
     if (!form.propertyId) {
@@ -328,7 +328,7 @@ export default function TechnicianFieldJob() {
         </div>
 
         <div className={fieldCard}>
-          <Label>Work day</Label>
+          <Label>Due date</Label>
           <div className="grid grid-cols-7 gap-1">
             {workDays.map((day) => {
               const selected = !laterDay && form.workDate === day.key;
@@ -372,7 +372,7 @@ export default function TechnicianFieldJob() {
               data-testid="input-field-job-work-date"
             />
           )}
-          <p className="text-xs text-muted-foreground">This is the day the job shows on My Tasks. If it is still open the next morning, it moves to that day.</p>
+          <p className="text-xs text-muted-foreground">This is the day the job is due. It shows on My Tasks that day, and stays overdue if it is still open after that.</p>
         </div>
 
         <div className={fieldCard}>

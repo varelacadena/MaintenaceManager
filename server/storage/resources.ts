@@ -3,6 +3,7 @@ import {
   resourceCategories,
   resourceFolders,
   propertyResources,
+  taskResources,
   equipment,
   type ResourceCategory,
   type InsertResourceCategory,
@@ -219,6 +220,36 @@ export async function getPropertyResources(propertyId: string): Promise<(Resourc
     ...row.resources,
     category: row.resource_categories,
   }));
+}
+
+export async function getTaskResources(taskId: string): Promise<(Resource & { category: ResourceCategory | null })[]> {
+  const rows = await db.select().from(taskResources)
+    .innerJoin(resources, eq(taskResources.resourceId, resources.id))
+    .leftJoin(resourceCategories, eq(resources.categoryId, resourceCategories.id))
+    .where(eq(taskResources.taskId, taskId))
+    .orderBy(resources.title);
+  return rows.map((row) => ({
+    ...row.resources,
+    category: row.resource_categories,
+  }));
+}
+
+export async function setTaskResources(
+  taskId: string,
+  resourceIds: string[],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const unique = [...new Set(resourceIds.filter(Boolean))];
+  if (unique.length > 0) {
+    const found = await db.select({ id: resources.id }).from(resources).where(inArray(resources.id, unique));
+    if (found.length !== unique.length) {
+      return { ok: false, message: "One or more resources were not found" };
+    }
+  }
+  await db.delete(taskResources).where(eq(taskResources.taskId, taskId));
+  if (unique.length > 0) {
+    await db.insert(taskResources).values(unique.map((resourceId) => ({ taskId, resourceId })));
+  }
+  return { ok: true };
 }
 
 export async function getEquipmentResources(equipmentId: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]> {

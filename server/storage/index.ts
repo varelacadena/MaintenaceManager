@@ -480,6 +480,8 @@ export interface IStorage {
   updateResource(id: string, data: Partial<InsertResource>, propertyIds?: string[]): Promise<Resource | undefined>;
   deleteResource(id: string): Promise<void>;
   getPropertyResources(propertyId: string): Promise<(Resource & { category: ResourceCategory | null })[]>;
+  getTaskResources(taskId: string): Promise<(Resource & { category: ResourceCategory | null })[]>;
+  setTaskResources(taskId: string, resourceIds: string[]): Promise<{ ok: true } | { ok: false; message: string }>;
   getEquipmentResources(equipmentId: string): Promise<(Resource & { category: ResourceCategory | null; propertyIds: string[] })[]>;
 
   addTaskHelper(taskId: string, userId: string): Promise<TaskHelper>;
@@ -800,6 +802,8 @@ export class DatabaseStorage implements IStorage {
   updateResource = resourceStorage.updateResource;
   deleteResource = resourceStorage.deleteResource;
   getPropertyResources = resourceStorage.getPropertyResources;
+  getTaskResources = resourceStorage.getTaskResources;
+  setTaskResources = resourceStorage.setTaskResources;
   getEquipmentResources = resourceStorage.getEquipmentResources;
 }
 

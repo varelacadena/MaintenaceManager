@@ -14,21 +14,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X, Plus, Loader2, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
 import { getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
 import { format } from "date-fns";
-import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem } from "@shared/schema";
+import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem, Resource } from "@shared/schema";
 import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";
+import { TaskAttachmentEditor } from "@/components/task-form/TaskAttachmentEditor";
 import { TaskChecklistEditor } from "@/components/task-form/TaskChecklistEditor";
+import { TaskResourcePicker } from "@/components/task-form/TaskResourcePicker";
 import type { SelectedAsset } from "@/components/task-form/TaskLocationFields";
 import { equipmentKeys, fetchEquipmentList } from "@/lib/equipmentQueries";
 import { isAutoShopName } from "@/lib/autoShopUtils";
+import { sortByName } from "@/lib/propertyDisplayUtils";
 import {
   buildAssetsFromTask,
   isAssetSubtask,
@@ -61,6 +65,13 @@ type TaskHelperAssignment = {
 };
 
 type ChecklistGroupWithItems = TaskChecklistGroup & { items: TaskChecklistItem[] };
+type LocationScope = "single" | "multiple" | "campus";
+
+function initialLocationScope(task: Task): LocationScope {
+  if (task.isCampusWide) return "campus";
+  if (task.propertyIds && task.propertyIds.length > 0 && !task.propertyId) return "multiple";
+  return "single";
+}
 
 interface TaskEditModeProps {
   taskId: string;
@@ -97,6 +108,10 @@ export function TaskEditMode({
     task.estimatedHours != null ? String(task.estimatedHours) : ""
   );
   const [propertyId, setPropertyId] = useState<string>(task.propertyId || "");
+  const [locationScope, setLocationScope] = useState<LocationScope>(() => initialLocationScope(task));
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>(task.propertyIds ?? []);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
+  const [resourcesLoaded, setResourcesLoaded] = useState(false);
   const [assignedToId, setAssignedToId] = useState<string>(task.assignedToId || "");
   const [helperUserIds, setHelperUserIds] = useState<string[]>(
     () => task.helpers?.map((helper) => helper.userId) ?? []
@@ -148,6 +163,15 @@ export function TaskEditMode({
     showVehicle ||
     !!propertyId;
 
+  const { data: assignedResources = [], isSuccess: resourcesFetched } = useQuery<Resource[]>({
+    queryKey: ["/api/tasks", taskId, "library-resources"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/tasks/${taskId}/resources`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
   const { data: originalChecklistGroups = [], isSuccess: checklistsFetched } = useQuery<ChecklistGroupWithItems[]>({
     queryKey: ["/api/tasks", taskId, "checklist-groups"],
     enabled: !!taskId,
@@ -162,6 +186,8 @@ export function TaskEditMode({
     setActualCompletionDate(getTaskDateInputValue(task.actualCompletionDate));
     setEstimatedHours(task.estimatedHours != null ? String(task.estimatedHours) : "");
     setPropertyId(task.propertyId || "");
+    setLocationScope(initialLocationScope(task));
+    setSelectedPropertyIds(task.propertyIds ?? []);
     setAssignedToId(task.assignedToId || "");
     setHelperUserIds(task.helpers?.map((helper) => helper.userId) ?? []);
   }, [task.id, task.helpers]);
@@ -190,6 +216,17 @@ export function TaskEditMode({
       setSelectedAssets((prev) => prev.filter((asset) => asset.type !== "vehicle"));
     }
   }, [showVehicle]);
+
+  useEffect(() => {
+    setResourcesLoaded(false);
+    setSelectedResourceIds([]);
+  }, [task.id]);
+
+  useEffect(() => {
+    if (!resourcesFetched || resourcesLoaded) return;
+    setSelectedResourceIds(assignedResources.map((resource) => resource.id));
+    setResourcesLoaded(true);
+  }, [task.id, assignedResources, resourcesFetched, resourcesLoaded]);
 
   useEffect(() => {
     setChecklistsLoaded(false);
@@ -260,6 +297,22 @@ export function TaskEditMode({
     setSelectedAssets((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const chooseLocationScope = (scope: LocationScope) => {
+    setLocationScope(scope);
+    if (scope === "multiple") {
+      setSelectedPropertyIds((current) => (current.length > 0 ? current : propertyId ? [propertyId] : []));
+      setPropertyId("");
+      return;
+    }
+    if (scope === "campus") {
+      setPropertyId("");
+      return;
+    }
+    if (!propertyId && selectedPropertyIds.length === 1) {
+      setPropertyId(selectedPropertyIds[0]);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       toast({ title: "Title is required", variant: "destructive" });
@@ -274,7 +327,36 @@ export function TaskEditMode({
       if (urgency !== task.urgency) patchData.urgency = urgency as InsertTask["urgency"];
 
       const origPropertyId = task.propertyId || "";
-      if (propertyId !== origPropertyId) patchData.propertyId = propertyId || null;
+      if (locationScope === "campus") {
+        if (!task.isCampusWide) {
+          patchData.isCampusWide = true;
+          patchData.propertyId = null;
+          patchData.propertyIds = [];
+          patchData.spaceId = null;
+          patchData.equipmentId = null;
+        }
+      } else if (locationScope === "multiple") {
+        if (selectedPropertyIds.length === 0) {
+          toast({ title: "Select at least one property", variant: "destructive" });
+          setIsSaving(false);
+          return;
+        }
+        const originalIds = task.propertyIds ?? [];
+        const sameIds =
+          selectedPropertyIds.length === originalIds.length &&
+          selectedPropertyIds.every((id) => originalIds.includes(id));
+        if (!sameIds || task.propertyId || task.isCampusWide) {
+          patchData.propertyIds = selectedPropertyIds;
+          patchData.propertyId = null;
+          patchData.isCampusWide = false;
+          patchData.spaceId = null;
+          patchData.equipmentId = null;
+        }
+      } else if (propertyId !== origPropertyId || task.isCampusWide || ((task.propertyIds?.length ?? 0) > 0 && !task.propertyId)) {
+        patchData.propertyId = propertyId || null;
+        patchData.propertyIds = [];
+        patchData.isCampusWide = false;
+      }
 
       const origAssignedToId = task.assignedToId || "";
       if (assignedToId !== origAssignedToId) patchData.assignedToId = assignedToId || null;
@@ -343,6 +425,11 @@ export function TaskEditMode({
 
       if (checklistsLoaded) {
         await syncTaskChecklists(taskId, initialChecklistsRef.current, checklistGroups);
+      }
+
+      if (resourcesLoaded) {
+        await apiRequest("PUT", `/api/tasks/${taskId}/resources`, { resourceIds: selectedResourceIds });
+        await queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "library-resources"] });
       }
 
       invalidateTaskAfterMutation(taskId, { broad: true });
@@ -527,20 +614,69 @@ export function TaskEditMode({
           <Label className="text-xs font-medium" style={{ color: "#6B7280" }}>
             Property
           </Label>
-          <Select
-            value={propertyId || "__none__"}
-            onValueChange={(v) => setPropertyId(v === "__none__" ? "" : v)}
-          >
-            <SelectTrigger data-testid="select-edit-property">
-              <SelectValue placeholder="Select property" />
-            </SelectTrigger>
-            <SelectContent>
-              <PropertySelectItems
-                properties={properties || []}
-                noneLabel="No property"
-              />
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-1.5" data-testid="edit-location-scope">
+            {([
+              ["single", "Single"],
+              ["multiple", "Multiple"],
+              ["campus", "All campus"],
+            ] as const).map(([scope, label]) => (
+              <Button
+                key={scope}
+                type="button"
+                size="sm"
+                variant={locationScope === scope ? "default" : "outline"}
+                onClick={() => chooseLocationScope(scope)}
+                data-testid={`button-edit-scope-${scope}`}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          {locationScope === "campus" ? (
+            <p className="text-sm text-muted-foreground" data-testid="edit-campus-indicator">
+              This task applies to all campus properties.
+            </p>
+          ) : null}
+          {locationScope === "single" ? (
+            <Select
+              value={propertyId || "__none__"}
+              onValueChange={(v) => setPropertyId(v === "__none__" ? "" : v)}
+            >
+              <SelectTrigger data-testid="select-edit-property">
+                <SelectValue placeholder="Select property" />
+              </SelectTrigger>
+              <SelectContent>
+                <PropertySelectItems
+                  properties={properties || []}
+                  noneLabel="No property"
+                />
+              </SelectContent>
+            </Select>
+          ) : null}
+          {locationScope === "multiple" ? (
+            <div className="max-h-48 overflow-y-auto rounded-md border p-1" data-testid="edit-property-multi">
+              {sortByName(properties || []).map((property) => {
+                const checked = selectedPropertyIds.includes(property.id);
+                return (
+                  <label
+                    key={property.id}
+                    className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-2 py-2 hover:bg-muted"
+                    data-testid={`checkbox-edit-property-${property.id}`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(next) =>
+                        setSelectedPropertyIds((current) =>
+                          next ? [...current, property.id] : current.filter((id) => id !== property.id),
+                        )
+                      }
+                    />
+                    <span className="min-w-0 truncate text-sm">{property.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -606,7 +742,14 @@ export function TaskEditMode({
           />
         </div>
 
-        {showAssetEditor && (
+        <TaskAttachmentEditor taskId={taskId} />
+
+        <TaskResourcePicker
+          selectedIds={selectedResourceIds}
+          onChange={setSelectedResourceIds}
+        />
+
+        {showAssetEditor && locationScope === "single" && (
           <TaskAssetListEditor
             selectedAssets={selectedAssets}
             onAddAsset={handleAddAsset}

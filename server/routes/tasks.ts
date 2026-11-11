@@ -95,7 +95,7 @@ export function registerTaskRoutes(app: Express) {
       .trim()
       .min(20, "Describe what you found and what needs to be done"),
     urgency: z.enum(["low", "medium", "high"]).default("medium"),
-    workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the day you will do this job"),
+    workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the day this job is due"),
     propertyId: z.string().trim().min(1, "Building is required"),
     vehicleId: z.string().trim().optional().or(z.literal("")),
     photos: z
@@ -413,7 +413,7 @@ export function registerTaskRoutes(app: Express) {
       const workRecord = `Where: ${payload.locationDetail}\n\n${payload.description}`;
       const workDay = parseFieldWorkDate(payload.workDate);
       if (!workDay) {
-        return res.status(400).json({ message: "Pick the day you will do this job." });
+        return res.status(400).json({ message: "Pick the day this job is due." });
       }
       const earliest = new Date();
       earliest.setHours(0, 0, 0, 0);
@@ -435,6 +435,7 @@ export function registerTaskRoutes(app: Express) {
         status: "not_started",
         createdById: userId,
         initialDate: workDay,
+        estimatedCompletionDate: workDay,
         requiresPhoto: false,
         requiresEstimate: false,
         estimateStatus: "none",
@@ -857,6 +858,46 @@ export function registerTaskRoutes(app: Express) {
       res.json(helperUsers.filter(Boolean));
     } catch (error) {
       handleRouteError(res, error, "Failed to fetch task helpers");
+    }
+  });
+
+  app.get("/api/tasks/:id/resources", isAuthenticated, requireTaskExecutorOrAdmin, async (req: any, res) => {
+    try {
+      const hasAccess = await canAccessTask(req.userId, req.params.id);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
+      }
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      const assigned = await storage.getTaskResources(req.params.id);
+      res.json(assigned);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to fetch task resources");
+    }
+  });
+
+  app.put("/api/tasks/:id/resources", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      const parsed = z.object({
+        resourceIds: z.array(z.string().trim().min(1)),
+      }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Choose resources from the library" });
+      }
+      const result = await storage.setTaskResources(req.params.id, parsed.data.resourceIds);
+      if (!result.ok) {
+        return res.status(400).json({ message: result.message });
+      }
+      const assigned = await storage.getTaskResources(req.params.id);
+      res.json(assigned);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to assign task resources");
     }
   });
 

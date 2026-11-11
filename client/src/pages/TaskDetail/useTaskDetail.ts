@@ -348,17 +348,27 @@ export function useTaskDetail() {
     enabled: !!task?.equipmentId,
   });
 
+  const { data: assignedResources = [] } = useQuery<any[]>({
+    queryKey: ["/api/tasks", task?.id, "library-resources"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/tasks/${task?.id}/resources`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!task?.id,
+  });
+
   const allTaskResources = useMemo(() => {
     const seen = new Set<string>();
     const merged: any[] = [];
-    for (const r of [...propertyResources, ...equipmentResources]) {
+    for (const r of [...propertyResources, ...equipmentResources, ...assignedResources]) {
       if (!seen.has(r.id)) {
         seen.add(r.id);
         merged.push(r);
       }
     }
     return merged;
-  }, [propertyResources, equipmentResources]);
+  }, [propertyResources, equipmentResources, assignedResources]);
 
   const previousWork = useMemo(() => {
     if (!task || !previousWorkTasks.length) return [];

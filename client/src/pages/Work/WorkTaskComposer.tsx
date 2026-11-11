@@ -18,11 +18,11 @@ import { getSignedUploadParameters, inferUploadFileType } from "@/lib/uploadUtil
 import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
 import { sortByName } from "@/lib/propertyDisplayUtils";
 import { getUserDisplayName } from "@/utils/taskUtils";
-import type { Equipment, Project, Property, ServiceRequest, Space, User, Vendor } from "@shared/schema";
+import type { Equipment, Project, Property, ServiceRequest, Space, User, Vehicle, Vendor } from "@shared/schema";
 
 type RepeatMode = "once" | "daily" | "weekly" | "monthly" | "yearly" | "custom";
 type CustomUnit = "days" | "weeks" | "months" | "years";
-type MoreTool = "" | "subtasks" | "checklist" | "project" | "space" | "equipment" | "contact" | "instructions" | "helpers";
+type MoreTool = "" | "subtasks" | "checklist" | "project" | "space" | "equipment" | "vehicle" | "contact" | "instructions" | "helpers";
 type PersonKind = "technician" | "student" | "vendor";
 
 type Person = { id: string; label: string; kind: PersonKind };
@@ -66,6 +66,11 @@ function dueFace(due: Date | undefined, mode: RepeatMode, every: string, unit: C
   return date || repeat;
 }
 
+function vehicleFace(vehicle: Vehicle | undefined): string {
+  if (!vehicle) return "";
+  return `${vehicle.make} ${vehicle.model} ${vehicle.year} — ${vehicle.vehicleId}`;
+}
+
 function propertyFace(ids: string[], properties: Property[]): string {
   if (ids.length === 0) return "";
   const first = properties.find((property) => property.id === ids[0])?.name || "Property";
@@ -101,6 +106,7 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
   const [projectId, setProjectId] = useState(projectFromUrl);
   const [spaceId, setSpaceId] = useState("");
   const [equipmentId, setEquipmentId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
   const [contact, setContact] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -128,6 +134,9 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
       const response = await apiRequest("GET", `/api/spaces?propertyId=${singleProperty}`);
       return response.json();
     },
+  });
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/for-task-selection"],
   });
   const { data: equipment = [] } = useQuery<Equipment[]>({
     queryKey: equipmentKeys.list({ propertyId: singleProperty }),
@@ -179,6 +188,7 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
     !!projectId,
     !!spaceId,
     !!equipmentId,
+    !!vehicleId,
     !!contact,
     whoKind === "student" && !!instructions.trim(),
     helpers.length > 0,
@@ -207,6 +217,7 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
     setProjectId(projectFromUrl);
     setSpaceId("");
     setEquipmentId("");
+    setVehicleId("");
     setContact("");
     setContactEmail("");
     setContactPhone("");
@@ -241,6 +252,7 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
         propertyIds: manyProperties ? propertyIds : undefined,
         spaceId: manyProperties || lifeSafety ? undefined : spaceId || undefined,
         equipmentId: manyProperties || lifeSafety ? undefined : equipmentId || undefined,
+        vehicleId: vehicleId || undefined,
         assignedToId: whoKind === "vendor" ? undefined : whoId || undefined,
         assignedVendorId: whoKind === "vendor" ? whoId || undefined : undefined,
         executorType: whoKind === "technician" || whoKind === "student" ? whoKind : undefined,
@@ -553,6 +565,7 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
                   ["project", "Project", activeProjects.find((project) => project.id === projectId)?.name || ""],
                   ["space", "Space", spaces.find((space) => space.id === spaceId)?.name || ""],
                   ["equipment", "Equipment", equipment.find((item) => item.id === equipmentId)?.name || ""],
+                  ["vehicle", "Vehicle", vehicleFace(vehicles.find((item) => item.id === vehicleId))],
                   ["contact", "Contact", contact],
                   ...(whoKind === "student" ? [["instructions", "Instructions", instructions] as const] : []),
                   ["helpers", "Helpers", helpers.length ? String(helpers.length) : ""],
@@ -643,6 +656,14 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
                     selected={equipmentId}
                     options={[{ id: "", label: "None" }, ...sortByName(equipment).map((item) => ({ id: item.id, label: item.name }))]}
                     onPick={setEquipmentId}
+                  />
+                ) : null}
+                {moreTool === "vehicle" ? (
+                  <OptionList
+                    title="Vehicle"
+                    selected={vehicleId}
+                    options={[{ id: "", label: "None" }, ...vehicles.map((item) => ({ id: item.id, label: vehicleFace(item) }))]}
+                    onPick={setVehicleId}
                   />
                 ) : null}
                 {moreTool === "contact" ? (

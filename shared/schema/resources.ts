@@ -10,6 +10,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
 import { properties, equipment } from "./facilities";
+import { tasks } from "./workOrders";
 
 export const resourceCategories = pgTable("resource_categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -63,3 +64,12 @@ export const propertyResources = pgTable("property_resources", {
 });
 
 export type PropertyResource = typeof propertyResources.$inferSelect;
+
+export const taskResources = pgTable("task_resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  resourceId: varchar("resource_id").notNull().references(() => resources.id, { onDelete: "cascade" }),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export type TaskResource = typeof taskResources.$inferSelect;

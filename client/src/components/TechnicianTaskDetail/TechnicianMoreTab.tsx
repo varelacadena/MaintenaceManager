@@ -54,7 +54,6 @@ export function TechnicianMoreTab({
   task,
   equipment,
   equipmentResources,
-  propertyResources,
   contactName,
   contactPhone,
   contactInitials,
@@ -72,7 +71,7 @@ export function TechnicianMoreTab({
 }: TechnicianMoreTabProps) {
   const { openImagePreview } = useImagePreview();
   const showCost = canSeeInventoryCost(userRole);
-  const generalResources = equipment ? propertyResources : allTaskResources;
+  const generalResources = allTaskResources;
   const generalResourceDocs = generalResources.filter((r: any) => r.type !== "video").length;
   const generalResourceVids = generalResources.filter((r: any) => r.type === "video").length;
   const equipmentDocCount = equipmentResources.filter((r: any) => r.type !== "video").length;
@@ -310,7 +309,7 @@ export function TechnicianMoreTab({
           </button>
         )}
 
-        {((equipment && propertyResources.length > 0) || (!equipment && allTaskResources.length > 0)) && (
+        {allTaskResources.length > 0 && (
           <button
             className="flex items-center gap-3 w-full py-3 text-left"
             onClick={() => setIsResourcesOpen(true)}
@@ -324,7 +323,7 @@ export function TechnicianMoreTab({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
-                {equipment ? "Property Resources" : "Resources"}
+                Resources
               </p>
             </div>
             <span className="text-xs shrink-0 text-muted-foreground">
