@@ -371,7 +371,7 @@ export function VehicleReservationsContent() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -436,8 +436,8 @@ export function VehicleReservationsContent() {
           {displayReservations.map((reservation) => (
             <Card key={reservation.id} data-testid={`card-reservation-${reservation.id}`} className={reservation.status === "pending" ? "ring-1 ring-primary/30 bg-primary/[0.03]" : ""}>
               <CardContent className="pt-4 pb-3 px-4 space-y-2">
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="font-mono text-xs font-semibold text-muted-foreground">
                       {getVehicleReservationNumber(reservation)}
                     </span>
@@ -452,30 +452,30 @@ export function VehicleReservationsContent() {
                             ? "logbook"
                             : "reservations"
                         }`}
-                        className="font-semibold text-sm truncate hover:underline"
+                        className="min-w-0 max-w-full break-words font-semibold text-sm hover:underline"
                         data-testid={`link-vehicle-history-${reservation.id}`}
                       >
                         {getVehicleName(reservation.vehicleId)}
                       </Link>
                     ) : (
-                      <span className="font-semibold text-sm truncate">{getVehicleName(reservation.vehicleId)}</span>
+                      <span className="min-w-0 break-words font-semibold text-sm">{getVehicleName(reservation.vehicleId)}</span>
                     )}
                     <span className="text-muted-foreground text-xs">·</span>
                     <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate">{getUserName(reservation)}</span>
+                    <span className="min-w-0 break-words text-sm font-medium">{getUserName(reservation)}</span>
                   </div>
-                  <Badge variant={statusColors[reservation.status]} data-testid={`badge-status-${reservation.id}`}>
+                  <Badge className="w-fit shrink-0" variant={statusColors[reservation.status]} data-testid={`badge-status-${reservation.id}`}>
                     {formatStatus(reservation.status)}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3 shrink-0" />
-                  <span>
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <Calendar className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span className="min-w-0 break-words">
                     {format(new Date(reservation.startDate), "MMM d, yyyy h:mm a")} &ndash; {format(new Date(reservation.endDate), "MMM d, yyyy h:mm a")}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                  <span><span className="text-muted-foreground">Purpose: </span>{reservation.purpose}</span>
+                  <span className="min-w-0 break-words"><span className="text-muted-foreground">Purpose: </span>{reservation.purpose}</span>
                   <span><span className="text-muted-foreground">Passengers: </span>{reservation.passengerCount}</span>
                   {reservation.notes && (
                     <span><span className="text-muted-foreground">Notes: </span>{reservation.notes}</span>
@@ -487,7 +487,7 @@ export function VehicleReservationsContent() {
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="flex gap-2 flex-wrap pt-0 pb-3 px-4">
+              <CardFooter className="flex flex-col items-stretch gap-2 px-4 pb-3 pt-0 sm:flex-row sm:flex-wrap sm:items-center [&_button]:w-full sm:[&_button]:w-auto">
                 {isFleetStaff && reservation.status === "pending" && (
                   <>
                     <Dialog>
@@ -509,8 +509,8 @@ export function VehicleReservationsContent() {
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="vehicle" className="text-right">
+                          <div className="grid gap-2 sm:grid-cols-4 sm:items-center sm:gap-4">
+                            <Label htmlFor="vehicle" className="sm:text-right">
                               Vehicle
                             </Label>
                             <Select
@@ -521,7 +521,7 @@ export function VehicleReservationsContent() {
                               }}
                               disabled={assignVehicleMutation.isPending}
                             >
-                              <SelectTrigger className="col-span-3">
+                              <SelectTrigger className="min-w-0 sm:col-span-3">
                                 <SelectValue placeholder="Select a vehicle" />
                               </SelectTrigger>
                               <SelectContent>
@@ -640,7 +640,7 @@ export function VehicleReservationsContent() {
                   const checkInLog = checkInLogs?.find(log => log.checkOutLogId === checkOutLog.id);
                   if (checkInLog) {
                     return (
-                      <Link href={`/vehicle-checkin-verify/${checkInLog.id}`}>
+                      <Link href={`/vehicle-checkin-verify/${checkInLog.id}`} className="block w-full sm:w-auto">
                         <Button
                           size="sm"
                           variant="outline"
@@ -830,48 +830,48 @@ export function VehicleReservationsContent() {
               </Select>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2">
                 <Label htmlFor="edit-start-date">Start Date</Label>
                 <Input
                   id="edit-start-date"
                   type="date"
                   value={editStartDate}
                   onChange={(e) => setEditStartDate(e.target.value)}
-                  className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
+                  className="relative block min-w-0 cursor-pointer [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="grid min-w-0 gap-2">
                 <Label htmlFor="edit-start-time">Start Time</Label>
                 <Input
                   id="edit-start-time"
                   type="time"
                   value={editStartTime}
                   onChange={(e) => setEditStartTime(e.target.value)}
-                  className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
+                  className="relative block min-w-0 cursor-pointer [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2">
                 <Label htmlFor="edit-end-date">End Date</Label>
                 <Input
                   id="edit-end-date"
                   type="date"
                   value={editEndDate}
                   onChange={(e) => setEditEndDate(e.target.value)}
-                  className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
+                  className="relative block min-w-0 cursor-pointer [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="grid min-w-0 gap-2">
                 <Label htmlFor="edit-end-time">End Time</Label>
                 <Input
                   id="edit-end-time"
                   type="time"
                   value={editEndTime}
                   onChange={(e) => setEditEndTime(e.target.value)}
-                  className="cursor-pointer block [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 relative"
+                  className="relative block min-w-0 cursor-pointer [appearance:none] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                 />
               </div>
             </div>

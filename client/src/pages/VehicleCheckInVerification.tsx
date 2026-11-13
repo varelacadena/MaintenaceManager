@@ -198,7 +198,7 @@ export default function VehicleCheckInVerification() {
   const StatusIcon = statusInfo.icon;
 
   return (
-    <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-4 p-4">
       {vehicle && (
         <Button
           variant="ghost"
@@ -216,7 +216,7 @@ export default function VehicleCheckInVerification() {
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {vehicle ? (
               <Link href={`/vehicles/${vehicle.id}?tab=logbook`}>
-                <button className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1 transition-colors">
+                <button className="flex min-w-0 items-center gap-1 break-words text-left text-sm text-muted-foreground transition-colors hover:text-foreground">
                   {vehicle.make} {vehicle.model} ({vehicle.vehicleId})
                   <ExternalLink className="h-3 w-3" />
                 </button>

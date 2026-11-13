@@ -89,8 +89,8 @@ export function StepProgress({ currentStep, advisoryAlreadyAccepted }: { current
   const currentIndex = STEPS.findIndex(s => s.id === currentStep);
   const currentStepData = STEPS[currentIndex];
   return (
-    <div className="mb-6">
-      <div className="flex items-center px-2">
+    <div className="mb-6 min-w-0">
+      <div className="flex min-w-0 items-center px-1 sm:px-2">
         {STEPS.map((step, index) => {
           const isCompleted = advisoryAlreadyAccepted && step.id === "advisory"
             ? true

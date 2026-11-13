@@ -85,7 +85,7 @@ export default function VehicleEdit() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 space-y-4 p-4">
+      <div className="w-full min-w-0 space-y-4 p-4">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/4" />
           <div className="h-64 bg-muted rounded" />
@@ -96,7 +96,7 @@ export default function VehicleEdit() {
 
   if (!vehicle) {
     return (
-      <div className="flex-1 space-y-4 p-4">
+      <div className="w-full min-w-0 space-y-4 p-4">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-lg font-medium">Vehicle not found</p>
@@ -107,12 +107,10 @@ export default function VehicleEdit() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4">
-      <div className="flex items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Edit Vehicle</h2>
-          <p className="text-muted-foreground mt-0.5">{vehicle.vehicleId} · {vehicle.make} {vehicle.model}</p>
-        </div>
+    <div className="w-full min-w-0 space-y-4 p-4">
+      <div className="min-w-0">
+        <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Edit Vehicle</h2>
+        <p className="mt-0.5 break-words text-muted-foreground">{vehicle.vehicleId} · {vehicle.make} {vehicle.model}</p>
       </div>
 
       <Card>
@@ -122,7 +120,7 @@ export default function VehicleEdit() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="vehicleId"
@@ -331,7 +329,7 @@ export default function VehicleEdit() {
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Notes</FormLabel>
                       <FormControl>
                         <Textarea {...field} value={field.value ?? ""} rows={4} />
@@ -344,10 +342,10 @@ export default function VehicleEdit() {
                   control={form.control}
                   name="imageUrl"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Vehicle Photo (optional)</FormLabel>
                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <ObjectUploader
                             maxNumberOfFiles={1}
                             maxFileSize={10 * 1024 * 1024}
@@ -419,11 +417,11 @@ export default function VehicleEdit() {
                   )}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button type="submit" disabled={updateMutation.isPending}>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="submit" className="w-full sm:w-auto" disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate(`/vehicles/${id}`)}>
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/vehicles/${id}`)}>
                   Cancel
                 </Button>
               </div>

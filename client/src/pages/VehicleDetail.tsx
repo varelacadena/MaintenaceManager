@@ -229,7 +229,7 @@ export default function VehicleDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-3 pb-6">
+      <div className="w-full min-w-0 space-y-3 pb-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-3/4" />
           <div className="h-64 bg-muted rounded" />
@@ -240,7 +240,7 @@ export default function VehicleDetail() {
 
   if (!vehicle) {
     return (
-      <div className="space-y-3 pb-6">
+      <div className="w-full min-w-0 space-y-3 pb-6">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Car className="h-12 w-12 text-muted-foreground mb-4" />
@@ -254,7 +254,7 @@ export default function VehicleDetail() {
   const qrCodeUrl = `${window.location.origin}/vehicles/${vehicle.id}`;
 
   return (
-    <div className="space-y-3 pb-6">
+    <div className="w-full min-w-0 space-y-3 pb-6">
       {/* Header Section - Mobile Optimized */}
       <div className="space-y-3 sm:space-y-0">
         <div className="flex items-center gap-2 sm:gap-4">
@@ -311,17 +311,15 @@ export default function VehicleDetail() {
         </div>
       ) : null}
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-        <div className="overflow-x-auto -mx-1 px-1">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap">Overview</TabsTrigger>
-            <TabsTrigger value="documents" className="text-xs sm:text-sm whitespace-nowrap">Documents</TabsTrigger>
-            <TabsTrigger value="reservations" className="text-xs sm:text-sm whitespace-nowrap">Reservations</TabsTrigger>
-            <TabsTrigger value="logbook" className="text-xs sm:text-sm whitespace-nowrap">Logbook</TabsTrigger>
-            <TabsTrigger value="maintenance" className="text-xs sm:text-sm whitespace-nowrap">Maintenance</TabsTrigger>
-            <TabsTrigger value="qr-code" className="text-xs sm:text-sm whitespace-nowrap">QR Code</TabsTrigger>
-          </TabsList>
-        </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0 space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 sm:grid-cols-6">
+          <TabsTrigger value="overview" className="px-1.5 text-xs sm:px-3 sm:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="documents" className="px-1.5 text-xs sm:px-3 sm:text-sm">Documents</TabsTrigger>
+          <TabsTrigger value="reservations" className="px-1.5 text-xs sm:px-3 sm:text-sm">Reservations</TabsTrigger>
+          <TabsTrigger value="logbook" className="px-1.5 text-xs sm:px-3 sm:text-sm">Logbook</TabsTrigger>
+          <TabsTrigger value="maintenance" className="px-1.5 text-xs sm:px-3 sm:text-sm">Maintenance</TabsTrigger>
+          <TabsTrigger value="qr-code" className="px-1.5 text-xs sm:px-3 sm:text-sm">QR Code</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
@@ -330,15 +328,15 @@ export default function VehicleDetail() {
                 <CardTitle className="text-base sm:text-lg">Vehicle Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
                     <Badge variant={statusColors[vehicle.status]} className="text-xs">
                       {vehicle.status.replace(/_/g, " ")}
                     </Badge>
                     {canManageVehicles && (
                       <select
-                        className="text-xs border rounded p-1"
+                        className="max-w-full rounded border bg-background p-1 text-xs"
                         value={vehicle.status}
                         onChange={(e) => updateStatusMutation.mutate(e.target.value)}
                       >
@@ -360,7 +358,7 @@ export default function VehicleDetail() {
                 <Separator />
                 <div className="flex justify-between items-center gap-2">
                   <span className="text-sm text-muted-foreground">License Plate</span>
-                  <span className="font-mono text-sm">{vehicle.licensePlate || "N/A"}</span>
+                  <span className="break-all text-right font-mono text-sm">{vehicle.licensePlate || "N/A"}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center gap-2">
@@ -503,10 +501,10 @@ export default function VehicleDetail() {
                   return (
                     <Card key={doc.id} className={isExpired ? "border-destructive" : isExpiringSoon ? "border-yellow-500" : ""} data-testid={`card-document-${doc.id}`}>
                       <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="flex items-center gap-2">
-                            <FileCheck className="w-4 h-4 text-muted-foreground" />
-                            <CardTitle className="text-sm sm:text-base">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <FileCheck className="w-4 h-4 shrink-0 text-muted-foreground" />
+                            <CardTitle className="break-words text-sm sm:text-base">
                               {documentTypeLabels[doc.documentType] || doc.documentType}
                             </CardTitle>
                           </div>
@@ -1002,7 +1000,7 @@ export default function VehicleDetail() {
                   data-testid={`card-maintenance-log-${log.id}`}
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <CardTitle className="text-base">{log.type}</CardTitle>
                         <p className="text-xs text-muted-foreground">
@@ -1047,13 +1045,16 @@ export default function VehicleDetail() {
                 Scan this QR code to quickly access this vehicle's details
               </p>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-6 sm:py-8 px-4">
-              <div className="bg-white p-4 rounded-lg" id="vehicle-qr-print-area">
+            <CardContent className="flex w-full flex-col items-center justify-center px-4 py-6 sm:py-8">
+              <div className="w-full max-w-full rounded-lg bg-white p-3 sm:p-4" id="vehicle-qr-print-area">
+                <div className="mx-auto w-full" style={{ maxWidth: QR_PRINT_SIZE_PX[qrPrintSize] }}>
                 <QRCode
                   value={qrCodeUrl}
                   size={QR_PRINT_SIZE_PX[qrPrintSize]}
+                  className="h-auto w-full max-w-full"
                   data-testid="qr-code"
                 />
+                </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-4 text-center break-words">
                   {vehicle.vehicleId} ({vehicle.make} {vehicle.model})
                 </p>

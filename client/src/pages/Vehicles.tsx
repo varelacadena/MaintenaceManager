@@ -128,12 +128,13 @@ function VehicleFleetActions({
   onDelete: (vehicle: Vehicle) => void;
 }) {
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex items-center gap-1.5 sm:justify-end">
       {canManage ? (
         <Button
           type="button"
           variant="outline"
           size="sm"
+          className="flex-1 sm:flex-none"
           onClick={() => onEdit(vehicle)}
           data-testid={`button-edit-vehicle-${vehicle.id}`}
         >
@@ -147,6 +148,7 @@ function VehicleFleetActions({
             type="button"
             variant="outline"
             size="sm"
+            className="flex-1 sm:flex-none"
             data-testid={`button-more-vehicle-${vehicle.id}`}
             aria-label={`More actions for ${vehicle.vehicleId}`}
           >
@@ -348,12 +350,13 @@ function FleetContent() {
   const canManageVehicles = isFleetPrivilegedRole(user);
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           {canManageVehicles && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => syncStatusesMutation.mutate()}
               disabled={syncStatusesMutation.isPending}
             >
@@ -363,7 +366,7 @@ function FleetContent() {
           {canManageVehicles && (
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-add-vehicle">
+              <Button className="w-full sm:w-auto" data-testid="button-add-vehicle">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Vehicle
               </Button>
@@ -377,7 +380,7 @@ function FleetContent() {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="vehicleId"
@@ -551,10 +554,10 @@ function FleetContent() {
                       control={form.control}
                       name="imageUrl"
                       render={({ field }) => (
-                        <FormItem className="col-span-2">
+                        <FormItem className="sm:col-span-2">
                           <FormLabel>Vehicle Photo (optional)</FormLabel>
                           <div className="flex flex-col gap-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <ObjectUploader
                                 maxNumberOfFiles={1}
                                 maxFileSize={10 * 1024 * 1024}
@@ -710,8 +713,75 @@ function FleetContent() {
         </div>
       ) : vehicles && vehicles.length > 0 ? (
         <div className="rounded-lg border bg-card overflow-hidden">
+          <div className="divide-y md:hidden">
+            {vehicles.map((vehicle) => (
+              <div key={vehicle.id} className="space-y-3 p-3" data-testid={`card-vehicle-${vehicle.id}`}>
+                <div className="flex items-start gap-3">
+                  <Link
+                    href={`/vehicles/${vehicle.id}`}
+                    className="flex min-w-0 flex-1 items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`${vehicle.vehicleId}, ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                  >
+                    <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-muted/40">
+                      {vehicle.imageUrl ? (
+                        <img
+                          src={toDisplayUrl(vehicle.imageUrl)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <Car className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium leading-tight">{vehicle.vehicleId}</div>
+                      <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </p>
+                      <Badge
+                        className="no-default-hover-elevate mt-1.5"
+                        variant={statusColors[vehicle.status]}
+                      >
+                        {formatVehicleStatus(vehicle.status)}
+                      </Badge>
+                    </div>
+                  </Link>
+                </div>
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Plate</dt>
+                    <dd className="truncate font-mono">{vehicle.licensePlate || "—"}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Mileage</dt>
+                    <dd className="tabular-nums">{formatMileage(vehicle.currentMileage)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Registration</dt>
+                    <dd><ComplianceDate value={vehicle.registrationExpiresAt} /></dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Inspection</dt>
+                    <dd><ComplianceDate value={vehicle.inspectionExpiresAt} /></dd>
+                  </div>
+                </dl>
+                <VehicleFleetActions
+                  vehicle={vehicle}
+                  canManage={canManageVehicles}
+                  onView={(selected) => setLocation(`/vehicles/${selected.id}`)}
+                  onEdit={(selected) => setLocation(`/vehicles/${selected.id}/edit`)}
+                  onCopy={copyVehicleValue}
+                  onDelete={setVehicleToDelete}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block">
           <ResponsiveTableScroll>
-            <Table className="min-w-[980px] [&_td]:py-2.5 [&_th]:h-10">
+            <Table className="min-w-[760px] [&_td]:py-2.5 [&_th]:h-10">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="bg-card">Vehicle</TableHead>
@@ -801,6 +871,7 @@ function FleetContent() {
               </TableBody>
             </Table>
           </ResponsiveTableScroll>
+          </div>
         </div>
       ) : (
         <Card>
@@ -879,16 +950,17 @@ export default function Vehicles() {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4">
-      <div>
+    <div className="w-full min-w-0 space-y-4 p-4">
+      <div className="min-w-0">
         <h2 className="text-xl md:text-2xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Management</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
           Manage fleet and reservations
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-vehicles">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-vehicles" className="min-w-0">
+        <div className="max-w-full overflow-x-auto">
+        <TabsList className="h-auto w-max justify-start">
           {canAccessFleet && (
             <TabsTrigger value="fleet" data-testid="tab-fleet">Fleet</TabsTrigger>
           )}
@@ -906,6 +978,7 @@ export default function Vehicles() {
             </TabsTrigger>
           )}
         </TabsList>
+        </div>
         {canAccessFleet && (
           <TabsContent value="fleet">
             <FleetContent />

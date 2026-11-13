@@ -126,18 +126,18 @@ export default function VehicleQRRedirect() {
 
   if (user?.role === "technician") {
     return (
-      <div className="p-4 max-w-2xl mx-auto space-y-6" data-testid="vehicle-info-technician">
+      <div className="mx-auto w-full min-w-0 max-w-2xl space-y-6 p-4" data-testid="vehicle-info-technician">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => exitTo(setLocation, "/my-reservations")} data-testid="button-back">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => exitTo(setLocation, "/my-reservations")} data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-xl font-semibold">Vehicle Information</h1>
+          <h1 className="min-w-0 text-xl font-semibold">Vehicle Information</h1>
         </div>
 
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex min-w-0 items-center gap-2 break-words">
                 <Car className="h-5 w-5" />
                 {vehicle.year} {vehicle.make} {vehicle.model}
               </CardTitle>
@@ -150,11 +150,11 @@ export default function VehicleQRRedirect() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
               {vehicle.vin && (
                 <div>
                   <p className="text-xs text-muted-foreground">VIN</p>
-                  <p className="text-sm font-mono" data-testid="text-vin">{vehicle.vin}</p>
+                  <p className="break-all font-mono text-sm" data-testid="text-vin">{vehicle.vin}</p>
                 </div>
               )}
               {vehicle.licensePlate && (

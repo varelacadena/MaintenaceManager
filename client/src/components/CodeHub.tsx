@@ -179,15 +179,15 @@ function LockboxCard({ lockbox }: { lockbox: Lockbox }) {
           className="cursor-pointer"
           onClick={() => setExpanded(!expanded)}
         >
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex min-w-0 items-center gap-2">
               {expanded ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
               )}
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-base" data-testid={`text-lockbox-name-${lockbox.id}`}>
+              <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <CardTitle className="min-w-0 break-words text-base" data-testid={`text-lockbox-name-${lockbox.id}`}>
                 {lockbox.name}
               </CardTitle>
             </div>
@@ -200,7 +200,7 @@ function LockboxCard({ lockbox }: { lockbox: Lockbox }) {
               </Badge>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground ml-10" data-testid={`text-lockbox-location-${lockbox.id}`}>
+          <p className="break-words text-sm text-muted-foreground sm:ml-10" data-testid={`text-lockbox-location-${lockbox.id}`}>
             {lockbox.location}
           </p>
         </CardHeader>
@@ -262,7 +262,38 @@ function LockboxCard({ lockbox }: { lockbox: Lockbox }) {
                 ))}
               </div>
             ) : codes && codes.length > 0 ? (
-              <div className="rounded-md border">
+              <>
+              <div className="space-y-2 md:hidden">
+                {codes.map((code) => (
+                  <div key={code.id} className="flex items-center gap-3 rounded-md border px-3 py-2" data-testid={`row-code-mobile-${code.id}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-mono font-medium">{code.code}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {code.lastUsedAt ? new Date(code.lastUsedAt).toLocaleDateString() : "Never used"}
+                        {" · "}
+                        {code.useCount} {code.useCount === 1 ? "use" : "uses"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={code.status === "active"}
+                      onCheckedChange={() =>
+                        toggleCodeMutation.mutate({ id: code.id, currentStatus: code.status })
+                      }
+                      aria-label={`${code.status === "active" ? "Deactivate" : "Activate"} code ${code.code}`}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0"
+                      onClick={() => setDeleteCodeId(code.id)}
+                      aria-label={`Delete code ${code.code}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden rounded-md border md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -309,6 +340,7 @@ function LockboxCard({ lockbox }: { lockbox: Lockbox }) {
                   </TableBody>
                 </Table>
               </div>
+              </>
             ) : (
               <div className="text-center py-6 text-muted-foreground text-sm">
                 <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -472,9 +504,9 @@ export default function CodeHub() {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Button onClick={() => setCreateOpen(true)} data-testid="button-add-lockbox">
+    <div className="w-full min-w-0 space-y-4">
+      <div className="flex items-center sm:justify-end">
+        <Button className="w-full sm:w-auto" onClick={() => setCreateOpen(true)} data-testid="button-add-lockbox">
           <Plus className="mr-2 h-4 w-4" />
           Add Lockbox
         </Button>

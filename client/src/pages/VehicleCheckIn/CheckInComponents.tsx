@@ -80,7 +80,7 @@ export function SubStepDots({ total, currentIndex }: { total: number; currentInd
 export function StepProgress({ currentStep }: { currentStep: Step }) {
   const currentIndex = STEPS.findIndex(s => s.id === currentStep);
   return (
-    <div className="flex items-center justify-between mb-6 px-2">
+    <div className="mb-6 flex min-w-0 items-center justify-between px-1 sm:px-2">
       {STEPS.map((step, index) => {
         const isCompleted = index < currentIndex;
         const isCurrent = step.id === currentStep;
@@ -95,7 +95,7 @@ export function StepProgress({ currentStep }: { currentStep: Step }) {
               }`}>
                 {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
               </div>
-              <span className={`text-xs text-center leading-tight max-w-[60px] ${
+              <span className={`max-w-[4.25rem] text-center text-[10px] leading-tight sm:text-xs ${
                 isCurrent ? "text-primary font-medium" : isCompleted ? "text-muted-foreground" : "text-muted-foreground/50"
               }`}>
                 {step.label}

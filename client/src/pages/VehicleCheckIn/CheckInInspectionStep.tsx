@@ -183,12 +183,12 @@ export function InspectionStep(props: InspectionStepProps) {
                   <h3 className="text-lg font-semibold">Is the vehicle clean?</h3>
                   <p className="text-sm text-muted-foreground">You agreed to return the vehicle clean</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid min-w-0 grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => { setCiIsClean(true); setCleanlinessViolationAck(false); }}
                     data-testid="cleanliness-clean"
-                    className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                    className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                       ciIsClean === true
                         ? "border-green-500 bg-green-50 dark:bg-green-950/20"
                         : "border-muted hover-elevate"
@@ -203,7 +203,7 @@ export function InspectionStep(props: InspectionStepProps) {
                     type="button"
                     onClick={() => { setCiIsClean(false); setCleanlinessViolationAck(false); }}
                     data-testid="cleanliness-dirty"
-                    className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                    className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                       ciIsClean === false
                         ? "border-red-500 bg-red-50 dark:bg-red-950/20"
                         : "border-muted hover-elevate"

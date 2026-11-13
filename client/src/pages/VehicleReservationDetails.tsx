@@ -232,17 +232,17 @@ export default function VehicleReservationDetails() {
   const showEditButton = isAdmin && isApproved && moreThan24hAway;
 
   return (
-    <div className="flex-1 space-y-4 p-4 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-4 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl" data-testid="text-page-title">
             Reservation Details
           </h2>
-          <p className="text-muted-foreground mt-0.5">
+          <p className="mt-0.5 break-words text-muted-foreground">
             Reservation {getVehicleReservationNumber(reservation)} · {reservation.purpose}
           </p>
         </div>
-        <Badge variant={getStatusColor(reservation.status)} className="text-sm" data-testid="badge-status">
+        <Badge variant={getStatusColor(reservation.status)} className="w-fit shrink-0 text-sm" data-testid="badge-status">
           {formatStatusLabel(reservation.status)}
         </Badge>
       </div>
@@ -314,7 +314,7 @@ export default function VehicleReservationDetails() {
                   <p className="font-semibold text-sm">Your vehicle is ready</p>
                   <p className="text-base font-bold">{vehicle.make} {vehicle.model}</p>
                 </div>
-                <div className="flex gap-6 text-sm">
+                <div className="flex flex-wrap justify-center gap-4 text-sm sm:gap-6">
                   <div>
                     <p className="text-muted-foreground text-xs">Fleet No.</p>
                     <p className="font-medium">{vehicle.vehicleId}</p>
@@ -391,7 +391,7 @@ export default function VehicleReservationDetails() {
                 onClick={() => setShowAdvisoryDialog(true)}
                 variant="default"
                 size="lg"
-                className="shadow-lg"
+                className="h-auto whitespace-normal px-4 text-center shadow-lg"
                 disabled={!isAdmin && isApproved && !isTimeAvailable}
                 data-testid="button-view-key-pickup"
               >
@@ -417,7 +417,7 @@ export default function VehicleReservationDetails() {
         </Card>
       )}
 
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap [&_button]:w-full sm:[&_button]:w-auto">
         {hasVehicle && isFleetPrivilegedRole(currentUser) && (
           <Button
             variant="outline"

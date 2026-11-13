@@ -35,7 +35,7 @@ export function SummaryStep({ vehicle, checkOutLog, reservation, setInspSubStep,
       <CardContent className="space-y-4">
         <div className="bg-muted/50 rounded-md p-4 space-y-3">
           <p className="text-sm font-semibold">Trip Summary</p>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
             <div>
               <p className="text-muted-foreground text-xs">Vehicle</p>
               <p className="font-medium">{vehicle.make} {vehicle.model}</p>
@@ -149,7 +149,7 @@ export function CompleteStep({ outcome, vehicle, milesDriven, checkOutLog, setLo
 
         <div className="w-full bg-muted/50 rounded-md p-4 text-left space-y-2">
           <p className="text-sm font-semibold">Trip Stats</p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             <span className="text-muted-foreground">Vehicle</span>
             <span className="font-medium">{vehicle.make} {vehicle.model}</span>
             <span className="text-muted-foreground">Miles Driven</span>

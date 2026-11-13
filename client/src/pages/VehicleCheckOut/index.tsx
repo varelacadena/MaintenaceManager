@@ -30,7 +30,7 @@ export default function VehicleCheckOut() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 space-y-4 p-4">
+      <div className="w-full min-w-0 space-y-4 p-4">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/4" />
           <div className="h-64 bg-muted rounded" />
@@ -41,7 +41,7 @@ export default function VehicleCheckOut() {
 
   if (!reservation || !vehicle) {
     return (
-      <div className="flex-1 space-y-4 p-4">
+      <div className="w-full min-w-0 space-y-4 p-4">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Car className="h-12 w-12 text-muted-foreground mb-4" />
@@ -54,10 +54,10 @@ export default function VehicleCheckOut() {
 
   if (!withinTime) {
     return (
-      <div className="flex-1 p-4 max-w-2xl mx-auto">
+      <div className="mx-auto w-full min-w-0 max-w-2xl p-4">
         <div className="mb-2">
-          <h2 className="text-2xl font-bold tracking-tight">Vehicle Check-Out</h2>
-          <p className="text-muted-foreground mt-0.5">{vehicle.make} {vehicle.model} ({vehicle.vehicleId})</p>
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Vehicle Check-Out</h2>
+          <p className="mt-0.5 break-words text-muted-foreground">{vehicle.make} {vehicle.model} ({vehicle.vehicleId})</p>
         </div>
         <Card className="mt-6">
           <CardContent className="flex flex-col items-center text-center py-12 gap-4">
@@ -86,10 +86,10 @@ export default function VehicleCheckOut() {
   }
 
   return (
-    <div className="flex-1 p-4 max-w-2xl mx-auto">
+    <div className="mx-auto w-full min-w-0 max-w-2xl p-4">
       <div className="mb-2">
-        <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Vehicle Check-Out</h2>
-        <p className="text-muted-foreground mt-0.5">{vehicle.make} {vehicle.model} ({vehicle.vehicleId})</p>
+        <h2 className="text-xl font-bold tracking-tight sm:text-2xl" data-testid="text-page-title">Vehicle Check-Out</h2>
+        <p className="mt-0.5 break-words text-muted-foreground">{vehicle.make} {vehicle.model} ({vehicle.vehicleId})</p>
       </div>
 
       <StepProgress currentStep={step} advisoryAlreadyAccepted={advisoryAccepted && step !== "advisory"} />

@@ -42,12 +42,12 @@ export function InspectionStepExtra(props: InspectionStepProps) {
             <h3 className="text-lg font-semibold">Any mechanical issues?</h3>
             <p className="text-sm text-muted-foreground">Report problems, damage, or safety concerns</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid min-w-0 grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => { setCiHasIssues(false); setCiIssueCategory(""); setCiIssues(""); }}
               data-testid="issues-none"
-              className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+              className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                 ciHasIssues === false
                   ? "border-primary bg-primary/10"
                   : "border-muted hover-elevate"
@@ -62,7 +62,7 @@ export function InspectionStepExtra(props: InspectionStepProps) {
               type="button"
               onClick={() => setCiHasIssues(true)}
               data-testid="issues-yes"
-              className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+              className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                 ciHasIssues === true
                   ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
                   : "border-muted hover-elevate"

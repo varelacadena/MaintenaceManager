@@ -15,7 +15,7 @@ export function QrPrintSizeSelector({ value, onChange }: QrPrintSizeSelectorProp
         if (next) onChange(next as QrPrintSize);
       }}
       size="sm"
-      className="justify-center"
+      className="w-full flex-wrap justify-center"
     >
       <ToggleGroupItem value="small" aria-label="Small print size">
         Small

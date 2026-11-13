@@ -116,12 +116,12 @@ export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
                   <h3 className="text-lg font-semibold">Is the vehicle clean?</h3>
                   <p className="text-sm text-muted-foreground">Document the vehicle's current cleanliness</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid min-w-0 grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setCoIsClean(true)}
                     data-testid="condition-clean"
-                    className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                    className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                       coIsClean === true
                         ? "border-green-500 bg-green-50 dark:bg-green-950/20"
                         : "border-muted hover-elevate"
@@ -136,7 +136,7 @@ export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
                     type="button"
                     onClick={() => setCoIsClean(false)}
                     data-testid="condition-dirty"
-                    className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                    className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                       coIsClean === false
                         ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
                         : "border-muted hover-elevate"
@@ -175,12 +175,12 @@ export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
                   <h3 className="text-lg font-semibold">Any pre-existing damage?</h3>
                   <p className="text-sm text-muted-foreground">Document existing damage to protect yourself</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid min-w-0 grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => { setCoHasDamage(false); setCoDamageNotes(""); }}
                     data-testid="damage-none"
-                    className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                    className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                       coHasDamage === false
                         ? "border-primary bg-primary/10"
                         : "border-muted hover-elevate"
@@ -195,7 +195,7 @@ export function CheckoutStep({ ctx }: { ctx: VehicleCheckOutContext }) {
                     type="button"
                     onClick={() => setCoHasDamage(true)}
                     data-testid="damage-yes"
-                    className={`flex flex-col items-center gap-3 p-5 rounded-md border-2 transition-all ${
+                    className={`flex min-w-0 flex-col items-center gap-3 rounded-md border-2 p-3 text-center transition-all sm:p-5 ${
                       coHasDamage === true
                         ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
                         : "border-muted hover-elevate"
@@ -354,9 +354,9 @@ export function CompleteStep({ ctx }: { ctx: VehicleCheckOutContext }) {
         </div>
         <div className="w-full bg-muted/50 rounded-md p-4 text-left space-y-2">
           <p className="text-sm font-semibold">Trip Details</p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid min-w-0 grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             <span className="text-muted-foreground">Vehicle</span>
-            <span className="font-medium">{vehicle.make} {vehicle.model}</span>
+            <span className="min-w-0 break-words font-medium">{vehicle.make} {vehicle.model}</span>
             <span className="text-muted-foreground">Start Time</span>
             <span className="font-medium">{format(new Date(reservation.startDate), "MMM d 'at' h:mm a")}</span>
             <span className="text-muted-foreground">Starting Mileage</span>
