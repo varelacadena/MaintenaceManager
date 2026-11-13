@@ -19,6 +19,7 @@ export function isNavItemActive(location: string, itemUrl: string): boolean {
     "/resources",
     "/properties",
     "/analytics",
+    "/purchases",
     "/inventory",
     "/vendors",
     "/students",
@@ -118,7 +119,7 @@ export function getParentRoute(pathname: string, role?: string): string {
     return "/";
   }
 
-  if (path === "/inventory" || path.startsWith("/analytics")) {
+  if (path === "/inventory" || path === "/purchases" || path.startsWith("/analytics")) {
     return "/";
   }
   if (

@@ -11,7 +11,6 @@ export const EXPORT_TYPES: Record<ReportTab, string> = {
   requests: "service-requests-detailed",
   alerts: "alerts",
   projects: "projects",
-  purchases: "purchases",
 };
 
 export const SHEETS_BY_TAB: Record<ReportTab, string[]> = {
@@ -59,7 +58,6 @@ export const SHEETS_BY_TAB: Record<ReportTab, string[]> = {
   ],
   alerts: ["Report Info", "By Severity", "By Type", "All Alerts"],
   projects: ["Report Info", "Summary", "By Status", "By Priority", "Budget by Status", "All Projects"],
-  purchases: ["Purchases"],
 };
 
 export const TASK_DATE_TABS: ReportTab[] = [
@@ -80,7 +78,6 @@ export const PROPERTY_TABS: ReportTab[] = [
   "requests",
   "alerts",
   "projects",
-  "purchases",
 ];
 
 export const DATE_NOTE: Partial<Record<ReportTab, string>> = {
@@ -88,5 +85,4 @@ export const DATE_NOTE: Partial<Record<ReportTab, string>> = {
   projects: "Projects use the date they were created.",
   fleet: "Fleet counts reservations that overlap the period. Vehicles are not assigned to a property.",
   inventory: "Inventory counts parts logged in the period. Stock is not assigned to a property.",
-  purchases: "Purchases use the date on the receipt.",
 };

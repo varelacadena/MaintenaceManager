@@ -14,7 +14,8 @@ import {
   vehicleMaintenanceLogs,
   spaces,
   projects,
-  taskPurchases,
+  purchaseLinks,
+  purchases,
   studentTimeEntries,
   studentDailyRecaps,
 } from "@shared/schema";
@@ -699,10 +700,14 @@ export class AnalyticsService {
         .select({ cost: sql<number>`coalesce(sum(${partsUsed.cost}), 0)` })
         .from(partsUsed)
         .where(inArray(partsUsed.taskId, matchingIds));
+      const linkedPurchaseIds = db
+        .select({ id: purchaseLinks.purchaseId })
+        .from(purchaseLinks)
+        .where(inArray(purchaseLinks.taskId, matchingIds));
       const [storeRow] = await db
-        .select({ cost: sql<number>`coalesce(sum(${taskPurchases.amount}), 0)` })
-        .from(taskPurchases)
-        .where(inArray(taskPurchases.taskId, matchingIds));
+        .select({ cost: sql<number>`coalesce(sum(${purchases.amount}), 0)` })
+        .from(purchases)
+        .where(inArray(purchases.id, linkedPurchaseIds));
       const cents = (value: number) => Math.round(value * 100) / 100;
       laborCost = cents((Number(timeRow?.minutes) || 0) / 60 * 15);
       partsCost = cents(Number(partsRow?.cost) || 0);

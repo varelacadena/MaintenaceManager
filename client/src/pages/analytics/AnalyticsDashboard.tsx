@@ -16,7 +16,6 @@ const InventoryReport = lazy(() => import("./reports/InventoryReport"));
 const ServiceRequestsReport = lazy(() => import("./reports/ServiceRequestsReport"));
 const AlertsReport = lazy(() => import("./reports/AlertsReport"));
 const ProjectsReport = lazy(() => import("./reports/ProjectsReport"));
-const PurchasesReport = lazy(() => import("./reports/PurchasesReport"));
 const KeyMetricsReport = lazy(() => import("./reports/KeyMetricsReport"));
 
 const reportTabs = new Set<ReportTab>([
@@ -80,11 +79,7 @@ function AnalyticsDashboardContent() {
         <h1 className="text-xl sm:text-2xl font-bold">{title}</h1>
       </div>
       <AnalyticsToolbar />
-      {activeTab === "purchases" ? (
-        <Suspense fallback={<LoadingSkeleton />}>
-          <PurchasesReport />
-        </Suspense>
-      ) : view === "analytics" ? (
+      {view === "analytics" ? (
         activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities" ? (
           <AnalyticsFocus />
         ) : (

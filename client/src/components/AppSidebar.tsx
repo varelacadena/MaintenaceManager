@@ -21,6 +21,7 @@ import {
   Map,
   Car,
   BarChart3,
+  Receipt,
   FolderKanban,
   LogOut,
   BookOpen,
@@ -56,6 +57,7 @@ const roleMenus = {
     { title: "Work", url: "/work", icon: FolderKanban },
     { title: "Students", url: "/students", icon: GraduationCap },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
+    { title: "Purchases", url: "/purchases", icon: Receipt },
     { title: "Resource Library", url: "/resources", icon: BookOpen },
     { title: "Vehicles", url: "/vehicles", icon: Car },
     { title: "Drivers", url: "/drivers", icon: Car },
@@ -67,6 +69,7 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
+    { title: "Purchases", url: "/purchases", icon: Receipt },
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },

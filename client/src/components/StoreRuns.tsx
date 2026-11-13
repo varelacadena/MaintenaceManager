@@ -1,23 +1,16 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format, isValid, parse } from "date-fns";
 import { ChevronRight, Receipt, Trash2 } from "lucide-react";
-import type { TaskPurchase } from "@shared/schema";
+import { Link } from "wouter";
+import type { PurchaseView } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getSignedUploadParameters } from "@/lib/uploadUtils";
-
-const MAX_RECEIPT_BYTES = 15 * 1024 * 1024;
-
-type ReceiptPayload = {
-  fileName: string;
-  fileType: string;
-  objectPath: string;
-};
+import { prepareReceipt, type ReceiptPayload, type ReceiptSuggestion } from "@/lib/purchaseReceipt";
 
 type PurchaseBody = {
   storeName: string;
@@ -36,38 +29,6 @@ function showDay(value: string): string {
   return isValid(parsed) ? format(parsed, "MMM d, yyyy") : value;
 }
 
-function fileTypeOf(file: File): string {
-  if (file.type) return file.type;
-  const ext = file.name.split(".").pop()?.toLowerCase();
-  if (ext === "pdf") return "application/pdf";
-  if (ext === "png") return "image/png";
-  if (ext === "webp") return "image/webp";
-  if (ext === "heic" || ext === "heif") return "image/heic";
-  return "image/jpeg";
-}
-
-async function uploadReceipt(file: File): Promise<ReceiptPayload> {
-  if (file.size > MAX_RECEIPT_BYTES) {
-    throw new Error("Receipt must be 15 MB or smaller");
-  }
-  const params = await getSignedUploadParameters();
-  if (!params.objectPath) throw new Error("Could not start the receipt upload");
-  const isMock = params.url.startsWith("https://mock-storage.local/");
-  if (!isMock) {
-    const response = await fetch(params.url, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": fileTypeOf(file) },
-    });
-    if (!response.ok) throw new Error("Could not upload the receipt");
-  }
-  return {
-    fileName: file.name,
-    fileType: fileTypeOf(file),
-    objectPath: params.objectPath,
-  };
-}
-
 function emptyForm() {
   return {
     storeName: "",
@@ -78,16 +39,34 @@ function emptyForm() {
   };
 }
 
+function applySuggestion<T extends { storeName: string; amount: string; purchasedOn: string }>(
+  form: T,
+  suggestion: ReceiptSuggestion,
+): T {
+  return {
+    ...form,
+    storeName: suggestion.storeName || form.storeName,
+    purchasedOn: suggestion.purchasedOn || form.purchasedOn,
+    amount: suggestion.amount != null ? suggestion.amount.toFixed(2) : form.amount,
+  };
+}
+
 export function StoreRunPanel({ taskId }: { taskId: string }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const isAdmin = user?.role === "admin";
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [file, setFile] = useState<File | null>(null);
-  const [fileKey, setFileKey] = useState(0);
+  const [file, setFile] = useState<ReceiptPayload | null>(null);
+  const [fileLabel, setFileLabel] = useState("");
+  const [reading, setReading] = useState(false);
+  const [readNote, setReadNote] = useState<string | null>(null);
+  const [find, setFind] = useState("");
+  const [hits, setHits] = useState<PurchaseView[]>([]);
 
-  const { data: purchases = [], isLoading } = useQuery<TaskPurchase[]>({
+  const { data: purchases = [], isLoading } = useQuery<PurchaseView[]>({
     queryKey: ["/api/tasks", taskId, "purchases"],
     enabled: !!taskId,
   });
@@ -96,7 +75,38 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
     setEditingId(null);
     setForm(emptyForm());
     setFile(null);
-    setFileKey((key) => key + 1);
+    setFileLabel("");
+    setReadNote(null);
+  };
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "purchases"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
+  };
+
+  const onFile = async (list: FileList | null) => {
+    const next = list?.[0];
+    if (!next) return;
+    setReading(true);
+    setReadNote(null);
+    try {
+      const prepared = await prepareReceipt(next);
+      setFile(prepared.receipt);
+      setFileLabel(next.name);
+      setForm((current) => ({
+        ...(prepared.suggestion ? applySuggestion(current, prepared.suggestion) : current),
+        removeReceipt: false,
+      }));
+      setReadNote(prepared.suggestion?.message || prepared.warning);
+    } catch (error) {
+      toast({
+        title: "Could not add the receipt",
+        description: error instanceof Error ? error.message : "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setReading(false);
+    }
   };
 
   const saveMutation = useMutation({
@@ -116,61 +126,91 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
         amount,
         purchasedOn: form.purchasedOn,
       };
-      if (file) body.receipt = await uploadReceipt(file);
+      if (file) body.receipt = file;
       else if (editing && form.removeReceipt) body.receipt = null;
 
       if (editing) {
-        const response = await apiRequest("PATCH", `/api/task-purchases/${editing.id}`, body);
+        const response = await apiRequest("PATCH", `/api/purchases/${editing.id}`, body);
         return response.json();
       }
       const response = await apiRequest("POST", `/api/tasks/${taskId}/purchases`, body);
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: editingId ? "Store run updated" : "Store run added" });
+      refresh();
       reset();
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "purchases"] });
     },
     onError: (error: Error) => {
       toast({ title: "Could not save store run", description: error.message, variant: "destructive" });
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/task-purchases/${id}`);
+  const removeMutation = useMutation({
+    mutationFn: async (purchase: PurchaseView) => {
+      await apiRequest("DELETE", `/api/tasks/${taskId}/purchases/${purchase.id}`);
     },
     onSuccess: () => {
-      if (editingId) reset();
-      toast({ title: "Store run deleted" });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "purchases"] });
+      refresh();
+      reset();
     },
     onError: (error: Error) => {
-      toast({ title: "Could not delete store run", description: error.message, variant: "destructive" });
+      toast({ title: "Could not remove store run", description: error.message, variant: "destructive" });
     },
   });
 
-  const startEdit = (purchase: TaskPurchase) => {
+  const startEdit = (purchase: PurchaseView) => {
     setEditingId(purchase.id);
     setFile(null);
+    setFileLabel("");
+    setReadNote(null);
     setForm({
       storeName: purchase.storeName,
       description: purchase.description,
-      amount: Number(purchase.amount).toFixed(2),
+      amount: String(purchase.amount),
       purchasedOn: purchase.purchasedOn,
       removeReceipt: false,
     });
   };
 
-  const canChange = (purchase: TaskPurchase) =>
+  const canChange = (purchase: PurchaseView) =>
     isAdmin || (!!user?.id && purchase.createdById === user.id);
+
+  const searchSaved = async () => {
+    const query = find.trim();
+    if (query.length < 2) {
+      setHits([]);
+      return;
+    }
+    const params = new URLSearchParams({ q: query });
+    const response = await fetch(`/api/purchases?${params.toString()}`, { credentials: "include" });
+    if (!response.ok) {
+      toast({ title: "Could not search receipts", variant: "destructive" });
+      return;
+    }
+    const rows = (await response.json()) as PurchaseView[];
+    setHits(rows.filter((row) => !row.links.some((link) => link.kind === "task" && link.targetId === taskId)).slice(0, 6));
+  };
+
+  const attachMutation = useMutation({
+    mutationFn: async (purchaseId: string) => {
+      await apiRequest("POST", `/api/purchases/${purchaseId}/links`, { kind: "task", targetId: taskId });
+    },
+    onSuccess: () => {
+      refresh();
+      setHits([]);
+      setFind("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not attach receipt", description: error.message, variant: "destructive" });
+    },
+  });
 
   return (
     <div className="space-y-3" data-testid="section-store-runs">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Receipts for this job.</p>
+        <Link href="/purchases" className="text-sm text-primary underline shrink-0">All receipts</Link>
+      </div>
       <form
         className="space-y-3"
         onSubmit={(event) => {
@@ -229,20 +269,20 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="store-receipt">{editingId ? "Replace receipt" : "Receipt"}</Label>
-          <Input
-            id="store-receipt"
-            key={fileKey}
-            type="file"
-            accept="image/*,application/pdf"
-            className="h-11 text-base file:mr-3 file:text-sm"
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
-              if (event.target.files?.[0]) setForm({ ...form, removeReceipt: false });
-            }}
-            data-testid="input-store-receipt"
-          />
-          {file && <p className="text-xs text-muted-foreground break-all">{file.name}</p>}
+          <Label>{editingId ? "Replace receipt" : "Receipt"}</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => cameraRef.current?.click()} data-testid="button-take-receipt-photo">
+              Take photo
+            </Button>
+            <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => fileRef.current?.click()} data-testid="button-upload-receipt">
+              Upload file
+            </Button>
+          </div>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => { void onFile(event.target.files); event.target.value = ""; }} />
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => { void onFile(event.target.files); event.target.value = ""; }} />
+          {reading && <p className="text-xs text-muted-foreground">Reading the receipt...</p>}
+          {fileLabel && <p className="text-xs text-muted-foreground break-all">{fileLabel}</p>}
+          {readNote && <p className="text-xs text-muted-foreground">{readNote}</p>}
           {editingId && !file && (
             <p className="text-xs text-muted-foreground">
               {purchases.find((purchase) => purchase.id === editingId)?.receiptFileName || "No receipt on this line"}
@@ -262,12 +302,7 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
           )}
         </div>
         <div className="flex gap-2">
-          <Button
-            type="submit"
-            className="h-11 flex-1 sm:flex-none"
-            disabled={saveMutation.isPending}
-            data-testid="button-save-store-run"
-          >
+          <Button type="submit" className="h-11 flex-1 sm:flex-none" disabled={saveMutation.isPending || reading} data-testid="button-save-store-run">
             {saveMutation.isPending ? "Saving..." : editingId ? "Save changes" : "Add store run"}
           </Button>
           {editingId && (
@@ -278,63 +313,97 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
         </div>
       </form>
 
+      <form
+        className="space-y-2 border-t border-border pt-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void searchSaved();
+        }}
+      >
+        <Label htmlFor="attach-receipt">Attach a saved receipt</Label>
+        <div className="flex gap-2">
+          <Input
+            id="attach-receipt"
+            value={find}
+            onChange={(event) => setFind(event.target.value)}
+            placeholder="Store or what you bought"
+            className="h-11 text-base"
+            data-testid="input-attach-receipt"
+          />
+          <Button type="submit" variant="outline" className="h-11 shrink-0" data-testid="button-find-receipt">Find</Button>
+        </div>
+        {hits.length > 0 && (
+          <ul className="space-y-2">
+            {hits.map((purchase) => (
+              <li key={purchase.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium break-words">{purchase.storeName}</p>
+                  <p className="text-xs text-muted-foreground">{showDay(purchase.purchasedOn)} · ${Number(purchase.amount).toFixed(2)}</p>
+                </div>
+                <Button type="button" variant="outline" className="h-9 shrink-0" disabled={attachMutation.isPending} onClick={() => attachMutation.mutate(purchase.id)}>
+                  Attach
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </form>
+
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading store runs...</p>
       ) : purchases.length === 0 ? (
         <p className="text-sm text-muted-foreground" data-testid="text-store-runs-empty">No store runs on this job yet.</p>
       ) : (
         <ul className="space-y-2">
-          {purchases.map((purchase) => (
-            <li
-              key={purchase.id}
-              className="rounded-lg border border-border px-3 py-2.5"
-              data-testid={`store-run-${purchase.id}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium break-words">{purchase.storeName}</p>
-                  <p className="text-sm text-muted-foreground break-words">{purchase.description}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {showDay(purchase.purchasedOn)}
-                    {purchase.createdByName ? ` · ${purchase.createdByName}` : ""}
-                  </p>
-                  {purchase.receiptObjectPath && (
-                    <a
-                      href={`/api/task-purchases/${purchase.id}/receipt`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary underline"
-                      data-testid={`link-receipt-${purchase.id}`}
+          {purchases.map((purchase) => {
+            const shared = purchase.links.length > 1 || !!purchase.purpose;
+            return (
+              <li key={purchase.id} className="rounded-lg border border-border px-3 py-2.5" data-testid={`store-run-${purchase.id}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium break-words">{purchase.storeName}</p>
+                    <p className="text-sm text-muted-foreground break-words">{purchase.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {showDay(purchase.purchasedOn)}
+                      {purchase.createdByName ? ` · ${purchase.createdByName}` : ""}
+                    </p>
+                    {purchase.receiptObjectPath && (
+                      <a href={`/api/purchases/${purchase.id}/receipt`} target="_blank" rel="noreferrer" className="text-xs text-primary underline" data-testid={`link-receipt-${purchase.id}`}>
+                        {purchase.receiptFileName || "Receipt"}
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium shrink-0">${Number(purchase.amount).toFixed(2)}</p>
+                </div>
+                {(canChange(purchase) || shared) && (
+                  <div className="mt-2 flex gap-2">
+                    {canChange(purchase) && (
+                      <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => startEdit(purchase)} data-testid={`button-edit-store-run-${purchase.id}`}>
+                        Edit
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9"
+                      disabled={removeMutation.isPending}
+                      onClick={() => {
+                        const message = shared
+                          ? "Remove this receipt from this job? It stays in Purchases."
+                          : "Delete this store run?";
+                        if (window.confirm(message)) removeMutation.mutate(purchase);
+                      }}
+                      data-testid={`button-delete-store-run-${purchase.id}`}
                     >
-                      {purchase.receiptFileName || "Receipt"}
-                    </a>
-                  )}
-                </div>
-                <p className="text-sm font-medium shrink-0">${Number(purchase.amount).toFixed(2)}</p>
-              </div>
-              {canChange(purchase) && (
-                <div className="mt-2 flex gap-2">
-                  <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => startEdit(purchase)} data-testid={`button-edit-store-run-${purchase.id}`}>
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9"
-                    disabled={deleteMutation.isPending}
-                    onClick={() => {
-                      if (window.confirm("Delete this store run?")) deleteMutation.mutate(purchase.id);
-                    }}
-                    data-testid={`button-delete-store-run-${purchase.id}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              )}
-            </li>
-          ))}
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />
+                      {shared ? "Remove" : "Delete"}
+                    </Button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -343,7 +412,7 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
 
 export function StoreRunMoreRow({ taskId }: { taskId: string }) {
   const [open, setOpen] = useState(false);
-  const { data: purchases = [] } = useQuery<TaskPurchase[]>({
+  const { data: purchases = [] } = useQuery<PurchaseView[]>({
     queryKey: ["/api/tasks", taskId, "purchases"],
     enabled: !!taskId,
   });

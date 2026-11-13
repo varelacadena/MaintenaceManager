@@ -35,7 +35,6 @@ const AREAS: { id: ReportTab; label: string }[] = [
   { id: "requests", label: "Requests" },
   { id: "alerts", label: "Alerts" },
   { id: "projects", label: "Projects" },
-  { id: "purchases", label: "Purchases" },
 ];
 
 const VIEWS: { id: AnalyticsView; label: string }[] = [
@@ -336,7 +335,6 @@ export default function AnalyticsToolbar() {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 items-end gap-2 md:flex md:flex-wrap">
-        {activeTab !== "purchases" && (
         <Field label="View" testId="analytics-view">
           <Select value={view} onValueChange={(value) => setView(value as AnalyticsView)}>
             <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[10.5rem]">
@@ -351,7 +349,6 @@ export default function AnalyticsToolbar() {
             </SelectContent>
           </Select>
         </Field>
-        )}
         <Field label="Area" testId="analytics-area">
           <Select value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
             <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[11.5rem]">

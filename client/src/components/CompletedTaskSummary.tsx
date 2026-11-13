@@ -44,7 +44,7 @@ import type {
   User as UserType,
   Vehicle,
   TaskNote,
-  TaskPurchase,
+  PurchaseView,
 } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -208,7 +208,7 @@ function SummaryContent({
   });
 
   const canSeePurchases = user?.role === "admin" || user?.role === "technician";
-  const { data: purchases = [] } = useQuery<TaskPurchase[]>({
+  const { data: purchases = [] } = useQuery<PurchaseView[]>({
     queryKey: ["/api/tasks", taskId, "purchases"],
     enabled: !!taskId && canSeePurchases,
   });
@@ -452,13 +452,13 @@ function SummaryContent({
                     {purchase.receiptObjectPath && (
                       purchase.receiptFileType?.startsWith("image/") ? (
                         <img
-                          src={`/api/task-purchases/${purchase.id}/receipt`}
+                          src={`/api/purchases/${purchase.id}/receipt`}
                           alt={purchase.receiptFileName || "Receipt"}
                           className="mt-2 max-h-48 rounded-md border border-border"
                         />
                       ) : (
                         <a
-                          href={`/api/task-purchases/${purchase.id}/receipt`}
+                          href={`/api/purchases/${purchase.id}/receipt`}
                           className="text-xs text-primary underline"
                           target="_blank"
                           rel="noreferrer"

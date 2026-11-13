@@ -27,6 +27,7 @@ const EquipmentWorkHistory = lazyWithRetry(() => import("@/pages/EquipmentWorkHi
 const Users = lazyWithRetry(() => import("@/pages/Users"));
 const Vendors = lazyWithRetry(() => import("@/pages/Vendors"));
 const Inventory = lazyWithRetry(() => import("@/pages/Inventory"));
+const Purchases = lazyWithRetry(() => import("@/pages/Purchases"));
 const MobileEquipmentPage = lazyWithRetry(() => import("@/pages/MobileEquipment"));
 const MobileEquipmentDetail = lazyWithRetry(() => import("@/pages/MobileEquipment/MobileEquipmentDetail"));
 const Vehicles = lazyWithRetry(() => import("@/pages/Vehicles"));
@@ -261,6 +262,16 @@ function InventoryRoute() {
     <DomainErrorBoundary domain="Inventory">
       <RoleGuard allowedRoles={["admin", "technician"]} permission="inventory">
         <Inventory />
+      </RoleGuard>
+    </DomainErrorBoundary>
+  );
+}
+
+function PurchasesRoute() {
+  return (
+    <DomainErrorBoundary domain="Purchases">
+      <RoleGuard allowedRoles={["admin", "technician"]}>
+        <Purchases />
       </RoleGuard>
     </DomainErrorBoundary>
   );
@@ -542,6 +553,7 @@ export function AppRoutes() {
       <Route path="/credentials" component={CredentialsRedirectRoute} />
       <Route path="/vendors" component={VendorsRoute} />
       <Route path="/inventory" component={InventoryRoute} />
+      <Route path="/purchases" component={PurchasesRoute} />
       <Route path="/tools-equipment" component={MobileEquipmentListRoute} />
       <Route path="/tools-equipment/:id" component={MobileEquipmentDetailRoute} />
       <Route path="/drivers" component={DriversRoute} />
