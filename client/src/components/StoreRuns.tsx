@@ -17,6 +17,7 @@ type PurchaseBody = {
   description: string;
   amount: number;
   purchasedOn: string;
+  poNumber: string;
   receipt?: ReceiptPayload | null;
 };
 
@@ -35,6 +36,7 @@ function emptyForm() {
     description: "",
     amount: "",
     purchasedOn: todayInput(),
+    poNumber: "",
     removeReceipt: false,
   };
 }
@@ -116,6 +118,7 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
       if (!form.description.trim()) throw new Error("Enter what was bought");
       if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter the amount paid");
       if (!form.purchasedOn) throw new Error("Enter the purchase date");
+      if (!form.poNumber.trim()) throw new Error("Enter the PO");
       const editing = purchases.find((purchase) => purchase.id === editingId);
       if (!editing && !file) throw new Error("Add a photo or PDF of the receipt");
       if (editing && form.removeReceipt && !isAdmin) throw new Error("Keep the receipt, or ask an admin to remove it");
@@ -125,6 +128,7 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
         description: form.description.trim(),
         amount,
         purchasedOn: form.purchasedOn,
+        poNumber: form.poNumber.trim(),
       };
       if (file) body.receipt = file;
       else if (editing && form.removeReceipt) body.receipt = null;
@@ -168,6 +172,7 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
       description: purchase.description,
       amount: String(purchase.amount),
       purchasedOn: purchase.purchasedOn,
+      poNumber: purchase.poNumber || "",
       removeReceipt: false,
     });
   };
@@ -238,6 +243,17 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
             placeholder="Mulch, bags, and edging"
             className="h-11 text-base"
             data-testid="input-store-item"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="store-po">PO</Label>
+          <Input
+            id="store-po"
+            value={form.poNumber}
+            onChange={(event) => setForm({ ...form, poNumber: event.target.value })}
+            placeholder="PO-1042"
+            className="h-11 text-base"
+            data-testid="input-store-po"
           />
         </div>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
@@ -364,6 +380,7 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
                     <p className="text-sm font-medium break-words">{purchase.storeName}</p>
                     <p className="text-sm text-muted-foreground break-words">{purchase.description}</p>
                     <p className="text-xs text-muted-foreground mt-1">
+                      {purchase.poNumber ? `${purchase.poNumber} · ` : ""}
                       {showDay(purchase.purchasedOn)}
                       {purchase.createdByName ? ` · ${purchase.createdByName}` : ""}
                     </p>

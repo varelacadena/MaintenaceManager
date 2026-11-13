@@ -22,6 +22,7 @@ import {
   listTaskPurchases,
   purchaseTargetExists,
   searchPurchaseOptions,
+  searchWorkJobs,
   updatePurchase,
   type PurchaseLinkInput,
 } from "../storage/purchases";
@@ -44,6 +45,7 @@ const purchaseFields = z.object({
   description: z.string().trim().min(1, "Enter what was bought").max(500),
   amount: z.number().positive("Enter the amount paid").max(1_000_000),
   purchasedOn: z.string().regex(dayPattern, "Enter the purchase date"),
+  poNumber: z.string().trim().min(1, "Enter the PO").max(80),
   purpose: z.enum(["shop_stock", "general"]).nullable().optional(),
   purposeNote: z.string().trim().max(300).nullable().optional(),
 });
@@ -93,7 +95,9 @@ function safeFilePart(value: string): string {
 
 function receiptDownloadName(row: PurchaseView, used: Map<string, number>): string {
   const amount = money(row.amount).toFixed(2);
-  const base = safeFilePart(`${row.purchasedOn} ${row.storeName} $${amount}`) || "receipt";
+  const store = safeFilePart(row.storeName).slice(0, 40);
+  const po = row.poNumber ? safeFilePart(row.poNumber) : "";
+  const base = [row.purchasedOn, store, `$${amount}`, po].filter(Boolean).join(" ") || "receipt";
   const ext = receiptExtension(row.receiptFileName, row.receiptFileType);
   const count = (used.get(base) ?? 0) + 1;
   used.set(base, count);
@@ -208,6 +212,7 @@ export function registerPurchaseRoutes(app: Express) {
         description: body.description,
         amount: money(body.amount),
         purchasedOn: body.purchasedOn,
+        poNumber: body.poNumber,
         purpose: body.purpose ?? null,
         purposeNote: body.purposeNote?.trim() || null,
         receiptFileName: body.receipt.fileName,
@@ -244,6 +249,17 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
+  app.get("/api/purchases/jobs", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+    try {
+      const query = typeof req.query.q === "string" ? req.query.q.slice(0, 80) : "";
+      const technicianId = typeof req.query.technicianId === "string" ? req.query.technicianId.slice(0, 80) : "";
+      const propertyId = typeof req.query.propertyId === "string" ? req.query.propertyId.slice(0, 80) : "";
+      res.json(await searchWorkJobs({ query, technicianId, propertyId }));
+    } catch (error) {
+      handleRouteError(res, error, "Failed to load jobs");
+    }
+  });
+
   app.get("/api/purchases/options", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
     try {
       const kind = typeof req.query.kind === "string" ? req.query.kind : "";
@@ -272,11 +288,12 @@ export function registerPurchaseRoutes(app: Express) {
             : "all-dates";
 
       if (format === "csv") {
-        const header = ["Date", "Store", "What was bought", "Amount", "Linked to", "Receipt", "Added by"];
+        const header = ["Date", "PO", "Store", "What was bought", "Amount", "Linked to", "Receipt", "Added by"];
         const lines = [header.map(csvCell).join(",")];
         for (const row of rows) {
           lines.push([
             row.purchasedOn,
+            row.poNumber || "",
             row.storeName,
             row.description,
             money(row.amount).toFixed(2),
@@ -366,6 +383,7 @@ export function registerPurchaseRoutes(app: Express) {
         description: body.description,
         amount: money(body.amount),
         purchasedOn: body.purchasedOn,
+        poNumber: body.poNumber,
         purpose: body.purpose ?? null,
         purposeNote: body.purposeNote?.trim() || null,
         receiptFileName: body.receipt.fileName,
@@ -400,6 +418,7 @@ export function registerPurchaseRoutes(app: Express) {
         description: body.description,
         amount: money(body.amount),
         purchasedOn: body.purchasedOn,
+        poNumber: body.poNumber,
         purpose: body.purpose === undefined ? existing.purpose : body.purpose,
         purposeNote: body.purposeNote === undefined ? existing.purposeNote : (body.purposeNote?.trim() || null),
       };

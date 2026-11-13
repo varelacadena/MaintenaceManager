@@ -21,6 +21,7 @@ export const purchases = pgTable("purchases", {
   description: text("description").notNull(),
   amount: doublePrecision("amount").notNull(),
   purchasedOn: date("purchased_on").notNull(),
+  poNumber: varchar("po_number", { length: 80 }),
   receiptFileName: varchar("receipt_file_name", { length: 500 }),
   receiptFileType: varchar("receipt_file_type", { length: 100 }),
   receiptObjectPath: varchar("receipt_object_path", { length: 1000 }),

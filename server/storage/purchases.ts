@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import {
   equipment,
   mobileEquipment,
@@ -7,6 +7,7 @@ import {
   purchaseLinks,
   purchases,
   tasks,
+  users,
   vehicles,
   type Purchase,
   type PurchaseLink,
@@ -144,6 +145,70 @@ export async function listPurchases(filters: {
   return withLinks(rows);
 }
 
+function byName(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
+
+export async function searchWorkJobs(filters: {
+  query?: string;
+  technicianId?: string;
+  propertyId?: string;
+}): Promise<{
+  technicians: { id: string; name: string }[];
+  properties: { id: string; name: string }[];
+  jobs: { id: string; name: string; technicianName: string | null; propertyName: string | null }[];
+}> {
+  const recent = new Date();
+  recent.setDate(recent.getDate() - 30);
+  const conditions = [
+    ne(tasks.status, "on_hold"),
+    or(
+      ne(tasks.status, "completed"),
+      gte(tasks.actualCompletionDate, recent),
+      and(eq(tasks.status, "completed"), isNull(tasks.actualCompletionDate), gte(tasks.updatedAt, recent)),
+    ),
+  ];
+  if (filters.technicianId) conditions.push(eq(tasks.assignedToId, filters.technicianId));
+  if (filters.propertyId) {
+    conditions.push(or(
+      eq(tasks.propertyId, filters.propertyId),
+      sql`${filters.propertyId} = any(${tasks.propertyIds})`,
+    )!);
+  }
+  const query = filters.query?.trim() ?? "";
+  if (query) conditions.push(ilike(tasks.name, pattern(query)));
+
+  const [techRows, propertyRows, jobs] = await Promise.all([
+    db
+      .select({ id: users.id, firstName: users.firstName, lastName: users.lastName, username: users.username })
+      .from(users)
+      .where(eq(users.role, "technician")),
+    db.select({ id: properties.id, name: properties.name }).from(properties),
+    db
+      .select({
+        id: tasks.id,
+        name: tasks.name,
+        technicianName: tasks.assignedToName,
+        propertyName: tasks.propertyName,
+      })
+      .from(tasks)
+      .where(and(...conditions))
+      .orderBy(asc(tasks.name))
+      .limit(40),
+  ]);
+
+  return {
+    technicians: techRows
+      .map((row) => ({
+        id: row.id,
+        name: [row.firstName, row.lastName].filter(Boolean).join(" ").trim() || row.username,
+      }))
+      .sort((a, b) => byName(a.name, b.name)),
+    properties: propertyRows.sort((a, b) => byName(a.name, b.name)),
+    jobs,
+  };
+}
+
 export async function searchPurchaseOptions(kind: PurchaseLinkKind, query: string): Promise<{ id: string; label: string }[]> {
   const like = pattern(query.trim());
   const hasQuery = query.trim().length > 0;
@@ -262,6 +327,7 @@ function searchMatch(like: string) {
   return sql`(
     ${purchases.storeName} ilike ${like}
     or ${purchases.description} ilike ${like}
+    or coalesce(${purchases.poNumber}, '') ilike ${like}
     or coalesce(${purchases.purposeNote}, '') ilike ${like}
     or exists (
       select 1 from purchase_links pl
