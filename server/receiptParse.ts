@@ -4,21 +4,37 @@ export type ReceiptRead = {
   amount: number | null;
 };
 
-const SKIP_LINE = /^(tel|phone|fax|www\.|https?:|thank|welcome|visa|mastercard|debit|credit|change|cash|subtotal|tax|balance|auth|approval|mid|tid|aid|receipt|invoice|store #|st#)/i;
+const SKIP_LINE = /^(tel|phone|fax|www\.|https?:|thank|welcome|please|visa|mastercard|debit|credit|change|cash|subtotal|tax|balance|auth|approval|mid|tid|aid|receipt|invoice|store #|st#)/i;
+
+const GENERIC_WORD = new Set([
+  "provided", "signature", "approved", "please", "copy", "original", "customer", "merchant",
+  "welcome", "thank", "you", "come", "again", "shopping", "visit", "phone", "date", "time",
+  "cashier", "total", "amount", "sale", "sales", "store", "number", "order", "paid", "cash",
+  "card", "debit", "credit", "visa", "change", "balance", "invoice", "receipt", "the", "and",
+  "for", "your", "our",
+]);
 
 function cleanLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
 function looksLikeStore(line: string): boolean {
-  if (line.length < 3 || line.length > 40) return false;
-  if (!/[A-Za-z]/.test(line)) return false;
+  if (line.length < 3 || line.length > 42) return false;
   if (SKIP_LINE.test(line)) return false;
   if (/^\d/.test(line)) return false;
   if (/\d{3}[-.)]\s*\d{3}/.test(line)) return false;
   if (/\$\s*\d/.test(line)) return false;
-  const letters = line.replace(/[^A-Za-z]/g, "");
-  return letters.length >= 3;
+  if (/(?<!\d)\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}(?!\d)/.test(line)) return false;
+  const compact = line.replace(/\s+/g, "");
+  const letters = compact.replace(/[^A-Za-z]/g, "");
+  if (letters.length < 4 || letters.length / compact.length < 0.75) return false;
+  const tokens = line.split(/\s+/).filter(Boolean);
+  const lettersOf = (token: string) => token.replace(/[^A-Za-z]/g, "");
+  const strongWords = tokens.filter((token) => lettersOf(token).length >= 4);
+  const shortJunk = tokens.filter((token) => lettersOf(token).length <= 2);
+  if (strongWords.length === 0) return false;
+  if (shortJunk.length > 0 && shortJunk.length >= strongWords.length) return false;
+  return strongWords.some((token) => !GENERIC_WORD.has(lettersOf(token).toLowerCase()));
 }
 
 function pad(value: number): string {
@@ -43,7 +59,7 @@ const MONTHS: Record<string, number> = {
 };
 
 function findDate(text: string): string | null {
-  const numeric = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/g;
+  const numeric = /(?<!\d)(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})(?!\d)/g;
   let match: RegExpExecArray | null;
   while ((match = numeric.exec(text))) {
     let year = Number(match[3]);
@@ -85,7 +101,8 @@ function findAmount(lines: string[]): number | null {
     let score = 0;
     if (/grand\s*total|amount\s*due|balance\s*due|total\s*due/.test(lower)) score = 100;
     else if (/\btotal\b/.test(lower) && !/sub\s*total|subtotal/.test(lower)) score = 80;
-    else if (/sub\s*total|subtotal|\btax\b|change|cash|tender|visa|mastercard/.test(lower)) score = 10;
+    else if (/sub\s*total|subtotal|\btax\b|change|cash|tender|visa|mastercard|debit/.test(lower)) score = 10;
+    else if (lower.replace(/[$,.\d\s]/g, "").length === 0) score = 50;
     else score = 20;
     score += index / 1000;
     ranked.push({ score, amount });
@@ -100,9 +117,9 @@ export function parseReceiptText(raw: string): ReceiptRead {
     .split(/\r?\n/)
     .map(cleanLine)
     .filter(Boolean);
-  const storeLine = lines.find(looksLikeStore) ?? null;
+  const storeLine = lines.slice(0, 8).find(looksLikeStore) ?? [...lines].reverse().slice(0, 6).find(looksLikeStore) ?? null;
   return {
-    storeName: storeLine ? storeLine.slice(0, 200) : null,
+    storeName: storeLine ? storeLine.slice(0, 80) : null,
     purchasedOn: findDate(raw),
     amount: findAmount(lines),
   };

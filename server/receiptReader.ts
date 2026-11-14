@@ -4,7 +4,8 @@ import { parseReceiptText, type ReceiptRead } from "./receiptParse";
 const EMPTY: ReceiptRead = { storeName: null, purchasedOn: null, amount: null };
 
 type OcrWorker = {
-  recognize: (image: Buffer) => Promise<{ data: { text: string } }>;
+  recognize: (image: Buffer) => Promise<{ data: { text: string; confidence?: number } }>;
+  setParameters: (params: Record<string, string>) => Promise<void>;
 };
 
 let workerPromise: Promise<OcrWorker> | null = null;
@@ -13,7 +14,12 @@ async function getWorker(): Promise<OcrWorker> {
   if (!workerPromise) {
     workerPromise = (async () => {
       const { createWorker } = await import("tesseract.js");
-      return createWorker("eng");
+      const worker = await createWorker("eng");
+      await worker.setParameters({
+        tessedit_pageseg_mode: "6",
+        user_defined_dpi: "300",
+      });
+      return worker;
     })().catch((error) => {
       workerPromise = null;
       throw error;
@@ -22,17 +28,31 @@ async function getWorker(): Promise<OcrWorker> {
   return workerPromise;
 }
 
-async function imageText(buffer: Buffer): Promise<string> {
-  const png = await sharp(buffer, { failOn: "none" })
+function fieldsFound(text: string): number {
+  const read = parseReceiptText(text);
+  return [read.storeName, read.purchasedOn, read.amount].filter((value) => value != null).length;
+}
+
+async function prepareImage(buffer: Buffer, strong: boolean): Promise<Buffer> {
+  let image = sharp(buffer, { failOn: "none" })
     .rotate()
-    .resize({ width: 1800, withoutEnlargement: true })
+    .resize({ width: 2000, fit: "inside", withoutEnlargement: false })
     .grayscale()
-    .normalize()
-    .png()
-    .toBuffer();
+    .normalize();
+  image = strong ? image.linear(1.35, -30).threshold(150) : image.sharpen();
+  return image.png().toBuffer();
+}
+
+async function imageText(buffer: Buffer): Promise<string> {
   const worker = await getWorker();
-  const result = await worker.recognize(png);
-  return result.data.text || "";
+  const first = await worker.recognize(await prepareImage(buffer, false));
+  const firstText = first.data.text || "";
+  const confidence = first.data.confidence ?? 0;
+  if (fieldsFound(firstText) >= 2 && confidence >= 50) return firstText;
+
+  const second = await worker.recognize(await prepareImage(buffer, true));
+  const secondText = second.data.text || "";
+  return fieldsFound(secondText) > fieldsFound(firstText) ? secondText : firstText;
 }
 
 async function pdfText(buffer: Buffer): Promise<string> {

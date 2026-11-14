@@ -112,7 +112,7 @@ function periodFilters(query: Record<string, unknown>) {
   const startDate = typeof query.startDate === "string" && dayPattern.test(query.startDate) ? query.startDate : undefined;
   const endDate = typeof query.endDate === "string" && dayPattern.test(query.endDate) ? query.endDate : undefined;
   const propertyIds = parsePropertyIds(typeof query.propertyId === "string" ? query.propertyId : "");
-  const search = typeof query.q === "string" ? query.q.trim().slice(0, 80) : "";
+  const search = typeof query.q === "string" ? query.q.trim().replace(/[$,]/g, "").slice(0, 80) : "";
   return { startDate, endDate, propertyIds, query: search || undefined };
 }
 
@@ -154,7 +154,7 @@ async function readStoredReceipt(objectPath: string, fileType: string) {
   const read = await Promise.race([
     readReceiptBuffer(buffer, fileType),
     new Promise<ReceiptRead>((_, reject) => {
-      setTimeout(() => reject(new Error("Reading the receipt took too long")), 25000);
+      setTimeout(() => reject(new Error("Reading the receipt took too long")), 40000);
     }),
   ]);
   return { ...read, message: readNote(read) };

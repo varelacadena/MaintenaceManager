@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { format, isValid, parse } from "date-fns";
 import { Receipt } from "lucide-react";
@@ -176,6 +176,7 @@ export default function Purchases() {
   const [jobPropertyId, setJobPropertyId] = useState("");
   const [jobQuery, setJobQuery] = useState("");
   const [selectedJob, setSelectedJob] = useState<JobHit | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const query = new URLSearchParams();
   if (startDate) query.set("startDate", startDate);
@@ -231,6 +232,12 @@ export default function Purchases() {
     () => [...properties].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
     [properties],
   );
+  const buildingName = buildingOptions.find((property) => property.id === propertyId)?.name;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setAppliedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
   const total = useMemo(() => rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0), [rows]);
   const receipts = rows.filter((row) => row.hasReceipt).length;
   const links = editing ? editing.links.map((link) => ({ kind: link.kind, targetId: link.targetId, label: link.label, id: link.id })) : draftLinks;
@@ -448,61 +455,52 @@ export default function Purchases() {
         </div>
       </div>
 
-      <form
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setAppliedSearch(search.trim());
-        }}
-      >
-        <div className="space-y-1.5">
-          <Label htmlFor="purchase-from">From</Label>
-          <Input id="purchase-from" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-11 text-base md:h-9 md:text-sm" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="purchase-to">To</Label>
-          <Input id="purchase-to" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-11 text-base md:h-9 md:text-sm" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="purchase-building">Building</Label>
-          <select
-            id="purchase-building"
-            value={propertyId}
-            onChange={(event) => setPropertyId(event.target.value)}
-            className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base md:h-9 md:text-sm"
-          >
-            <option value="">All buildings</option>
-            {buildingOptions.map((property) => (
-              <option key={property.id} value={property.id}>{property.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="purchase-search">Search</Label>
-          <Input id="purchase-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Store, job, vehicle" className="h-11 text-base md:h-9 md:text-sm" />
-        </div>
-      </form>
+      <section data-testid="section-add-receipt">
+        <Button type="button" className="h-11 w-full sm:w-auto" onClick={openCreate} data-testid="button-add-purchase">Add receipt</Button>
+      </section>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        <p><span className="text-muted-foreground">Purchases </span><span className="font-medium" data-testid="text-purchase-count">{rows.length}</span></p>
-        <p><span className="text-muted-foreground">Spent </span><span className="font-medium" data-testid="text-purchase-total">${total.toFixed(2)}</span></p>
-        <p><span className="text-muted-foreground">Receipts </span><span className="font-medium">{receipts}</span></p>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <Button type="button" className="h-11 sm:h-9" onClick={openCreate} data-testid="button-add-purchase">Add receipt</Button>
-        <Button type="button" variant="outline" className="h-11 sm:h-9" onClick={() => setAppliedSearch(search.trim())}>Search</Button>
-        {isAdmin && (
-          <>
-            <Button type="button" variant="outline" className="h-11 sm:h-9" disabled={busy !== null} onClick={() => download("csv")} data-testid="button-download-purchases">
-              {busy === "csv" ? "Downloading..." : "Download spreadsheet"}
-            </Button>
-            <Button type="button" variant="outline" className="h-11 sm:h-9" disabled={busy !== null || isLoading || receipts === 0} onClick={() => download("zip")} data-testid="button-download-receipts">
-              {busy === "zip" ? "Downloading..." : "Download receipts"}
-            </Button>
-          </>
-        )}
-      </div>
+      <section className="space-y-3" data-testid="section-find-receipt">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+          <div className="min-w-0 space-y-1">
+            <Label htmlFor="purchase-from" className="text-xs">From</Label>
+            <Input id="purchase-from" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-9 min-w-0 px-2 text-sm" />
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label htmlFor="purchase-to" className="text-xs">To</Label>
+            <Input id="purchase-to" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-9 min-w-0 px-2 text-sm" />
+          </div>
+          <Button type="button" variant="outline" className="h-9 px-3" onClick={() => setFiltersOpen(true)} data-testid="button-purchase-filters">
+            {buildingName ? "Filters · 1" : "Filters"}
+          </Button>
+        </div>
+        <Input
+          id="purchase-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Store, job, or amount"
+          className="h-11 text-base"
+          aria-label="Search receipts"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+          <p>
+            <span className="font-medium" data-testid="text-purchase-count">{rows.length}</span>
+            <span className="text-muted-foreground"> purchases · </span>
+            <span className="font-medium" data-testid="text-purchase-total">${total.toFixed(2)}</span>
+            {receipts !== rows.length && (
+              <span className="text-muted-foreground"> · {receipts} with a photo</span>
+            )}
+          </p>
+          {isAdmin && (
+            <p className="flex gap-3">
+              <button type="button" className="text-primary underline disabled:opacity-50" disabled={busy !== null} onClick={() => download("csv")} data-testid="button-download-purchases">
+                {busy === "csv" ? "Downloading..." : "Spreadsheet"}
+              </button>
+              <button type="button" className="text-primary underline disabled:opacity-50" disabled={busy !== null || isLoading || receipts === 0} onClick={() => download("zip")} data-testid="button-download-receipts">
+                {busy === "zip" ? "Downloading..." : "Receipt files"}
+              </button>
+            </p>
+          )}
+        </div>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading purchases...</p>
@@ -553,6 +551,38 @@ export default function Purchases() {
             </table>
           </div>
         </>
+      )}
+      </section>
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-testid="dialog-purchase-filters">
+          <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close filters" onClick={() => setFiltersOpen(false)} />
+          <div className="relative z-10 w-full space-y-3 rounded-t-2xl bg-background p-4 sm:max-w-sm sm:rounded-xl">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-base font-medium">Filters</p>
+              <Button type="button" variant="ghost" className="h-11" onClick={() => setFiltersOpen(false)}>Done</Button>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="purchase-building">Building</Label>
+              <select
+                id="purchase-building"
+                value={propertyId}
+                onChange={(event) => setPropertyId(event.target.value)}
+                className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base"
+              >
+                <option value="">All buildings</option>
+                {buildingOptions.map((property) => (
+                  <option key={property.id} value={property.id}>{property.name}</option>
+                ))}
+              </select>
+            </div>
+            {propertyId && (
+              <button type="button" className="text-sm text-primary underline" onClick={() => setPropertyId("")}>
+                Clear building
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {open && (

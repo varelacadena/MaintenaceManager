@@ -327,6 +327,7 @@ function searchMatch(like: string) {
   return sql`(
     ${purchases.storeName} ilike ${like}
     or ${purchases.description} ilike ${like}
+    or cast(${purchases.amount} as text) ilike ${like}
     or coalesce(${purchases.poNumber}, '') ilike ${like}
     or coalesce(${purchases.purposeNote}, '') ilike ${like}
     or exists (

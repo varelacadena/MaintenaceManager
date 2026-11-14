@@ -30,6 +30,45 @@ describe("parseReceiptText", () => {
     });
   });
 
+  it("leaves the store blank when the top line is camera noise", () => {
+    const text = [
+      "op EE v R D 5 ot NEES",
+      "11/13/2026",
+      "TOTAL 20.65",
+    ].join("\n");
+
+    expect(parseReceiptText(text)).toEqual({
+      storeName: null,
+      purchasedOn: "2026-11-13",
+      amount: 20.65,
+    });
+  });
+
+  it("skips a noisy first line and keeps the store name under it", () => {
+    const text = [
+      "Y : RB er : . fo - er",
+      "HOME DEPOT",
+      "11/13/2026",
+      "nails 4.00",
+      "TOTAL 27.43",
+    ].join("\n");
+
+    expect(parseReceiptText(text)).toEqual({
+      storeName: "HOME DEPOT",
+      purchasedOn: "2026-11-13",
+      amount: 27.43,
+    });
+  });
+
+  it("does not treat a receipt phrase as the store", () => {
+    const text = ["PROVIDED i", "Please Come Again", "Lowe's", "11/10/2026", "TOTAL 28.41"].join("\n");
+    expect(parseReceiptText(text)).toEqual({
+      storeName: "Lowe's",
+      purchasedOn: "2026-11-10",
+      amount: 28.41,
+    });
+  });
+
   it("returns empty fields when the page has no receipt text", () => {
     expect(parseReceiptText("   \n")).toEqual({
       storeName: null,
