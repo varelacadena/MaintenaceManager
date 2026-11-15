@@ -18,6 +18,7 @@ import {
   getPurchase,
   getPurchaseLink,
   getPurchaseView,
+  listKnownStoreNames,
   listPurchases,
   listTaskPurchases,
   purchaseTargetExists,
@@ -151,8 +152,9 @@ async function downloadReceipt(objectPath: string): Promise<Buffer> {
 
 async function readStoredReceipt(objectPath: string, fileType: string) {
   const buffer = await downloadReceipt(objectPath);
+  const knownStores = await listKnownStoreNames().catch(() => []);
   const read = await Promise.race([
-    readReceiptBuffer(buffer, fileType),
+    readReceiptBuffer(buffer, fileType, knownStores),
     new Promise<ReceiptRead>((_, reject) => {
       setTimeout(() => reject(new Error("Reading the receipt took too long")), 40000);
     }),

@@ -112,12 +112,66 @@ function findAmount(lines: string[]): number | null {
   return ranked[0].amount;
 }
 
-export function parseReceiptText(raw: string): ReceiptRead {
+function lettersOnly(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/0/g, "o")
+    .replace(/1/g, "l")
+    .replace(/5/g, "s")
+    .replace(/8/g, "b")
+    .replace(/[^a-z]/g, "");
+}
+
+function similarity(left: string, right: string): number {
+  if (!left || !right) return 0;
+  if (left === right) return 1;
+  const rows = left.length + 1;
+  const cols = right.length + 1;
+  const dist: number[] = Array.from({ length: cols }, (_, index) => index);
+  for (let row = 1; row < rows; row += 1) {
+    let previous = dist[0];
+    dist[0] = row;
+    for (let col = 1; col < cols; col += 1) {
+      const current = dist[col];
+      const cost = left[row - 1] === right[col - 1] ? 0 : 1;
+      dist[col] = Math.min(dist[col] + 1, dist[col - 1] + 1, previous + cost);
+      previous = current;
+    }
+  }
+  return 1 - dist[cols - 1] / Math.max(left.length, right.length);
+}
+
+export function knownStoreName(raw: string, stores: string[]): string | null {
+  const usable = stores.map((store) => store.trim()).filter((store) => looksLikeStore(store));
+  if (usable.length === 0) return null;
+  const compactText = lettersOnly(raw);
+  const contained = usable.filter((store) => {
+    const compact = lettersOnly(store);
+    return compact.length >= 5 && compactText.includes(compact);
+  });
+  if (contained.length > 0) {
+    contained.sort((left, right) => right.length - left.length);
+    return contained[0].slice(0, 80);
+  }
+  const lines = raw.split(/\r?\n/).map(cleanLine).filter(Boolean).slice(0, 12);
+  let best: { name: string; score: number } | null = null;
+  for (const store of usable) {
+    const target = lettersOnly(store);
+    if (target.length < 5) continue;
+    for (const line of lines) {
+      const score = similarity(lettersOnly(line), target);
+      if (score >= 0.72 && (!best || score > best.score)) best = { name: store, score };
+    }
+  }
+  return best ? best.name.slice(0, 80) : null;
+}
+
+export function parseReceiptText(raw: string, knownStores: string[] = []): ReceiptRead {
   const lines = raw
     .split(/\r?\n/)
     .map(cleanLine)
     .filter(Boolean);
-  const storeLine = lines.slice(0, 8).find(looksLikeStore) ?? [...lines].reverse().slice(0, 6).find(looksLikeStore) ?? null;
+  const storeLine = knownStoreName(raw, knownStores) ?? lines.slice(0, 8).find(looksLikeStore) ?? [...lines].reverse().slice(0, 6).find(looksLikeStore) ?? null;
   return {
     storeName: storeLine ? storeLine.slice(0, 80) : null,
     purchasedOn: findDate(raw),

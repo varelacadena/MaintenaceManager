@@ -16,7 +16,7 @@ async function getWorker(): Promise<OcrWorker> {
       const { createWorker } = await import("tesseract.js");
       const worker = await createWorker("eng");
       await worker.setParameters({
-        tessedit_pageseg_mode: "6",
+        tessedit_pageseg_mode: "4",
         user_defined_dpi: "300",
       });
       return worker;
@@ -63,7 +63,7 @@ async function pdfText(buffer: Buffer): Promise<string> {
   return text || "";
 }
 
-export async function readReceiptBuffer(buffer: Buffer, fileType: string): Promise<ReceiptRead> {
+export async function readReceiptBuffer(buffer: Buffer, fileType: string, knownStores: string[] = []): Promise<ReceiptRead> {
   const type = fileType.toLowerCase();
   let text = "";
   if (type === "application/pdf") {
@@ -73,5 +73,5 @@ export async function readReceiptBuffer(buffer: Buffer, fileType: string): Promi
   } else {
     return EMPTY;
   }
-  return parseReceiptText(text);
+  return parseReceiptText(text, knownStores);
 }

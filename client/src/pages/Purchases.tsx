@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { format, isValid, parse } from "date-fns";
-import { Receipt } from "lucide-react";
+import { CalendarIcon, Receipt } from "lucide-react";
 import type { PurchaseLinkKind, PurchasePurpose, PurchaseView } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -82,6 +84,69 @@ function detailsProblem(form: FormState): string | null {
   return null;
 }
 
+const compactCalendar = {
+  months: "flex flex-col",
+  month: "space-y-1",
+  caption: "relative flex h-7 items-center justify-center",
+  caption_label: "text-sm font-medium",
+  nav: "flex items-center",
+  nav_button: "inline-flex h-6 w-6 items-center justify-center rounded-md border border-border bg-transparent p-0 opacity-70 hover:opacity-100",
+  nav_button_previous: "absolute left-0",
+  nav_button_next: "absolute right-0",
+  table: "w-full border-collapse",
+  head_row: "flex",
+  head_cell: "w-7 text-[10px] font-medium text-muted-foreground",
+  row: "mt-0.5 flex w-full",
+  cell: "relative h-7 w-7 p-0 text-center text-xs",
+  day: "inline-flex h-7 w-7 items-center justify-center rounded-md p-0 text-xs font-normal hover:bg-accent",
+  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+  day_today: "border border-primary/40",
+  day_outside: "text-muted-foreground/40",
+};
+
+function PeriodDate({
+  id,
+  label,
+  value,
+  onChange,
+  wide = false,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  wide?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const parsed = value ? parse(value, "yyyy-MM-dd", new Date()) : undefined;
+  const selected = parsed && isValid(parsed) ? parsed : undefined;
+  return (
+    <div className="min-w-0 space-y-1">
+      <Label htmlFor={id} className="text-xs">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button id={id} type="button" variant="outline" className={wide ? "h-11 min-h-11 w-full max-w-full justify-start gap-2 px-3 py-0 text-base font-normal" : "h-9 min-h-9 w-full max-w-full justify-start gap-1.5 px-2 py-0 text-sm font-normal"}>
+            <CalendarIcon className={wide ? "h-4 w-4 shrink-0 text-muted-foreground" : "h-3.5 w-3.5 shrink-0 text-muted-foreground"} />
+            <span>{selected ? format(selected, "M/d/yy") : "Any"}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" collisionPadding={12} className="w-auto p-2">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) => {
+              onChange(date ? format(date, "yyyy-MM-dd") : "");
+              window.setTimeout(() => setOpen(false), 0);
+            }}
+            className="p-0"
+            classNames={compactCalendar}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function ReceiptLines({ form, setForm }: { form: FormState; setForm: (next: FormState) => void }) {
   return (
     <>
@@ -90,10 +155,7 @@ function ReceiptLines({ form, setForm }: { form: FormState; setForm: (next: Form
         <Input id="purchase-store" value={form.storeName} onChange={(event) => setForm({ ...form, storeName: event.target.value })} className="h-11 text-base" data-testid="input-purchase-store" />
       </div>
       <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="purchase-date">Date</Label>
-          <Input id="purchase-date" type="date" value={form.purchasedOn} onChange={(event) => setForm({ ...form, purchasedOn: event.target.value })} className="h-11 text-base" data-testid="input-purchase-date" />
-        </div>
+        <PeriodDate id="purchase-date" label="Date" value={form.purchasedOn} onChange={(purchasedOn) => setForm({ ...form, purchasedOn })} wide />
         <div className="space-y-1.5">
           <Label htmlFor="purchase-amount">Amount paid</Label>
           <Input id="purchase-amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} className="h-11 text-base" data-testid="input-purchase-amount" />
@@ -460,18 +522,10 @@ export default function Purchases() {
       </section>
 
       <section className="space-y-3" data-testid="section-find-receipt">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="grid min-w-[15rem] max-w-full flex-1 grid-cols-2 gap-2">
-            <div className="min-w-0 space-y-1">
-              <Label htmlFor="purchase-from" className="text-xs">From</Label>
-              <Input id="purchase-from" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-9 w-full min-w-0 px-2 text-sm" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <Label htmlFor="purchase-to" className="text-xs">To</Label>
-              <Input id="purchase-to" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-9 w-full min-w-0 px-2 text-sm" />
-            </div>
-          </div>
-          <Button type="button" variant="outline" className="h-9 shrink-0 px-3" onClick={() => setFiltersOpen(true)} data-testid="button-purchase-filters">
+        <div className="grid grid-cols-2 gap-2">
+          <PeriodDate id="purchase-from" label="From" value={startDate} onChange={setStartDate} />
+          <PeriodDate id="purchase-to" label="To" value={endDate} onChange={setEndDate} />
+          <Button type="button" variant="outline" className="col-span-2 h-9 min-h-9 w-full px-3 py-0" onClick={() => setFiltersOpen(true)} data-testid="button-purchase-filters">
             {buildingName ? "Filters · 1" : "Filters"}
           </Button>
         </div>

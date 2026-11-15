@@ -69,6 +69,15 @@ describe("parseReceiptText", () => {
     });
   });
 
+  it("uses a saved store name when the scan is close to it", () => {
+    const text = ["op EE v R D", "F00D L10N", "11/13/2026", "TOTAL 66.08"].join("\n");
+    expect(parseReceiptText(text, ["Food Lion", "op EE v R D 5 ot NEES"])).toMatchObject({
+      storeName: "Food Lion",
+      purchasedOn: "2026-11-13",
+      amount: 66.08,
+    });
+  });
+
   it("returns empty fields when the page has no receipt text", () => {
     expect(parseReceiptText("   \n")).toEqual({
       storeName: null,

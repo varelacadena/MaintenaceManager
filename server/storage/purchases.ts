@@ -121,6 +121,14 @@ export async function countPurchaseLinks(purchaseId: string): Promise<number> {
   return Number(row?.count) || 0;
 }
 
+export async function listKnownStoreNames(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ storeName: purchases.storeName })
+    .from(purchases)
+    .limit(300);
+  return rows.map((row) => row.storeName).filter((name) => name.trim().length > 0);
+}
+
 export async function listPurchases(filters: {
   startDate?: string;
   endDate?: string;
