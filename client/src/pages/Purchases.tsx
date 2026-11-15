@@ -460,16 +460,18 @@ export default function Purchases() {
       </section>
 
       <section className="space-y-3" data-testid="section-find-receipt">
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
-          <div className="min-w-0 space-y-1">
-            <Label htmlFor="purchase-from" className="text-xs">From</Label>
-            <Input id="purchase-from" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-9 min-w-0 px-2 text-sm" />
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="grid min-w-[15rem] max-w-full flex-1 grid-cols-2 gap-2">
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor="purchase-from" className="text-xs">From</Label>
+              <Input id="purchase-from" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-9 w-full min-w-0 px-2 text-sm" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor="purchase-to" className="text-xs">To</Label>
+              <Input id="purchase-to" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-9 w-full min-w-0 px-2 text-sm" />
+            </div>
           </div>
-          <div className="min-w-0 space-y-1">
-            <Label htmlFor="purchase-to" className="text-xs">To</Label>
-            <Input id="purchase-to" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-9 min-w-0 px-2 text-sm" />
-          </div>
-          <Button type="button" variant="outline" className="h-9 px-3" onClick={() => setFiltersOpen(true)} data-testid="button-purchase-filters">
+          <Button type="button" variant="outline" className="h-9 shrink-0 px-3" onClick={() => setFiltersOpen(true)} data-testid="button-purchase-filters">
             {buildingName ? "Filters · 1" : "Filters"}
           </Button>
         </div>
