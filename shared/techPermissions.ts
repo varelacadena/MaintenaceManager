@@ -4,15 +4,23 @@ export type TechPermissionUser = {
   canManageEquipment?: boolean | null;
   canManageFleet?: boolean | null;
   canManageInventory?: boolean | null;
+  canManagePurchases?: boolean | null;
 };
 
-export type TechPermissionKey = "equipment" | "fleet" | "inventory";
+export type TechPermissionKey = "equipment" | "fleet" | "inventory" | "purchases";
 
 const PERMISSION_FIELD: Record<TechPermissionKey, keyof TechPermissionUser> = {
   equipment: "canManageEquipment",
   fleet: "canManageFleet",
   inventory: "canManageInventory",
+  purchases: "canManagePurchases",
 };
+
+export function techPermissionField(
+  permission: TechPermissionKey,
+): Exclude<keyof TechPermissionUser, "role"> {
+  return PERMISSION_FIELD[permission];
+}
 
 export function canManageEquipment(user: TechPermissionUser | null | undefined): boolean {
   if (!user) return false;
@@ -29,6 +37,11 @@ export function canManageInventory(user: TechPermissionUser | null | undefined):
   return user.role === "admin" || (user.role === "technician" && !!user.canManageInventory);
 }
 
+export function canManagePurchases(user: TechPermissionUser | null | undefined): boolean {
+  if (!user) return false;
+  return user.role === "admin" || (user.role === "technician" && !!user.canManagePurchases);
+}
+
 export function hasTechPermission(
   user: TechPermissionUser | null | undefined,
   permission: TechPermissionKey,
@@ -40,6 +53,8 @@ export function hasTechPermission(
       return canManageFleet(user);
     case "inventory":
       return canManageInventory(user);
+    case "purchases":
+      return canManagePurchases(user);
   }
 }
 
@@ -64,5 +79,9 @@ export const TECH_PERMISSION_LABELS: Record<TechPermissionKey, { title: string; 
   inventory: {
     title: "Inventory",
     description: "Add and edit inventory items and stock levels",
+  },
+  purchases: {
+    title: "Purchases",
+    description: "Open the receipt list, add receipts, and attach a saved receipt to a job. Store runs on a job stay available without this.",
   },
 };

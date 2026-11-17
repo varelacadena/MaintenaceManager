@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { z } from "zod";
 import { PURCHASE_LINK_KINDS, type PurchaseLinkKind, type PurchaseView, type User } from "@shared/schema";
 import { isAuthenticated } from "../replitAuth";
-import { canAccessTask, requireAdmin, requireTechnicianOrAdmin } from "../middleware";
+import { canAccessTask, requireAdmin, requirePurchasesAccess, requireTechnicianOrAdmin } from "../middleware";
 import { handleRouteError } from "../routeUtils";
 import { parsePropertyIds } from "../localDates";
 import { getDownloadUrl } from "../objectStorage";
@@ -13,10 +13,13 @@ import {
   addPurchaseLink,
   countPurchaseLinks,
   createPurchase,
+  createPurchaseRefund,
   deletePurchase,
   deletePurchaseLink,
+  deletePurchaseRefund,
   getPurchase,
   getPurchaseLink,
+  getPurchaseRefund,
   getPurchaseView,
   listKnownStoreNames,
   listPurchases,
@@ -251,7 +254,7 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/purchases/jobs", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+  app.get("/api/purchases/jobs", isAuthenticated, requirePurchasesAccess, async (req, res) => {
     try {
       const query = typeof req.query.q === "string" ? req.query.q.slice(0, 80) : "";
       const technicianId = typeof req.query.technicianId === "string" ? req.query.technicianId.slice(0, 80) : "";
@@ -262,7 +265,7 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/purchases/options", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+  app.get("/api/purchases/options", isAuthenticated, requirePurchasesAccess, async (req, res) => {
     try {
       const kind = typeof req.query.kind === "string" ? req.query.kind : "";
       if (!PURCHASE_LINK_KINDS.includes(kind as PurchaseLinkKind)) {
@@ -290,15 +293,18 @@ export function registerPurchaseRoutes(app: Express) {
             : "all-dates";
 
       if (format === "csv") {
-        const header = ["Date", "PO", "Store", "What was bought", "Amount", "Linked to", "Receipt", "Added by"];
+        const header = ["Date", "PO", "Store", "What was bought", "Amount", "Refunded", "Net", "Linked to", "Receipt", "Added by"];
         const lines = [header.map(csvCell).join(",")];
         for (const row of rows) {
+          const refunded = money((row.refunds ?? []).reduce((sum, refund) => sum + Number(refund.amount), 0));
           lines.push([
             row.purchasedOn,
             row.poNumber || "",
             row.storeName,
             row.description,
             money(row.amount).toFixed(2),
+            refunded.toFixed(2),
+            money(row.amount - refunded).toFixed(2),
             whereLabel(row),
             row.receiptFileName || "",
             row.createdByName || "",
@@ -349,7 +355,7 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/purchases", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+  app.get("/api/purchases", isAuthenticated, requirePurchasesAccess, async (req, res) => {
     try {
       res.json(await listPurchases(periodFilters(req.query as Record<string, unknown>)));
     } catch (error) {
@@ -357,7 +363,7 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/purchases", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
+  app.post("/api/purchases", isAuthenticated, requirePurchasesAccess, async (req: any, res) => {
     try {
       const user = req.currentUser as User;
       const parsed = purchaseFields.extend({
@@ -460,8 +466,8 @@ export function registerPurchaseRoutes(app: Express) {
 
   app.patch("/api/purchases/:id", isAuthenticated, requireTechnicianOrAdmin, updatePurchaseHandler);
   app.patch("/api/task-purchases/:id", isAuthenticated, requireTechnicianOrAdmin, updatePurchaseHandler);
-  app.delete("/api/purchases/:id", isAuthenticated, requireTechnicianOrAdmin, deletePurchaseHandler);
-  app.delete("/api/task-purchases/:id", isAuthenticated, requireTechnicianOrAdmin, deletePurchaseHandler);
+  app.delete("/api/purchases/:id", isAuthenticated, requirePurchasesAccess, deletePurchaseHandler);
+  app.delete("/api/task-purchases/:id", isAuthenticated, requirePurchasesAccess, deletePurchaseHandler);
 
   app.get("/api/purchases/:id/receipt", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
     try {
@@ -479,7 +485,7 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/purchases/:id/read", isAuthenticated, requireTechnicianOrAdmin, async (req, res) => {
+  app.post("/api/purchases/:id/read", isAuthenticated, requirePurchasesAccess, async (req, res) => {
     try {
       const existing = await getPurchase(req.params.id);
       if (!existing?.receiptObjectPath || !existing.receiptFileType) {
@@ -496,7 +502,53 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/purchases/:id/links", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
+  app.post("/api/purchases/:id/refunds", isAuthenticated, requirePurchasesAccess, async (req: any, res) => {
+    try {
+      const user = req.currentUser as User;
+      const existing = await getPurchaseView(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Receipt not found" });
+      const parsed = z.object({
+        amount: z.number().positive("Enter the refund amount").max(1_000_000),
+        refundedOn: z.string().regex(dayPattern, "Enter the refund date"),
+        note: z.string().trim().max(300).optional(),
+      }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message || "Check the refund and try again." });
+      }
+      if (!validDay(parsed.data.refundedOn)) return res.status(400).json({ message: "Enter the refund date" });
+      const amount = money(parsed.data.amount);
+      const already = (existing.refunds ?? []).reduce((sum, refund) => sum + Math.round(Number(refund.amount) * 100), 0);
+      const left = Math.round(Number(existing.amount) * 100) - already;
+      if (Math.round(amount * 100) > left) {
+        return res.status(400).json({ message: `The most you can refund is $${money(left / 100).toFixed(2)}` });
+      }
+      const view = await createPurchaseRefund(existing.id, {
+        amount,
+        refundedOn: parsed.data.refundedOn,
+        note: parsed.data.note?.trim() || null,
+        createdById: user.id,
+        createdByName: personName(user),
+      });
+      res.json(view);
+    } catch (error) {
+      handleRouteError(res, error, "Failed to save refund");
+    }
+  });
+
+  app.delete("/api/purchases/:id/refunds/:refundId", isAuthenticated, requirePurchasesAccess, async (req: any, res) => {
+    try {
+      const user = req.currentUser as User;
+      const refund = await getPurchaseRefund(req.params.refundId);
+      if (!refund || refund.purchaseId !== req.params.id) return res.status(404).json({ message: "Refund not found" });
+      if (!canModifyPurchase(user, refund.createdById)) return res.status(403).json({ message: "Forbidden" });
+      await deletePurchaseRefund(refund.id);
+      res.json(await getPurchaseView(req.params.id));
+    } catch (error) {
+      handleRouteError(res, error, "Failed to remove refund");
+    }
+  });
+
+  app.post("/api/purchases/:id/links", isAuthenticated, requirePurchasesAccess, async (req: any, res) => {
     try {
       const existing = await getPurchase(req.params.id);
       if (!existing) return res.status(404).json({ message: "Receipt not found" });
@@ -520,7 +572,7 @@ export function registerPurchaseRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/purchases/:id/links/:linkId", isAuthenticated, requireTechnicianOrAdmin, async (req: any, res) => {
+  app.delete("/api/purchases/:id/links/:linkId", isAuthenticated, requirePurchasesAccess, async (req: any, res) => {
     try {
       const user = req.currentUser as User;
       const existing = await getPurchase(req.params.id);

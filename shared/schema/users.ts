@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   canManageEquipment: boolean("can_manage_equipment").notNull().default(false),
   canManageFleet: boolean("can_manage_fleet").notNull().default(false),
   canManageInventory: boolean("can_manage_inventory").notNull().default(false),
+  canManagePurchases: boolean("can_manage_purchases").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

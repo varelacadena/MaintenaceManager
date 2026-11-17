@@ -128,6 +128,7 @@ export interface IStorage {
     canManageEquipment?: boolean;
     canManageFleet?: boolean;
     canManageInventory?: boolean;
+    canManagePurchases?: boolean;
   }): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;

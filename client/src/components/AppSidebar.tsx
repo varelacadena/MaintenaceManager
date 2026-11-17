@@ -41,6 +41,7 @@ import {
   canManageFleet,
   canManageInventory,
   canManageEquipment,
+  canManagePurchases,
 } from "@shared/techPermissions";
 import { useStudentTimeClock } from "@/pages/StudentPortal/studentPortalApi";
 
@@ -69,7 +70,6 @@ const roleMenus = {
   ],
   technician: [
     { title: "My Tasks", url: "/work", icon: Wrench },
-    { title: "Purchases", url: "/purchases", icon: Receipt },
     { title: "Grab a Job", url: "/grab", icon: Hand },
     { title: "My Requests", url: "/requests", icon: ClipboardList },
     { title: "New Request", url: "/new-request", icon: Wrench },
@@ -99,6 +99,13 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
     }
     if (userRole !== "technician") return base;
 
+    const items = canManagePurchases(user)
+      ? [
+          base[0],
+          { title: "Purchases", url: "/purchases", icon: Receipt },
+          ...base.slice(1),
+        ]
+      : [...base];
     const extra: typeof base = [];
     if (canManageEquipment(user)) {
       extra.push({ title: "Properties", url: "/properties", icon: Map });
@@ -110,11 +117,11 @@ export default function AppSidebar({ user, userName, userInitials }: AppSidebarP
     if (canManageInventory(user)) {
       extra.push({ title: "Inventory", url: "/inventory", icon: Package });
     }
-    if (extra.length === 0) return base;
+    if (extra.length === 0) return items;
 
-    const settingsIndex = base.findIndex((item) => item.url === "/settings");
-    if (settingsIndex === -1) return [...base, ...extra];
-    return [...base.slice(0, settingsIndex), ...extra, ...base.slice(settingsIndex)];
+    const settingsIndex = items.findIndex((item) => item.url === "/settings");
+    if (settingsIndex === -1) return [...items, ...extra];
+    return [...items.slice(0, settingsIndex), ...extra, ...items.slice(settingsIndex)];
   })();
   const notificationCounts = useNotificationCounts();
   const { setOpenMobile, isMobile, setOpen } = useSidebar();

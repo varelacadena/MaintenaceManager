@@ -261,7 +261,10 @@ function SummaryContent({
 
   // Stored part cost is already the line total (unit price × quantity).
   const partsCost = parts.reduce((sum, part) => sum + (part.cost || 0), 0);
-  const purchasesCost = purchases.reduce((sum, purchase) => sum + (Number(purchase.amount) || 0), 0);
+  const purchasesCost = purchases.reduce((sum, purchase) => {
+    const refunded = (purchase.refunds ?? []).reduce((refundSum, refund) => refundSum + (Number(refund.amount) || 0), 0);
+    return sum + (Number(purchase.amount) || 0) - refunded;
+  }, 0);
   // Same rate the facilities and asset reports use.
   const laborRate = 15;
   const laborCost = (totalMinutes / 60) * laborRate;
@@ -447,7 +450,14 @@ function SummaryContent({
                           {isValid(day) ? format(day, "MMM d, yyyy") : purchase.purchasedOn}
                         </p>
                       </div>
-                      <p className="font-medium shrink-0">${Number(purchase.amount).toFixed(2)}</p>
+                      <div className="shrink-0 text-right">
+                        <p className="font-medium">${Number(purchase.amount).toFixed(2)}</p>
+                        {(purchase.refunds ?? []).length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Refunded ${(purchase.refunds ?? []).reduce((sum, refund) => sum + (Number(refund.amount) || 0), 0).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     {purchase.receiptObjectPath && (
                       purchase.receiptFileType?.startsWith("image/") ? (

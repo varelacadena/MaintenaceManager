@@ -5,6 +5,7 @@ import {
   projects,
   properties,
   purchaseLinks,
+  purchaseRefunds,
   purchases,
   tasks,
   users,
@@ -13,6 +14,7 @@ import {
   type PurchaseLink,
   type PurchaseLinkKind,
   type PurchaseLinkView,
+  type PurchaseRefund,
   type PurchaseView,
 } from "@shared/schema";
 import { db } from "../db";
@@ -111,6 +113,30 @@ export async function getPurchaseLink(id: string): Promise<PurchaseLink | undefi
 
 export async function deletePurchaseLink(id: string): Promise<void> {
   await db.delete(purchaseLinks).where(eq(purchaseLinks.id, id));
+}
+
+export async function getPurchaseRefund(id: string): Promise<PurchaseRefund | undefined> {
+  const [row] = await db.select().from(purchaseRefunds).where(eq(purchaseRefunds.id, id));
+  return row;
+}
+
+export async function createPurchaseRefund(
+  purchaseId: string,
+  values: { amount: number; refundedOn: string; note: string | null; createdById: string; createdByName: string },
+): Promise<PurchaseView | undefined> {
+  await db.insert(purchaseRefunds).values({
+    purchaseId,
+    amount: values.amount,
+    refundedOn: values.refundedOn,
+    note: values.note,
+    createdById: values.createdById,
+    createdByName: values.createdByName,
+  });
+  return getPurchaseView(purchaseId);
+}
+
+export async function deletePurchaseRefund(id: string): Promise<void> {
+  await db.delete(purchaseRefunds).where(eq(purchaseRefunds.id, id));
 }
 
 export async function countPurchaseLinks(purchaseId: string): Promise<number> {
@@ -335,7 +361,7 @@ function searchMatch(like: string) {
   return sql`(
     ${purchases.storeName} ilike ${like}
     or ${purchases.description} ilike ${like}
-    or cast(${purchases.amount} as text) ilike ${like}
+    or to_char(${purchases.amount}, 'FM999999990.00') ilike ${like}
     or coalesce(${purchases.poNumber}, '') ilike ${like}
     or coalesce(${purchases.purposeNote}, '') ilike ${like}
     or exists (
@@ -358,13 +384,21 @@ function searchMatch(like: string) {
           or coalesce(pr.name, '') ilike ${like}
         )
     )
+    or exists (
+      select 1 from purchase_refunds r
+      where r.purchase_id = ${purchases.id}
+        and coalesce(r.note, '') ilike ${like}
+    )
   )`;
 }
 
 async function withLinks(rows: Purchase[]): Promise<PurchaseView[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((row) => row.id);
-  const links = await db.select().from(purchaseLinks).where(inArray(purchaseLinks.purchaseId, ids));
+  const [links, refundRows] = await Promise.all([
+    db.select().from(purchaseLinks).where(inArray(purchaseLinks.purchaseId, ids)),
+    db.select().from(purchaseRefunds).where(inArray(purchaseRefunds.purchaseId, ids)),
+  ]);
   const labels = await loadLabels(links);
   const byPurchase = new Map<string, PurchaseLinkView[]>();
   for (const link of links) {
@@ -373,9 +407,16 @@ async function withLinks(rows: Purchase[]): Promise<PurchaseView[]> {
     list.push(view);
     byPurchase.set(link.purchaseId, list);
   }
+  const refundsByPurchase = new Map<string, PurchaseRefund[]>();
+  for (const refund of refundRows) {
+    const list = refundsByPurchase.get(refund.purchaseId) ?? [];
+    list.push(refund);
+    refundsByPurchase.set(refund.purchaseId, list);
+  }
   return rows.map((row) => ({
     ...row,
     links: (byPurchase.get(row.id) ?? []).sort((a, b) => a.label.localeCompare(b.label)),
+    refunds: (refundsByPurchase.get(row.id) ?? []).sort((a, b) => String(b.refundedOn).localeCompare(String(a.refundedOn))),
     hasReceipt: !!row.receiptObjectPath,
   }));
 }

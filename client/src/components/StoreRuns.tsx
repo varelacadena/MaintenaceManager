@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format, isValid, parse } from "date-fns";
-import { ChevronRight, Receipt, Trash2 } from "lucide-react";
+import { Camera, Check, ChevronRight, Receipt, Trash2, Upload } from "lucide-react";
 import { Link } from "wouter";
 import type { PurchaseView } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { prepareReceipt, type ReceiptPayload, type ReceiptSuggestion } from "@/lib/purchaseReceipt";
+import { canManagePurchases } from "@shared/techPermissions";
 
 type PurchaseBody = {
   storeName: string;
@@ -53,10 +54,33 @@ function applySuggestion<T extends { storeName: string; amount: string; purchase
   };
 }
 
-export function StoreRunPanel({ taskId }: { taskId: string }) {
+function storeRunGaps(
+  form: ReturnType<typeof emptyForm>,
+  needsReceipt: boolean,
+): string[] {
+  const gaps: string[] = [];
+  if (needsReceipt) gaps.push("a receipt photo or file");
+  if (!form.storeName.trim()) gaps.push("the store");
+  if (!form.description.trim()) gaps.push("what you bought");
+  if (!form.poNumber.trim()) gaps.push("the PO");
+  const amount = Number(form.amount);
+  if (!Number.isFinite(amount) || amount <= 0) gaps.push("the amount");
+  if (!form.purchasedOn) gaps.push("the date");
+  return gaps;
+}
+
+function continueHint(gaps: string[]): string {
+  if (gaps.length === 0) return "";
+  if (gaps.length === 1) return `Add ${gaps[0]} to continue.`;
+  const labels = gaps.map((gap) => gap.replace(/^(a|the) /, ""));
+  return `Still needed: ${labels.join(", ")}.`;
+}
+
+export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pinSave?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const isAdmin = user?.role === "admin";
+  const canOpenPurchases = canManagePurchases(user);
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -71,6 +95,8 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
   const { data: purchases = [], isLoading } = useQuery<PurchaseView[]>({
     queryKey: ["/api/tasks", taskId, "purchases"],
     enabled: !!taskId,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const reset = () => {
@@ -210,101 +236,85 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
     },
   });
 
-  return (
-    <div className="space-y-3" data-testid="section-store-runs">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Receipts for this job.</p>
-        <Link href="/purchases" className="text-sm text-primary underline shrink-0">All receipts</Link>
+  const editing = purchases.find((purchase) => purchase.id === editingId);
+  const needsReceipt = !editingId && !file;
+  const gaps = storeRunGaps(form, needsReceipt);
+  const canSave = gaps.length === 0 && !saveMutation.isPending && !reading;
+  const formId = `store-run-form-${taskId}`;
+  const saveBar = (
+    <div className={pinSave ? "shrink-0 space-y-2 border-t border-border bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4" : "space-y-2 border-t border-border pt-3"}>
+      {!canSave && !saveMutation.isPending && !reading && (
+        <p className="break-words text-xs text-muted-foreground" data-testid="text-store-run-locked">
+          {continueHint(gaps)}
+        </p>
+      )}
+      <div className="flex gap-2">
+        {editingId && (
+          <Button type="button" variant="outline" className="h-12" onClick={reset} data-testid="button-cancel-store-run">
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" form={formId} className="h-12 flex-1 text-base disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none" disabled={!canSave} data-testid="button-save-store-run">
+          {saveMutation.isPending ? "Saving..." : editingId ? "Save changes" : "Add store run"}
+        </Button>
       </div>
+    </div>
+  );
+
+  return (
+    <div className={pinSave ? "flex min-h-0 flex-1 flex-col" : "space-y-4"} data-testid="section-store-runs">
+      <div className={pinSave ? "min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-3 sm:px-4" : "min-w-0 space-y-4"}>
       <form
-        className="space-y-3"
+        id={formId}
+        className="min-w-0 space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!canSave) return;
           saveMutation.mutate();
         }}
       >
-        <div className="space-y-1.5">
-          <Label htmlFor="store-name">Store</Label>
-          <Input
-            id="store-name"
-            value={form.storeName}
-            onChange={(event) => setForm({ ...form, storeName: event.target.value })}
-            placeholder="Home Depot"
-            className="h-11 text-base"
-            data-testid="input-store-name"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="store-item">What you bought</Label>
-          <Input
-            id="store-item"
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            placeholder="Mulch, bags, and edging"
-            className="h-11 text-base"
-            data-testid="input-store-item"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="store-po">PO</Label>
-          <Input
-            id="store-po"
-            value={form.poNumber}
-            onChange={(event) => setForm({ ...form, poNumber: event.target.value })}
-            placeholder="PO-1042"
-            className="h-11 text-base"
-            data-testid="input-store-po"
-          />
-        </div>
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="store-amount">Amount paid</Label>
-            <Input
-              id="store-amount"
-              type="number"
-              inputMode="decimal"
-              min="0.01"
-              step="0.01"
-              value={form.amount}
-              onChange={(event) => setForm({ ...form, amount: event.target.value })}
-              placeholder="0.00"
-              className="h-11 text-base"
-              data-testid="input-store-amount"
-            />
+        <section className="min-w-0 space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3" aria-labelledby="store-run-receipt">
+          <div className="flex items-start gap-2.5">
+            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${file || (editing?.receiptObjectPath && !form.removeReceipt) ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"}`}>
+              {file || (editing?.receiptObjectPath && !form.removeReceipt) ? <Check className="h-3.5 w-3.5" /> : "1"}
+            </span>
+            <div className="min-w-0">
+              <h3 id="store-run-receipt" className="text-sm font-medium text-foreground">
+                {editingId ? "Receipt" : "Start with the receipt"}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {editingId
+                  ? "Take a new photo or upload a file to replace the one on this line."
+                  : "Take a photo or upload a file. A clear picture can fill in the store, date, and amount."}
+              </p>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="store-date">Date</Label>
-            <Input
-              id="store-date"
-              type="date"
-              value={form.purchasedOn}
-              onChange={(event) => setForm({ ...form, purchasedOn: event.target.value })}
-              className="h-11 text-base"
-              data-testid="input-store-date"
-            />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label>{editingId ? "Replace receipt" : "Receipt"}</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => cameraRef.current?.click()} data-testid="button-take-receipt-photo">
+          <div className="grid min-w-0 grid-cols-2 gap-2">
+            <Button type="button" variant="outline" className="h-16 w-full min-w-0 flex-col gap-1 bg-background px-2 text-sm" disabled={reading} onClick={() => cameraRef.current?.click()} data-testid="button-take-receipt-photo">
+              <Camera />
               Take photo
             </Button>
-            <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => fileRef.current?.click()} data-testid="button-upload-receipt">
+            <Button type="button" variant="outline" className="h-16 w-full min-w-0 flex-col gap-1 bg-background px-2 text-sm" disabled={reading} onClick={() => fileRef.current?.click()} data-testid="button-upload-receipt">
+              <Upload />
               Upload file
             </Button>
           </div>
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => { void onFile(event.target.files); event.target.value = ""; }} />
           <input ref={fileRef} type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => { void onFile(event.target.files); event.target.value = ""; }} />
           {reading && <p className="text-xs text-muted-foreground">Reading the receipt...</p>}
-          {fileLabel && <p className="text-xs text-muted-foreground break-all">{fileLabel}</p>}
+          {fileLabel && (
+            <p className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              <Check className="h-4 w-4 shrink-0 text-primary" />
+              <span className="min-w-0 break-all">{fileLabel}</span>
+            </p>
+          )}
           {readNote && <p className="text-xs text-muted-foreground">{readNote}</p>}
           {editingId && !file && (
             <p className="text-xs text-muted-foreground">
-              {purchases.find((purchase) => purchase.id === editingId)?.receiptFileName || "No receipt on this line"}
+              {editing?.receiptFileName || "No receipt on this line"}
             </p>
           )}
-          {isAdmin && editingId && purchases.find((purchase) => purchase.id === editingId)?.receiptObjectPath && (
+          {isAdmin && editing?.receiptObjectPath && (
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -316,19 +326,85 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
               Remove receipt
             </label>
           )}
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" className="h-11 flex-1 sm:flex-none" disabled={saveMutation.isPending || reading} data-testid="button-save-store-run">
-            {saveMutation.isPending ? "Saving..." : editingId ? "Save changes" : "Add store run"}
-          </Button>
-          {editingId && (
-            <Button type="button" variant="outline" className="h-11 flex-1 sm:flex-none" onClick={reset} data-testid="button-cancel-store-run">
-              Cancel
-            </Button>
-          )}
-        </div>
+        </section>
+
+        <section className="min-w-0 space-y-3 rounded-xl border border-border bg-background p-3" aria-labelledby="store-run-details">
+          <div className="flex items-start gap-2.5">
+            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${gaps.some((gap) => gap !== "a receipt photo or file") ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"}`}>
+              {gaps.some((gap) => gap !== "a receipt photo or file") ? "2" : <Check className="h-3.5 w-3.5" />}
+            </span>
+            <div className="min-w-0">
+              <h3 id="store-run-details" className="text-sm font-medium text-foreground">Purchase details</h3>
+              <p className="text-xs text-muted-foreground">Every line is required before this store run can be added.</p>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="store-name">Store</Label>
+            <Input
+              id="store-name"
+              value={form.storeName}
+              onChange={(event) => setForm({ ...form, storeName: event.target.value })}
+              placeholder="Home Depot"
+              className="h-11 w-full min-w-0 text-base"
+              data-testid="input-store-name"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="store-item">What you bought</Label>
+            <Input
+              id="store-item"
+              value={form.description}
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
+              placeholder="Mulch, bags, and edging"
+              className="h-11 w-full min-w-0 text-base"
+              data-testid="input-store-item"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="store-po">PO</Label>
+            <Input
+              id="store-po"
+              value={form.poNumber}
+              onChange={(event) => setForm({ ...form, poNumber: event.target.value })}
+              placeholder="PO-1042"
+              className="h-11 w-full min-w-0 text-base"
+              data-testid="input-store-po"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="store-amount">Amount paid</Label>
+              <Input
+                id="store-amount"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="0.01"
+                value={form.amount}
+                onChange={(event) => setForm({ ...form, amount: event.target.value })}
+                placeholder="0.00"
+                className="h-11 w-full min-w-0 text-base"
+                data-testid="input-store-amount"
+              />
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="store-date">Date</Label>
+              <Input
+                id="store-date"
+                type="date"
+                value={form.purchasedOn}
+                onChange={(event) => setForm({ ...form, purchasedOn: event.target.value })}
+                className="h-11 w-full min-w-0 max-w-full text-base"
+                data-testid="input-store-date"
+              />
+            </div>
+          </div>
+        </section>
+
+        {!pinSave && saveBar}
       </form>
 
+      {canOpenPurchases && (
       <form
         className="space-y-2 border-t border-border pt-3"
         onSubmit={(event) => {
@@ -337,13 +413,13 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
         }}
       >
         <Label htmlFor="attach-receipt">Attach a saved receipt</Label>
-        <div className="flex gap-2">
+        <div className="flex min-w-0 gap-2">
           <Input
             id="attach-receipt"
             value={find}
             onChange={(event) => setFind(event.target.value)}
             placeholder="Store or what you bought"
-            className="h-11 text-base"
+            className="h-11 min-w-0 flex-1 text-base"
             data-testid="input-attach-receipt"
           />
           <Button type="submit" variant="outline" className="h-11 shrink-0" data-testid="button-find-receipt">Find</Button>
@@ -364,7 +440,14 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
           </ul>
         )}
       </form>
+      )}
 
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+        <p className="text-sm font-medium">On this job</p>
+        {canOpenPurchases && (
+          <Link href="/purchases" className="text-sm text-primary underline shrink-0">All receipts</Link>
+        )}
+      </div>
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading store runs...</p>
       ) : purchases.length === 0 ? (
@@ -389,6 +472,12 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
                         {purchase.receiptFileName || "Receipt"}
                       </a>
                     )}
+                    {(purchase.refunds ?? []).map((refund) => (
+                      <p key={refund.id} className="text-xs text-muted-foreground">
+                        Refunded ${Number(refund.amount).toFixed(2)}
+                        {refund.note ? ` · ${refund.note}` : ""}
+                      </p>
+                    ))}
                   </div>
                   <p className="text-sm font-medium shrink-0">${Number(purchase.amount).toFixed(2)}</p>
                 </div>
@@ -423,6 +512,8 @@ export function StoreRunPanel({ taskId }: { taskId: string }) {
           })}
         </ul>
       )}
+      </div>
+      {pinSave && saveBar}
     </div>
   );
 }
@@ -432,6 +523,8 @@ export function StoreRunMoreRow({ taskId }: { taskId: string }) {
   const { data: purchases = [] } = useQuery<PurchaseView[]>({
     queryKey: ["/api/tasks", taskId, "purchases"],
     enabled: !!taskId,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   return (
@@ -456,16 +549,14 @@ export function StoreRunMoreRow({ taskId }: { taskId: string }) {
       {open && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" data-testid="sheet-store-run">
           <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close store run" onClick={() => setOpen(false)} />
-          <div className="relative z-10 flex max-h-[min(85dvh,40rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-background sm:max-w-md sm:rounded-xl">
-            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="relative z-10 flex h-[min(85dvh,40rem)] w-full min-w-0 max-w-full flex-col overflow-hidden rounded-t-2xl bg-background sm:max-w-md sm:rounded-xl">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
               <p className="text-base font-medium">Store run</p>
               <Button type="button" variant="ghost" className="h-11" onClick={() => setOpen(false)} data-testid="button-close-store-run">
                 Close
               </Button>
             </div>
-            <div className="overflow-y-auto px-4 py-3">
-              <StoreRunPanel taskId={taskId} />
-            </div>
+            <StoreRunPanel taskId={taskId} pinSave />
           </div>
         </div>
       )}

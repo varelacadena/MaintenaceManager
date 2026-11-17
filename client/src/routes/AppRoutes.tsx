@@ -270,7 +270,7 @@ function InventoryRoute() {
 function PurchasesRoute() {
   return (
     <DomainErrorBoundary domain="Purchases">
-      <RoleGuard allowedRoles={["admin", "technician"]}>
+      <RoleGuard allowedRoles={["admin", "technician"]} permission="purchases">
         <Purchases />
       </RoleGuard>
     </DomainErrorBoundary>

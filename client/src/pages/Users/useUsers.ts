@@ -229,6 +229,7 @@ export function useUsers() {
         canManageEquipment?: boolean;
         canManageFleet?: boolean;
         canManageInventory?: boolean;
+        canManagePurchases?: boolean;
       };
     }) => {
       const response = await apiRequest("PATCH", `/api/users/${userId}/permissions`, permissions);

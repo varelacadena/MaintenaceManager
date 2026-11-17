@@ -15,6 +15,7 @@ import {
   spaces,
   projects,
   purchaseLinks,
+  purchaseRefunds,
   purchases,
   studentTimeEntries,
   studentDailyRecaps,
@@ -708,10 +709,14 @@ export class AnalyticsService {
         .select({ cost: sql<number>`coalesce(sum(${purchases.amount}), 0)` })
         .from(purchases)
         .where(inArray(purchases.id, linkedPurchaseIds));
+      const [refundRow] = await db
+        .select({ cost: sql<number>`coalesce(sum(${purchaseRefunds.amount}), 0)` })
+        .from(purchaseRefunds)
+        .where(inArray(purchaseRefunds.purchaseId, linkedPurchaseIds));
       const cents = (value: number) => Math.round(value * 100) / 100;
       laborCost = cents((Number(timeRow?.minutes) || 0) / 60 * 15);
       partsCost = cents(Number(partsRow?.cost) || 0);
-      storeCost = cents(Number(storeRow?.cost) || 0);
+      storeCost = cents((Number(storeRow?.cost) || 0) - (Number(refundRow?.cost) || 0));
     }
     const totalCost = Math.round((laborCost + partsCost + storeCost) * 100) / 100;
 

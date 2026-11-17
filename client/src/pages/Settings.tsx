@@ -69,7 +69,7 @@ const systemSettingSections: SystemSettingSection[] = [
       },
       {
         title: "Users, Roles & Access",
-        description: "Manage users, pending signups, credentials, and role assignments.",
+        description: "Manage users, pending signups, credentials, roles, and technician permissions.",
         status: "available",
         icon: Users,
         actionLabel: "Open User Settings",

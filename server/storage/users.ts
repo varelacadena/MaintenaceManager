@@ -70,6 +70,7 @@ export async function updateUser(id: string, userData: {
   canManageEquipment?: boolean;
   canManageFleet?: boolean;
   canManageInventory?: boolean;
+  canManagePurchases?: boolean;
 }): Promise<User | undefined> {
   const [user] = await db
     .update(users)

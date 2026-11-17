@@ -20,7 +20,7 @@ export default function AdminTaskDetailPage() {
 
   return (
     <div
-      className="h-full flex flex-col -mx-3 -my-4 sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-6 min-h-0"
+      className="flex h-full min-h-0 min-w-0 flex-col md:-mx-6 md:-my-6 lg:-mx-8 lg:-my-6"
       data-testid="admin-task-detail-page"
     >
       <TaskDetailPanel

@@ -3,12 +3,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { TECH_PERMISSION_LABELS, type TechPermissionKey } from "@shared/techPermissions";
+import { TECH_PERMISSION_LABELS, getTechPermissionValue, techPermissionField, type TechPermissionKey } from "@shared/techPermissions";
 import type { UsersContext } from "./useUsers";
 import { formatUserDisplayName } from "@/lib/displayNames";
 import { getInitials } from "@/utils/taskUtils";
 
-const PERMISSION_KEYS: TechPermissionKey[] = ["equipment", "fleet", "inventory"];
+const PERMISSION_KEYS: TechPermissionKey[] = ["equipment", "fleet", "inventory", "purchases"];
 
 export function PermissionsTabContent({ ctx }: { ctx: UsersContext }) {
   const { users, updatePermissionsMutation, getRoleBadgeColor } = ctx;
@@ -20,7 +20,7 @@ export function PermissionsTabContent({ ctx }: { ctx: UsersContext }) {
         <CardHeader className="p-3 md:p-4">
           <CardTitle className="text-base md:text-lg">Technician Permissions</CardTitle>
           <CardDescription>
-            Grant technicians the ability to add and edit equipment, fleet, or inventory.
+            Grant technicians equipment, fleet, inventory, or the Purchases page.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-3 md:p-4 pt-0">
@@ -37,7 +37,7 @@ export function PermissionsTabContent({ ctx }: { ctx: UsersContext }) {
       <CardHeader className="p-3 md:p-4">
         <CardTitle className="text-base md:text-lg">Technician Permissions</CardTitle>
         <CardDescription>
-          Enable or disable add/edit access for each technician. Admins always have full access.
+          Turn each area on for a technician. Admins always have full access. Purchases opens the receipt list. Store runs on a job stay available either way.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-3 md:p-4 pt-0 space-y-4">
@@ -65,16 +65,11 @@ export function PermissionsTabContent({ ctx }: { ctx: UsersContext }) {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {PERMISSION_KEYS.map((key) => {
                   const { title, description } = TECH_PERMISSION_LABELS[key];
-                  const field =
-                    key === "equipment"
-                      ? "canManageEquipment"
-                      : key === "fleet"
-                        ? "canManageFleet"
-                        : "canManageInventory";
-                  const checked = !!user[field];
+                  const field = techPermissionField(key);
+                  const checked = getTechPermissionValue(user, key);
 
                   return (
                     <div

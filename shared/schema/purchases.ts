@@ -33,6 +33,18 @@ export const purchases = pgTable("purchases", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const purchaseRefunds = pgTable("purchase_refunds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purchaseId: varchar("purchase_id").notNull().references(() => purchases.id, { onDelete: "cascade" }),
+  amount: doublePrecision("amount").notNull(),
+  refundedOn: date("refunded_on").notNull(),
+  note: text("note"),
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdByName: varchar("created_by_name", { length: 200 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const purchaseLinks = pgTable("purchase_links", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   purchaseId: varchar("purchase_id").notNull().references(() => purchases.id, { onDelete: "cascade" }),
@@ -53,6 +65,7 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 
 export type Purchase = typeof purchases.$inferSelect;
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+export type PurchaseRefund = typeof purchaseRefunds.$inferSelect;
 export type PurchaseLink = typeof purchaseLinks.$inferSelect;
 
 export type PurchaseLinkView = {
@@ -64,5 +77,6 @@ export type PurchaseLinkView = {
 
 export type PurchaseView = Purchase & {
   links: PurchaseLinkView[];
+  refunds: PurchaseRefund[];
   hasReceipt: boolean;
 };

@@ -22,7 +22,6 @@ const KINDS: { id: PurchaseLinkKind; label: string }[] = [
   { id: "project", label: "Project" },
 ];
 
-type DraftLink = { kind: PurchaseLinkKind; targetId: string; label: string };
 type FormState = {
   storeName: string;
   description: string;
@@ -74,6 +73,28 @@ function whereText(row: PurchaseView): string {
   return parts.join(" · ") || "Not linked";
 }
 
+function refundedAmount(row: PurchaseView): number {
+  return (row.refunds ?? []).reduce((sum, refund) => sum + (Number(refund.amount) || 0), 0);
+}
+
+function refundLeft(row: PurchaseView): number {
+  return Math.round((Number(row.amount) - refundedAmount(row)) * 100) / 100;
+}
+
+function RefundLines({ row }: { row: PurchaseView }) {
+  if (!row.refunds?.length) return null;
+  return (
+    <>
+      {row.refunds.map((refund) => (
+        <p key={refund.id} className="text-xs text-muted-foreground break-words">
+          Refund −${Number(refund.amount).toFixed(2)} · {showDay(String(refund.refundedOn).slice(0, 10))}
+          {refund.note ? ` · ${refund.note}` : ""}
+        </p>
+      ))}
+    </>
+  );
+}
+
 function detailsProblem(form: FormState): string | null {
   const amount = Number(form.amount);
   if (!form.storeName.trim()) return "Enter the store";
@@ -110,12 +131,14 @@ function PeriodDate({
   value,
   onChange,
   wide = false,
+  disabled = false,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (next: string) => void;
   wide?: boolean;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const parsed = value ? parse(value, "yyyy-MM-dd", new Date()) : undefined;
@@ -123,11 +146,11 @@ function PeriodDate({
   return (
     <div className="min-w-0 space-y-1">
       <Label htmlFor={id} className="text-xs">{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open && !disabled} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button id={id} type="button" variant="outline" className={wide ? "h-11 min-h-11 w-full max-w-full justify-start gap-2 px-3 py-0 text-base font-normal" : "h-9 min-h-9 w-full max-w-full justify-start gap-1.5 px-2 py-0 text-sm font-normal"}>
+          <Button id={id} type="button" variant="outline" disabled={disabled} className={wide ? "h-11 min-h-11 w-full max-w-full justify-start gap-2 px-3 py-0 text-base font-normal" : "h-9 min-h-9 w-full max-w-full justify-start gap-1.5 px-2 py-0 text-sm font-normal"}>
             <CalendarIcon className={wide ? "h-4 w-4 shrink-0 text-muted-foreground" : "h-3.5 w-3.5 shrink-0 text-muted-foreground"} />
-            <span>{selected ? format(selected, "M/d/yy") : "Any"}</span>
+            <span>{selected ? format(selected, "M/d/yy") : wide ? "Pick a date" : "Any"}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" collisionPadding={12} className="w-auto p-2">
@@ -147,27 +170,31 @@ function PeriodDate({
   );
 }
 
-function ReceiptLines({ form, setForm }: { form: FormState; setForm: (next: FormState) => void }) {
+function keepFocus(event: { key: string; preventDefault: () => void }) {
+  if (event.key === "Enter") event.preventDefault();
+}
+
+function ReceiptLines({ form, setForm, disabled = false }: { form: FormState; setForm: (next: FormState) => void; disabled?: boolean }) {
   return (
     <>
       <div className="space-y-1.5">
         <Label htmlFor="purchase-store">Store</Label>
-        <Input id="purchase-store" value={form.storeName} onChange={(event) => setForm({ ...form, storeName: event.target.value })} className="h-11 text-base" data-testid="input-purchase-store" />
+        <Input id="purchase-store" value={form.storeName} disabled={disabled} onChange={(event) => setForm({ ...form, storeName: event.target.value })} className="h-11 text-base" data-testid="input-purchase-store" />
       </div>
       <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-        <PeriodDate id="purchase-date" label="Date" value={form.purchasedOn} onChange={(purchasedOn) => setForm({ ...form, purchasedOn })} wide />
+        <PeriodDate id="purchase-date" label="Date" value={form.purchasedOn} onChange={(purchasedOn) => setForm({ ...form, purchasedOn })} wide disabled={disabled} />
         <div className="space-y-1.5">
           <Label htmlFor="purchase-amount">Amount paid</Label>
-          <Input id="purchase-amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} className="h-11 text-base" data-testid="input-purchase-amount" />
+          <Input id="purchase-amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} disabled={disabled} onChange={(event) => setForm({ ...form, amount: event.target.value })} className="h-11 text-base" data-testid="input-purchase-amount" />
         </div>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="purchase-item">What you bought</Label>
-        <Input id="purchase-item" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="h-11 text-base" data-testid="input-purchase-item" />
+        <Input id="purchase-item" value={form.description} disabled={disabled} onChange={(event) => setForm({ ...form, description: event.target.value })} className="h-11 text-base" data-testid="input-purchase-item" />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="purchase-po">PO</Label>
-        <Input id="purchase-po" value={form.poNumber} onChange={(event) => setForm({ ...form, poNumber: event.target.value })} placeholder="PO-1042" className="h-11 text-base" data-testid="input-purchase-po" />
+        <Input id="purchase-po" value={form.poNumber} disabled={disabled} onChange={(event) => setForm({ ...form, poNumber: event.target.value })} placeholder="PO-1042" className="h-11 text-base" data-testid="input-purchase-po" />
       </div>
     </>
   );
@@ -214,6 +241,7 @@ export default function Purchases() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isAdmin = user?.role === "admin";
+  const canChange = (row: PurchaseView) => isAdmin || (!!user?.id && row.createdById === user.id);
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [startDate, setStartDate] = useState("");
@@ -224,12 +252,12 @@ export default function Purchases() {
   const [busy, setBusy] = useState<"csv" | "zip" | null>(null);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PurchaseView | null>(null);
+  const locked = !!editing && !canChange(editing);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [file, setFile] = useState<ReceiptPayload | null>(null);
   const [fileLabel, setFileLabel] = useState("");
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState<string | null>(null);
-  const [draftLinks, setDraftLinks] = useState<DraftLink[]>([]);
   const [linkKind, setLinkKind] = useState<PurchaseLinkKind>("task");
   const [linkQuery, setLinkQuery] = useState("");
   const [linkTarget, setLinkTarget] = useState("");
@@ -239,6 +267,13 @@ export default function Purchases() {
   const [jobQuery, setJobQuery] = useState("");
   const [selectedJob, setSelectedJob] = useState<JobHit | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundQuery, setRefundQuery] = useState("");
+  const [appliedRefundQuery, setAppliedRefundQuery] = useState("");
+  const [refundPick, setRefundPick] = useState<PurchaseView | null>(null);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundDate, setRefundDate] = useState(todayInput);
+  const [refundNote, setRefundNote] = useState("");
 
   const query = new URLSearchParams();
   if (startDate) query.set("startDate", startDate);
@@ -249,6 +284,9 @@ export default function Purchases() {
 
   const { data: rows = [], isLoading } = useQuery<PurchaseView[]>({
     queryKey: ["/api/purchases", startDate, endDate, propertyId, appliedSearch],
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const response = await fetch(`/api/purchases${queryString ? `?${queryString}` : ""}`, { credentials: "include" });
       if (!response.ok) throw new Error("Could not load purchases");
@@ -267,6 +305,19 @@ export default function Purchases() {
       const params = new URLSearchParams({ kind: linkKind, q: linkQuery });
       const response = await fetch(`/api/purchases/options?${params.toString()}`, { credentials: "include" });
       if (!response.ok) throw new Error("Could not load records");
+      return response.json();
+    },
+  });
+
+  const { data: refundChoices = [], isFetching: refundChoicesLoading } = useQuery<PurchaseView[]>({
+    queryKey: ["/api/purchases", "refund-choices", appliedRefundQuery],
+    enabled: refundOpen && !refundPick,
+    staleTime: 0,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (appliedRefundQuery) params.set("q", appliedRefundQuery);
+      const response = await fetch(`/api/purchases${params.toString() ? `?${params}` : ""}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load receipts");
       return response.json();
     },
   });
@@ -300,9 +351,25 @@ export default function Purchases() {
     const timer = window.setTimeout(() => setAppliedSearch(search.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [search]);
-  const total = useMemo(() => rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0), [rows]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setAppliedRefundQuery(refundQuery.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [refundQuery]);
+
+  useEffect(() => {
+    if (!open && !filtersOpen && !refundOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open, filtersOpen, refundOpen]);
+
+  const refunded = useMemo(() => rows.reduce((sum, row) => sum + refundedAmount(row), 0), [rows]);
+  const total = useMemo(() => rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0) - refunded, [rows, refunded]);
   const receipts = rows.filter((row) => row.hasReceipt).length;
-  const links = editing ? editing.links.map((link) => ({ kind: link.kind, targetId: link.targetId, label: link.label, id: link.id })) : draftLinks;
+  const links = editing?.links ?? [];
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
@@ -316,7 +383,6 @@ export default function Purchases() {
     setFile(null);
     setFileLabel("");
     setReadNote(null);
-    setDraftLinks([]);
     setLinkTarget("");
     setStep(1);
     setTechId("");
@@ -325,13 +391,32 @@ export default function Purchases() {
     setSelectedJob(null);
   };
 
+  const closeRefund = () => {
+    setRefundOpen(false);
+    setRefundQuery("");
+    setAppliedRefundQuery("");
+    setRefundPick(null);
+    setRefundAmount("");
+    setRefundDate(todayInput());
+    setRefundNote("");
+  };
+
+  const openRefund = (preset?: PurchaseView) => {
+    setRefundPick(preset ?? null);
+    setRefundQuery("");
+    setAppliedRefundQuery("");
+    setRefundAmount("");
+    setRefundDate(todayInput());
+    setRefundNote("");
+    setRefundOpen(true);
+  };
+
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
     setFile(null);
     setFileLabel("");
     setReadNote(null);
-    setDraftLinks([]);
     setStep(1);
     setTechId("");
     setJobPropertyId("");
@@ -405,18 +490,15 @@ export default function Purchases() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const amount = Number(form.amount);
-      if (!form.storeName.trim()) throw new Error("Enter the store");
-      if (!form.description.trim()) throw new Error("Enter what was bought");
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter the amount paid");
-      if (!form.purchasedOn) throw new Error("Enter the purchase date");
-      if (!form.poNumber.trim()) throw new Error("Enter the PO");
+      const problem = detailsProblem(form);
+      if (problem) throw new Error(problem);
+      if (editing && !canChange(editing)) throw new Error("You can look at this receipt, but only the person who added it can change it");
       if (!editing && !file) throw new Error("Add a photo or PDF of the receipt");
       if (editing && form.removeReceipt && !isAdmin) throw new Error("Keep the receipt, or ask an admin to remove it");
       const body: Record<string, unknown> = {
         storeName: form.storeName.trim(),
         description: form.description.trim(),
-        amount,
+        amount: Number(form.amount),
         purchasedOn: form.purchasedOn,
         poNumber: form.poNumber.trim(),
         purpose: form.purpose || null,
@@ -454,38 +536,71 @@ export default function Purchases() {
     },
   });
 
+  const saveRefund = useMutation({
+    mutationFn: async () => {
+      if (!refundPick) throw new Error("Choose the receipt");
+      const amount = Number(refundAmount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter the refund amount");
+      const left = refundLeft(refundPick);
+      if (Math.round(amount * 100) > Math.round(left * 100)) throw new Error(`The most you can refund is $${left.toFixed(2)}`);
+      if (!refundDate) throw new Error("Enter the refund date");
+      const response = await apiRequest("POST", `/api/purchases/${refundPick.id}/refunds`, {
+        amount,
+        refundedOn: refundDate,
+        note: refundNote.trim() || undefined,
+      });
+      return response.json() as Promise<PurchaseView>;
+    },
+    onSuccess: (view: PurchaseView) => {
+      refresh();
+      setEditing((current) => (current?.id === view.id ? view : current));
+      closeRefund();
+      toast({ title: "Refund saved" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not save refund", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeRefund = useMutation({
+    mutationFn: async (refundId: string) => {
+      if (!editing) throw new Error("Open the receipt first");
+      const response = await apiRequest("DELETE", `/api/purchases/${editing.id}/refunds/${refundId}`);
+      return response.json() as Promise<PurchaseView>;
+    },
+    onSuccess: (view: PurchaseView) => {
+      refresh();
+      setEditing(view);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not remove refund", description: error.message, variant: "destructive" });
+    },
+  });
+
   const addLink = async () => {
+    if (!editing) return;
     const option = options.find((item) => item.id === linkTarget);
     if (!option) return;
-    if (editing) {
-      try {
-        const response = await apiRequest("POST", `/api/purchases/${editing.id}/links`, { kind: linkKind, targetId: option.id });
-        const next = (await response.json()) as PurchaseView;
-        setEditing(next);
-        refresh();
-        setLinkTarget("");
-      } catch (error) {
-        toast({ title: "Could not add link", description: error instanceof Error ? error.message : "Try again", variant: "destructive" });
-      }
-      return;
+    try {
+      const response = await apiRequest("POST", `/api/purchases/${editing.id}/links`, { kind: linkKind, targetId: option.id });
+      const next = (await response.json()) as PurchaseView;
+      setEditing(next);
+      refresh();
+      setLinkTarget("");
+    } catch (error) {
+      toast({ title: "Could not add link", description: error instanceof Error ? error.message : "Try again", variant: "destructive" });
     }
-    if (draftLinks.some((link) => link.kind === linkKind && link.targetId === option.id)) return;
-    setDraftLinks([...draftLinks, { kind: linkKind, targetId: option.id, label: option.label }]);
-    setLinkTarget("");
   };
 
-  const removeLink = async (link: { id?: string; kind: PurchaseLinkKind; targetId: string }) => {
-    if (editing && link.id) {
-      try {
-        const response = await apiRequest("DELETE", `/api/purchases/${editing.id}/links/${link.id}`);
-        setEditing((await response.json()) as PurchaseView);
-        refresh();
-      } catch (error) {
-        toast({ title: "Could not remove link", description: error instanceof Error ? error.message : "Try again", variant: "destructive" });
-      }
-      return;
+  const removeLink = async (linkId: string) => {
+    if (!editing) return;
+    try {
+      const response = await apiRequest("DELETE", `/api/purchases/${editing.id}/links/${linkId}`);
+      setEditing((await response.json()) as PurchaseView);
+      refresh();
+    } catch (error) {
+      toast({ title: "Could not remove link", description: error instanceof Error ? error.message : "Try again", variant: "destructive" });
     }
-    setDraftLinks(draftLinks.filter((item) => !(item.kind === link.kind && item.targetId === link.targetId)));
   };
 
   const download = async (formatName: "csv" | "zip") => {
@@ -503,8 +618,6 @@ export default function Purchases() {
     }
   };
 
-  const canChange = (row: PurchaseView) => isAdmin || (!!user?.id && row.createdById === user.id);
-
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4 p-3 md:p-6" data-testid="page-purchases">
       <div className="flex items-start gap-3">
@@ -518,7 +631,10 @@ export default function Purchases() {
       </div>
 
       <section data-testid="section-add-receipt">
-        <Button type="button" className="h-11 w-full sm:w-auto" onClick={openCreate} data-testid="button-add-purchase">Add receipt</Button>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button type="button" className="h-11" onClick={openCreate} data-testid="button-add-purchase">Add receipt</Button>
+          <Button type="button" variant="outline" className="h-11" onClick={() => openRefund()} data-testid="button-add-refund">Add refund</Button>
+        </div>
       </section>
 
       <section className="space-y-3" data-testid="section-find-receipt">
@@ -542,6 +658,9 @@ export default function Purchases() {
             <span className="font-medium" data-testid="text-purchase-count">{rows.length}</span>
             <span className="text-muted-foreground"> purchases · </span>
             <span className="font-medium" data-testid="text-purchase-total">${total.toFixed(2)}</span>
+            {refunded > 0 && (
+              <span className="text-muted-foreground"> · ${refunded.toFixed(2)} refunded</span>
+            )}
             {receipts !== rows.length && (
               <span className="text-muted-foreground"> · {receipts} with a photo</span>
             )}
@@ -573,6 +692,7 @@ export default function Purchases() {
                     <p className="shrink-0 font-medium">${Number(row.amount).toFixed(2)}</p>
                   </div>
                   <p className="text-sm text-muted-foreground break-words">{row.description}</p>
+                  <RefundLines row={row} />
                   <p className="mt-1 text-xs text-muted-foreground">{row.poNumber ? `${row.poNumber} · ` : ""}{showDay(row.purchasedOn)} · {whereText(row)}</p>
                 </button>
               </li>
@@ -598,7 +718,10 @@ export default function Purchases() {
                     <td className="px-3 py-2">
                       <button type="button" className="text-left underline" onClick={() => openEdit(row)}>{row.storeName}</button>
                     </td>
-                    <td className="px-3 py-2">{row.description}</td>
+                    <td className="px-3 py-2">
+                      <p>{row.description}</p>
+                      <RefundLines row={row} />
+                    </td>
                     <td className="px-3 py-2">{whereText(row)}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">${Number(row.amount).toFixed(2)}</td>
                   </tr>
@@ -642,9 +765,9 @@ export default function Purchases() {
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-testid="dialog-purchase">
+        <div className="fixed inset-0 z-50 flex items-start justify-center sm:items-center" data-testid="dialog-purchase">
           <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close receipt" onClick={close} />
-          <div className="relative z-10 flex max-h-[min(92dvh,44rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-background sm:max-w-lg sm:rounded-xl">
+          <div className="relative z-10 flex h-full max-h-full w-full flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] sm:h-auto sm:max-h-[min(92dvh,44rem)] sm:max-w-lg sm:rounded-xl sm:pt-0">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
                 <p className="text-base font-medium">{editing ? "Receipt" : step === 1 ? "Scan the receipt" : step === 2 ? "Check the lines" : "Link to a job"}</p>
@@ -653,30 +776,30 @@ export default function Purchases() {
               <Button type="button" variant="ghost" className="h-11" onClick={close}>Close</Button>
             </div>
             <form
-              className="space-y-3 overflow-y-auto px-4 py-3"
+              className="flex min-h-0 flex-1 flex-col"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!editing && step !== 3) return;
                 saveMutation.mutate();
               }}
             >
-              {!editing && step === 1 && (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">Take a photo or choose a file. The picture is saved, then the store, date, and amount are filled in for you to check.</p>
+              <div className="shrink-0 space-y-2 border-b border-border px-4 py-3">
+                {(!editing && step === 1) || editing ? (
+                  <>
+                    {!editing && (
+                      <p className="text-sm text-muted-foreground">Take a photo or choose a file. The picture is saved, then the store, date, and amount are filled in for you to check.</p>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button type="button" variant="outline" className="h-11" disabled={reading || locked} onClick={() => cameraRef.current?.click()} data-testid="button-take-receipt-photo">Take photo</Button>
+                      <Button type="button" variant="outline" className="h-11" disabled={reading || locked} onClick={() => fileRef.current?.click()} data-testid="button-upload-receipt">Upload file</Button>
+                    </div>
+                    {!editing && file && (
+                      <Button type="button" className="h-11 w-full" onClick={() => setStep(2)} data-testid="button-receipt-use-photo">Continue</Button>
+                    )}
+                  </>
+                ) : null}
+                {!editing && step === 2 && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => cameraRef.current?.click()} data-testid="button-take-receipt-photo">Take photo</Button>
-                    <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => fileRef.current?.click()} data-testid="button-upload-receipt">Upload file</Button>
-                  </div>
-                  {reading && <p className="text-sm text-muted-foreground">Saving and reading the receipt...</p>}
-                </div>
-              )}
-              {!editing && step === 2 && (
-                <>
-                  <p className="text-sm text-muted-foreground" data-testid="text-receipt-saved">Receipt saved. Check these lines, then add the PO and what you bought.</p>
-                  {fileLabel && <p className="text-xs text-muted-foreground break-all">{fileLabel}</p>}
-                  {readNote && <p className="text-xs text-muted-foreground">{readNote}</p>}
-                  <ReceiptLines form={form} setForm={setForm} />
-                  <div className="flex flex-col gap-2 pb-2 sm:flex-row">
                     <Button type="button" variant="outline" className="h-11" onClick={() => setStep(1)}>Back</Button>
                     <Button
                       type="button"
@@ -694,6 +817,44 @@ export default function Purchases() {
                       Continue
                     </Button>
                   </div>
+                )}
+                {!editing && step === 3 && (
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="h-11 shrink-0 px-3" onClick={() => setStep(2)}>Back</Button>
+                    <Button type="submit" className="h-11 min-w-0 flex-1 px-3" disabled={saveMutation.isPending} data-testid="button-save-purchase">
+                      {saveMutation.isPending ? "Saving..." : selectedJob ? "Save" : "Save with no job"}
+                    </Button>
+                  </div>
+                )}
+                {editing && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button type="submit" className={canChange(editing) ? "h-11" : "col-span-2 h-11"} disabled={saveMutation.isPending || reading || !canChange(editing)} data-testid="button-save-purchase">
+                      {saveMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    {canChange(editing) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          if (window.confirm("Delete this receipt?")) deleteMutation.mutate(editing.id);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {reading && <p className="text-sm text-muted-foreground">{editing ? "Reading the receipt..." : "Saving and reading the receipt..."}</p>}
+              </div>
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+              {!editing && step === 2 && (
+                <>
+                  <p className="text-sm text-muted-foreground" data-testid="text-receipt-saved">Receipt saved. Check these lines, then add the PO and what you bought.</p>
+                  {fileLabel && <p className="text-xs text-muted-foreground break-all">{fileLabel}</p>}
+                  {readNote && <p className="text-xs text-muted-foreground">{readNote}</p>}
+                  <ReceiptLines form={form} setForm={setForm} />
                 </>
               )}
               {!editing && step === 3 && (
@@ -739,6 +900,7 @@ export default function Purchases() {
                       placeholder="Type a job from the work page"
                       className="h-11 text-base"
                       data-testid="input-job-search"
+                      onKeyDown={keepFocus}
                     />
                   </div>
                   {selectedJob && (
@@ -766,30 +928,18 @@ export default function Purchases() {
                       <li className="text-sm text-muted-foreground">No jobs match. Leave both lists on All to search every job, or save with no job.</li>
                     )}
                   </ul>
-                  <div className="flex flex-col gap-2 pb-2 sm:flex-row">
-                    <Button type="button" variant="outline" className="h-11" onClick={() => setStep(2)}>Back</Button>
-                    <Button type="submit" className="h-11" disabled={saveMutation.isPending} data-testid="button-save-purchase">
-                      {saveMutation.isPending ? "Saving..." : selectedJob ? "Save" : "Save with no job"}
-                    </Button>
-                  </div>
                 </>
               )}
               {editing && (
                 <>
-                  <ReceiptLines form={form} setForm={setForm} />
+                  <ReceiptLines form={form} setForm={setForm} disabled={locked} />
                   <div className="space-y-1.5">
-                    <Label>Receipt</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => cameraRef.current?.click()}>Take photo</Button>
-                      <Button type="button" variant="outline" className="h-11" disabled={reading} onClick={() => fileRef.current?.click()}>Upload file</Button>
-                    </div>
-                    {reading && <p className="text-xs text-muted-foreground">Reading the receipt...</p>}
                     {fileLabel && <p className="text-xs text-muted-foreground break-all">{fileLabel}</p>}
                     {readNote && <p className="text-xs text-muted-foreground">{readNote}</p>}
                     {editing.receiptObjectPath && !file && (
                       <div className="flex flex-wrap items-center gap-3">
                         <a href={`/api/purchases/${editing.id}/receipt`} target="_blank" rel="noreferrer" className="text-sm text-primary underline">{editing.receiptFileName || "Open receipt"}</a>
-                        <Button type="button" variant="outline" className="h-9" disabled={reading} onClick={() => void readExisting()}>Read receipt</Button>
+                        <Button type="button" variant="outline" className="h-9" disabled={reading || locked} onClick={() => void readExisting()}>Read receipt</Button>
                       </div>
                     )}
                     {isAdmin && editing.receiptObjectPath && (
@@ -806,14 +956,37 @@ export default function Purchases() {
                       value={form.purpose}
                       onChange={(event) => setForm({ ...form, purpose: event.target.value as FormState["purpose"] })}
                       className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base"
+                      disabled={locked}
                     >
                       <option value="">No extra label</option>
                       <option value="shop_stock">Shop stock</option>
                       <option value="general">General</option>
                     </select>
                     {form.purpose && (
-                      <Input value={form.purposeNote} onChange={(event) => setForm({ ...form, purposeNote: event.target.value })} placeholder="Short note" className="h-11 text-base" />
+                      <Input value={form.purposeNote} disabled={locked} onChange={(event) => setForm({ ...form, purposeNote: event.target.value })} placeholder="Short note" className="h-11 text-base" />
                     )}
+                  </div>
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">Refunds</p>
+                      <Button type="button" variant="outline" className="h-9" onClick={() => openRefund(editing)} disabled={refundLeft(editing) <= 0}>
+                        Add refund
+                      </Button>
+                    </div>
+                    {(editing.refunds ?? []).length === 0 && <p className="text-sm text-muted-foreground">No refund on this receipt.</p>}
+                    {(editing.refunds ?? []).map((refund) => (
+                      <div key={refund.id} className="flex items-start justify-between gap-3 text-sm">
+                        <p className="min-w-0 break-words">
+                          −${Number(refund.amount).toFixed(2)} · {showDay(String(refund.refundedOn).slice(0, 10))}
+                          {refund.note ? ` · ${refund.note}` : ""}
+                        </p>
+                        {(isAdmin || refund.createdById === user?.id) && (
+                          <button type="button" className="shrink-0 text-muted-foreground underline" disabled={removeRefund.isPending} onClick={() => removeRefund.mutate(refund.id)}>
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                   <div className="space-y-2 border-t border-border pt-3">
                     <p className="text-sm font-medium">Linked to</p>
@@ -822,7 +995,7 @@ export default function Purchases() {
                       {links.map((link) => (
                         <span key={`${link.kind}-${link.targetId}`} className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs">
                           {kindLabel(link.kind)}: {link.label}
-                          <button type="button" className="text-muted-foreground" onClick={() => void removeLink(link)} aria-label="Remove link">Remove</button>
+                          <button type="button" className="text-muted-foreground" onClick={() => void removeLink(link.id)} aria-label="Remove link">Remove</button>
                         </span>
                       ))}
                     </div>
@@ -840,7 +1013,7 @@ export default function Purchases() {
                           <option key={kind.id} value={kind.id}>{kind.label}</option>
                         ))}
                       </select>
-                      <Input value={linkQuery} onChange={(event) => setLinkQuery(event.target.value)} placeholder="Filter the list" className="h-11 text-base" aria-label="Filter links" />
+                      <Input value={linkQuery} onChange={(event) => setLinkQuery(event.target.value)} onKeyDown={keepFocus} placeholder="Filter the list" className="h-11 text-base" aria-label="Filter links" />
                     </div>
                     <div className="flex gap-2">
                       <select
@@ -857,29 +1030,93 @@ export default function Purchases() {
                       <Button type="button" variant="outline" className="h-11 shrink-0" onClick={() => void addLink()}>Add</Button>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 pb-2 sm:flex-row">
-                    <Button type="submit" className="h-11" disabled={saveMutation.isPending || reading || !canChange(editing)} data-testid="button-save-purchase">
-                      {saveMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                    {canChange(editing) && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-11"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          if (window.confirm("Delete this receipt?")) deleteMutation.mutate(editing.id);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
                 </>
               )}
+              </div>
               <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => { void onFile(event.target.files); event.target.value = ""; }} />
               <input ref={fileRef} type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => { void onFile(event.target.files); event.target.value = ""; }} />
             </form>
+          </div>
+        </div>
+      )}
+
+      {refundOpen && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center sm:items-center" data-testid="dialog-refund">
+          <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close refund" onClick={closeRefund} />
+          <div className="relative z-10 flex h-full max-h-full w-full flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] sm:h-auto sm:max-h-[min(92dvh,40rem)] sm:max-w-lg sm:rounded-xl sm:pt-0">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <p className="text-base font-medium">Add refund</p>
+              <Button type="button" variant="ghost" className="h-11" onClick={closeRefund}>Close</Button>
+            </div>
+            {refundPick ? (
+              <form
+                className="flex min-h-0 flex-1 flex-col"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  saveRefund.mutate();
+                }}
+              >
+                <div className="shrink-0 border-b border-border px-4 py-3">
+                  <Button type="submit" className="h-11 w-full" disabled={saveRefund.isPending} data-testid="button-save-refund">
+                    {saveRefund.isPending ? "Saving..." : "Save refund"}
+                  </Button>
+                </div>
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+                  <div>
+                    <p className="font-medium break-words">{refundPick.storeName}</p>
+                    <p className="text-sm text-muted-foreground break-words">{refundPick.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Paid ${Number(refundPick.amount).toFixed(2)} · {showDay(String(refundPick.purchasedOn).slice(0, 10))}
+                      {refundedAmount(refundPick) > 0 ? ` · already refunded $${refundedAmount(refundPick).toFixed(2)}` : ""}
+                    </p>
+                    <p className="text-sm">Up to ${refundLeft(refundPick).toFixed(2)} can still be refunded.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="refund-amount">Refund amount</Label>
+                    <Input id="refund-amount" inputMode="decimal" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} placeholder="0.00" className="h-11 text-base" data-testid="input-refund-amount" />
+                  </div>
+                  <PeriodDate id="refund-date" label="Date" value={refundDate} onChange={setRefundDate} wide />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="refund-note">What was returned</Label>
+                    <Input id="refund-note" value={refundNote} onChange={(event) => setRefundNote(event.target.value)} placeholder="Optional" className="h-11 text-base" data-testid="input-refund-note" />
+                  </div>
+                  <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setRefundPick(null)}>Choose a different receipt</button>
+                </div>
+              </form>
+            ) : (
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+                <p className="text-sm text-muted-foreground">Pick the receipt this refund belongs to. The receipt amount stays the same, and the total comes down by the refund.</p>
+                <Input
+                  value={refundQuery}
+                  onChange={(event) => setRefundQuery(event.target.value)}
+                  placeholder="Store, PO, or what was bought"
+                  className="h-11 text-base"
+                  aria-label="Find a receipt to refund"
+                  data-testid="input-refund-search"
+                />
+                {refundChoicesLoading && <p className="text-sm text-muted-foreground">Loading receipts...</p>}
+                <ul className="space-y-2">
+                  {refundChoices.filter((row) => refundLeft(row) > 0).slice(0, 20).map((row) => (
+                    <li key={row.id}>
+                      <button type="button" className="w-full rounded-lg border border-border px-3 py-2.5 text-left" onClick={() => setRefundPick(row)} data-testid={`refund-choice-${row.id}`}>
+                        <span className="flex items-start justify-between gap-3">
+                          <span className="font-medium break-words">{row.storeName}</span>
+                          <span className="shrink-0">${Number(row.amount).toFixed(2)}</span>
+                        </span>
+                        <span className="block text-sm text-muted-foreground break-words">{row.description}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {row.poNumber ? `${row.poNumber} · ` : ""}{showDay(String(row.purchasedOn).slice(0, 10))}
+                          {refundedAmount(row) > 0 ? ` · $${refundLeft(row).toFixed(2)} left` : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {!refundChoicesLoading && refundChoices.filter((row) => refundLeft(row) > 0).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No receipt matches. Try the store, the PO, or what was bought.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

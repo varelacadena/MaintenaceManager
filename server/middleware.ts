@@ -4,6 +4,7 @@ import {
   canManageEquipment,
   canManageFleet,
   canManageInventory,
+  canManagePurchases,
 } from "@shared/techPermissions";
 
 // Middleware to check if user has specific role
@@ -75,6 +76,8 @@ export const requireEquipmentManager = requireUserPermission(canManageEquipment)
 export const requireFleetPrivileged = requireUserPermission(canManageFleet);
 /** Create items and adjust stock (search, add, use on inventory page). */
 export const requireInventoryOperator = requireUserPermission(canManageInventory);
+/** Purchases page: list, add, and link receipts. Admins always pass. */
+export const requirePurchasesAccess = requireUserPermission(canManagePurchases);
 /** Read inventory when picking parts on tasks (staff excluded). */
 export const requireInventoryReader = requireRole("admin", "technician", "student");
 export const requireStaffOrHigher = requireRole("staff", "technician", "admin");

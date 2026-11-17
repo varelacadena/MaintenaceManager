@@ -164,6 +164,7 @@ export function registerUserRoutes(app: Express) {
         canManageEquipment: z.boolean().optional(),
         canManageFleet: z.boolean().optional(),
         canManageInventory: z.boolean().optional(),
+        canManagePurchases: z.boolean().optional(),
       });
       const validated = permissionsSchema.parse(req.body);
 
