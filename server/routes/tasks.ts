@@ -125,6 +125,14 @@ export function registerTaskRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden: Staff cannot access tasks" });
       }
 
+      if (req.query.completedLookup === "true") {
+        const matches = await storage.searchCompletedTasks({
+          query: String(req.query.q ?? ""),
+          userId: currentUser.role === "admin" ? undefined : userId,
+        });
+        return res.json(matches);
+      }
+
       const equipmentIdFilter = req.query.equipmentId as string | undefined;
 
       if (

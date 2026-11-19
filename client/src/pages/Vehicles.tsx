@@ -81,6 +81,15 @@ const statusColors = {
   out_of_service: "destructive",
 } as const;
 
+const statusTone: Record<string, { dot: string; text: string }> = {
+  available: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
+  reserved: { dot: "bg-sky-500", text: "text-sky-700 dark:text-sky-400" },
+  in_use: { dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-400" },
+  needs_cleaning: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" },
+  needs_maintenance: { dot: "bg-orange-500", text: "text-orange-700 dark:text-orange-400" },
+  out_of_service: { dot: "bg-red-500", text: "text-red-700 dark:text-red-400" },
+};
+
 type FleetListVehicle = Vehicle & {
   registrationExpiresAt?: string | null;
   inspectionExpiresAt?: string | null;
@@ -112,6 +121,18 @@ function ComplianceDate({ value }: { value: string | null | undefined }) {
   );
 }
 
+function complianceAttention(label: string, value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const days = Math.ceil((date.getTime() - startOfToday.getTime()) / 86_400_000);
+  if (days < 0) return `${label} overdue`;
+  if (days <= 30) return `${label} ${format(date, "MMM d")}`;
+  return null;
+}
+
 function VehicleFleetActions({
   vehicle,
   canManage,
@@ -119,6 +140,7 @@ function VehicleFleetActions({
   onEdit,
   onCopy,
   onDelete,
+  compact = false,
 }: {
   vehicle: Vehicle;
   canManage: boolean;
@@ -126,10 +148,11 @@ function VehicleFleetActions({
   onEdit: (vehicle: Vehicle) => void;
   onCopy: (value: string, label: string) => void;
   onDelete: (vehicle: Vehicle) => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1.5 sm:justify-end">
-      {canManage ? (
+    <div className={compact ? "shrink-0" : "flex items-center gap-1.5 sm:justify-end"}>
+      {canManage && !compact ? (
         <Button
           type="button"
           variant="outline"
@@ -146,17 +169,25 @@ function VehicleFleetActions({
         <DropdownMenuTrigger asChild>
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            className="flex-1 sm:flex-none"
+            variant={compact ? "ghost" : "outline"}
+            size={compact ? "icon" : "sm"}
+            className={compact ? "h-8 w-8" : "flex-1 sm:flex-none"}
             data-testid={`button-more-vehicle-${vehicle.id}`}
             aria-label={`More actions for ${vehicle.vehicleId}`}
           >
-            More
-            <ChevronDown />
+            {compact ? <ChevronDown /> : <>More<ChevronDown /></>}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+          {compact && canManage ? (
+            <DropdownMenuItem
+              onClick={() => onEdit(vehicle)}
+              data-testid={`button-edit-vehicle-${vehicle.id}`}
+            >
+              <Pencil />
+              Edit
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             onClick={() => onView(vehicle)}
             data-testid={`button-view-vehicle-${vehicle.id}`}
@@ -714,70 +745,51 @@ function FleetContent() {
       ) : vehicles && vehicles.length > 0 ? (
         <div className="rounded-lg border bg-card overflow-hidden">
           <div className="divide-y md:hidden">
-            {vehicles.map((vehicle) => (
-              <div key={vehicle.id} className="space-y-3 p-3" data-testid={`card-vehicle-${vehicle.id}`}>
-                <div className="flex items-start gap-3">
-                  <Link
-                    href={`/vehicles/${vehicle.id}`}
-                    className="flex min-w-0 flex-1 items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`${vehicle.vehicleId}, ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                  >
-                    <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-muted/40">
-                      {vehicle.imageUrl ? (
-                        <img
-                          src={toDisplayUrl(vehicle.imageUrl)}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <Car className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium leading-tight">{vehicle.vehicleId}</div>
-                      <p className="mt-0.5 break-words text-xs text-muted-foreground">
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                      </p>
-                      <Badge
-                        className="no-default-hover-elevate mt-1.5"
-                        variant={statusColors[vehicle.status]}
-                      >
-                        {formatVehicleStatus(vehicle.status)}
-                      </Badge>
-                    </div>
-                  </Link>
-                </div>
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                  <div className="min-w-0">
-                    <dt className="text-muted-foreground">Plate</dt>
-                    <dd className="truncate font-mono">{vehicle.licensePlate || "—"}</dd>
+            {vehicles.map((vehicle) => {
+              const tone = statusTone[vehicle.status] ?? statusTone.available;
+              const attention = [
+                complianceAttention("Registration", vehicle.registrationExpiresAt),
+                complianceAttention("Inspection", vehicle.inspectionExpiresAt),
+              ].filter(Boolean);
+              return (
+              <div key={vehicle.id} className="flex items-center gap-1 px-3 py-2.5" data-testid={`card-vehicle-${vehicle.id}`}>
+                <Link
+                  href={`/vehicles/${vehicle.id}`}
+                  className="min-w-0 flex-1 rounded-md py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${vehicle.year} ${vehicle.make} ${vehicle.model}, ${formatVehicleStatus(vehicle.status)}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate font-medium leading-tight">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </p>
+                    <span className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-medium ${tone.text}`}>
+                      <span className={`h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
+                      {formatVehicleStatus(vehicle.status)}
+                    </span>
                   </div>
-                  <div className="min-w-0">
-                    <dt className="text-muted-foreground">Mileage</dt>
-                    <dd className="tabular-nums">{formatMileage(vehicle.currentMileage)}</dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-muted-foreground">Registration</dt>
-                    <dd><ComplianceDate value={vehicle.registrationExpiresAt} /></dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-muted-foreground">Inspection</dt>
-                    <dd><ComplianceDate value={vehicle.inspectionExpiresAt} /></dd>
-                  </div>
-                </dl>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {vehicle.vehicleId}
+                    <span aria-hidden> · </span>
+                    {vehicle.licensePlate || "No plate"}
+                    <span aria-hidden> · </span>
+                    {formatMileage(vehicle.currentMileage)}
+                  </p>
+                  {attention.length > 0 ? (
+                    <p className="mt-0.5 truncate text-xs font-medium text-destructive">{attention.join(" · ")}</p>
+                  ) : null}
+                </Link>
                 <VehicleFleetActions
                   vehicle={vehicle}
                   canManage={canManageVehicles}
+                  compact
                   onView={(selected) => setLocation(`/vehicles/${selected.id}`)}
                   onEdit={(selected) => setLocation(`/vehicles/${selected.id}/edit`)}
                   onCopy={copyVehicleValue}
                   onDelete={setVehicleToDelete}
                 />
               </div>
-            ))}
+              );
+            })}
           </div>
           <div className="hidden md:block">
           <ResponsiveTableScroll>

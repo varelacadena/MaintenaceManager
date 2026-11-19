@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { dateInputValueToTaskTimestamp, toCalendarDate } from "@/lib/taskCalendarDates";
 import { getUserDisplayName } from "@/utils/taskUtils";
 import type { Project, Property, Task, User as AppUser } from "@shared/schema";
+import { CompletedSearchResults, useCompletedTaskSearch } from "./CompletedTaskLookup";
 import { WorkTaskComposer } from "./WorkTaskComposer";
 import type { WorkContext } from "./useWorkAdmin";
 import { loadWorkListView, saveWorkListView } from "./workListPrefs";
@@ -412,6 +413,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
   const {
     searchQuery,
     setSearchQuery,
+    navigate,
     tasks,
     projects,
     properties = [],
@@ -583,7 +585,11 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
     const emptyProjects = projectRows.filter((row) => row.children.length === 0).length;
     return { stack, rows, count: list.filter(inStack).length + emptyProjects };
   });
-  const visibleJobs = stacks.reduce((sum, stack) => sum + stack.count, 0);
+  const completedSearch = useCompletedTaskSearch(searchQuery);
+  const shownStacks = completedSearch.active ? stacks.filter((item) => item.stack !== "completed") : stacks;
+  const visibleJobs = shownStacks.reduce((sum, stack) => sum + stack.count, 0);
+  const completedMatches = completedSearch.data ?? [];
+  const completedSearchPending = completedSearch.active && (completedSearch.isLoading || completedSearch.isError || completedMatches.length > 0);
 
   const propertyOptions = [...properties].sort((a, b) => byName(a.name, b.name));
   const techOptions = [...technicianUsers].sort((a, b) => byName(getUserDisplayName(a), getUserDisplayName(b)));
@@ -642,8 +648,8 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
             <Input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search"
-              aria-label="Search tasks and projects"
+              placeholder="Search jobs"
+              aria-label="Search jobs and projects"
               className="rounded-full pl-9"
               data-testid="input-search-work"
             />
@@ -772,13 +778,22 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
           </div>
         ) : null}
 
-        {!tasksError && visibleJobs === 0 ? (
+        <CompletedSearchResults
+          active={completedSearch.active}
+          isLoading={completedSearch.isLoading}
+          isError={completedSearch.isError}
+          error={completedSearch.error instanceof Error ? completedSearch.error : null}
+          matches={completedMatches}
+          onOpen={(taskId) => navigate(`/tasks/${taskId}`)}
+        />
+
+        {!tasksError && visibleJobs === 0 && !completedSearchPending ? (
           <div className="border-t px-3 py-8 text-sm text-muted-foreground" data-testid="work-tasks-empty-search">
             Nothing matches.
           </div>
         ) : null}
 
-        {stacks.filter(({ count }) => count > 0 || (!searchQuery.trim() && !overdueOnly && techIds.length === 0 && propertyIds.length === 0)).map(({ stack, rows, count }) => {
+        {shownStacks.filter(({ count }) => count > 0 || (!searchQuery.trim() && !overdueOnly && techIds.length === 0 && propertyIds.length === 0)).map(({ stack, rows, count }) => {
           const collapsed = collapsedStacks[stack] || count === 0;
           const renderTask = (task: Task, nested = false) => (
             <div key={task.id}>
@@ -805,7 +820,7 @@ export function AdminWorkList({ ctx }: { ctx: WorkContext }) {
               <div className={`border-t border-b-2 bg-muted ${WORK_STACK_LINE[stack]}`}>
                 <WorkStatusGroupHeader
                   statusKey={stack}
-                  label={WORK_STATUS_LABEL[stack]}
+                  label={stack === "completed" ? "Completed · 30 days" : WORK_STATUS_LABEL[stack]}
                   count={count}
                   isCollapsed={collapsed}
                   isEmpty={count === 0}

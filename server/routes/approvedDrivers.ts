@@ -81,7 +81,22 @@ export function registerApprovedDriverRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/approved-drivers/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
+  app.delete("/api/approved-drivers/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
+  try {
+    const result = await driverStorage.deleteApprovedDriver(req.params.id);
+    if (result === "not_found") return res.status(404).json({ message: "Driver not found" });
+    if (result === "has_open_trips") {
+      return res.status(409).json({
+        message: "This driver has an open trip. Mark them inactive instead of deleting them.",
+      });
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    handleRouteError(res, error, "Failed to delete driver");
+  }
+});
+
+app.patch("/api/approved-drivers/:id", isAuthenticated, requireFleetPrivileged, async (req, res) => {
     try {
       const existing = await driverStorage.getApprovedDriver(req.params.id);
       if (!existing) return res.status(404).json({ message: "Driver not found" });

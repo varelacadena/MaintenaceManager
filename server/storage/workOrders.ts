@@ -26,7 +26,7 @@ import {
   type TaskHelper,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, or, desc, isNull, sql, inArray, gte, lte, ne } from "drizzle-orm";
+import { eq, and, or, desc, isNull, sql, inArray, gte, lte, ne, ilike } from "drizzle-orm";
 import { enrichTaskWithNameSnapshots } from "../lib/taskNameSnapshots";
 import { formatUserDisplayName } from "@shared/displayNames";
 import { getUser } from "./users";
@@ -193,6 +193,64 @@ export async function getTasks(filters?: {
   }
 
   return await query;
+}
+
+export type CompletedTaskMatch = {
+  id: string;
+  name: string;
+  propertyName: string | null;
+  equipmentName: string | null;
+  spaceName: string | null;
+  assignedToName: string | null;
+  actualCompletionDate: Date | null;
+  parentTaskId: string | null;
+};
+
+const COMPLETED_LOOKUP_LIMIT = 20;
+
+/** A few completed jobs matching a name, property, or equipment search. */
+export async function searchCompletedTasks(input: {
+  query: string;
+  userId?: string;
+}): Promise<CompletedTaskMatch[]> {
+  const term = input.query.trim().slice(0, 80).replace(/[%_\\]/g, "");
+  if (term.length < 2) return [];
+
+  const pattern = `%${term}%`;
+  const conditions = [
+    eq(tasks.status, "completed"),
+    or(
+      ilike(tasks.name, pattern),
+      ilike(tasks.propertyName, pattern),
+      ilike(tasks.equipmentName, pattern),
+      ilike(tasks.spaceName, pattern),
+      ilike(tasks.assignedToName, pattern),
+    ),
+  ];
+  if (input.userId) {
+    conditions.push(
+      or(
+        eq(tasks.assignedToId, input.userId),
+        sql`exists (select 1 from task_helpers h where h.task_id = ${tasks.id} and h.user_id = ${input.userId})`,
+      )!,
+    );
+  }
+
+  return await db
+    .select({
+      id: tasks.id,
+      name: tasks.name,
+      propertyName: tasks.propertyName,
+      equipmentName: tasks.equipmentName,
+      spaceName: tasks.spaceName,
+      assignedToName: tasks.assignedToName,
+      actualCompletionDate: tasks.actualCompletionDate,
+      parentTaskId: tasks.parentTaskId,
+    })
+    .from(tasks)
+    .where(and(...conditions))
+    .orderBy(sql`${tasks.actualCompletionDate} desc nulls last`, desc(tasks.updatedAt))
+    .limit(COMPLETED_LOOKUP_LIMIT);
 }
 
 export async function getTask(id: string): Promise<Task | undefined> {

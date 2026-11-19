@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { useSessionState } from "@/hooks/useSessionState";
 import { useMutation } from "@tanstack/react-query";
-import { Building2, Calendar, CheckCircle2, Plus } from "lucide-react";
+import { Building2, Calendar, CheckCircle2, Plus, Search } from "lucide-react";
 import type { Property, Task, User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { dateInputValueToTaskTimestamp } from "@/lib/taskCalendarDates";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { cn } from "@/lib/utils";
+import { COMPLETED_SEARCH_CAP, CompletedSearchResults, type CompletedTaskMatch } from "./CompletedTaskLookup";
 import { FieldWorkTaskCard } from "./FieldWorkTaskCard";
 import { filterTechnicianWorkTasks, type TaskWithHelperFlag } from "./helpers";
 import {
@@ -292,6 +294,7 @@ function WeekStrip({
 export function TechnicianWorkView({ user, tasks, properties, navigate }: TechnicianWorkViewProps) {
   const { toast } = useToast();
   const [view, setView] = useState<TechWorkView>(loadTechWorkView);
+  const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useSessionState<string | null>("tech-work-selected-day", null);
   const [scheduleTaskId, setScheduleTaskId] = useState<string | null>(null);
   const plan = useMemo(
@@ -329,6 +332,45 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
   });
 
   const propertyName = (propertyId: string | null) => properties?.find((property) => property.id === propertyId)?.name;
+  const query = search.trim().toLowerCase();
+  const taskMatches = (task: Task) => {
+    if (!query) return true;
+    const property = propertyName(task.propertyId)?.toLowerCase() ?? "";
+    return task.name.toLowerCase().includes(query) || property.includes(query);
+  };
+  const shown = useMemo(() => {
+    if (!query) return plan;
+    const byDay: Record<string, Task[]> = {};
+    for (const day of plan.days) byDay[day.key] = (plan.byDay[day.key] ?? []).filter(taskMatches);
+    return {
+      ...plan,
+      overdue: plan.overdue.filter(taskMatches),
+      byDay,
+      undated: plan.undated.filter(taskMatches),
+      later: plan.later.filter(taskMatches),
+      completed: plan.completed.filter(taskMatches),
+    };
+  }, [plan, query, properties]);
+  const olderCompleted: CompletedTaskMatch[] = query.length < 2
+    ? []
+    : filterTechnicianWorkTasks(tasks, user.id)
+        .filter((task) => task.status === "completed" && !plan.completed.some((recent) => recent.id === task.id) && taskMatches(task))
+        .sort((a, b) => {
+          const aTime = a.actualCompletionDate ? new Date(a.actualCompletionDate).getTime() : 0;
+          const bTime = b.actualCompletionDate ? new Date(b.actualCompletionDate).getTime() : 0;
+          return bTime - aTime;
+        })
+        .slice(0, COMPLETED_SEARCH_CAP)
+        .map((task) => ({
+          id: task.id,
+          name: task.name,
+          propertyName: propertyName(task.propertyId) ?? null,
+          equipmentName: null,
+          spaceName: null,
+          assignedToName: null,
+          actualCompletionDate: task.actualCompletionDate ? new Date(task.actualCompletionDate).toISOString() : null,
+          parentTaskId: task.parentTaskId,
+        }));
 
   const switchView = (next: TechWorkView) => {
     saveTechWorkView(next);
@@ -352,7 +394,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
     />
   );
 
-  const listDays = plan.days.filter((day) => (plan.byDay[day.key]?.length ?? 0) > 0);
+  const listDays = shown.days.filter((day) => (shown.byDay[day.key]?.length ?? 0) > 0);
 
   return (
     <div className="w-full max-w-lg mx-auto min-w-0 overflow-x-hidden px-3 py-4 pb-8 sm:px-4 space-y-4">
@@ -396,7 +438,19 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         ))}
       </div>
 
-      {openCount === 0 && plan.completed.length === 0 ? (
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search jobs"
+          aria-label="Search jobs"
+          className="h-11 rounded-full pl-9"
+          data-testid="input-search-work"
+        />
+      </div>
+
+      {query.length === 0 && openCount === 0 && plan.completed.length === 0 ? (
         <div className="text-center py-10 px-2">
           <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
           <p className="text-xl font-semibold">All done!</p>
@@ -408,13 +462,13 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
         </div>
       ) : (
         <div className="space-y-4 min-w-0">
-          {plan.overdue.length > 0 && (
+          {shown.overdue.length > 0 && (
             <section className="space-y-2" data-testid="tech-overdue-section">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Overdue</h2>
-                <span className="text-xs font-semibold text-red-600 dark:text-red-400">{plan.overdue.length}</span>
+                <span className="text-xs font-semibold text-red-600 dark:text-red-400">{shown.overdue.length}</span>
               </div>
-              {plan.overdue.map((task) => (
+              {shown.overdue.map((task) => (
                 <div key={task.id}>{renderJob(task, "reschedule")}</div>
               ))}
             </section>
@@ -422,32 +476,32 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
 
           {view === "week" ? (
             <section className="space-y-3 min-w-0">
-              <WeekStrip plan={plan} selectedDay={activeDay} onSelect={setSelectedDay} />
+              <WeekStrip plan={shown} selectedDay={activeDay} onSelect={setSelectedDay} />
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="font-semibold">
                   {activeDayInfo.name} {activeDayInfo.dateNum}
                   {activeDayInfo.isToday ? " · Today" : ""}
                 </h2>
                 <p className="text-sm text-muted-foreground" data-testid="tech-selected-day-count">
-                  {(plan.byDay[activeDay]?.length ?? 0) === 0
+                  {(shown.byDay[activeDay]?.length ?? 0) === 0
                     ? "Open"
-                    : `${plan.byDay[activeDay].length} job${plan.byDay[activeDay].length === 1 ? "" : "s"}`}
+                    : `${shown.byDay[activeDay].length} job${shown.byDay[activeDay].length === 1 ? "" : "s"}`}
                 </p>
               </div>
-              {(plan.byDay[activeDay]?.length ?? 0) === 0 ? (
-                <p className="text-sm text-muted-foreground">Open day.</p>
+              {(shown.byDay[activeDay]?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">{query ? "No jobs match." : "Open day."}</p>
               ) : (
                 <div className="space-y-2">
-                  {plan.byDay[activeDay].map((task) => renderJob(task, isTaskOverdue(task, plan.todayKey) ? "reschedule" : null))}
+                  {shown.byDay[activeDay].map((task) => renderJob(task, isTaskOverdue(task, shown.todayKey) ? "reschedule" : null))}
                 </div>
               )}
             </section>
           ) : (
             <div className="space-y-4">
               {listDays.map((day) => {
-                const jobs = plan.byDay[day.key] ?? [];
-                const urgent = jobs.filter((task) => task.urgency === "high" && !isTaskOverdue(task, plan.todayKey)).length;
-                const late = jobs.some((task) => isTaskOverdue(task, plan.todayKey));
+                const jobs = shown.byDay[day.key] ?? [];
+                const urgent = jobs.filter((task) => task.urgency === "high" && !isTaskOverdue(task, shown.todayKey)).length;
+                const late = jobs.some((task) => isTaskOverdue(task, shown.todayKey));
                 return (
                   <section key={day.key} className="space-y-2" data-testid={`tech-day-section-${day.key}`}>
                     <div className="flex items-baseline justify-between gap-2">
@@ -461,7 +515,7 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
                       </p>
                     </div>
                     <div className="space-y-2">
-                      {jobs.map((task) => renderJob(task, isTaskOverdue(task, plan.todayKey) ? "reschedule" : null))}
+                      {jobs.map((task) => renderJob(task, isTaskOverdue(task, shown.todayKey) ? "reschedule" : null))}
                     </div>
                   </section>
                 );
@@ -469,26 +523,26 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
             </div>
           )}
 
-          {plan.undated.length > 0 && (
+          {shown.undated.length > 0 && (
             <section className="space-y-2" data-testid="tech-undated-section">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Needs a day</h2>
-              {plan.undated.map((task) => (
+              {shown.undated.map((task) => (
                 <div key={task.id}>{renderJob(task, "set-day")}</div>
               ))}
             </section>
           )}
 
-          {plan.later.length > 0 && (
+          {shown.later.length > 0 && (
             <section className="space-y-2" data-testid="tech-later-section">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">After this week</h2>
-              <div className="space-y-2">{plan.later.map((task) => renderJob(task))}</div>
+              <div className="space-y-2">{shown.later.map((task) => renderJob(task))}</div>
             </section>
           )}
 
-          {view === "list" && plan.completed.length > 0 && (
+          {(view === "list" || query.length > 0) && shown.completed.length > 0 && (
             <section className="space-y-2" data-testid="tech-completed-section">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Completed</h2>
-              {plan.completed.map((task) => {
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Completed · last 7 days</h2>
+              {shown.completed.map((task) => {
                 const property = propertyName(task.propertyId);
                 return (
                   <FieldWorkTaskCard
@@ -517,6 +571,13 @@ export function TechnicianWorkView({ user, tasks, properties, navigate }: Techni
               })}
             </section>
           )}
+
+          <CompletedSearchResults
+            active={olderCompleted.length > 0}
+            matches={olderCompleted}
+            onOpen={(taskId) => navigate(`/tasks/${taskId}`)}
+            title="Older completed"
+          />
         </div>
       )}
     </div>

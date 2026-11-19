@@ -82,8 +82,16 @@ export function isTaskOverdue(
   return !!due && due < todayKey;
 }
 
+/** Local calendar day of a real completion instant. ISO timestamps keep their local day. */
 function completionKey(task: Task): string | null {
-  return getCalendarDateKey(task.actualCompletionDate) ?? getCalendarDateKey(task.updatedAt);
+  return instantDayKey(task.actualCompletionDate) ?? instantDayKey(task.updatedAt);
+}
+
+function instantDayKey(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return localDayKey(parsed);
 }
 
 export function taskSortRank(task: Task, todayKey: string): number {

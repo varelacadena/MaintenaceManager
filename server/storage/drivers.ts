@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   approvedDrivers,
@@ -58,6 +58,34 @@ export async function updateApprovedDriver(
     updatedAt: new Date(),
   }).where(eq(approvedDrivers.id, id)).returning();
   return driver;
+}
+
+const OPEN_DRIVER_TRIP_STATUSES = ["pending", "approved", "active", "pending_review"] as const;
+
+export async function deleteApprovedDriver(
+  id: string,
+): Promise<"not_found" | "has_open_trips" | "deleted"> {
+  return db.transaction(async (tx) => {
+    const [existing] = await tx.select({ id: approvedDrivers.id }).from(approvedDrivers)
+      .where(eq(approvedDrivers.id, id))
+      .limit(1);
+    if (!existing) return "not_found";
+
+    const [openTrip] = await tx.select({ id: vehicleReservations.id }).from(vehicleReservations)
+      .where(and(
+        eq(vehicleReservations.driverId, id),
+        inArray(vehicleReservations.status, [...OPEN_DRIVER_TRIP_STATUSES]),
+      ))
+      .limit(1);
+    if (openTrip) return "has_open_trips";
+
+    // Finished trips keep the stored driver name after the roster row is removed.
+    await tx.update(vehicleReservations)
+      .set({ driverId: null, updatedAt: new Date() })
+      .where(eq(vehicleReservations.driverId, id));
+    await tx.delete(approvedDrivers).where(eq(approvedDrivers.id, id));
+    return "deleted";
+  });
 }
 
 export async function getDriverPenalties(driverId: string): Promise<DriverPenalty[]> {

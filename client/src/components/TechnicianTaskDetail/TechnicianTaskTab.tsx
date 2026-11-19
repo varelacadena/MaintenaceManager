@@ -12,6 +12,7 @@ import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePr
 import { format } from "date-fns";
 import type { Task, TaskNote, Upload } from "@shared/schema";
 import { LifeSafetyRoundPanel } from "@/components/LifeSafetyRoundPanel";
+import { GrowingNoteField } from "./GrowingNoteField";
 import type { ChecklistGroupWithItems, TaskHelperDisplay } from "./types";
 
 interface TechnicianTaskTabProps {
@@ -342,12 +343,11 @@ export function TechnicianTaskTab({
             </span>
           )}
         </div>
-        <textarea
+        <GrowingNoteField
           value={noteText}
           onChange={(e) => handleNoteChange(e.target.value)}
           placeholder={task.lifeSafetyRound ? "Optional note for this week" : "Type what you did... required before you can finish"}
-          rows={3}
-          className="w-full resize-none bg-transparent outline-none text-foreground"
+          className="bg-transparent outline-none text-foreground"
           style={{
             border: "none",
             fontSize: 13,

@@ -22,6 +22,7 @@ import { toDisplayUrl } from "@/lib/imageUtils";
 import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 import type { Task, Quote, InventoryItem } from "@shared/schema";
+import { GrowingNoteField } from "./GrowingNoteField";
 
 export interface TechnicianDialogsProps {
   task: Task;
@@ -343,13 +344,12 @@ export function TechnicianDialogs({
               >
                 Work notes <span className="text-destructive">*</span>
               </label>
-              <textarea
+              <GrowingNoteField
                 id="completion-work-note"
                 value={completionNoteValue}
                 onChange={(e) => handleNoteChange(e.target.value)}
                 placeholder="What did you do?"
-                rows={3}
-                className={`w-full resize-none rounded-lg px-3 py-2 mt-1.5 text-sm bg-background text-foreground outline-none ${
+                className={`rounded-lg px-3 py-2 mt-1.5 text-sm bg-background text-foreground outline-none ${
                   completionNoteError
                     ? "border-2 border-destructive"
                     : "border border-border"

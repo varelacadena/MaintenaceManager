@@ -96,6 +96,38 @@ describe("buildTechWorkPlan", () => {
     expect(plan.byDay["2026-10-09"][0].id).toBe("a");
   });
 
+  it("keeps a job finished this evening on the completed list", () => {
+    const evening = new Date(2026, 9, 7, 20, 30).toISOString();
+    const plan = buildTechWorkPlan(
+      [
+        task({
+          id: "night",
+          name: "Night job",
+          status: "completed",
+          actualCompletionDate: evening as unknown as Date,
+        }),
+      ],
+      today,
+    );
+    expect(plan.completed.map((item) => item.id)).toEqual(["night"]);
+  });
+
+  it("leaves jobs finished more than a week ago off the list", () => {
+    const old = new Date(2026, 8, 29, 12).toISOString();
+    const plan = buildTechWorkPlan(
+      [
+        task({
+          id: "old",
+          name: "Old job",
+          status: "completed",
+          actualCompletionDate: old as unknown as Date,
+        }),
+      ],
+      today,
+    );
+    expect(plan.completed).toEqual([]);
+  });
+
   it("puts undated jobs and jobs after the week in their own groups", () => {
     const plan = buildTechWorkPlan(
       [

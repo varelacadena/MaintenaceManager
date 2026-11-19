@@ -103,6 +103,7 @@ import * as inventoryStorage from "./inventory";
 import * as facilityStorage from "./facilities";
 import * as serviceRequestStorage from "./serviceRequests";
 import * as workOrderStorage from "./workOrders";
+import type { CompletedTaskMatch } from "./workOrders";
 import * as vehicleStorage from "./vehicles";
 import * as mobileEquipmentStorage from "./mobileEquipment";
 import type { MobileEquipmentFilters } from "./mobileEquipment";
@@ -203,6 +204,7 @@ export interface IStorage {
     limit?: number;
     offset?: number;
   }): Promise<Task[]>;
+  searchCompletedTasks(input: { query: string; userId?: string }): Promise<CompletedTaskMatch[]>;
   getTask(id: string): Promise<Task | undefined>;
   getTaskByRequestId(requestId: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
@@ -611,6 +613,7 @@ export class DatabaseStorage implements IStorage {
   updateServiceRequestStatus = serviceRequestStorage.updateServiceRequestStatus;
 
   getTasks = workOrderStorage.getTasks;
+  searchCompletedTasks = workOrderStorage.searchCompletedTasks;
   getTask = workOrderStorage.getTask;
   getTaskByRequestId = workOrderStorage.getTaskByRequestId;
   createTask = workOrderStorage.createTask;
