@@ -8,7 +8,7 @@ import {
 } from "./useAnalyticsFilters";
 import AnalyticsToolbar from "./AnalyticsToolbar";
 import AnalyticsFocus from "./AnalyticsFocus";
-import ReportsBuilder from "./ReportsBuilder";
+import ReportingPanel from "./ReportingPanel";
 
 const AssetsReport = lazy(() => import("./reports/AssetsReport"));
 const FleetReport = lazy(() => import("./reports/FleetReport"));
@@ -68,7 +68,7 @@ function AnalyticsDashboardContent() {
     }
   };
 
-  const title = view === "analytics" ? "Analytics" : "Reports";
+  const title = view === "reporting" ? "Reporting" : "Analytics";
 
   return (
     <div className="p-3 md:p-4 space-y-3">
@@ -88,7 +88,7 @@ function AnalyticsDashboardContent() {
           )
         )
       ) : (
-        <ReportsBuilder />
+        <ReportingPanel />
       )}
     </div>
   );

@@ -37,7 +37,9 @@ const VALID_TABS: ReportTab[] = [
   "projects",
 ];
 
-export type AnalyticsView = "analytics" | "xlsx" | "pdf";
+export type AnalyticsView = "analytics" | "reporting";
+
+export type ReportDocumentKind = "maintenance-record" | "work-report" | "data-export";
 
 const FILTER_KEYS: (keyof FilterState)[] = [
   "startDate",
@@ -91,8 +93,14 @@ function parseTab(params: URLSearchParams): ReportTab {
 
 function parseView(params: URLSearchParams): AnalyticsView {
   const view = params.get("view");
-  if (view === "xlsx" || view === "pdf") return view;
+  if (view === "reporting" || view === "xlsx" || view === "pdf") return "reporting";
   return "analytics";
+}
+
+function parseDocument(params: URLSearchParams): ReportDocumentKind {
+  const doc = params.get("doc");
+  if (doc === "work-report" || doc === "data-export" || doc === "maintenance-record") return doc;
+  return "maintenance-record";
 }
 
 function parseRole(params: URLSearchParams): RoleFilter {
@@ -115,6 +123,8 @@ interface AnalyticsFilterContextValue {
   navigateToReport: (tab: ReportTab, scope?: ReportScopePatch) => void;
   view: AnalyticsView;
   setView: (view: AnalyticsView) => void;
+  reportDocument: ReportDocumentKind;
+  setReportDocument: (document: ReportDocumentKind) => void;
   filters: FilterState;
   setFilters: (filters: FilterState) => void;
   clearFilters: () => void;
@@ -147,6 +157,7 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
   const params = useMemo(() => new URLSearchParams(search), [search]);
   const activeTab = useMemo(() => parseTab(params), [params]);
   const view = useMemo(() => parseView(params), [params]);
+  const reportDocument = useMemo(() => parseDocument(params), [params]);
   const filters = useMemo(() => parseFilters(params), [params]);
   const roleFilter = useMemo(() => parseRole(params), [params]);
 
@@ -212,6 +223,16 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
     [setAnalyticsUrl],
   );
 
+  const setReportDocument = useCallback(
+    (document: ReportDocumentKind) => {
+      setAnalyticsUrl((next) => {
+        if (document === "maintenance-record") next.delete("doc");
+        else next.set("doc", document);
+      });
+    },
+    [setAnalyticsUrl],
+  );
+
   const setFilters = useCallback(
     (nextFilters: FilterState) => {
       setAnalyticsUrl((next) => {
@@ -226,9 +247,18 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
   }, [setFilters]);
 
   useEffect(() => {
+    if (view === "reporting") return;
     if (!filtersDifferForTab(activeTab, filters)) return;
     setFilters(sanitizeFiltersForTab(activeTab, filters));
-  }, [activeTab, filters, setFilters]);
+  }, [activeTab, filters, setFilters, view]);
+
+  useEffect(() => {
+    const raw = params.get("view");
+    if (raw !== "xlsx" && raw !== "pdf") return;
+    setAnalyticsUrl((next) => {
+      next.set("view", "reporting");
+    });
+  }, [params, setAnalyticsUrl]);
 
   const setRoleFilter = useCallback(
     (role: RoleFilter) => {
@@ -268,6 +298,8 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       navigateToReport,
       view,
       setView,
+      reportDocument,
+      setReportDocument,
       filters,
       setFilters,
       clearFilters,
@@ -282,6 +314,8 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       navigateToReport,
       view,
       setView,
+      reportDocument,
+      setReportDocument,
       filters,
       setFilters,
       clearFilters,

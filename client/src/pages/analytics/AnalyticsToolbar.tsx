@@ -19,6 +19,7 @@ import type { FilterState } from "@/components/analytics/AnalyticsFilters";
 import {
   useAnalyticsFilters,
   type AnalyticsView,
+  type ReportDocumentKind,
   type ReportTab,
   type RoleFilter,
 } from "./useAnalyticsFilters";
@@ -39,8 +40,13 @@ const AREAS: { id: ReportTab; label: string }[] = [
 
 const VIEWS: { id: AnalyticsView; label: string }[] = [
   { id: "analytics", label: "Analytics" },
-  { id: "xlsx", label: "Spreadsheet" },
-  { id: "pdf", label: "PDF" },
+  { id: "reporting", label: "Reporting" },
+];
+
+const DOCUMENTS: { id: ReportDocumentKind; label: string }[] = [
+  { id: "maintenance-record", label: "Maintenance Record" },
+  { id: "work-report", label: "Work Report" },
+  { id: "data-export", label: "Data Export" },
 ];
 
 function parseDay(value: string): Date | undefined {
@@ -137,16 +143,18 @@ function PeoplePicker({
   people,
   value,
   onChange,
+  emptyLabel = "Everyone",
 }: {
   people: { id: string; name: string }[];
   value: string;
   onChange: (next: string) => void;
+  emptyLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = value ? value.split(",").filter(Boolean) : [];
   const label =
     selected.length === 0
-      ? "Everyone"
+      ? emptyLabel
       : selected.length === 1
         ? people.find((person) => person.id === selected[0])?.name ?? "1 person"
         : `${selected.length} people`;
@@ -311,26 +319,40 @@ function PeriodPicker({
 }
 
 export default function AnalyticsToolbar() {
-  const { activeTab, setActiveTab, view, setView, filters, setFilters, roleFilter, setRoleFilter } =
-    useAnalyticsFilters();
+  const {
+    activeTab,
+    setActiveTab,
+    view,
+    setView,
+    reportDocument,
+    setReportDocument,
+    filters,
+    setFilters,
+    roleFilter,
+    setRoleFilter,
+  } = useAnalyticsFilters();
+  const reporting = view === "reporting";
   const { data: properties = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/properties"],
   });
   const { data: users = [] } = useQuery<{ id: string; firstName: string | null; lastName: string | null; username: string; role: string }[]>({
     queryKey: ["/api/users"],
   });
-  const showBasis = TASK_DATE_TABS.includes(activeTab);
-  const showProperty = PROPERTY_TABS.includes(activeTab);
-  const showPeople = activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities";
+  const showBasis = !reporting && TASK_DATE_TABS.includes(activeTab);
+  const showProperty = reporting || PROPERTY_TABS.includes(activeTab);
+  const showPeople = !reporting && (activeTab === "work-orders" || activeTab === "technicians" || activeTab === "facilities");
   const people = users
     .filter((user) => {
+      if (reporting) return user.role === "technician";
       if (activeTab === "technicians" && roleFilter === "technician") return user.role === "technician";
       if (activeTab === "technicians" && roleFilter === "student") return user.role === "student";
       return user.role === "technician" || user.role === "student" || user.role === "admin";
     })
     .map((user) => ({ id: user.id, name: personName(user) }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const note = DATE_NOTE[activeTab];
+  const note = reporting
+    ? "Dates are the day the job was completed. Hours and labor include technicians only."
+    : DATE_NOTE[activeTab];
 
   return (
     <div className="space-y-2">
@@ -349,20 +371,37 @@ export default function AnalyticsToolbar() {
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Area" testId="analytics-area">
-          <Select value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
-            <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[11.5rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {AREAS.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        {reporting ? (
+          <Field label="Document" testId="reporting-document">
+            <Select value={reportDocument} onValueChange={(value) => setReportDocument(value as ReportDocumentKind)}>
+              <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[13.5rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DOCUMENTS.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        ) : (
+          <Field label="Area" testId="analytics-area">
+            <Select value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
+              <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[11.5rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AREAS.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
         {showProperty && (
           <Field label="Buildings" testId="analytics-property-field">
             <BuildingPicker
@@ -372,7 +411,7 @@ export default function AnalyticsToolbar() {
             />
           </Field>
         )}
-        {activeTab === "technicians" && (
+        {!reporting && activeTab === "technicians" && (
           <Field label="Group" testId="analytics-role">
             <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
               <SelectTrigger className="h-11 w-full min-w-0 md:h-9 md:w-[10.5rem]">
@@ -386,11 +425,12 @@ export default function AnalyticsToolbar() {
             </Select>
           </Field>
         )}
-        {showPeople && (
-          <Field label="People" testId="analytics-people-field">
+        {(reporting || showPeople) && (
+          <Field label={reporting ? "Technicians" : "People"} testId="analytics-people-field">
             <PeoplePicker
               people={people}
               value={filters.technicianId}
+              emptyLabel={reporting ? "All technicians" : "Everyone"}
               onChange={(technicianId) => setFilters({ ...filters, technicianId })}
             />
           </Field>

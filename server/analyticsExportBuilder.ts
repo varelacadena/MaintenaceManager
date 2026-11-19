@@ -1251,6 +1251,15 @@ export async function buildExcelBuffer(dataType: string, filters: AnalyticsFilte
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 
+/** Same rows the spreadsheet file contains, for the on-page preview. */
+export async function buildSpreadsheetPreview(
+  dataType: string,
+  filters: AnalyticsFilters,
+): Promise<{ title: string; sheets: ExportSheet[] }> {
+  const { title, sheets } = await buildExportSheets(dataType, filters);
+  return { title, sheets: selectSheets(sheets, filters) };
+}
+
 type PdfBlock =
   | { kind: "text"; heading: string; paragraphs: string[] }
   | { kind: "analysis"; heading: string; sections: AnalysisSection[] }

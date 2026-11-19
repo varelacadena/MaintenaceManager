@@ -298,18 +298,24 @@ export function registerAnalyticsRoutes(app: Express) {
       if (!dataType) {
         return res.status(400).json({ message: "Data type is required" });
       }
-      if (exportFormat !== "xlsx" && exportFormat !== "pdf") {
-        return res.status(400).json({ message: "Format must be xlsx or pdf" });
+      if (exportFormat !== "xlsx" && exportFormat !== "pdf" && exportFormat !== "sheets") {
+        return res.status(400).json({ message: "Format must be xlsx, pdf, or sheets" });
       }
 
       const filters = parseExportFilters(dataType, req.query);
-      const { buildExcelBuffer, buildPdfBuffer, buildExportFilename } = await import(
+      const { buildExcelBuffer, buildPdfBuffer, buildExportFilename, buildSpreadsheetPreview } = await import(
         "../analyticsExportBuilder"
       );
-      const filename = buildExportFilename(dataType, exportFormat, filters);
 
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       res.setHeader("Pragma", "no-cache");
+
+      if (exportFormat === "sheets") {
+        const preview = await buildSpreadsheetPreview(dataType, filters);
+        return res.json(preview);
+      }
+
+      const filename = buildExportFilename(dataType, exportFormat, filters);
 
       if (exportFormat === "xlsx") {
         const buffer = await buildExcelBuffer(dataType, filters);
@@ -319,11 +325,61 @@ export function registerAnalyticsRoutes(app: Express) {
       }
 
       const buffer = await buildPdfBuffer(dataType, filters);
+      const disposition = req.query.inline === "1" ? "inline" : "attachment";
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Disposition", `${disposition}; filename="${filename}"`);
       return res.send(buffer);
     } catch (error) {
       handleRouteError(res, error, "Export failed");
+    }
+  });
+
+  app.get("/api/analytics/reporting", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { loadPlantServicesReport } = await import("../plantServicesReportData");
+      const report = await loadPlantServicesReport({
+        startDate: typeof req.query.startDate === "string" ? req.query.startDate : undefined,
+        endDate: typeof req.query.endDate === "string" ? req.query.endDate : undefined,
+        propertyId: typeof req.query.propertyId === "string" ? req.query.propertyId : undefined,
+        technicianId: typeof req.query.technicianId === "string" ? req.query.technicianId : undefined,
+      });
+      res.setHeader("Cache-Control", "no-store");
+      res.json(report);
+    } catch (error) {
+      handleRouteError(res, error, "Could not build the report");
+    }
+  });
+
+  app.get("/api/analytics/reporting/download", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const document = req.query.document;
+      if (document !== "maintenance-record" && document !== "work-report" && document !== "data-export") {
+        return res.status(400).json({ message: "Choose a document" });
+      }
+      const { loadPlantServicesReport } = await import("../plantServicesReportData");
+      const report = await loadPlantServicesReport({
+        startDate: typeof req.query.startDate === "string" ? req.query.startDate : undefined,
+        endDate: typeof req.query.endDate === "string" ? req.query.endDate : undefined,
+        propertyId: typeof req.query.propertyId === "string" ? req.query.propertyId : undefined,
+        technicianId: typeof req.query.technicianId === "string" ? req.query.technicianId : undefined,
+      });
+      const { reportingDownloadName } = await import("../plantServicesXlsx");
+      const filename = reportingDownloadName(document);
+      res.setHeader("Cache-Control", "no-store");
+      if (document === "data-export") {
+        const { buildDataExportXlsx } = await import("../plantServicesXlsx");
+        const buffer = await buildDataExportXlsx(report);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        return res.send(buffer);
+      }
+      const { buildMaintenanceRecordDocx, buildWorkReportDocx } = await import("../plantServicesDocx");
+      const buffer = document === "maintenance-record" ? await buildMaintenanceRecordDocx(report) : await buildWorkReportDocx(report);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return res.send(buffer);
+    } catch (error) {
+      handleRouteError(res, error, "Could not download the document");
     }
   });
 }
