@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cappedInstant, studentShiftEndAt } from "./openIntervals";
 
 export const MIN_RECAP_LENGTH = 8;
 export const MAX_RECAP_LENGTH = 4000;
@@ -103,7 +104,8 @@ export function elapsedMilliseconds(
   if (!clockInAt) return 0;
   const start = clockInAt instanceof Date ? clockInAt : new Date(clockInAt);
   if (Number.isNaN(start.getTime())) return 0;
-  return Math.max(0, new Date(now).getTime() - start.getTime());
+  const end = cappedInstant(now, studentShiftEndAt(start));
+  return Math.max(0, end.getTime() - start.getTime());
 }
 
 /** Recorded time as hours and minutes, e.g. `2h 30m` or `0h 12m`. */
@@ -237,7 +239,7 @@ export function resolveEntryMinutes(
     ? clockOutAt instanceof Date
       ? clockOutAt
       : new Date(clockOutAt)
-    : now;
+    : cappedInstant(now, studentShiftEndAt(start));
   if (Number.isNaN(end.getTime())) return 0;
   return computeDurationMinutes(start, end);
 }

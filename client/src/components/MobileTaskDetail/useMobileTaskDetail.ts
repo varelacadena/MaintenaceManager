@@ -89,11 +89,17 @@ export function useMobileTaskDetail() {
   const { data: timeEntries } = useQuery<any[]>({
     queryKey: ["/api/time-entries/task", id],
     enabled: !!id,
+    refetchInterval: (query) => {
+      const entries = query.state.data;
+      return Array.isArray(entries) && entries.some((entry) => entry.startTime && !entry.endTime) ? 4000 : false;
+    },
   });
 
   const { data: notes = [] } = useQuery<TaskNote[]>({
     queryKey: ["/api/task-notes/task", id],
     enabled: !!id,
+    refetchInterval: () =>
+      (timeEntries ?? []).some((entry) => entry.startTime && !entry.endTime) ? 4000 : false,
   });
 
   const { data: taskParts = [] } = useQuery<PartUsed[]>({

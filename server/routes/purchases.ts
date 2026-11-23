@@ -203,7 +203,10 @@ export function registerPurchaseRoutes(app: Express) {
       const user = req.currentUser as User;
       const allowed = await canAccessTask(req.userId, req.params.taskId);
       if (!allowed) return res.status(403).json({ message: "Forbidden" });
-      const parsed = purchaseFields.extend({ receipt: receiptSchema }).safeParse(req.body);
+      const parsed = purchaseFields.extend({
+        receipt: receiptSchema,
+        alsoTaskIds: z.array(z.string().trim().min(1).max(80)).max(11).optional(),
+      }).safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: parsed.error.errors[0]?.message || "Check the store run and try again." });
       }
@@ -211,6 +214,14 @@ export function registerPurchaseRoutes(app: Express) {
       if (!validDay(body.purchasedOn)) return res.status(400).json({ message: "Enter the purchase date" });
       if (!isReceiptType(body.receipt.fileType) || !isReceiptPath(body.receipt.objectPath)) {
         return res.status(400).json({ message: "The receipt needs to be a photo or a PDF" });
+      }
+      const extraTaskIds = [...new Set(body.alsoTaskIds ?? [])].filter((taskId) => taskId !== req.params.taskId);
+      for (const taskId of extraTaskIds) {
+        const allowed = await canAccessTask(req.userId, taskId);
+        if (!allowed) return res.status(403).json({ message: "Forbidden" });
+        if (!(await purchaseTargetExists("task", taskId))) {
+          return res.status(400).json({ message: "Choose a job that still exists" });
+        }
       }
       const row = await createPurchase({
         storeName: body.storeName,
@@ -225,7 +236,10 @@ export function registerPurchaseRoutes(app: Express) {
         receiptObjectPath: body.receipt.objectPath,
         createdById: user.id,
         createdByName: personName(user),
-      }, [{ kind: "task", targetId: req.params.taskId }]);
+      }, [
+        { kind: "task", targetId: req.params.taskId },
+        ...extraTaskIds.map((targetId) => ({ kind: "task" as const, targetId })),
+      ]);
       res.json(row);
     } catch (error) {
       handleRouteError(res, error, "Failed to save store run");

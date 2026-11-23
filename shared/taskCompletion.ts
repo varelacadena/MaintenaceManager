@@ -1,3 +1,5 @@
+import { TASK_TIMER_AUTO_STOP_NOTE_PREFIX } from "./openIntervals";
+
 export const MIN_WORK_NOTE_LENGTH = 10;
 
 export const WORK_NOTE_REQUIRED_MESSAGE =
@@ -6,7 +8,11 @@ export const WORK_NOTE_REQUIRED_MESSAGE =
 export const PHOTO_REQUIRED_MESSAGE =
   "This task requires at least one photo before it can be marked as completed.";
 
-const SYSTEM_NOTE_PREFIXES = ["Task placed on hold:", "Claimed by "];
+const SYSTEM_NOTE_PREFIXES = [
+  "Task placed on hold:",
+  "Claimed by ",
+  TASK_TIMER_AUTO_STOP_NOTE_PREFIX,
+];
 
 export function isSystemGeneratedNoteContent(content: string | null | undefined): boolean {
   const trimmed = (content ?? "").trim();

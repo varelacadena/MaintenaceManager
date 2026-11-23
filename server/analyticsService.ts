@@ -20,6 +20,7 @@ import {
   studentTimeEntries,
   studentDailyRecaps,
 } from "@shared/schema";
+import { cappedInstant, studentShiftEndAt } from "@shared/openIntervals";
 import { computeDurationMinutes, hoursFromMinutes } from "@shared/studentPortal";
 import { parseCsvIds, parseLocalDayEnd, parseLocalDayStart, parsePropertyIds } from "./localDates";
 import { compareVehicleIds } from "@shared/vehicleSort";
@@ -853,7 +854,9 @@ export class AnalyticsService {
     for (const entry of clockEntries) {
       if (!entry.studentId) continue;
       const minutes = entry.durationMinutes
-        ?? (!entry.clockOutAt && entry.clockInAt ? computeDurationMinutes(entry.clockInAt, now) : 0);
+        ?? (!entry.clockOutAt && entry.clockInAt
+          ? computeDurationMinutes(entry.clockInAt, cappedInstant(now, studentShiftEndAt(entry.clockInAt)))
+          : 0);
       clockMinutesByStudent.set(entry.studentId, (clockMinutesByStudent.get(entry.studentId) || 0) + minutes);
     }
 

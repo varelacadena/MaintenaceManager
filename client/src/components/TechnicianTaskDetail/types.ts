@@ -147,10 +147,4 @@ export function getStatusLabel(status: string, isPaused: boolean): string {
   return "Not Started";
 }
 
-export function formatElapsed(seconds: number): string {
-  const total = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-}
+export { formatElapsed, formatLoggedMinutes } from "@shared/duration";

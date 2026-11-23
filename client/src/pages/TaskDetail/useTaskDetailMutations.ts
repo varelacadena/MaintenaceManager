@@ -143,6 +143,9 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
+      if (data?._requestedStatus === "completed") {
+        queryClient.invalidateQueries({ queryKey: ["/api/time-entries/task", id] });
+      }
       invalidateTaskAfterMutation(id);
       toast({ title: data?._requestedStatus === "completed" ? "Task completed" : "Status updated" });
       if (data?._requestedStatus === "completed" && task?.parentTaskId) {

@@ -436,6 +436,27 @@ export async function updateTimeEntry(
   return entry;
 }
 
+function minutesFromStart(start: Date | null, end: Date): number {
+  if (!start) return 0;
+  const startMs = start.getTime();
+  if (!Number.isFinite(startMs)) return 0;
+  return Math.max(0, Math.floor((end.getTime() - startMs) / 60000));
+}
+
+/** Stop every open timer on a task. Used when someone else completes the job. */
+export async function closeOpenTimeEntries(taskId: string, endTime: Date = new Date()): Promise<void> {
+  const open = await db
+    .select({ id: timeEntries.id, startTime: timeEntries.startTime })
+    .from(timeEntries)
+    .where(and(eq(timeEntries.taskId, taskId), isNull(timeEntries.endTime)));
+  await Promise.all(open.map((entry) =>
+    db
+      .update(timeEntries)
+      .set({ endTime, durationMinutes: minutesFromStart(entry.startTime, endTime) })
+      .where(eq(timeEntries.id, entry.id)),
+  ));
+}
+
 export async function deleteTimeEntry(id: string): Promise<void> {
   await db.delete(timeEntries).where(eq(timeEntries.id, id));
 }

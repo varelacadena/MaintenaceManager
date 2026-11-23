@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { taskTimerEndAt } from "@shared/openIntervals";
 import {
   hasWorkExplanation,
   isSystemGeneratedNoteContent,
@@ -34,7 +35,9 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isPreviousWorkOpen, setIsPreviousWorkOpen] = useState(false);
 
-  const existingJobNote = notes.find((n) => n.noteType === "job_note");
+  const existingJobNote = notes.find(
+    (n) => n.noteType === "job_note" && !isSystemGeneratedNoteContent(n.content),
+  );
   const [noteText, setNoteText] = useState(existingJobNote?.content || "");
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(existingJobNote?.id || null);
   const [saveIndicator, setSaveIndicator] = useState<"idle" | "saving" | "saved">("idle");
@@ -61,11 +64,12 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   }, [task.status, activeTimer]);
 
   useEffect(() => {
-    if (!activeTimer || isPaused) return;
+    if (task.status === "completed" || !activeTimer || isPaused) return;
     const entry = timeEntries.find((e) => e.id === activeTimer);
-    if (!entry?.startTime) return;
+    if (!entry?.startTime || entry.endTime) return;
 
     const startMs = new Date(entry.startTime).getTime();
+    const capMs = taskTimerEndAt(new Date(entry.startTime)).getTime();
     const previousCompleted = timeEntries
       .filter((e) => e.id !== activeTimer && e.startTime && e.endTime)
       .reduce((sum, e) => {
@@ -75,27 +79,38 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
       }, 0);
 
     const update = () => {
-      const now = Date.now();
+      const now = Math.min(Date.now(), capMs);
       const currentSeg = Math.floor((now - startMs) / 1000);
       setElapsedSeconds(previousCompleted + Math.max(0, currentSeg));
     };
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [activeTimer, isPaused, timeEntries]);
+  }, [activeTimer, isPaused, timeEntries, task.status]);
 
   useEffect(() => {
-    if (isPaused || !activeTimer) {
-      const total = timeEntries
-        .filter((e) => e.startTime && e.endTime)
-        .reduce((sum, e) => {
-          const start = new Date(e.startTime!).getTime();
-          const end = new Date(e.endTime!).getTime();
-          return sum + Math.max(0, Math.floor((end - start) / 1000));
-        }, 0);
-      if (total > 0) setElapsedSeconds(total);
-    }
-  }, [isPaused, activeTimer, timeEntries]);
+    const completed = task.status === "completed";
+    const entry = activeTimer ? timeEntries.find((e) => e.id === activeTimer) : undefined;
+    const live = !completed && !!activeTimer && !isPaused && !!entry?.startTime && !entry.endTime;
+    if (live) return;
+
+    const now = Date.now();
+    const total = timeEntries.reduce((sum, item) => {
+      if (!item.startTime) return sum;
+      const start = new Date(item.startTime).getTime();
+      if (!Number.isFinite(start)) return sum;
+      if (item.endTime) {
+        const end = new Date(item.endTime).getTime();
+        return sum + Math.max(0, Math.floor((end - start) / 1000));
+      }
+      if (completed) {
+        const cap = taskTimerEndAt(new Date(item.startTime)).getTime();
+        return sum + Math.max(0, Math.floor((Math.min(now, cap) - start) / 1000));
+      }
+      return sum;
+    }, 0);
+    if (total > 0 || completed) setElapsedSeconds(total);
+  }, [task.status, isPaused, activeTimer, timeEntries]);
 
   useEffect(() => {
     noteInitializedRef.current = false;

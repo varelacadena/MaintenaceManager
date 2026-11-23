@@ -265,7 +265,7 @@ export default function Purchases() {
   const [techId, setTechId] = useState("");
   const [jobPropertyId, setJobPropertyId] = useState("");
   const [jobQuery, setJobQuery] = useState("");
-  const [selectedJob, setSelectedJob] = useState<JobHit | null>(null);
+  const [selectedJobs, setSelectedJobs] = useState<JobHit[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundQuery, setRefundQuery] = useState("");
@@ -388,7 +388,7 @@ export default function Purchases() {
     setTechId("");
     setJobPropertyId("");
     setJobQuery("");
-    setSelectedJob(null);
+    setSelectedJobs([]);
   };
 
   const closeRefund = () => {
@@ -421,8 +421,18 @@ export default function Purchases() {
     setTechId("");
     setJobPropertyId("");
     setJobQuery("");
-    setSelectedJob(null);
+    setSelectedJobs([]);
     setOpen(true);
+  };
+
+  const toggleJob = (job: JobHit) => {
+    setSelectedJobs((current) => {
+      if (current.some((item) => item.id === job.id)) {
+        return current.filter((item) => item.id !== job.id);
+      }
+      if (current.length >= 12) return current;
+      return [...current, job];
+    });
   };
 
   const openEdit = (row: PurchaseView) => {
@@ -507,7 +517,7 @@ export default function Purchases() {
       if (file) body.receipt = file;
       else if (editing && form.removeReceipt) body.receipt = null;
       if (!editing) {
-        body.links = selectedJob ? [{ kind: "task", targetId: selectedJob.id }] : [];
+        body.links = selectedJobs.map((job) => ({ kind: "task", targetId: job.id }));
         const response = await apiRequest("POST", "/api/purchases", body);
         return response.json();
       }
@@ -770,7 +780,7 @@ export default function Purchases() {
           <div className="relative z-10 flex h-full max-h-full w-full flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] sm:h-auto sm:max-h-[min(92dvh,44rem)] sm:max-w-lg sm:rounded-xl sm:pt-0">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div>
-                <p className="text-base font-medium">{editing ? "Receipt" : step === 1 ? "Scan the receipt" : step === 2 ? "Check the lines" : "Link to a job"}</p>
+                <p className="text-base font-medium">{editing ? "Receipt" : step === 1 ? "Scan the receipt" : step === 2 ? "Check the lines" : "Link to jobs"}</p>
                 {!editing && <p className="text-xs text-muted-foreground">Step {step} of 3</p>}
               </div>
               <Button type="button" variant="ghost" className="h-11" onClick={close}>Close</Button>
@@ -822,7 +832,7 @@ export default function Purchases() {
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" className="h-11 shrink-0 px-3" onClick={() => setStep(2)}>Back</Button>
                     <Button type="submit" className="h-11 min-w-0 flex-1 px-3" disabled={saveMutation.isPending} data-testid="button-save-purchase">
-                      {saveMutation.isPending ? "Saving..." : selectedJob ? "Save" : "Save with no job"}
+                      {saveMutation.isPending ? "Saving..." : selectedJobs.length > 0 ? `Save · ${selectedJobs.length} ${selectedJobs.length === 1 ? "job" : "jobs"}` : "Save with no job"}
                     </Button>
                   </div>
                 )}
@@ -892,7 +902,8 @@ export default function Purchases() {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="job-search">Job</Label>
+                    <Label htmlFor="job-search">Jobs</Label>
+                    <p className="text-xs text-muted-foreground">Select every job this receipt covers. One receipt can be on more than one job.</p>
                     <Input
                       id="job-search"
                       value={jobQuery}
@@ -903,27 +914,41 @@ export default function Purchases() {
                       onKeyDown={keepFocus}
                     />
                   </div>
-                  {selectedJob && (
-                    <p className="text-sm" data-testid="text-selected-job">
-                      Linked to {selectedJob.name}
-                      <button type="button" className="ml-2 text-muted-foreground underline" onClick={() => setSelectedJob(null)}>Clear</button>
-                    </p>
+                  {selectedJobs.length > 0 && (
+                    <div className="flex flex-wrap gap-2" data-testid="text-selected-job">
+                      {selectedJobs.map((job) => (
+                        <span key={job.id} className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs">
+                          <span className="break-words">{job.name}</span>
+                          <button type="button" className="text-muted-foreground underline" onClick={() => toggleJob(job)}>Remove</button>
+                        </span>
+                      ))}
+                    </div>
                   )}
                   <ul className="max-h-52 space-y-1 overflow-y-auto">
-                    {(jobSearch?.jobs ?? []).map((job) => (
+                    {(jobSearch?.jobs ?? []).map((job) => {
+                      const picked = selectedJobs.some((item) => item.id === job.id);
+                      return (
                       <li key={job.id}>
                         <button
                           type="button"
-                          className="w-full rounded-md border border-border px-3 py-2 text-left"
-                          onClick={() => setSelectedJob(job)}
+                          className={`w-full rounded-md border px-3 py-2 text-left ${picked ? "border-primary bg-primary/5" : "border-border"}`}
+                          aria-pressed={picked}
+                          onClick={() => {
+                            if (!picked && selectedJobs.length >= 12) {
+                              toast({ title: "A receipt can be linked to 12 jobs", variant: "destructive" });
+                              return;
+                            }
+                            toggleJob(job);
+                          }}
                         >
-                          <span className="block text-sm font-medium break-words">{job.name}</span>
+                          <span className="block text-sm font-medium break-words">{picked ? "Selected · " : ""}{job.name}</span>
                           <span className="block text-xs text-muted-foreground break-words">
                             {[job.technicianName, job.propertyName].filter(Boolean).join(" · ") || "No technician or property"}
                           </span>
                         </button>
                       </li>
-                    ))}
+                      );
+                    })}
                     {jobSearch && jobSearch.jobs.length === 0 && (
                       <li className="text-sm text-muted-foreground">No jobs match. Leave both lists on All to search every job, or save with no job.</li>
                     )}
@@ -990,6 +1015,7 @@ export default function Purchases() {
                   </div>
                   <div className="space-y-2 border-t border-border pt-3">
                     <p className="text-sm font-medium">Linked to</p>
+                    <p className="text-xs text-muted-foreground">Add each job this receipt covers. One receipt can stay linked to more than one job.</p>
                     <div className="flex flex-wrap gap-2">
                       {links.length === 0 && <p className="text-sm text-muted-foreground">Nothing linked yet.</p>}
                       {links.map((link) => (

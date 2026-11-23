@@ -95,7 +95,7 @@ export function TechnicianHero({
               fontVariantNumeric: "tabular-nums",
             }}
             data-testid="text-elapsed-timer"
-            title="Elapsed time (hours : minutes : seconds)"
+            title="Elapsed time. Hours become days after 24 hours."
           >
             <Clock className="w-3.5 h-3.5 shrink-0 opacity-80" />
             {formatElapsed(elapsedSeconds)}

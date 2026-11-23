@@ -20,6 +20,14 @@ type PurchaseBody = {
   purchasedOn: string;
   poNumber: string;
   receipt?: ReceiptPayload | null;
+  alsoTaskIds?: string[];
+};
+
+type JobHit = {
+  id: string;
+  name: string;
+  technicianName: string | null;
+  propertyName: string | null;
 };
 
 function todayInput(): string {
@@ -91,6 +99,8 @@ export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pin
   const [readNote, setReadNote] = useState<string | null>(null);
   const [find, setFind] = useState("");
   const [hits, setHits] = useState<PurchaseView[]>([]);
+  const [jobQuery, setJobQuery] = useState("");
+  const [extraJobs, setExtraJobs] = useState<JobHit[]>([]);
 
   const { data: purchases = [], isLoading } = useQuery<PurchaseView[]>({
     queryKey: ["/api/tasks", taskId, "purchases"],
@@ -105,7 +115,21 @@ export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pin
     setFile(null);
     setFileLabel("");
     setReadNote(null);
+    setJobQuery("");
+    setExtraJobs([]);
   };
+
+  const { data: jobSearch } = useQuery<{ jobs: JobHit[] }>({
+    queryKey: ["/api/purchases/jobs", "store-run", jobQuery],
+    enabled: canOpenPurchases,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (jobQuery.trim()) params.set("q", jobQuery.trim());
+      const response = await fetch(`/api/purchases/jobs?${params.toString()}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load jobs");
+      return response.json();
+    },
+  });
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "purchases"] });
@@ -158,6 +182,7 @@ export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pin
       };
       if (file) body.receipt = file;
       else if (editing && form.removeReceipt) body.receipt = null;
+      if (!editing && extraJobs.length > 0) body.alsoTaskIds = extraJobs.map((job) => job.id);
 
       if (editing) {
         const response = await apiRequest("PATCH", `/api/purchases/${editing.id}`, body);
@@ -235,6 +260,35 @@ export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pin
       toast({ title: "Could not attach receipt", description: error.message, variant: "destructive" });
     },
   });
+
+  const addExtraJob = async (job: JobHit) => {
+    if (job.id === taskId) return;
+    if (!editingId) {
+      setExtraJobs((current) => {
+        if (current.some((item) => item.id === job.id)) return current.filter((item) => item.id !== job.id);
+        if (current.length >= 11) return current;
+        return [...current, job];
+      });
+      return;
+    }
+    const current = purchases.find((purchase) => purchase.id === editingId);
+    if (current?.links.some((link) => link.kind === "task" && link.targetId === job.id)) return;
+    try {
+      await apiRequest("POST", `/api/purchases/${editingId}/links`, { kind: "task", targetId: job.id });
+      refresh();
+    } catch (error) {
+      toast({ title: "Could not link job", description: error instanceof Error ? error.message : "Try again", variant: "destructive" });
+    }
+  };
+
+  const removeExtraLink = async (purchaseId: string, linkId: string) => {
+    try {
+      await apiRequest("DELETE", `/api/purchases/${purchaseId}/links/${linkId}`);
+      refresh();
+    } catch (error) {
+      toast({ title: "Could not remove job", description: error instanceof Error ? error.message : "Try again", variant: "destructive" });
+    }
+  };
 
   const editing = purchases.find((purchase) => purchase.id === editingId);
   const needsReceipt = !editingId && !file;
@@ -401,6 +455,73 @@ export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pin
           </div>
         </section>
 
+        {canOpenPurchases && (
+          <section className="min-w-0 space-y-3 rounded-xl border border-border bg-background p-3" aria-labelledby="store-run-jobs">
+            <div className="min-w-0">
+              <h3 id="store-run-jobs" className="text-sm font-medium text-foreground">Other jobs on this receipt</h3>
+              <p className="text-xs text-muted-foreground">This job is already included. Add every other job the same receipt covers.</p>
+            </div>
+            {(editing
+              ? editing.links.filter((link) => link.kind === "task" && link.targetId !== taskId)
+              : extraJobs
+            ).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {editing
+                  ? editing.links
+                    .filter((link) => link.kind === "task" && link.targetId !== taskId)
+                    .map((link) => (
+                      <span key={link.id} className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs">
+                        <span className="break-words">{link.label}</span>
+                        <button type="button" className="text-muted-foreground underline" onClick={() => void removeExtraLink(editing.id, link.id)}>Remove</button>
+                      </span>
+                    ))
+                  : extraJobs.map((job) => (
+                    <span key={job.id} className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs">
+                      <span className="break-words">{job.name}</span>
+                      <button type="button" className="text-muted-foreground underline" onClick={() => void addExtraJob(job)}>Remove</button>
+                    </span>
+                  ))}
+              </div>
+            )}
+            <Input
+              value={jobQuery}
+              onChange={(event) => setJobQuery(event.target.value)}
+              placeholder="Find another job"
+              className="h-11 w-full min-w-0 text-base"
+              aria-label="Find another job"
+              data-testid="input-extra-job"
+            />
+            <ul className="max-h-40 space-y-1 overflow-y-auto">
+              {(jobSearch?.jobs ?? [])
+                .filter((job) => job.id !== taskId)
+                .filter((job) => !editing || !editing.links.some((link) => link.kind === "task" && link.targetId === job.id))
+                .map((job) => {
+                  const picked = extraJobs.some((item) => item.id === job.id);
+                  return (
+                    <li key={job.id}>
+                      <button
+                        type="button"
+                        className={`w-full rounded-md border px-3 py-2 text-left ${picked ? "border-primary bg-primary/5" : "border-border"}`}
+                        onClick={() => {
+                          if (!editing && !picked && extraJobs.length >= 11) {
+                            toast({ title: "A receipt can be linked to 12 jobs", variant: "destructive" });
+                            return;
+                          }
+                          void addExtraJob(job);
+                        }}
+                      >
+                        <span className="block text-sm font-medium break-words">{picked && !editing ? "Selected · " : ""}{job.name}</span>
+                        <span className="block text-xs text-muted-foreground break-words">
+                          {[job.technicianName, job.propertyName].filter(Boolean).join(" · ") || "No technician or property"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+          </section>
+        )}
+
         {!pinSave && saveBar}
       </form>
 
@@ -467,6 +588,11 @@ export function StoreRunPanel({ taskId, pinSave = false }: { taskId: string; pin
                       {showDay(purchase.purchasedOn)}
                       {purchase.createdByName ? ` · ${purchase.createdByName}` : ""}
                     </p>
+                    {purchase.links.some((link) => link.kind === "task" && link.targetId !== taskId) && (
+                      <p className="text-xs text-muted-foreground">
+                        Also on {purchase.links.filter((link) => link.kind === "task" && link.targetId !== taskId).map((link) => link.label).join(", ")}
+                      </p>
+                    )}
                     {purchase.receiptObjectPath && (
                       <a href={`/api/purchases/${purchase.id}/receipt`} target="_blank" rel="noreferrer" className="text-xs text-primary underline" data-testid={`link-receipt-${purchase.id}`}>
                         {purchase.receiptFileName || "Receipt"}

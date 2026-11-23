@@ -57,6 +57,13 @@ describe("studentPortal helpers", () => {
     expect(elapsedMilliseconds(null, now)).toBe(0);
   });
 
+  it("stops a live student shift at shop midnight", () => {
+    const clockIn = new Date("2026-11-21T15:00:00.000Z");
+    const afterMidnight = new Date("2026-11-22T12:00:00.000Z");
+    expect(elapsedMilliseconds(clockIn, afterMidnight)).toBe(14 * 60 * 60 * 1000);
+    expect(resolveEntryMinutes(clockIn, null, null, afterMidnight)).toBe(14 * 60);
+  });
+
   it("adds an open shift to closed week minutes", () => {
     const clockInAt = new Date("2026-09-13T22:00:00.000Z");
     const now = new Date("2026-09-13T22:10:00.000Z");

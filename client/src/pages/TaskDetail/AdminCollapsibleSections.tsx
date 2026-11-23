@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, formatDistanceToNow } from "date-fns";
+import { formatLoggedMinutes } from "@shared/duration";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { AdminCollapsibleSectionsExtra } from "./AdminCollapsibleSectionsExtra";
 
@@ -210,7 +211,7 @@ export function AdminCollapsibleSections({ ctx }: { ctx: TaskDetailContext }) {
                       )}
                     </div>
                     {entry.durationMinutes ? (
-                      <Badge variant="secondary">{Math.floor(entry.durationMinutes / 60)}h {entry.durationMinutes % 60}m</Badge>
+                      <Badge variant="secondary">{formatLoggedMinutes(entry.durationMinutes)}</Badge>
                     ) : (
                       <Badge variant="default" className="animate-pulse">Running</Badge>
                     )}

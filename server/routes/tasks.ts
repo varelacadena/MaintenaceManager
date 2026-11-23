@@ -839,6 +839,10 @@ export function registerTaskRoutes(app: Express) {
         await syncProjectStatusFromTasks(task.projectId);
       }
 
+      if (task?.status === "completed" && updateData.status === "completed") {
+        await storage.closeOpenTimeEntries(task.id);
+      }
+
       if (task?.status === "completed") {
         await touchPropertyLastWorkFromTask(task);
       }
@@ -1285,6 +1289,7 @@ export function registerTaskRoutes(app: Express) {
               await syncProjectStatusFromTasks(completedParent.projectId);
             }
             if (completedParent) {
+              await storage.closeOpenTimeEntries(completedParent.id);
               await autoCreateVehicleMaintenanceLog(completedParent);
               await touchPropertyLastWorkFromTask(completedParent);
             }
@@ -1308,6 +1313,7 @@ export function registerTaskRoutes(app: Express) {
       }
 
       if (normalizedStatus === "completed") {
+        await storage.closeOpenTimeEntries(updatedTask.id);
         await autoCreateVehicleMaintenanceLog(updatedTask);
         await touchPropertyLastWorkFromTask(updatedTask);
         if (updatedTask.parentTaskId) {

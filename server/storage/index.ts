@@ -220,6 +220,7 @@ export interface IStorage {
   createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
   getTimeEntry(id: string): Promise<TimeEntry | undefined>;
   updateTimeEntry(id: string, endTime: Date, durationMinutes: number): Promise<TimeEntry | undefined>;
+  closeOpenTimeEntries(taskId: string, endTime?: Date): Promise<void>;
   deleteTimeEntry(id: string): Promise<void>;
   getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]>;
 
@@ -628,6 +629,7 @@ export class DatabaseStorage implements IStorage {
   createTimeEntry = workOrderStorage.createTimeEntry;
   getTimeEntry = workOrderStorage.getTimeEntry;
   updateTimeEntry = workOrderStorage.updateTimeEntry;
+  closeOpenTimeEntries = workOrderStorage.closeOpenTimeEntries;
   deleteTimeEntry = workOrderStorage.deleteTimeEntry;
   getTimeEntriesByTask = workOrderStorage.getTimeEntriesByTask;
   createTaskNote = workOrderStorage.createTaskNote;

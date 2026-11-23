@@ -129,11 +129,18 @@ export function useTaskDetail() {
       return res.json();
     },
     enabled: !!id,
+    refetchOnMount: "always",
+    refetchInterval: (query) => (query.state.data?.status === "in_progress" ? 4000 : false),
   });
 
   const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries/task", id],
     enabled: !!id,
+    refetchOnMount: "always",
+    refetchInterval: (query) => {
+      const entries = query.state.data;
+      return Array.isArray(entries) && entries.some((entry) => entry.startTime && !entry.endTime) ? 4000 : false;
+    },
   });
 
   const { data: parts = [] } = useQuery<PartUsed[]>({
@@ -144,6 +151,8 @@ export function useTaskDetail() {
   const { data: notes = [] } = useQuery<TaskNote[]>({
     queryKey: ["/api/task-notes/task", id],
     enabled: !!id,
+    refetchInterval: () =>
+      timeEntries.some((entry) => entry.startTime && !entry.endTime) ? 4000 : false,
   });
 
   const { inventoryItems, isInventoryLoading } = useInventorySearch(inventorySearchQuery, {
@@ -383,11 +392,23 @@ export function useTaskDetail() {
   }, [task, previousWorkTasks]);
 
   useEffect(() => {
-    const runningEntry = timeEntries.find((e) => e.startTime && !e.endTime);
+    if (task?.status === "completed") {
+      setActiveTimer(null);
+      return;
+    }
+    const mine = timeEntries.filter((entry) => entry.userId === user?.id);
+    const runningEntry = mine.find((entry) => entry.startTime && !entry.endTime);
     if (runningEntry) {
       setActiveTimer(runningEntry.id);
+      return;
     }
-  }, [timeEntries]);
+    setActiveTimer((current) => {
+      if (!current) return null;
+      const known = mine.find((entry) => entry.id === current);
+      if (!known) return current;
+      return known.endTime ? null : current;
+    });
+  }, [timeEntries, task?.status, user?.id]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {

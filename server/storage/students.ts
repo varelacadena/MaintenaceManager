@@ -12,7 +12,8 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
-import { computeDurationMinutes, localDateString, MIN_RECAP_LENGTH, startOfNextLocalDay } from "@shared/studentPortal";
+import { studentShiftCutoff } from "@shared/openIntervals";
+import { computeDurationMinutes, localDateString, MIN_RECAP_LENGTH } from "@shared/studentPortal";
 
 export type StudentTimeRange = {
   startDate?: Date;
@@ -59,8 +60,8 @@ export async function closeOvernightOpenStudentShift(
 ): Promise<StudentTimeEntry | undefined> {
   const open = await getOpenStudentTimeEntry(studentId);
   if (!open?.clockInAt) return undefined;
-  if (localDateString(open.clockInAt) >= localDateString(now)) return undefined;
-  const clockOutAt = startOfNextLocalDay(open.clockInAt);
+  const clockOutAt = studentShiftCutoff(open.clockInAt, now);
+  if (!clockOutAt) return undefined;
   return clockOutStudentTimeEntry(
     open.id,
     clockOutAt,

@@ -18,6 +18,7 @@ describe("taskCompletion work notes", () => {
     expect(isWorkExplanationContent("done")).toBe(false);
     expect(isWorkExplanationContent("Claimed by Jane D.")).toBe(false);
     expect(isWorkExplanationContent("Task placed on hold: waiting on parts")).toBe(false);
+    expect(isWorkExplanationContent("Timer stopped automatically at 6:00pm.")).toBe(false);
   });
 
   it("accepts a real work explanation", () => {

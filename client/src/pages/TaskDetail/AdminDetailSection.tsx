@@ -31,6 +31,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatLoggedMinutes } from "@shared/duration";
 import type { TaskDetailContext } from "./useTaskDetail";
 
 export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
@@ -63,7 +64,7 @@ export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Time Logged</p>
-            <p className="text-2xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
+            <p className="text-2xl font-bold" data-testid="text-time-logged">{formatLoggedMinutes(totalHours * 60 + remainingMins)}</p>
           </div>
         </div>
         {activeTimer && (
@@ -125,7 +126,7 @@ export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
                         </p>
                       </div>
                       {entry.durationMinutes ? (
-                        <Badge variant="secondary">{Math.floor(entry.durationMinutes / 60)}h {entry.durationMinutes % 60}m</Badge>
+                        <Badge variant="secondary">{formatLoggedMinutes(entry.durationMinutes)}</Badge>
                       ) : (
                         <Badge variant="outline" className="animate-pulse">Running</Badge>
                       )}

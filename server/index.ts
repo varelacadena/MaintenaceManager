@@ -13,6 +13,7 @@ import { startRecurringTaskScheduler } from "./recurringTaskScheduler";
 import { startDocumentExpirationScheduler } from "./documentExpirationScheduler";
 import { startTaskReminderScheduler } from "./taskReminderScheduler";
 import { startPendingUserExpirationScheduler } from "./pendingUserExpirationScheduler";
+import { startOpenIntervalCloser } from "./openIntervalCloser";
 import { applyMigrations } from "./applyMigrations";
 import crypto from "crypto";
 import net from "net";
@@ -222,6 +223,9 @@ app.use((req, res, next) => {
 
     // Start the pending user expiration scheduler
     startPendingUserExpirationScheduler();
+
+    // Stop task timers at 6:00pm and student shifts at shop midnight
+    startOpenIntervalCloser();
   };
 
   // One process per port. A second dev server used to walk to the next port,

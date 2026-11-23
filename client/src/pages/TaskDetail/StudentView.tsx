@@ -18,6 +18,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
+import { formatLoggedMinutes } from "@shared/duration";
 import { uploadIsCompletionPhoto } from "@shared/taskCompletion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { statusColors } from "./constants";
@@ -201,7 +202,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Time Logged</p>
-                  <p className="text-lg sm:text-xl font-bold" data-testid="text-time-logged">{totalHours}h {remainingMins}m</p>
+                  <p className="text-lg sm:text-xl font-bold" data-testid="text-time-logged">{formatLoggedMinutes(totalHours * 60 + remainingMins)}</p>
                 </div>
               </div>
               {activeTimer && (
