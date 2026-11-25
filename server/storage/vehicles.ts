@@ -25,10 +25,11 @@ import { db } from "../db";
 import { eq, and, ne, desc, lte, gte, sql, inArray, count, or, ilike } from "drizzle-orm";
 import { sortVehiclesByVehicleId } from "@shared/vehicleSort";
 
-/** Natural order for fleet IDs (V-2 before V-10). */
+/** Natural order for fleet IDs (V-2 before V-10).
+ *  Digit runs use numeric so timestamp-sized IDs do not overflow integer. */
 const vehicleIdOrderBy = [
   sql`regexp_replace(${vehicles.vehicleId}, '[0-9]+', '', 'g')`,
-  sql`COALESCE(NULLIF(substring(${vehicles.vehicleId} from '[0-9]+'), '')::int, 0)`,
+  sql`COALESCE(NULLIF(substring(${vehicles.vehicleId} from '[0-9]+'), '')::numeric, 0)`,
   sql`lower(${vehicles.vehicleId})`,
 ] as const;
 

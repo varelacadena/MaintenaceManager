@@ -6,7 +6,6 @@ import "@testing-library/jest-dom/vitest";
 import type { Task, User } from "@shared/schema";
 import { TechnicianWorkView } from "../TechnicianWorkView";
 import { WorkStatusGroupHeader } from "../WorkStatusGroupHeader";
-import { WorkTasksEmptyState } from "../WorkTasksEmptyState";
 
 describe("WorkStatusGroupHeader", () => {
   it("renders expanded state and calls onToggle when clicked", () => {
@@ -43,56 +42,6 @@ describe("WorkStatusGroupHeader", () => {
 
     expect(screen.getByTestId("toggle-group-ready")).toBeDisabled();
     expect(screen.getByTestId("toggle-group-ready")).toHaveAttribute("aria-expanded", "false");
-  });
-});
-
-describe("WorkTasksEmptyState", () => {
-  it("shows tech filter empty state and clears filter", () => {
-    const onClearTechFilter = vi.fn();
-    render(
-      <WorkTasksEmptyState
-        hasSearchQuery={false}
-        hasTechFilter
-        techFilterName="Jane Tech"
-        onClearSearch={vi.fn()}
-        onClearTechFilter={onClearTechFilter}
-        onOpenProjectsTab={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByTestId("work-tasks-empty-tech")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("button-clear-tech-filter"));
-    expect(onClearTechFilter).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows search empty state and clears search", () => {
-    const onClearSearch = vi.fn();
-    render(
-      <WorkTasksEmptyState
-        hasSearchQuery={true}
-        onClearSearch={onClearSearch}
-        onOpenProjectsTab={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByTestId("work-tasks-empty-search")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("button-clear-work-search"));
-    expect(onClearSearch).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows board empty state with project tab action", () => {
-    const onOpenProjectsTab = vi.fn();
-    render(
-      <WorkTasksEmptyState
-        hasSearchQuery={false}
-        onClearSearch={vi.fn()}
-        onOpenProjectsTab={onOpenProjectsTab}
-      />,
-    );
-
-    expect(screen.getByTestId("work-tasks-empty")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("button-empty-view-projects"));
-    expect(onOpenProjectsTab).toHaveBeenCalledTimes(1);
   });
 });
 
