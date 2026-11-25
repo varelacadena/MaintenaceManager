@@ -2,7 +2,7 @@ import { Calendar, Clock, CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Task } from "@shared/schema";
 import { cn } from "@/lib/utils";
-import { formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
+import { formatTaskDate, formatTaskDateTime } from "@/lib/taskUtils";
 
 type ScheduleTask = Pick<
   Task,

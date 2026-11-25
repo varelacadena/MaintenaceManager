@@ -16,9 +16,9 @@ import type { TechnicianTaskDetailProps } from "./types";
 export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
     task, property, multiProperties = [], space, equipment, vehicle, contactStaff,
-    notes, uploads, parts, quotes, activeTimer, timeEntries,
+    notes, uploads, parts, activeTimer, timeEntries,
     allTaskResources, startTimerMutation, stopTimerMutation,
-    addUploadMutation, estimateBlocksCompletion,
+    addUploadMutation,
   } = props;
 
   const [, navigate] = useLocation();
@@ -30,7 +30,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [pauseDialogMode, setPauseDialogMode] = useState<"running" | "paused">("running");
   const [isStartReminderOpen, setIsStartReminderOpen] = useState(false);
-  const [isEstimateSheetOpen, setIsEstimateSheetOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isPreviousWorkOpen, setIsPreviousWorkOpen] = useState(false);
@@ -240,10 +239,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const completionNoteValue = isSystemGeneratedNoteContent(noteText) ? "" : noteText;
 
   const handleMarkComplete = async () => {
-    if (estimateBlocksCompletion) {
-      toast({ title: "Cannot complete", description: "Estimates must be approved first.", variant: "destructive" });
-      return;
-    }
     if (!photoReady) {
       toast({ title: "Photo required", description: PHOTO_REQUIRED_MESSAGE, variant: "destructive" });
       return;
@@ -320,8 +315,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const resourceDocs = allTaskResources.filter((r: any) => r.type !== "video").length;
   const resourceVids = allTaskResources.filter((r: any) => r.type === "video").length;
 
-  const existingQuote = quotes.length > 0 ? quotes[0] : null;
-
   const isCompleted = showCompletion || task.status === "completed";
 
   return {
@@ -334,7 +327,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     isPauseDialogOpen, setIsPauseDialogOpen,
     pauseDialogMode,
     isStartReminderOpen, setIsStartReminderOpen,
-    isEstimateSheetOpen, setIsEstimateSheetOpen,
     isPartModalOpen, setIsPartModalOpen,
     isResourcesOpen, setIsResourcesOpen,
     isPreviousWorkOpen, setIsPreviousWorkOpen,
@@ -365,7 +357,6 @@ export function useTechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     contactInitials,
     resourceDocs,
     resourceVids,
-    existingQuote,
     isCompleted,
   };
 }

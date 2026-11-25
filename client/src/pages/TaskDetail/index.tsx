@@ -55,8 +55,6 @@ export default function TaskDetail() {
           notes={ctx.notes}
           uploads={ctx.uploads}
           parts={ctx.parts}
-          quotes={ctx.quotes}
-          vendors={ctx.vendors}
           inventoryItems={ctx.inventoryItems}
           taskHelpers={ctx.taskHelpers}
           checklistGroups={ctx.checklistGroups}
@@ -75,7 +73,6 @@ export default function TaskDetail() {
           subTaskProgress={ctx.subTaskProgress}
           totalChecklistItems={ctx.totalChecklistItems}
           completedChecklistItems={ctx.completedChecklistItems}
-          estimateBlocksCompletion={!!ctx.estimateBlocksCompletion}
           startTimerMutation={ctx.startTimerMutation}
           stopTimerMutation={ctx.stopTimerMutation}
           updateStatusMutation={ctx.updateStatusMutation}
@@ -85,8 +82,6 @@ export default function TaskDetail() {
           deleteUploadMutation={ctx.deleteUploadMutation}
           addPartMutation={ctx.addPartMutation}
           toggleChecklistItemMutation={ctx.toggleChecklistItemMutation}
-          createQuoteMutation={ctx.createQuoteMutation}
-          deleteQuoteMutation={ctx.deleteQuoteMutation}
           updateSubtaskStatusMutation={ctx.updateSubtaskStatusMutation}
           safeNavigate={ctx.safeNavigate}
           handleStartOrPause={ctx.handleStartOrPause}
@@ -105,8 +100,6 @@ export default function TaskDetail() {
           setIsResourcesSheetOpen={ctx.setIsResourcesSheetOpen}
           isAddPartDialogOpen={ctx.isAddPartDialogOpen}
           setIsAddPartDialogOpen={ctx.setIsAddPartDialogOpen}
-          isAddQuoteDialogOpen={ctx.isAddQuoteDialogOpen}
-          setIsAddQuoteDialogOpen={ctx.setIsAddQuoteDialogOpen}
           isStopTimerDialogOpen={ctx.isStopTimerDialogOpen}
           setIsStopTimerDialogOpen={ctx.setIsStopTimerDialogOpen}
           selectedInventoryItemId={ctx.selectedInventoryItemId}
@@ -117,16 +110,6 @@ export default function TaskDetail() {
           setPartQuantity={ctx.setPartQuantity}
           partNotes={ctx.partNotes}
           setPartNotes={ctx.setPartNotes}
-          newQuoteEstimatedCost={ctx.newQuoteEstimatedCost}
-          setNewQuoteEstimatedCost={ctx.setNewQuoteEstimatedCost}
-          newQuoteVendorId={ctx.newQuoteVendorId}
-          setNewQuoteVendorId={ctx.setNewQuoteVendorId}
-          newQuoteVendorName={ctx.newQuoteVendorName}
-          setNewQuoteVendorName={ctx.setNewQuoteVendorName}
-          newQuoteNotes={ctx.newQuoteNotes}
-          setNewQuoteNotes={ctx.setNewQuoteNotes}
-          pendingQuoteFiles={ctx.pendingQuoteFiles}
-          setPendingQuoteFiles={ctx.setPendingQuoteFiles}
           scannedEquipment={ctx.scannedEquipment}
           scannedEquipmentTasks={ctx.scannedEquipmentTasks}
           scannedEquipmentResources={ctx.scannedEquipmentResources}

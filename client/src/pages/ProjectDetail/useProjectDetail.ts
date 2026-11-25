@@ -11,7 +11,7 @@ import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Project, Task, Property, User, ProjectComment, Upload } from "@shared/schema";
 import { format } from "date-fns";
-import { getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { getAvatarColor, getInitials, getUserDisplayName } from "@/lib/taskUtils";
 import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
 import { inferUploadFileType } from "@/lib/uploadUtils";
 

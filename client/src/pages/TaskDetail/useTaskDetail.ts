@@ -23,7 +23,6 @@ import type {
   Space,
   TaskChecklistGroup,
   TaskChecklistItem,
-  Quote,
   Vendor,
   Vehicle,
 } from "@shared/schema";
@@ -32,6 +31,7 @@ import {
   hasWorkExplanation,
   isWorkExplanationContent,
   missingCompletionPhoto,
+  openSubtasksBlockCompletion,
   roleRequiresWorkNoteOnCompletion,
   PHOTO_REQUIRED_MESSAGE,
   WORK_NOTE_REQUIRED_MESSAGE,
@@ -91,20 +91,7 @@ export function useTaskDetail() {
   const [attachmentsExpanded, setAttachmentsExpanded] = useState(false);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [partsExpanded, setPartsExpanded] = useState(false);
-  const [quotesExpanded, setQuotesExpanded] = useState(true);
   const [previousWorkExpanded, setPreviousWorkExpanded] = useState(false);
-  const [isAddQuoteDialogOpen, setIsAddQuoteDialogOpen] = useState(false);
-  const [newQuoteVendorId, setNewQuoteVendorId] = useState<string>("");
-  const [newQuoteVendorName, setNewQuoteVendorName] = useState("");
-  const [newQuoteEstimatedCost, setNewQuoteEstimatedCost] = useState("");
-  const [newQuoteNotes, setNewQuoteNotes] = useState("");
-  const [pendingQuoteFiles, setPendingQuoteFiles] = useState<Array<{url: string, fileName: string, fileType: string, fileSize: number}>>([]);
-  const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
-  const [newVendorName, setNewVendorName] = useState("");
-  const [newVendorEmail, setNewVendorEmail] = useState("");
-  const [newVendorPhone, setNewVendorPhone] = useState("");
-  const [newVendorAddress, setNewVendorAddress] = useState("");
-  const [newVendorNotes, setNewVendorNotes] = useState("");
   const [scannedVehicle, setScannedVehicle] = useState<Vehicle | null>(null);
   const [isVehicleInfoOpen, setIsVehicleInfoOpen] = useState(false);
   const [isAddSubTaskDialogOpen, setIsAddSubTaskDialogOpen] = useState(false);
@@ -223,11 +210,6 @@ export function useTaskDetail() {
   const { data: contactStaff } = useQuery<UserType>({
     queryKey: ["/api/users", task?.contactStaffId],
     enabled: !!task?.contactStaffId,
-  });
-
-  const { data: quotes = [] } = useQuery<Quote[]>({
-    queryKey: ["/api/tasks", id, "quotes"],
-    enabled: !!id && !!task?.requiresEstimate,
   });
 
   const previousWorkQueryKey = task?.equipmentId
@@ -635,18 +617,6 @@ export function useTaskDetail() {
     setNewNote,
     setNoteType,
     setIsAddNoteDialogOpen,
-    setNewQuoteVendorId,
-    setNewQuoteVendorName,
-    setNewQuoteEstimatedCost,
-    setNewQuoteNotes,
-    setPendingQuoteFiles,
-    setIsAddQuoteDialogOpen,
-    setNewVendorName,
-    setNewVendorEmail,
-    setNewVendorPhone,
-    setNewVendorAddress,
-    setNewVendorNotes,
-    setIsAddVendorDialogOpen,
   });
 
   const {
@@ -778,7 +748,6 @@ export function useTaskDetail() {
   const taskWithHelpers = task as (Task & { helpers?: Array<{ userId: string; user?: { id: string; name: string; email: string; role: string } }>; isHelper?: boolean }) | undefined;
   const taskIsHelper = !!taskWithHelpers?.isHelper;
   const taskHelpers = taskWithHelpers?.helpers || [];
-  const estimateBlocksCompletion = task?.requiresEstimate && task?.estimateStatus !== "approved";
   const assignedUser = task ? users.find(u => u.id === task.assignedToId) : undefined;
   const adminUsers = users.filter(u => u.role === "admin");
   const technicianUsers = users.filter(u => u.role === "technician");
@@ -811,14 +780,9 @@ export function useTaskDetail() {
   };
 
   const handleComplete = async () => {
-    if (estimateBlocksCompletion) {
-      toast({
-        title: "Cannot complete task",
-        description: isStudent
-          ? "This task requires approved estimates. Contact your supervisor."
-          : "Estimates must be approved before completing this task.",
-        variant: "destructive",
-      });
+    const subtaskBlock = openSubtasksBlockCompletion(subTasks);
+    if (subtaskBlock) {
+      toast({ title: "Subtasks open", description: subtaskBlock, variant: "destructive" });
       return;
     }
     if (missingCompletionPhoto({
@@ -914,7 +878,6 @@ export function useTaskDetail() {
     space,
     checklistGroups,
     contactStaff,
-    quotes,
     dependencyTasks,
     subTasks,
     vehicle,
@@ -1001,34 +964,8 @@ export function useTaskDetail() {
     setChecklistExpanded,
     partsExpanded,
     setPartsExpanded,
-    quotesExpanded,
-    setQuotesExpanded,
     previousWorkExpanded,
     setPreviousWorkExpanded,
-    isAddQuoteDialogOpen,
-    setIsAddQuoteDialogOpen,
-    newQuoteVendorId,
-    setNewQuoteVendorId,
-    newQuoteVendorName,
-    setNewQuoteVendorName,
-    newQuoteEstimatedCost,
-    setNewQuoteEstimatedCost,
-    newQuoteNotes,
-    setNewQuoteNotes,
-    pendingQuoteFiles,
-    setPendingQuoteFiles,
-    isAddVendorDialogOpen,
-    setIsAddVendorDialogOpen,
-    newVendorName,
-    setNewVendorName,
-    newVendorEmail,
-    setNewVendorEmail,
-    newVendorPhone,
-    setNewVendorPhone,
-    newVendorAddress,
-    setNewVendorAddress,
-    newVendorNotes,
-    setNewVendorNotes,
     scannedVehicle,
     setScannedVehicle,
     isVehicleInfoOpen,
@@ -1066,7 +1003,6 @@ export function useTaskDetail() {
     taskWithHelpers,
     taskIsHelper,
     taskHelpers,
-    estimateBlocksCompletion,
     assignedUser,
     adminUsers,
     technicianUsers,

@@ -56,7 +56,7 @@ import { FleetListPagination } from "@/components/fleet/FleetListPagination";
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import { invalidateVehicleReservationQueries } from "@/lib/fleetQueryInvalidation";
 import { getVehicleReservationNumber } from "@shared/recordNumbers";
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 
 const statusColors: Record<string, "secondary" | "default" | "destructive"> = {
   pending: "secondary",

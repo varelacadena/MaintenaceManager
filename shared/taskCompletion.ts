@@ -73,3 +73,17 @@ export function missingCompletionPhoto(input: {
 export function uploadIsCompletionPhoto(upload: { fileType?: string | null }): boolean {
   return (upload.fileType || "").toLowerCase().startsWith("image/");
 }
+
+export const OPEN_SUBTASKS_MESSAGE = "Finish every subtask before completing this task.";
+
+export function openSubtasksBlockCompletion(
+  subtasks: Array<{ status?: string | null }> | null | undefined,
+): string | null {
+  if (!subtasks || subtasks.length === 0) return null;
+  if (subtasks.every((subtask) => subtask.status === "completed")) return null;
+  return OPEN_SUBTASKS_MESSAGE;
+}
+
+export function subtaskStatusPath(subtaskId: string): string {
+  return `/api/tasks/${subtaskId}/status`;
+}

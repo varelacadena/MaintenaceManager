@@ -28,8 +28,6 @@ import {
 import { db } from "../db";
 import { eq, and, or, desc, isNull, sql, inArray, gte, lte, ne, ilike } from "drizzle-orm";
 import { enrichTaskWithNameSnapshots } from "../lib/taskNameSnapshots";
-import { formatUserDisplayName } from "@shared/displayNames";
-import { getUser } from "./users";
 
 function normalizeTaskPool(data: any): any {
   const normalized = { ...data };
@@ -406,12 +404,7 @@ export async function getSubTasks(parentTaskId: string): Promise<Task[]> {
 }
 
 export async function createTimeEntry(entryData: InsertTimeEntry): Promise<TimeEntry> {
-  const payload: InsertTimeEntry = { ...entryData };
-  if (payload.userId && !payload.userName) {
-    const user = await getUser(payload.userId);
-    if (user) payload.userName = formatUserDisplayName(user);
-  }
-  const [entry] = await db.insert(timeEntries).values(payload).returning();
+  const [entry] = await db.insert(timeEntries).values(entryData).returning();
   return entry;
 }
 
@@ -469,12 +462,7 @@ export async function getTimeEntriesByTask(taskId: string): Promise<TimeEntry[]>
 }
 
 export async function createTaskNote(noteData: InsertTaskNote): Promise<TaskNote> {
-  const payload: InsertTaskNote = { ...noteData };
-  if (payload.userId && !payload.userName) {
-    const user = await getUser(payload.userId);
-    if (user) payload.userName = formatUserDisplayName(user);
-  }
-  const [note] = await db.insert(taskNotes).values(payload).returning();
+  const [note] = await db.insert(taskNotes).values(noteData).returning();
   return note;
 }
 

@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, User as UserIcon, MapPin } from "lucide-react";
-import { statusBadgeStyles, urgencyBadgeStyles, statusLabels, taskTypeLabels, formatTaskDate } from "@/utils/taskUtils";
+import { statusBadgeStyles, urgencyBadgeStyles, statusLabels, taskTypeLabels, formatTaskDate } from "@/lib/taskUtils";
 import { resolveTaskAssigneeName } from "@/lib/displayNames";
 import type { Task, User } from "@shared/schema";
 

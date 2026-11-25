@@ -1,35 +1,23 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@radix-ui/react-label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { User, Check, Pause, CheckCircle2, DollarSign, Plus, X, Paperclip } from "lucide-react";
-import { ObjectUploader } from "@/components/ObjectUploader";
+import { User, Check, Pause, CheckCircle2 } from "lucide-react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import type { TaskDetailContext } from "./useTaskDetail";
 
 export function AdminDialogs({ ctx }: { ctx: TaskDetailContext }) {
   const {
-    task, toast, vendors,
+    task, toast,
     isAssignDialogOpen, setIsAssignDialogOpen,
     assignedUser, adminUsers, technicianUsers, staffUsers, studentUsers,
     updateTaskMutation,
     isAddNoteDialogOpen, setIsAddNoteDialogOpen,
     noteType, setNoteType, newNote, setNewNote, addNoteMutation,
     isStopTimerDialogOpen, setIsStopTimerDialogOpen,
-    activeTimer, stopTimerMutation, estimateBlocksCompletion,
+    activeTimer, stopTimerMutation,
     isHoldReasonDialogOpen, setIsHoldReasonDialogOpen,
     holdReason, setHoldReason,
     isScanPartOpen, setIsScanPartOpen, handleScanPart,
-    isAddQuoteDialogOpen, setIsAddQuoteDialogOpen,
-    newQuoteVendorId, setNewQuoteVendorId,
-    newQuoteVendorName, setNewQuoteVendorName,
-    newQuoteEstimatedCost, setNewQuoteEstimatedCost,
-    newQuoteNotes, setNewQuoteNotes,
-    pendingQuoteFiles, setPendingQuoteFiles,
-    getUploadParameters, createQuoteMutation,
-    setIsAddVendorDialogOpen,
   } = ctx;
 
   if (!task) return null;
@@ -113,13 +101,9 @@ export function AdminDialogs({ ctx }: { ctx: TaskDetailContext }) {
               variant="outline"
               className="w-full justify-start h-12"
               onClick={() => {
-                if (estimateBlocksCompletion) {
-                  toast({ title: "Cannot complete task", description: "Estimates must be approved before completing this task.", variant: "destructive" });
-                  return;
-                }
                 if (activeTimer) { stopTimerMutation.mutate({ timerId: activeTimer, newStatus: "completed" }); }
               }}
-              disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
+              disabled={stopTimerMutation.isPending}
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
               Complete Task
@@ -147,95 +131,6 @@ export function AdminDialogs({ ctx }: { ctx: TaskDetailContext }) {
               disabled={!holdReason.trim() || stopTimerMutation.isPending}
             >
               Hold Task
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddQuoteDialogOpen} onOpenChange={setIsAddQuoteDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Estimate</DialogTitle>
-            <DialogDescription>Add a new estimate for comparison. You can add multiple estimates to compare before approving one.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Estimated Cost *</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input type="number" step="0.01" min="0" placeholder="0.00" value={newQuoteEstimatedCost} onChange={(e) => setNewQuoteEstimatedCost(e.target.value)} className="pl-8" data-testid="input-quote-cost" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Vendor/Source (Optional)</Label>
-              <div className="flex gap-2">
-                <Select
-                  value={newQuoteVendorId}
-                  onValueChange={(value) => {
-                    if (value === "none") { setNewQuoteVendorId(""); setNewQuoteVendorName(""); }
-                    else { setNewQuoteVendorId(value); setNewQuoteVendorName(vendors.find(v => v.id === value)?.name || ""); }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-quote-vendor" className="flex-1">
-                    <SelectValue placeholder="Select a vendor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No vendor</SelectItem>
-                    {vendors.map((vendor) => (<SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" size="icon" onClick={() => setIsAddVendorDialogOpen(true)} data-testid="button-add-new-vendor">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
-              <Textarea placeholder="Details about this estimate..." value={newQuoteNotes} onChange={(e) => setNewQuoteNotes(e.target.value)} data-testid="input-quote-notes" />
-            </div>
-            <div className="space-y-2">
-              <Label>Attachments (Optional)</Label>
-              <div className="border-2 border-dashed rounded-lg p-4">
-                <ObjectUploader
-                  maxNumberOfFiles={5}
-                  maxFileSize={10485760}
-                  onGetUploadParameters={getUploadParameters}
-                  onComplete={(result: { successful: Array<{url: string, fileName: string, type: string, size: number}>, failed: Array<any> }) => {
-                    if (result.successful && result.successful.length > 0) {
-                      const newFiles = result.successful.map(file => ({ url: file.url, fileName: file.fileName, fileType: file.type, fileSize: file.size }));
-                      setPendingQuoteFiles(prev => [...prev, ...newFiles]);
-                      toast({ title: "File uploaded", description: `${result.successful.length} file(s) uploaded` });
-                    }
-                  }}
-                  onError={(error) => { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); }}
-                  buttonClassName="w-full"
-                >
-                  <Paperclip className="w-4 h-4 mr-2" />
-                  Browse Files
-                </ObjectUploader>
-                {pendingQuoteFiles.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {pendingQuoteFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded">
-                        <span className="truncate flex-1">{file.fileName}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingQuoteFiles(prev => prev.filter((_, i) => i !== index))}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsAddQuoteDialogOpen(false); setNewQuoteVendorId(""); setNewQuoteVendorName(""); setPendingQuoteFiles([]); }}>Cancel</Button>
-            <Button
-              onClick={() => createQuoteMutation.mutate({ vendorName: newQuoteVendorName, estimatedCost: parseFloat(newQuoteEstimatedCost) || 0, notes: newQuoteNotes, files: pendingQuoteFiles })}
-              disabled={!newQuoteEstimatedCost || createQuoteMutation.isPending}
-              data-testid="button-submit-quote"
-            >
-              Add Estimate
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,7 +16,7 @@ import { Hand, MapPin, Clock, RefreshCw, Inbox, Loader2, Wrench, ArrowRight } fr
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
-import { urgencyBadgeStyles, statusBadgeStyles, statusLabels } from "@/utils/taskUtils";
+import { urgencyBadgeStyles, statusBadgeStyles, statusLabels } from "@/lib/taskUtils";
 import type { Task } from "@shared/schema";
 
 export default function GrabAJob() {

@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { dateInputValueToTaskTimestamp, toCalendarDate } from "@/lib/taskCalendarDates";
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 import type { Project, Property, Task, User as AppUser } from "@shared/schema";
 import { CompletedSearchResults, useCompletedTaskSearch } from "./CompletedTaskLookup";
 import { WorkTaskComposer } from "./WorkTaskComposer";

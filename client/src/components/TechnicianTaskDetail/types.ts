@@ -11,8 +11,6 @@ import type {
   Space,
   TaskChecklistGroup,
   TaskChecklistItem,
-  Quote,
-  Vendor,
   Vehicle,
 } from "@shared/schema";
 
@@ -35,8 +33,6 @@ export interface TechnicianTaskDetailProps {
   notes: TaskNote[];
   uploads: Upload[];
   parts: PartUsed[];
-  quotes: Quote[];
-  vendors: Vendor[];
   inventoryItems: InventoryItem[];
   taskHelpers?: TaskHelperDisplay[];
   checklistGroups: ChecklistGroupWithItems[];
@@ -55,7 +51,6 @@ export interface TechnicianTaskDetailProps {
   subTaskProgress: number;
   totalChecklistItems: number;
   completedChecklistItems: number;
-  estimateBlocksCompletion: boolean;
   startTimerMutation: any;
   stopTimerMutation: any;
   updateStatusMutation: any;
@@ -65,8 +60,6 @@ export interface TechnicianTaskDetailProps {
   deleteUploadMutation: any;
   addPartMutation: any;
   toggleChecklistItemMutation: any;
-  createQuoteMutation: any;
-  deleteQuoteMutation: any;
   updateSubtaskStatusMutation: any;
   safeNavigate: (path: string) => void;
   handleStartOrPause: () => void;
@@ -85,8 +78,6 @@ export interface TechnicianTaskDetailProps {
   setIsResourcesSheetOpen: (v: boolean) => void;
   isAddPartDialogOpen: boolean;
   setIsAddPartDialogOpen: (v: boolean) => void;
-  isAddQuoteDialogOpen: boolean;
-  setIsAddQuoteDialogOpen: (v: boolean) => void;
   isStopTimerDialogOpen: boolean;
   setIsStopTimerDialogOpen: (v: boolean) => void;
   selectedInventoryItemId: string;
@@ -97,16 +88,6 @@ export interface TechnicianTaskDetailProps {
   setPartQuantity: (v: string) => void;
   partNotes: string;
   setPartNotes: (v: string) => void;
-  newQuoteEstimatedCost: string;
-  setNewQuoteEstimatedCost: (v: string) => void;
-  newQuoteVendorId: string;
-  setNewQuoteVendorId: (v: string) => void;
-  newQuoteVendorName: string;
-  setNewQuoteVendorName: (v: string) => void;
-  newQuoteNotes: string;
-  setNewQuoteNotes: (v: string) => void;
-  pendingQuoteFiles: any[];
-  setPendingQuoteFiles: (v: any[]) => void;
   scannedEquipment: Equipment | null;
   scannedEquipmentTasks: Task[];
   scannedEquipmentResources: any[];

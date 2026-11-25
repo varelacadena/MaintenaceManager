@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { taskStatusConfig } from "@/utils/taskUtils";
+import { taskStatusConfig } from "@/lib/taskUtils";
 import type { Task, Project } from "@shared/schema";
 
 export const unifiedStatusConfig = [

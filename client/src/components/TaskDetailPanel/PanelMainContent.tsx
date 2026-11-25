@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin, Clock, ChevronRight, ChevronDown, Flag, Calendar, User as UserIcon, CheckCircle2 } from "lucide-react";
 import type { User } from "@shared/schema";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/lib/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelPartsSection } from "./PanelPartsSection";
 import { PanelNotesSection } from "./PanelNotesSection";

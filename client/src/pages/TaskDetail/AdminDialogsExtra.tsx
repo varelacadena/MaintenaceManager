@@ -37,13 +37,6 @@ export function AdminDialogsExtra({ ctx }: { ctx: TaskDetailContext }) {
     quickAddInventoryMutation,
     isLeaveConfirmDialogOpen, setIsLeaveConfirmDialogOpen,
     cancelLeave, confirmLeave,
-    isAddVendorDialogOpen, setIsAddVendorDialogOpen,
-    newVendorName, setNewVendorName,
-    newVendorEmail, setNewVendorEmail,
-    newVendorPhone, setNewVendorPhone,
-    newVendorAddress, setNewVendorAddress,
-    newVendorNotes, setNewVendorNotes,
-    createVendorMutation,
     isScanEquipmentOpen, setIsScanEquipmentOpen,
     handleEquipmentScan,
     isVehicleInfoOpen, setIsVehicleInfoOpen,
@@ -137,88 +130,6 @@ export function AdminDialogsExtra({ ctx }: { ctx: TaskDetailContext }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Vendor</DialogTitle>
-            <DialogDescription>Create a new vendor to associate with this estimate.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Vendor Name *</Label>
-              <Input
-                value={newVendorName}
-                onChange={(e) => setNewVendorName(e.target.value)}
-                placeholder="e.g., ABC Plumbing, Home Depot"
-                data-testid="input-new-vendor-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Email (Optional)</Label>
-              <Input
-                type="email"
-                value={newVendorEmail}
-                onChange={(e) => setNewVendorEmail(e.target.value)}
-                placeholder="vendor@example.com"
-                data-testid="input-new-vendor-email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone (Optional)</Label>
-              <Input
-                value={newVendorPhone}
-                onChange={(e) => setNewVendorPhone(e.target.value)}
-                placeholder="(555) 123-4567"
-                data-testid="input-new-vendor-phone"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Address (Optional)</Label>
-              <Input
-                value={newVendorAddress}
-                onChange={(e) => setNewVendorAddress(e.target.value)}
-                placeholder="123 Main St, City, State"
-                data-testid="input-new-vendor-address"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
-              <Textarea
-                value={newVendorNotes}
-                onChange={(e) => setNewVendorNotes(e.target.value)}
-                placeholder="Any additional details about this vendor..."
-                data-testid="input-new-vendor-notes"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsAddVendorDialogOpen(false);
-              setNewVendorName("");
-              setNewVendorEmail("");
-              setNewVendorPhone("");
-              setNewVendorAddress("");
-              setNewVendorNotes("");
-            }}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createVendorMutation.mutate({
-                name: newVendorName,
-                email: newVendorEmail || undefined,
-                phone: newVendorPhone || undefined,
-                address: newVendorAddress || undefined,
-                notes: newVendorNotes || undefined,
-              })}
-              disabled={!newVendorName.trim() || createVendorMutation.isPending}
-              data-testid="button-submit-new-vendor"
-            >
-              {createVendorMutation.isPending ? "Creating..." : "Add Vendor"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <BarcodeScanner
         open={isScanEquipmentOpen}

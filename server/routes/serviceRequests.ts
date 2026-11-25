@@ -7,6 +7,7 @@ import { handleFacilityRouteError } from "../routeFacilityError";
 import { validateServiceRequestLocation } from "../facilityValidation";
 import { notificationService, notifyNewServiceRequest } from "../notifications";
 import { insertServiceRequestSchema } from "@shared/schema";
+import { propertyDisplayName, userDisplayName } from "../displayNameFill";
 import { z } from "zod";
 
 const requestStatusSchema = z.enum([
@@ -123,6 +124,8 @@ export function registerServiceRequestRoutes(app: Express) {
       const requestData = insertServiceRequestSchema.parse({
         ...req.body,
         requesterId: userId,
+        requesterName: req.body.requesterName || (await userDisplayName(userId)),
+        propertyName: req.body.propertyName || (await propertyDisplayName(req.body.propertyId)),
         requestedDate: req.body.requestedDate ? new Date(req.body.requestedDate) : undefined,
       });
 

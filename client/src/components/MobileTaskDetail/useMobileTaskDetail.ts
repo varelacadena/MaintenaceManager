@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSignedUploadParameters, mapUploaderResultForRegistration } from "@/lib/uploadUtils";
 import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
-import { taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
+import { taskDeleteUrl, type TaskDeleteScope } from "@/lib/taskUtils";
 import { canReadInventory } from "@/lib/inventoryAccess";
 import { useInventorySearch } from "@/hooks/useInventorySearch";
 import type { Task, User, Property, Upload, PartUsed, InventoryItem, TaskNote } from "@shared/schema";
@@ -14,7 +14,9 @@ import {
   hasWorkExplanation,
   isWorkExplanationContent,
   missingCompletionPhoto,
+  openSubtasksBlockCompletion,
   roleRequiresWorkNoteOnCompletion,
+  subtaskStatusPath,
   PHOTO_REQUIRED_MESSAGE,
   WORK_NOTE_REQUIRED_MESSAGE,
 } from "@shared/taskCompletion";
@@ -199,7 +201,7 @@ export function useMobileTaskDetail() {
 
   const updateSubtaskStatusMutation = useMutation({
     mutationFn: async ({ subtaskId, status }: { subtaskId: string; status: string }) => {
-      return apiRequest("PATCH", `/api/tasks/${subtaskId}`, { status });
+      return apiRequest("PATCH", subtaskStatusPath(subtaskId), { status });
     },
     onSuccess: () => {
       invalidateTaskAfterMutation(id);
@@ -352,10 +354,8 @@ export function useMobileTaskDetail() {
   const isCompleted = task?.status === "completed";
   const completedSubtasks = subtasks?.filter(s => s.status === "completed").length || 0;
   const totalSubtasks = subtasks?.length || 0;
-  const allSubtasksDone = totalSubtasks === 0 || completedSubtasks === totalSubtasks;
+  const allSubtasksDone = !openSubtasksBlockCompletion(subtasks);
   const subtaskProgress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
-  const estimateBlocksCompletion = !!task?.requiresEstimate && task?.estimateStatus !== "approved";
-
   const handleStartTask = async () => {
     if (!id || !task) return;
     if (task.assignedPool && !task.assignedToId) {
@@ -374,14 +374,6 @@ export function useMobileTaskDetail() {
 
   const handleMarkComplete = async () => {
     if (!allSubtasksDone) return;
-    if (estimateBlocksCompletion) {
-      toast({
-        title: "Cannot complete",
-        description: "Estimates must be approved first.",
-        variant: "destructive",
-      });
-      return;
-    }
     if (missingCompletionPhoto({
       role: user?.role,
       lifeSafetyRound: task?.lifeSafetyRound,

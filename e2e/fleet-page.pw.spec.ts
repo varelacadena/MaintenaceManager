@@ -1,4 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
+import { adminAccount, technicianAccount } from "./api";
 
 async function login(page: Page, username: string, password: string) {
   await page.goto("/login");
@@ -10,7 +11,7 @@ async function login(page: Page, username: string, password: string) {
 
 test.describe("Fleet page – admin", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "admin", "123456");
+    await login(page, adminAccount.username, adminAccount.password);
     await page.goto("/vehicles");
     await page.waitForLoadState("networkidle");
   });
@@ -48,7 +49,7 @@ test.describe("Fleet page – admin", () => {
 
 test.describe("Fleet page – technician", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "maintenance", "123456");
+    await login(page, technicianAccount.username, technicianAccount.password);
     await page.goto("/vehicles?tab=reservations");
     await page.waitForLoadState("networkidle");
   });

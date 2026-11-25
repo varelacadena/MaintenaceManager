@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TECH_PERMISSION_LABELS, getTechPermissionValue, techPermissionField, type TechPermissionKey } from "@shared/techPermissions";
 import type { UsersContext } from "./useUsers";
 import { formatUserDisplayName } from "@/lib/displayNames";
-import { getInitials } from "@/utils/taskUtils";
+import { getInitials } from "@/lib/taskUtils";
 
 const PERMISSION_KEYS: TechPermissionKey[] = ["equipment", "fleet", "inventory", "purchases"];
 

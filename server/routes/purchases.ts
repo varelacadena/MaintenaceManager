@@ -39,12 +39,12 @@ const receiptSchema = z.object({
   objectPath: z.string().trim().min(1).max(1000),
 });
 
-const linkSchema = z.object({
+export const linkSchema = z.object({
   kind: z.enum(PURCHASE_LINK_KINDS),
   targetId: z.string().trim().min(1).max(80),
 });
 
-const purchaseFields = z.object({
+export const purchaseFields = z.object({
   storeName: z.string().trim().min(1, "Enter the store").max(200),
   description: z.string().trim().min(1, "Enter what was bought").max(500),
   amount: z.number().positive("Enter the amount paid").max(1_000_000),
@@ -54,7 +54,13 @@ const purchaseFields = z.object({
   purposeNote: z.string().trim().max(300).nullable().optional(),
 });
 
-function money(value: number): number {
+export const refundFields = z.object({
+  amount: z.number().positive("Enter the refund amount").max(1_000_000),
+  refundedOn: z.string().regex(dayPattern, "Enter the refund date"),
+  note: z.string().trim().max(300).optional(),
+});
+
+export function money(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
@@ -521,11 +527,7 @@ export function registerPurchaseRoutes(app: Express) {
       const user = req.currentUser as User;
       const existing = await getPurchaseView(req.params.id);
       if (!existing) return res.status(404).json({ message: "Receipt not found" });
-      const parsed = z.object({
-        amount: z.number().positive("Enter the refund amount").max(1_000_000),
-        refundedOn: z.string().regex(dayPattern, "Enter the refund date"),
-        note: z.string().trim().max(300).optional(),
-      }).safeParse(req.body);
+      const parsed = refundFields.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: parsed.error.errors[0]?.message || "Check the refund and try again." });
       }

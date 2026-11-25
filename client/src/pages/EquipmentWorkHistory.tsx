@@ -11,7 +11,7 @@ import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { FileAttachment } from "@/components/FileAttachment";
 import ResourceCard from "@/components/ResourceCard";
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { toDisplayUrl } from "@/lib/imageUtils";
 

@@ -1,66 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Building2,
   ChevronRight,
-  Paperclip,
-  Download,
   BookOpen,
 } from "lucide-react";
-import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import ResourceCard from "@/components/ResourceCard";
-import type { Property, QuoteAttachment } from "@shared/schema";
+import type { Property } from "@shared/schema";
 import { isToday, isTomorrow, isPast, format } from "date-fns";
-
-export function QuoteAttachmentsList({ quoteId }: { quoteId: string }) {
-  const { data: attachments = [], isLoading } = useQuery<QuoteAttachment[]>({
-    queryKey: ["/api/quotes", quoteId, "attachments"],
-  });
-  const { openImagePreview } = useImagePreview();
-
-  if (isLoading) {
-    return <div className="text-xs text-muted-foreground">Loading attachments...</div>;
-  }
-
-  if (attachments.length === 0) {
-    return null;
-  }
-
-  const handleDownload = (attachment: QuoteAttachment) => {
-    openResourceUrl(openImagePreview, attachment.storageUrl, {
-      title: attachment.fileName,
-      fileType: attachment.fileType,
-    });
-  };
-
-  return (
-    <div className="mt-3 pt-3 border-t border-border/50">
-      <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-        <Paperclip className="w-3 h-3" />
-        Attachments ({attachments.length})
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {attachments.map((attachment) => (
-          <Button
-            key={attachment.id}
-            variant="outline"
-            size="sm"
-            className="text-xs h-7 px-2 gap-1"
-            onClick={() => handleDownload(attachment)}
-            data-testid={`button-download-attachment-${attachment.id}`}
-          >
-            <Download className="w-3 h-3" />
-            {attachment.fileName.length > 20 
-              ? attachment.fileName.substring(0, 17) + "..." 
-              : attachment.fileName}
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function MultiPropertyDisplay({ properties, isTechnicianOrAdmin, safeNavigate }: {
   properties: Property[];

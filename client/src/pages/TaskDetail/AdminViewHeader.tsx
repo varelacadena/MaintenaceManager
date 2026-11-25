@@ -22,7 +22,7 @@ import {
 import { statusColors, urgencyColors } from "./constants";
 import { MultiPropertyDisplay } from "./helpers";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
-import { formatTaskReferenceId, getUserDisplayName } from "@/utils/taskUtils";
+import { formatTaskReferenceId, getUserDisplayName } from "@/lib/taskUtils";
 import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
@@ -173,25 +173,6 @@ export function AdminViewHeader({ ctx }: { ctx: TaskDetailContext }) {
       </div>
 
       <TaskScheduleSummary task={task} isOverdue={isOverdue} />
-
-      {task.requiresEstimate && (
-        task.estimateStatus === "needs_estimate" ? (
-          <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-needs">
-            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <p className="text-sm text-amber-800 dark:text-amber-300">This task requires an estimate. Estimates must be submitted and approved before completion.</p>
-          </div>
-        ) : task.estimateStatus === "waiting_approval" ? (
-          <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-md" data-testid="banner-estimate-waiting">
-            <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
-            <p className="text-sm text-purple-800 dark:text-purple-300">Estimates submitted and pending approval.</p>
-          </div>
-        ) : task.estimateStatus === "approved" ? (
-          <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
-            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-            <p className="text-sm text-green-800 dark:text-green-300">Estimate approved — this task can be completed.</p>
-          </div>
-        ) : null
-      )}
 
       {task?.isCampusWide && (
         <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-md border border-primary/20" data-testid="display-campus-wide">

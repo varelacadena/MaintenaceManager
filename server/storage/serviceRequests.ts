@@ -6,9 +6,6 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, desc, count, inArray, isNull } from "drizzle-orm";
-import { formatUserDisplayName } from "@shared/displayNames";
-import { getUser } from "./users";
-import { getProperty } from "./facilities";
 
 const SERVICE_REQUEST_LIST_LIMIT = 500;
 
@@ -68,18 +65,9 @@ export async function getServiceRequest(id: string): Promise<ServiceRequest | un
 }
 
 export async function createServiceRequest(requestData: InsertServiceRequest): Promise<ServiceRequest> {
-  const payload: InsertServiceRequest = { ...requestData };
-  if (payload.requesterId && !payload.requesterName) {
-    const user = await getUser(payload.requesterId);
-    if (user) payload.requesterName = formatUserDisplayName(user);
-  }
-  if (payload.propertyId && !payload.propertyName) {
-    const property = await getProperty(payload.propertyId);
-    if (property) payload.propertyName = property.name;
-  }
   const [request] = await db
     .insert(serviceRequests)
-    .values(payload)
+    .values(requestData)
     .returning();
   return request;
 }

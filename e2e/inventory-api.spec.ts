@@ -69,7 +69,7 @@ async function run() {
 
   await test("login roles", async () => {
     adminCookie = await login("admin", "123456");
-    techCookie = await login("maintenance", "123456");
+    techCookie = await login("Varela", "123456");
     assert.ok(adminCookie && techCookie);
     try {
       studentCookie = await login("student", "123456");

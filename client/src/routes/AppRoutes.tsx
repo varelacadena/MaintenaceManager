@@ -30,11 +30,11 @@ const Inventory = lazyWithRetry(() => import("@/pages/Inventory"));
 const Purchases = lazyWithRetry(() => import("@/pages/Purchases"));
 const MobileEquipmentPage = lazyWithRetry(() => import("@/pages/MobileEquipment"));
 const MobileEquipmentDetail = lazyWithRetry(() => import("@/pages/MobileEquipment/MobileEquipmentDetail"));
-const Vehicles = lazyWithRetry(() => import("@/pages/Vehicles"));
-const Drivers = lazyWithRetry(() => import("@/pages/Drivers"));
-const VehicleDetail = lazyWithRetry(() => import("@/pages/VehicleDetail"));
+const Vehicles = lazyWithRetry(() => import("@/pages/Fleet"));
+const Drivers = lazyWithRetry(() => import("@/pages/Fleet/Drivers"));
+const VehicleDetail = lazyWithRetry(() => import("@/pages/Fleet/VehicleDetail"));
 const VehicleQRRedirect = lazyWithRetry(() => import("@/pages/VehicleQRRedirect"));
-const VehicleEdit = lazyWithRetry(() => import("@/pages/VehicleEdit"));
+const VehicleEdit = lazyWithRetry(() => import("@/pages/Fleet/VehicleEdit"));
 const MyReservations = lazyWithRetry(() => import("@/pages/MyReservations"));
 const VehicleReservationDetails = lazyWithRetry(() => import("@/pages/VehicleReservationDetails"));
 const VehicleCheckOut = lazyWithRetry(() => import("@/pages/VehicleCheckOut"));
@@ -144,8 +144,6 @@ function EditTaskRoute() {
 }
 
 function TaskDetailRoute() {
-  const { user } = useAuth();
-  if (user?.role === "student") return <RedirectTo to="/work" />;
   return (
     <DomainErrorBoundary domain="Work Orders & Tasks">
       <TaskDetailResponsive />
@@ -310,7 +308,7 @@ function DriversRoute() {
 function VehiclesRoute() {
   return (
     <DomainErrorBoundary domain="Vehicle Fleet">
-      <RoleGuard allowedRoles={["admin", "technician"]} permission="fleet">
+      <RoleGuard allowedRoles={["admin", "technician"]}>
         <Vehicles />
       </RoleGuard>
     </DomainErrorBoundary>

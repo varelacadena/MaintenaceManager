@@ -2,13 +2,14 @@ import { relations } from "drizzle-orm";
 
 import { users, availabilitySchedules, userSkills } from "./users";
 import { studentTimeEntries, studentDailyRecaps, studentTimeEditRequests } from "./students";
-import { properties, spaces, equipment } from "./facilities";
-import { areas, subdivisions, serviceRequests } from "./serviceRequests";
+import { areas, equipment, properties, spaces, subdivisions } from "./facilities";
+import { serviceRequests } from "./serviceRequests";
 import { vendors } from "./vendors";
 import {
   tasks, timeEntries, taskNotes, taskChecklistGroups, taskChecklistItems,
-  taskHelpers, vehicleMaintenanceLogs, checklistTemplates,
+  taskHelpers, checklistTemplates,
 } from "./workOrders";
+import { vehicleMaintenanceLogs } from "./vehicleMaintenance";
 import {
   vehicles, vehicleReservations, vehicleCheckOutLogs, vehicleCheckInLogs,
   vehicleMaintenanceSchedules, vehicleDocuments,

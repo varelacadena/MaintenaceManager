@@ -3,7 +3,6 @@ import {
   Lock,
   ChevronRight,
   FileText,
-  Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { uploadIsCompletionPhoto } from "@shared/taskCompletion";
@@ -19,7 +18,6 @@ interface TechnicianTaskTabProps {
   task: Task;
   taskStarted: boolean;
   isCompleted: boolean;
-  estimateBlocksCompletion: boolean;
   taskHelpers: TaskHelperDisplay[];
   subTasks: Task[];
   completedSubTasks: number;
@@ -43,7 +41,6 @@ export function TechnicianTaskTab({
   task,
   taskStarted,
   isCompleted,
-  estimateBlocksCompletion,
   taskHelpers,
   subTasks,
   completedSubTasks,
@@ -83,23 +80,6 @@ export function TechnicianTaskTab({
             </p>
             <p className="text-xs text-green-700 dark:text-green-400 leading-relaxed">
               You can still add photos, parts, and notes.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {estimateBlocksCompletion && (
-        <div
-          className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
-          data-testid="banner-estimate-pending"
-        >
-          <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-          <div>
-            <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-              Estimate pending approval
-            </p>
-            <p className="text-xs mt-0.5 text-amber-700 dark:text-amber-400">
-              This task cannot be completed until the estimate is approved by an admin.
             </p>
           </div>
         </div>

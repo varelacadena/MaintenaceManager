@@ -20,7 +20,7 @@ import { goBack, hasPageBackControl } from "@/lib/navigation";
 import { fullLocation, trackLocation } from "@/lib/navigationHistory";
 import { installScrollMemory } from "@/lib/scrollMemory";
 import { formatUserDisplayName } from "@shared/displayNames";
-import { getInitials } from "@/utils/taskUtils";
+import { getInitials } from "@/lib/taskUtils";
 import { queryClient } from "./lib/queryClient";
 import { markRouteNavigation, measureRouteNavigation } from "@/lib/performanceMarks";
 import { AppRoutes } from "@/routes/AppRoutes";

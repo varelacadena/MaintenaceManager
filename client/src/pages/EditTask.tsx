@@ -1,4 +1,4 @@
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";

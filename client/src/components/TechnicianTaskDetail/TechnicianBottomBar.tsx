@@ -75,14 +75,7 @@ export function TechnicianBottomBar({
             <Check className="size-5 shrink-0" />
             <span className="truncate">Completed</span>
           </div>
-        ) : task.status === "needs_estimate" || task.status === "waiting_approval" ? (
-          <div
-            className={`${actionButtonClass} bg-muted-foreground`}
-            data-testid="bottom-button-estimate-required"
-          >
-            <span className="truncate">Estimate Required</span>
-          </div>
-        ) : task.status === "not_started" ? (
+        ) : task.status === "not_started" || task.status === "needs_estimate" || task.status === "waiting_approval" ? (
           <button
             className={`${actionButtonClass} bg-primary transition-colors`}
             onClick={handleStartTask}

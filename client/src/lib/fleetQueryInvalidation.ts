@@ -17,3 +17,17 @@ export function invalidateVehicleReservationQueries(queryClient: QueryClient) {
     },
   });
 }
+
+/** Screens that show a vehicle, its reservation, or the dashboard count after checkout. */
+export function isCheckoutRefreshQueryKey(key: readonly unknown[]): boolean {
+  const head = key[0];
+  if (typeof head !== "string") return false;
+  return (
+    head.startsWith("/api/vehicle-checkout-logs") ||
+    head.startsWith("/api/vehicles") ||
+    head.startsWith("/api/vehicle-reservations") ||
+    head.startsWith("/api/tasks") ||
+    head === "/api/dashboard" ||
+    head.startsWith("/api/dashboard/")
+  );
+}

@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
 import { useScrollAwareClick } from "@/hooks/useScrollAwareClick";
 import type { Task, User } from "@shared/schema";
-import { getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { getAvatarColor, getInitials, getUserDisplayName } from "@/lib/taskUtils";
 import type { StatusType } from "./constants";
 
 const WORK_TABLE_COLUMN_COUNT = 7;

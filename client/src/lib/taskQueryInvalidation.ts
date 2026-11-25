@@ -34,6 +34,12 @@ export function invalidateDashboard() {
   queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
 }
 
+/** Project status and property work history are not under `/api/tasks`. */
+function isTaskSurfaceOutsideTaskList(key: readonly unknown[]): boolean {
+  if (key[0] === "/api/projects") return true;
+  return key[0] === "/api/properties" && key.includes("tasks");
+}
+
 /** Prefer targeted list/detail refresh over invalidating every task query. */
 export function invalidateTaskAfterMutation(
   taskId?: string,
@@ -45,11 +51,9 @@ export function invalidateTaskAfterMutation(
   if (taskId) {
     invalidateTaskDetail(taskId);
   }
-  if (options?.broad) {
-    invalidateTaskLists();
-    invalidateDashboard();
-    return;
-  }
   invalidateTaskLists();
   invalidateDashboard();
+  queryClient.invalidateQueries({
+    predicate: (query) => isTaskSurfaceOutsideTaskList(query.queryKey),
+  });
 }

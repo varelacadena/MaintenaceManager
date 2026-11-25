@@ -93,7 +93,7 @@ async function main() {
   console.log("\n=== Task Features E2E Tests ===\n");
 
   const adminSession = await login("admin", "123456");
-  const techSession = await login("maintenance", "123456");
+  const techSession = await login("Varela", "123456");
   const studentSession = await login("Sebastian", "123456");
 
   const adminCookie = adminSession.cookie;

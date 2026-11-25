@@ -11,12 +11,12 @@ import type { TechnicianTaskDetailProps } from "./types";
 
 export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
   const {
-    task, multiProperties = [], parts, quotes, vendors, inventoryItems, taskHelpers = [],
+    task, multiProperties = [], parts, inventoryItems, taskHelpers = [],
     checklistGroups, subTasks, uploads, notes, allTaskResources, propertyResources, previousWork, users,
     completedSubTasks, subTaskProgress,
-    totalChecklistItems, completedChecklistItems, estimateBlocksCompletion,
+    totalChecklistItems, completedChecklistItems,
     startTimerMutation, stopTimerMutation, addPartMutation, addUploadMutation,
-    toggleChecklistItemMutation, createQuoteMutation, deleteUploadMutation,
+    toggleChecklistItemMutation, deleteUploadMutation,
     safeNavigate, getUploadParameters, handleAutoSaveUpload,
     handleEquipmentScan, handleScanPart,
     isScanEquipmentOpen, setIsScanEquipmentOpen,
@@ -25,11 +25,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
     selectedInventoryItemId, setSelectedInventoryItemId,
     inventorySearchQuery, setInventorySearchQuery,
     partQuantity, setPartQuantity, partNotes, setPartNotes,
-    newQuoteEstimatedCost, setNewQuoteEstimatedCost,
-    newQuoteVendorId, setNewQuoteVendorId,
-    newQuoteVendorName, setNewQuoteVendorName,
-    newQuoteNotes, setNewQuoteNotes,
-    pendingQuoteFiles,
   } = props;
 
   const resourcesForSheet = allTaskResources;
@@ -84,7 +79,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               task={task}
               taskStarted={hook.taskStarted}
               isCompleted={hook.isCompleted}
-              estimateBlocksCompletion={estimateBlocksCompletion}
               taskHelpers={taskHelpers}
               subTasks={subTasks}
               completedSubTasks={completedSubTasks}
@@ -111,13 +105,11 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
               contactName={hook.contactName}
               contactPhone={hook.contactPhone}
               contactInitials={hook.contactInitials}
-              existingQuote={hook.existingQuote}
               parts={parts}
               previousWork={previousWork}
               allTaskResources={allTaskResources}
               propertyResources={propertyResources}
               isEquipmentLoading={isEquipmentLoading}
-              setIsEstimateSheetOpen={hook.setIsEstimateSheetOpen}
               setIsPartModalOpen={hook.setIsPartModalOpen}
               setIsPreviousWorkOpen={hook.setIsPreviousWorkOpen}
               setIsResourcesOpen={hook.setIsResourcesOpen}
@@ -158,7 +150,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         handlePauseConfirm={hook.handlePauseConfirm}
         handleMarkComplete={hook.handleMarkComplete}
         stopTimerMutation={stopTimerMutation}
-        estimateBlocksCompletion={estimateBlocksCompletion}
         completionNoteValue={hook.completionNoteValue}
         completionNoteError={hook.completionNoteError}
         notesReady={hook.notesReady}
@@ -167,10 +158,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         getUploadParameters={getUploadParameters}
         handleAutoSaveUpload={handleAutoSaveUpload}
         addUploadMutation={addUploadMutation}
-        isEstimateSheetOpen={hook.isEstimateSheetOpen}
-        setIsEstimateSheetOpen={hook.setIsEstimateSheetOpen}
-        quotes={quotes}
-        setIsAddQuoteDialogOpen={props.setIsAddQuoteDialogOpen}
         isPartModalOpen={hook.isPartModalOpen}
         setIsPartModalOpen={hook.setIsPartModalOpen}
         inventorySearchQuery={inventorySearchQuery}
@@ -194,19 +181,6 @@ export function TechnicianTaskDetail(props: TechnicianTaskDetailProps) {
         handlePauseAndLeave={hook.handlePauseAndLeave}
       />
       <TechnicianDialogsExtra
-        isAddQuoteDialogOpen={props.isAddQuoteDialogOpen}
-        setIsAddQuoteDialogOpen={props.setIsAddQuoteDialogOpen}
-        newQuoteEstimatedCost={newQuoteEstimatedCost}
-        setNewQuoteEstimatedCost={setNewQuoteEstimatedCost}
-        newQuoteVendorId={newQuoteVendorId}
-        setNewQuoteVendorId={setNewQuoteVendorId}
-        newQuoteVendorName={newQuoteVendorName}
-        setNewQuoteVendorName={setNewQuoteVendorName}
-        newQuoteNotes={newQuoteNotes}
-        setNewQuoteNotes={setNewQuoteNotes}
-        vendors={vendors}
-        createQuoteMutation={createQuoteMutation}
-        pendingQuoteFiles={pendingQuoteFiles}
         isPreviousWorkOpen={hook.isPreviousWorkOpen}
         setIsPreviousWorkOpen={hook.setIsPreviousWorkOpen}
         previousWork={previousWork}

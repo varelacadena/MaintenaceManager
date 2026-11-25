@@ -22,13 +22,12 @@ import {
 } from "lucide-react";
 import { EditableTextCell } from "@/components/EditableTextCell";
 import { EditableDateCell } from "@/components/EditableDateCell";
-import { urgencyConfig, taskStatusBadgeColors as taskStatusColors, statusDotColors, taskStatusConfig, getAvatarColor, getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { urgencyConfig, taskStatusBadgeColors as taskStatusColors, statusDotColors, taskStatusConfig, getAvatarColor, getInitials, getUserDisplayName } from "@/lib/taskUtils";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Task, User, Property } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { buildTaskRowAriaLabel, handleKeyboardActivate } from "./workA11y";
-import { formatTaskReferenceId } from "@/utils/taskUtils";
-
+import { formatTaskReferenceId } from "@/lib/taskUtils";
 function rowSubtitle(task: Task): string {
   const vehicle = task.vehicleName?.trim();
   const description = (task.description || "").replace(/\s+/g, " ").trim();
@@ -245,12 +244,6 @@ export const TaskTableRow = memo(function TaskTableRow({
             </SelectTrigger>
             <SelectContent>
               {taskStatusConfig
-                .filter((s) => {
-                  if (s.key === "completed" && task.requiresEstimate && task.estimateStatus !== "approved") {
-                    return false;
-                  }
-                  return true;
-                })
                 .map((s) => (
                 <SelectItem key={s.key} value={s.key}>
                   {s.label}
@@ -258,20 +251,6 @@ export const TaskTableRow = memo(function TaskTableRow({
               ))}
             </SelectContent>
           </Select>
-          {isAdmin && task.requiresEstimate && task.estimateStatus === "waiting_approval" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onReviewEstimates?.(task.id);
-              }}
-              className="text-xs"
-              data-testid={`button-review-estimates-${task.id}`}
-            >
-              Review & Approve
-            </Button>
-          )}
         </div>
       </TableCell>
       <TableCell className="py-2.5">

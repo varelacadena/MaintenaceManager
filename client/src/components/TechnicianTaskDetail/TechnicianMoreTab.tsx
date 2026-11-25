@@ -1,6 +1,5 @@
 import {
   Phone,
-  CircleDollarSign,
   Package,
   History,
   FileText,
@@ -15,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
-import type { Task, PartUsed, Quote, Equipment } from "@shared/schema";
+import type { Task, PartUsed, Equipment } from "@shared/schema";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 import { StoreRunMoreRow } from "@/components/StoreRuns";
 
@@ -36,13 +35,11 @@ interface TechnicianMoreTabProps {
   contactName: string;
   contactPhone: string;
   contactInitials: string;
-  existingQuote: Quote | null;
   parts: PartUsed[];
   previousWork: Task[];
   allTaskResources: any[];
   propertyResources: any[];
   isEquipmentLoading: boolean;
-  setIsEstimateSheetOpen: (v: boolean) => void;
   setIsPartModalOpen: (v: boolean) => void;
   setIsPreviousWorkOpen: (v: boolean) => void;
   setIsResourcesOpen: (v: boolean) => void;
@@ -57,12 +54,10 @@ export function TechnicianMoreTab({
   contactName,
   contactPhone,
   contactInitials,
-  existingQuote,
   parts,
   previousWork,
   allTaskResources,
   isEquipmentLoading,
-  setIsEstimateSheetOpen,
   setIsPartModalOpen,
   setIsPreviousWorkOpen,
   setIsResourcesOpen,
@@ -227,36 +222,6 @@ export function TechnicianMoreTab({
         className="p-3 rounded-xl bg-background border border-border"
         data-testid="card-actions"
       >
-        {task.requiresEstimate && (
-          <button
-            className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
-            onClick={() => setIsEstimateSheetOpen(true)}
-            data-testid="action-estimate"
-          >
-            <div
-              className="flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/30 rounded-lg"
-              style={{ width: 32, height: 32 }}
-            >
-              <CircleDollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">
-                Estimate / Quote
-              </p>
-              {existingQuote && (
-                <p className="text-xs text-muted-foreground truncate">
-                  {task.estimateStatus === "waiting_approval"
-                    ? `Pending approval \u00B7 $${(existingQuote.estimatedCost || 0).toFixed(2)}`
-                    : task.estimateStatus === "approved"
-                      ? `Approved \u00B7 $${(existingQuote.estimatedCost || 0).toFixed(2)}`
-                      : `$${(existingQuote.estimatedCost || 0).toFixed(2)}`}
-                </p>
-              )}
-            </div>
-            <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
-          </button>
-        )}
-
         <button
           className="flex items-center gap-3 w-full py-3 text-left border-b border-border"
           onClick={() => setIsPartModalOpen(true)}

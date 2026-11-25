@@ -22,15 +22,7 @@ export {
   getServiceRequestUrgencyLabel,
 } from "./serviceRequestLabels";
 
-export const taskStatusLabels: Record<string, string> = {
-  not_started: "Not Started",
-  needs_estimate: "Needs Estimate",
-  waiting_approval: "Waiting Approval",
-  ready: "Ready to Start",
-  in_progress: "In Progress",
-  on_hold: "On Hold",
-  completed: "Completed",
-};
+export { taskStatusLabels } from "./taskStatusLabels";
 
 export const taskStatusColors: Record<string, string> = {
   not_started: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",

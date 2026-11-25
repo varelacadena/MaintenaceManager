@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { EstimateReviewDialog } from "@/components/EstimateReviewDialog";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import type { Property } from "@shared/schema";
@@ -316,16 +315,6 @@ export function ProjectDetailDialogs({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {reviewEstimatesTaskId && (
-        <EstimateReviewDialog
-          taskId={reviewEstimatesTaskId}
-          open={!!reviewEstimatesTaskId}
-          onOpenChange={(open) => {
-            if (!open) setReviewEstimatesTaskId(null);
-          }}
-        />
-      )}
 
       {summaryTaskId && (
         <CompletedTaskSummary

@@ -49,7 +49,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VehicleReservationsContent } from "@/pages/VehicleReservations";
+import { VehicleReservationsContent } from "./VehicleReservations";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import CodeHub from "@/components/CodeHub";
 import { ObjectUploader } from "@/components/ObjectUploader";

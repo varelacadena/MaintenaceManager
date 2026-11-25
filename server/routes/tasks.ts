@@ -13,10 +13,13 @@ import {
   completionPhotoIsRequired,
   roleRequiresWorkNoteOnCompletion,
   uploadIsCompletionPhoto,
+  openSubtasksBlockCompletion,
   PHOTO_REQUIRED_MESSAGE,
   WORK_NOTE_REQUIRED_MESSAGE,
 } from "@shared/taskCompletion";
 import { sanitizeTaskPatch } from "@shared/taskPatch";
+import { formatUserDisplayName } from "@shared/displayNames";
+import { userDisplayName } from "../displayNameFill";
 import { resolvePartLineCost } from "../inventoryPartCost";
 import { redactPartsUsedForRole } from "../inventoryDto";
 import { z } from "zod";
@@ -645,6 +648,7 @@ export function registerTaskRoutes(app: Express) {
         await storage.createTaskNote({
           taskId: req.params.id,
           userId: userId,
+          userName: formatUserDisplayName(currentUser),
           content: `Claimed by ${displayName}`,
           noteType: "job_note",
         });
@@ -768,16 +772,11 @@ export function registerTaskRoutes(app: Express) {
         if (!currentTask) {
           return res.status(404).json({ message: "Task not found" });
         }
-        if (currentTask.requiresEstimate) {
-          const taskQuotes = await storage.getQuotesByTaskId(req.params.id);
-          if (taskQuotes.length === 0) {
-            return res.status(400).json({ message: "Submit an estimate before completing this task" });
-          }
-          if (currentTask.estimateStatus !== "approved") {
-            return res.status(400).json({ message: "Estimates must be approved before completing this task" });
-          }
-        }
         if (currentTask.status !== "completed") {
+          const subtaskMessage = openSubtasksBlockCompletion(await storage.getSubTasks(currentTask.id));
+          if (subtaskMessage) {
+            return res.status(400).json({ message: subtaskMessage });
+          }
           if (await rejectIfLifeSafetyOpen(res, currentTask)) {
             return;
           }
@@ -1150,17 +1149,11 @@ export function registerTaskRoutes(app: Express) {
         }
       }
 
-      if (normalizedStatus === "completed" && task.requiresEstimate) {
-        const taskQuotes = await storage.getQuotesByTaskId(taskId);
-        if (taskQuotes.length === 0) {
-          return res.status(400).json({ message: "Submit an estimate before completing this task" });
-        }
-        if (task.estimateStatus !== "approved") {
-          return res.status(400).json({ message: "Estimates must be approved before completing this task" });
-        }
-      }
-
       if (normalizedStatus === "completed" && task.status !== "completed") {
+        const subtaskMessage = openSubtasksBlockCompletion(await storage.getSubTasks(taskId));
+        if (subtaskMessage) {
+          return res.status(400).json({ message: subtaskMessage });
+        }
         if (await rejectIfLifeSafetyOpen(res, task)) {
           return;
         }
@@ -1210,6 +1203,7 @@ export function registerTaskRoutes(app: Express) {
         await storage.createTaskNote({
           taskId,
           userId: (req as any).userId,
+          userName: currentUser ? formatUserDisplayName(currentUser) : null,
           content: `Task placed on hold: ${onHoldReason}`,
           noteType: "job_note"
         });
@@ -1347,6 +1341,7 @@ export function registerTaskRoutes(app: Express) {
         startTime: req.body.startTime ? new Date(req.body.startTime) : new Date(),
         endTime: req.body.endTime ? new Date(req.body.endTime) : undefined,
         userId,
+        userName: req.body.userName || (await userDisplayName(userId)),
       });
       res.json(entry);
     } catch (error) {
@@ -1519,6 +1514,7 @@ export function registerTaskRoutes(app: Express) {
       const noteData = insertTaskNoteSchema.parse({
         ...req.body,
         userId,
+        userName: req.body.userName || (await userDisplayName(userId)),
       });
       const note = await storage.createTaskNote(noteData);
       res.json(note);

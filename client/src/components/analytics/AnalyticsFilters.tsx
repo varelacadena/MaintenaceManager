@@ -1,4 +1,4 @@
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 import { useAnalyticsFilters } from "@/pages/analytics/useAnalyticsFilters";
 import { useQuery } from "@tanstack/react-query";
 import { parse, format } from "date-fns";

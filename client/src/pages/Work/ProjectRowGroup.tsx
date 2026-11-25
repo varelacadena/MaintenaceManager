@@ -20,7 +20,7 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import {
   taskStatusBadgeColors as taskStatusColors,
-} from "@/utils/taskUtils";
+} from "@/lib/taskUtils";
 import type { Task, User, Property, Project } from "@shared/schema";
 import type { StatusType } from "./constants";
 import { projectStatusMapping, projectPriorityConfig } from "./constants";

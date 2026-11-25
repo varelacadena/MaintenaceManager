@@ -1,4 +1,4 @@
-import { getInitials, getUserDisplayName } from "@/utils/taskUtils";
+import { getInitials, getUserDisplayName } from "@/lib/taskUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

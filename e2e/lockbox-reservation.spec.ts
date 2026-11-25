@@ -56,7 +56,7 @@ async function run() {
   /**
    * Credential mapping (verified against database):
    *   admin      -> role: admin,      password: 123456
-   *   maintenance -> role: technician, password: 123456
+   *   Varela     -> role: technician, password: 123456
    *   Norberto   -> role: staff,      password: norberto123
    *   Sebastian  -> role: student,    password: 123456
    */
@@ -75,8 +75,8 @@ async function run() {
     assert.ok(adminCookie, "Admin cookie should be set");
   });
 
-  await test("authenticates technician (maintenance/123456)", async () => {
-    techCookie = await login("maintenance", "123456");
+  await test("authenticates technician (Varela/123456)", async () => {
+    techCookie = await login("Varela", "123456");
     assert.ok(techCookie, "Tech cookie should be set");
   });
 

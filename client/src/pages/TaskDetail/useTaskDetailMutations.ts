@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTaskAfterMutation, patchTaskInListCaches } from "@/lib/taskQueryInvalidation";
-import { taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
+import { taskDeleteUrl, type TaskDeleteScope } from "@/lib/taskUtils";
 import type {
   Task,
   TimeEntry,
@@ -85,18 +85,6 @@ interface MutationDeps {
   setNewNote: (v: string) => void;
   setNoteType: (v: "job_note" | "recommendation") => void;
   setIsAddNoteDialogOpen: (v: boolean) => void;
-  setNewQuoteVendorId: (v: string) => void;
-  setNewQuoteVendorName: (v: string) => void;
-  setNewQuoteEstimatedCost: (v: string) => void;
-  setNewQuoteNotes: (v: string) => void;
-  setPendingQuoteFiles: (v: Array<{url: string, fileName: string, fileType: string, fileSize: number}>) => void;
-  setIsAddQuoteDialogOpen: (v: boolean) => void;
-  setNewVendorName: (v: string) => void;
-  setNewVendorEmail: (v: string) => void;
-  setNewVendorPhone: (v: string) => void;
-  setNewVendorAddress: (v: string) => void;
-  setNewVendorNotes: (v: string) => void;
-  setIsAddVendorDialogOpen: (v: boolean) => void;
 }
 
 export function useTaskDetailMutations(deps: MutationDeps) {
@@ -112,10 +100,6 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     setQuickInventoryName, setQuickInventoryQuantity, setQuickInventoryUnit,
     setIsAddPartDialogOpen, setPartNotes, setPartQuantity, setInventorySearchQuery,
     setNewNote, setNoteType, setIsAddNoteDialogOpen,
-    setNewQuoteVendorId, setNewQuoteVendorName, setNewQuoteEstimatedCost,
-    setNewQuoteNotes, setPendingQuoteFiles, setIsAddQuoteDialogOpen,
-    setNewVendorName, setNewVendorEmail, setNewVendorPhone,
-    setNewVendorAddress, setNewVendorNotes, setIsAddVendorDialogOpen,
   } = deps;
 
   const addSubTaskMutation = useMutation({
@@ -390,111 +374,6 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     onError: () => toast({ title: "Failed to delete note", variant: "destructive" }),
   });
 
-  const createQuoteMutation = useMutation({
-    mutationFn: async ({ vendorName, estimatedCost, notes, files }: { vendorName: string, estimatedCost: number, notes: string, files: Array<{url: string, fileName: string, fileType: string, fileSize: number}> }) => {
-      const response = await apiRequest("POST", "/api/quotes", { 
-        taskId: id, 
-        vendorName: vendorName || null, 
-        estimatedCost, 
-        notes: notes || null,
-        status: "draft",
-      });
-      const quote = await response.json();
-      
-      if (files.length > 0 && quote.id) {
-        for (const file of files) {
-          await apiRequest("POST", `/api/quotes/${quote.id}/attachments`, {
-            fileName: file.fileName,
-            fileType: file.fileType,
-            fileSize: file.fileSize,
-            storageUrl: file.url,
-          });
-        }
-      }
-      
-      return quote;
-    },
-    onSuccess: () => {
-      setNewQuoteVendorId("");
-      setNewQuoteVendorName("");
-      setNewQuoteEstimatedCost("");
-      setNewQuoteNotes("");
-      setPendingQuoteFiles([]);
-      setIsAddQuoteDialogOpen(false);
-      toast({ title: "Quote added", description: "The estimate has been added for comparison." });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-    },
-    onError: () => toast({ title: "Failed to create quote", variant: "destructive" }),
-  });
-
-  const approveQuoteMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      return await apiRequest("POST", `/api/quotes/${quoteId}/approve`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      invalidateTaskAfterMutation(id);
-      toast({ title: "Quote approved", description: "The task is now ready to start work." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to approve quote", variant: "destructive" });
-    },
-  });
-
-  const rejectQuoteMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      return await apiRequest("POST", `/api/quotes/${quoteId}/reject`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id] });
-      invalidateTaskAfterMutation(id);
-      toast({ title: "Estimate rejected", description: "The estimate has been rejected." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to reject estimate", variant: "destructive" });
-    },
-  });
-
-  const deleteQuoteMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      return await apiRequest("DELETE", `/api/quotes/${quoteId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", id, "quotes"] });
-      toast({ title: "Estimate deleted" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to delete estimate", variant: "destructive" });
-    },
-  });
-
-  const createVendorMutation = useMutation({
-    mutationFn: async (vendorData: { name: string; email?: string; phone?: string; address?: string; notes?: string }) => {
-      const response = await apiRequest("POST", "/api/vendors", vendorData);
-      return response.json();
-    },
-    onSuccess: (newVendor) => {
-      setNewQuoteVendorId(newVendor.id);
-      setNewQuoteVendorName(newVendor.name);
-      setNewVendorName("");
-      setNewVendorEmail("");
-      setNewVendorPhone("");
-      setNewVendorAddress("");
-      setNewVendorNotes("");
-      setIsAddVendorDialogOpen(false);
-      toast({ title: "Vendor created", description: `${newVendor.name} has been added.` });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
-    },
-    onError: () => toast({ title: "Failed to create vendor", variant: "destructive" }),
-  });
-
   const addUploadMutation = useMutation({
     mutationFn: async ({
       fileName,
@@ -596,11 +475,6 @@ export function useTaskDetailMutations(deps: MutationDeps) {
     addNoteMutation,
     updateNoteMutation,
     deleteNoteMutation,
-    createQuoteMutation,
-    approveQuoteMutation,
-    rejectQuoteMutation,
-    deleteQuoteMutation,
-    createVendorMutation,
     addUploadMutation,
     deleteUploadMutation,
     toggleChecklistItemMutation,

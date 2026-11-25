@@ -21,8 +21,8 @@ import type {
   TaskChecklistGroup,
   TaskChecklistItem,
 } from "@shared/schema";
-import { panelStatusDotStyle, panelStatusPillStyle, panelStatusLabels, priorityConfig, getAvatarHexColor as getAvatarColorForId, getInitials, getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
-import { missingCompletionPhoto, PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
+import { panelStatusDotStyle, panelStatusPillStyle, panelStatusLabels, priorityConfig, getAvatarHexColor as getAvatarColorForId, getInitials, getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/lib/taskUtils";
+import { missingCompletionPhoto, openSubtasksBlockCompletion, OPEN_SUBTASKS_MESSAGE, PHOTO_REQUIRED_MESSAGE } from "@shared/taskCompletion";
 import { buildManualTimeEntryRange, durationFromHoursAndMinutes, splitMinutes } from "@/lib/timeEntryUtils";
 import { getTaskDateInputValue } from "@/lib/taskCalendarDates";
 
@@ -485,7 +485,7 @@ export function useTaskDetailPanel({
 
   const completedSubtasks = subtasks?.filter((s) => s.status === "completed").length || 0;
   const totalSubtasks = subtasks?.length || 0;
-  const allSubtasksComplete = totalSubtasks > 0 && completedSubtasks === totalSubtasks;
+  const allSubtasksComplete = !openSubtasksBlockCompletion(subtasks);
   const isStarted = task?.status === "in_progress";
   const isCompleted = task?.status === "completed";
   const isNotStarted = task?.status === "not_started";
@@ -513,15 +513,7 @@ export function useTaskDetailPanel({
     if (!allSubtasksComplete && totalSubtasks > 0) {
       toast({
         title: "Cannot complete task",
-        description: "All subtasks must be completed first.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (task?.requiresEstimate && task?.estimateStatus !== "approved") {
-      toast({
-        title: "Cannot complete task",
-        description: "Estimates must be approved before completing this task.",
+        description: OPEN_SUBTASKS_MESSAGE,
         variant: "destructive",
       });
       return;

@@ -48,7 +48,7 @@ import { PhotoThumbnailGrid } from "./PanelResourcesSection";
 import { PanelNoteList } from "./PanelNotesSection";
 import { PanelPhotoUploadTrigger } from "./PanelPhotoUploadTrigger";
 import { PanelFileInput } from "./PanelFileInput";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskReferenceId, formatTaskDate, formatTaskDateTime } from "@/lib/taskUtils";
 import { EditableDateCell } from "@/components/EditableDateCell";
 import { CompletedTaskSummary } from "@/components/CompletedTaskSummary";
 import { StoreRunPanel } from "@/components/StoreRuns";

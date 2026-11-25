@@ -21,7 +21,7 @@ async function login(username: string, password: string): Promise<string> {
 async function run() {
   console.log("\n=== Task Upload API E2E ===\n");
 
-  const cookie = await login("maintenance", "123456");
+  const cookie = await login("Varela", "123456");
   const headers = { Cookie: cookie, "Content-Type": "application/json" };
 
   const tasksRes = await fetch(`${BASE_URL}/api/tasks`, { headers });

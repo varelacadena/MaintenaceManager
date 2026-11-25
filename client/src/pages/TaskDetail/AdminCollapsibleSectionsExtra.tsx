@@ -1,4 +1,3 @@
-import { getUserDisplayName } from "@/utils/taskUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,27 +29,20 @@ import {
   ChevronRight,
   CheckCircle2,
   Check,
-  CircleDollarSign,
 } from "lucide-react";
-import { statusColors, quoteStatusColors } from "./constants";
-import { QuoteAttachmentsList } from "./helpers";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
 
 export function AdminCollapsibleSectionsExtra({ ctx }: { ctx: TaskDetailContext }) {
   const {
     task, user, downloadFile,
-    parts, uploads, requestAttachments, quotes, users,
+    parts, uploads, requestAttachments,
     attachmentsExpanded, setAttachmentsExpanded,
     partsExpanded, setPartsExpanded,
-    quotesExpanded, setQuotesExpanded,
     isAddPartDialogOpen, setIsAddPartDialogOpen,
-    isAddQuoteDialogOpen, setIsAddQuoteDialogOpen,
     partsSectionRef,
     deleteUploadMutation,
-    approveQuoteMutation, rejectQuoteMutation, deleteQuoteMutation,
     isTechnicianOrAdmin,
-    estimateBlocksCompletion,
   } = ctx;
 
   if (!task) return null;
@@ -153,141 +145,6 @@ export function AdminCollapsibleSectionsExtra({ ctx }: { ctx: TaskDetailContext 
           )}
         </CollapsibleContent>
       </Collapsible>
-
-      {task?.requiresEstimate && isTechnicianOrAdmin && (
-        <Collapsible open={quotesExpanded} onOpenChange={setQuotesExpanded}>
-          <CollapsibleTrigger asChild>
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg cursor-pointer hover-elevate" data-testid="toggle-quotes">
-              <div className="flex items-center gap-3">
-                <CircleDollarSign className="w-5 h-5 text-primary" />
-                <span className="font-medium">Estimates</span>
-                {quotes.length > 0 && <Badge variant="secondary">{quotes.length}</Badge>}
-                {task?.estimateStatus === "needs_estimate" && (
-                  <Badge variant="outline" className={statusColors.needs_estimate}>Needs Estimate</Badge>
-                )}
-                {task?.estimateStatus === "waiting_approval" && (
-                  <Badge variant="outline" className={statusColors.waiting_approval}>Pending Review</Badge>
-                )}
-                {task?.estimateStatus === "approved" && (
-                  <Badge variant="outline" className={statusColors.ready}>Approved</Badge>
-                )}
-              </div>
-              {quotesExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 space-y-3">
-            {task?.estimateStatus !== "approved" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAddQuoteDialogOpen(true)}
-                className="w-full"
-                data-testid="button-add-quote"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Estimate
-              </Button>
-            )}
-
-            {quotes.length === 0 ? (
-              <p className="text-center text-muted-foreground text-sm py-4">
-                No estimates added yet. Add estimates to compare and approve before work begins.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {quotes.map((quote) => {
-                  const quoteCreator = users.find(u => u.id === quote.createdById);
-                  const isOwnQuote = user?.id === quote.createdById;
-                  const canModify = user?.role === "admin" || isOwnQuote;
-
-                  return (
-                    <div
-                      key={quote.id}
-                      className={`p-4 rounded-lg border ${
-                        quote.status === "approved" ? "border-green-500/50 bg-green-500/5" : 
-                        quote.status === "rejected" ? "border-red-500/30 bg-red-500/5 opacity-60" : 
-                        "border-border"
-                      }`}
-                      data-testid={`quote-card-${quote.id}`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <span className="font-semibold text-lg">
-                              ${(quote.estimatedCost || 0).toLocaleString()}
-                            </span>
-                            <Badge variant="secondary" className={quoteStatusColors[quote.status]}>
-                              {quote.status}
-                            </Badge>
-                          </div>
-                          {quote.vendorName && (
-                            <p className="text-sm text-muted-foreground">
-                              Vendor: {quote.vendorName}
-                            </p>
-                          )}
-                          {quoteCreator && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Submitted by {getUserDisplayName(quoteCreator)}
-                            </p>
-                          )}
-                          {quote.notes && (
-                            <p className="text-sm mt-2">{quote.notes}</p>
-                          )}
-                          <QuoteAttachmentsList quoteId={quote.id} />
-                        </div>
-                        <div className="flex gap-2">
-                          {quote.status === "draft" && task?.estimateStatus !== "approved" && (
-                            <>
-                              {user?.role === "admin" && (
-                                <>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => approveQuoteMutation.mutate(quote.id)}
-                                    disabled={approveQuoteMutation.isPending}
-                                    data-testid={`button-approve-quote-${quote.id}`}
-                                  >
-                                    <Check className="w-4 h-4 mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => rejectQuoteMutation.mutate(quote.id)}
-                                    disabled={rejectQuoteMutation.isPending}
-                                    data-testid={`button-reject-quote-${quote.id}`}
-                                  >
-                                    <X className="w-4 h-4 mr-1" />
-                                    Reject
-                                  </Button>
-                                </>
-                              )}
-                              {canModify && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteQuoteMutation.mutate(quote.id)}
-                                  disabled={deleteQuoteMutation.isPending}
-                                  data-testid={`button-delete-quote-${quote.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </>
-                          )}
-                          {quote.status === "approved" && (
-                            <CheckCircle2 className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      )}
 
       {isTechnicianOrAdmin && (
         <Collapsible open={partsExpanded} onOpenChange={setPartsExpanded}>

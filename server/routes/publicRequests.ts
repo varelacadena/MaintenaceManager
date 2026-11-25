@@ -6,6 +6,7 @@ import { handleFacilityRouteError } from "../routeFacilityError";
 import { validateServiceRequestLocation } from "../facilityValidation";
 import { notificationService, notifyNewServiceRequest } from "../notifications";
 import { registerPublicRequestUpload } from "../uploadRegistration";
+import { propertyDisplayName } from "../displayNameFill";
 import {
   isPublicRequestHoneypot,
   publicServiceRequestSchema,
@@ -162,6 +163,7 @@ export function registerPublicRequestRoutes(app: Express) {
         description: data.description,
         urgency: data.urgency,
         propertyId: data.propertyId,
+        propertyName: await propertyDisplayName(data.propertyId),
         spaceId: data.spaceId,
         category: "General",
         requesterId: null,

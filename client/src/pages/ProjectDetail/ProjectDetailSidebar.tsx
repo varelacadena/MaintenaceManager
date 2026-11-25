@@ -9,7 +9,7 @@ import {
 import type { Project, ProjectComment, Upload } from "@shared/schema";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { getAvatarColor } from "@/utils/taskUtils";
+import { getAvatarColor } from "@/lib/taskUtils";
 import { buildUploadPreviewOptions, useImagePreview } from "@/components/ImagePreviewProvider";
 
 interface ProjectDetailSidebarProps {

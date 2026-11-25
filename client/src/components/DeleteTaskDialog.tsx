@@ -7,7 +7,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { taskDeleteWarning, taskOffersSeriesDelete, type TaskDeleteScope } from "@/utils/taskUtils";
+import { taskDeleteWarning, taskOffersSeriesDelete, type TaskDeleteScope } from "@/lib/taskUtils";
 
 type DeleteTaskDialogProps = {
   open: boolean;

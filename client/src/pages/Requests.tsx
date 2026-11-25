@@ -41,7 +41,7 @@ import {
 import { WorkLoadError } from "@/pages/Work/WorkLoadError";
 import EmptyState from "@/components/dashboard/EmptyState";
 import { getServiceRequestNumber } from "@shared/recordNumbers";
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 
 export default function Requests() {
   const [, navigate] = useLocation();

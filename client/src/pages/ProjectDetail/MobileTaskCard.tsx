@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, User as UserIcon, Flag, AlertTriangle, ClipboardCheck } from "lucide-react";
 import type { Task, User } from "@shared/schema";
 import type { StatusType } from "./useProjectDetail";
-import { urgencyConfig, taskStatusBadgeColors as tableBadgeColors, statusDotColors, getUserDisplayName } from "@/utils/taskUtils";
+import { urgencyConfig, taskStatusBadgeColors as tableBadgeColors, statusDotColors, getUserDisplayName } from "@/lib/taskUtils";
 
 export function MobileTaskCard({
   task,
@@ -64,21 +64,6 @@ export function MobileTaskCard({
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.preventDefault()}>
-          {isAdmin && task.requiresEstimate && task.estimateStatus === "waiting_approval" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onReviewEstimates?.(task.id);
-              }}
-              className="text-xs"
-              data-testid={`button-review-estimates-${task.id}`}
-            >
-              Review & Approve
-            </Button>
-          )}
           {task.status === "completed" && onViewSummary && (
             <Button
               size="icon"

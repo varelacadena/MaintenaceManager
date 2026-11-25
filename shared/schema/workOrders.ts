@@ -13,8 +13,8 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
-import { properties, spaces, equipment } from "./facilities";
-import { serviceRequests, urgencyEnum, areas, subdivisions } from "./serviceRequests";
+import { properties, spaces, equipment, areas, subdivisions } from "./facilities";
+import { serviceRequests, urgencyEnum } from "./serviceRequests";
 import { vehicles } from "./vehicles";
 import { vendors } from "./vendors";
 
@@ -120,32 +120,6 @@ export const insertTaskNoteSchema = createInsertSchema(taskNotes).omit({ id: tru
 export type InsertTaskNote = z.infer<typeof insertTaskNoteSchema>;
 export type TaskNote = typeof taskNotes.$inferSelect;
 
-export const lifeSafetyChecks = pgTable("life_safety_checks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
-  equipmentId: varchar("equipment_id").references(() => equipment.id, { onDelete: "set null" }),
-  equipmentName: varchar("equipment_name", { length: 200 }).notNull(),
-  assetTag: varchar("asset_tag", { length: 100 }),
-  category: varchar("category", { length: 50 }).notNull(),
-  spaceName: varchar("space_name", { length: 200 }),
-  floor: varchar("floor", { length: 50 }),
-  sortOrder: integer("sort_order").notNull().default(0),
-  result: varchar("result", { length: 20 }).notNull().default("pending"),
-  problemNote: text("problem_note"),
-  checkedById: varchar("checked_by_id").references(() => users.id, { onDelete: "set null" }),
-  checkedByName: varchar("checked_by_name", { length: 200 }),
-  checkedAt: timestamp("checked_at"),
-  repairTaskId: varchar("repair_task_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertLifeSafetyCheckSchema = createInsertSchema(lifeSafetyChecks).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertLifeSafetyCheck = z.infer<typeof insertLifeSafetyCheckSchema>;
-export type LifeSafetyCheck = typeof lifeSafetyChecks.$inferSelect;
-
 export const taskChecklistGroups = pgTable("task_checklist_groups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
@@ -229,23 +203,3 @@ export const insertSlaConfigSchema = createInsertSchema(slaConfigs).omit({ id: t
 export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
 export type SlaConfig = typeof slaConfigs.$inferSelect;
 
-export const vehicleMaintenanceLogs = pgTable("vehicle_maintenance_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
-  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "set null" }),
-  maintenanceDate: timestamp("maintenance_date").notNull().defaultNow(),
-  type: varchar("type", { length: 100 }).notNull(),
-  description: text("description").notNull(),
-  cost: doublePrecision("cost").default(0),
-  mileageAtMaintenance: integer("mileage_at_maintenance"),
-  performedBy: varchar("performed_by", { length: 200 }),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertVehicleMaintenanceLogSchema = createInsertSchema(vehicleMaintenanceLogs).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertVehicleMaintenanceLog = z.infer<typeof insertVehicleMaintenanceLogSchema>;
-export type VehicleMaintenanceLog = typeof vehicleMaintenanceLogs.$inferSelect;

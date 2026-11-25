@@ -45,7 +45,6 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
     getUploadParameters, handleAutoSaveUpload,
     startTimerMutation, stopTimerMutation,
     updateStatusMutation, addUploadMutation,
-    estimateBlocksCompletion,
     isParentTask, completedSubTasks, subTaskProgress,
     isEquipmentLoading,
   } = ctx;
@@ -209,12 +208,11 @@ export function AdminView({ ctx }: { ctx: TaskDetailContext }) {
                 size="sm"
                 className="h-14 min-w-0 flex-1 flex-col gap-0.5 bg-green-600 px-2 [&_svg]:!size-5"
                 onClick={handleComplete}
-                disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
-                title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
+                disabled={updateStatusMutation.isPending}
                 data-testid="bottom-button-complete"
               >
                 <CheckCircle2 className="w-6 h-6" />
-                <span className="text-xs font-medium">{estimateBlocksCompletion ? "Estimate Required" : "Complete"}</span>
+                <span className="text-xs font-medium">Complete</span>
               </Button>
             </div>
           ) : (

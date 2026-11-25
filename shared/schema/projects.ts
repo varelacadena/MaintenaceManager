@@ -12,8 +12,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
-import { properties, spaces } from "./facilities";
-import { areas } from "./serviceRequests";
+import { areas, properties, spaces } from "./facilities";
 import { vendors } from "./vendors";
 import { tasks } from "./workOrders";
 

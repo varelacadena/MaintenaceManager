@@ -23,6 +23,11 @@ import {
 import { cappedInstant, studentShiftEndAt } from "@shared/openIntervals";
 import { computeDurationMinutes, hoursFromMinutes } from "@shared/studentPortal";
 import { parseCsvIds, parseLocalDayEnd, parseLocalDayStart, parsePropertyIds } from "./localDates";
+import { type MetricComparison } from "./analyticsMetric";
+import { assembleExecutiveOverview } from "./analyticsExecutiveOverview";
+
+export type { MetricComparison } from "./analyticsMetric";
+export { buildMetricComparison } from "./analyticsMetric";
 import { compareVehicleIds } from "@shared/vehicleSort";
 import { eq, and, gte, lte, sql, count, desc, inArray } from "drizzle-orm";
 import {
@@ -367,13 +372,6 @@ export interface AnalyticsDetailOptions {
   includeDetails?: boolean;
 }
 
-export interface MetricComparison {
-  current: number;
-  previous: number;
-  changePercent: number | null;
-  isPositive: boolean;
-}
-
 export interface ExecutiveOverview {
   periodLabel: string;
   previousPeriodLabel: string;
@@ -389,26 +387,6 @@ export interface ExecutiveOverview {
 
 function formatDateLabel(date: Date): string {
   return date.toISOString().split("T")[0];
-}
-
-function buildMetricComparison(
-  current: number,
-  previous: number,
-  lowerIsBetter = false,
-): MetricComparison {
-  let changePercent: number | null = null;
-  if (previous > 0) {
-    changePercent = Math.round(((current - previous) / previous) * 100);
-  } else if (current > 0) {
-    changePercent = 100;
-  } else {
-    changePercent = 0;
-  }
-
-  const delta = current - previous;
-  const isPositive = lowerIsBetter ? delta < 0 : delta > 0;
-
-  return { current, previous, changePercent, isPositive };
 }
 
 function analyticsDateBounds(filters: AnalyticsFilters) {
@@ -529,46 +507,17 @@ export class AnalyticsService {
       this.getInventoryOverview({}),
     ]);
 
-    const openCurrent = woCurrent.totalWorkOrders - woCurrent.completedWorkOrders;
-    const openPrevious = woPrevious.totalWorkOrders - woPrevious.completedWorkOrders;
-
-    return {
+    return assembleExecutiveOverview({
       periodLabel,
       previousPeriodLabel,
-      openTasks: buildMetricComparison(openCurrent, openPrevious, true),
-      pendingRequests: buildMetricComparison(
-        srCurrent.pendingRequests,
-        srPrevious.pendingRequests,
-        true,
-      ),
-      overdueWorkOrders: buildMetricComparison(
-        woCurrent.overdueWorkOrders,
-        woPrevious.overdueWorkOrders,
-        true,
-      ),
-      fleetAvailable: buildMetricComparison(
-        fleetCurrent.availableVehicles,
-        fleetPrevious.availableVehicles,
-      ),
-      inventoryLowStock: {
-        current: inventorySnapshot.lowStockCount,
-        previous: inventorySnapshot.lowStockCount,
-        changePercent: null,
-        isPositive: inventorySnapshot.lowStockCount === 0,
+      workOrders: { current: woCurrent, previous: woPrevious },
+      requests: { current: srCurrent, previous: srPrevious },
+      fleetAvailable: {
+        current: fleetCurrent.availableVehicles,
+        previous: fleetPrevious.availableVehicles,
       },
-      completionRate: buildMetricComparison(
-        woCurrent.completionRate,
-        woPrevious.completionRate,
-      ),
-      completedInPeriod: buildMetricComparison(
-        woCurrent.completedWorkOrders,
-        woPrevious.completedWorkOrders,
-      ),
-      convertedInPeriod: buildMetricComparison(
-        srCurrent.convertedRequests,
-        srPrevious.convertedRequests,
-      ),
-    };
+      lowStockCount: inventorySnapshot.lowStockCount,
+    });
   }
 
   async getWorkOrderOverview(

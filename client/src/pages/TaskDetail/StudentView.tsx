@@ -23,7 +23,7 @@ import { uploadIsCompletionPhoto } from "@shared/taskCompletion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { statusColors } from "./constants";
 import { taskStatusLabels as statusLabels } from "@/lib/constants";
-import { formatTaskReferenceId } from "@/utils/taskUtils";
+import { formatTaskReferenceId } from "@/lib/taskUtils";
 import type { TaskDetailContext } from "./useTaskDetail";
 import { StudentBottomBar, StudentDialogs } from "./StudentViewSections";
 import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
@@ -37,7 +37,7 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
     addNoteMutation, toggleChecklistItemMutation,
     getUploadParameters, handleAutoSaveUpload, toast, taskIsHelper,
     allTaskResources, setIsResourcesSheetOpen,
-    addUploadMutation, notes, estimateBlocksCompletion,
+    addUploadMutation, notes,
     newNote, setNewNote,
   } = ctx;
 
@@ -136,20 +136,6 @@ export function StudentView({ ctx }: { ctx: TaskDetailContext }) {
               <div className="p-4 bg-muted/30 rounded-lg">
                 <p className="text-sm leading-relaxed" data-testid="text-description">{task.description}</p>
               </div>
-            )}
-
-            {task.requiresEstimate && (
-              task.estimateStatus === "approved" ? (
-                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md" data-testid="banner-estimate-approved">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                  <p className="text-sm leading-relaxed text-green-800 dark:text-green-300">Estimate approved — you can complete this task.</p>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="banner-estimate-pending">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-300">This task requires approved estimates. Contact your supervisor.</p>
-                </div>
-              )
             )}
 
             {allTaskResources.length > 0 && (

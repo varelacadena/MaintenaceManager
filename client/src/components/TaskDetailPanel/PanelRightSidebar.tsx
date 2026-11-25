@@ -14,7 +14,7 @@ import {
   Play,
   Loader2,
 } from "lucide-react";
-import { panelStatusLabels, taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
+import { panelStatusLabels, taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/lib/taskUtils";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 
 interface PanelRightSidebarProps {

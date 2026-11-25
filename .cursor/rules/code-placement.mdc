@@ -1,0 +1,38 @@
+---
+description: Where new Maintenance Manager code goes, and how domains may call each other
+alwaysApply: true
+---
+
+# Code placement
+
+Put a change in the home that already owns that idea.
+
+- Tables: `shared/schema/<domain>.ts`
+- A rule used by the client and the server: `shared/<rule>.ts`, with a test in `shared/__tests__/`
+- HTTP: `server/routes/<domain>.ts`
+- Database access: `server/storage/<domain>.ts`
+- A screen: `client/src/pages/<Domain>/`
+- UI used by two or more pages: `client/src/components/`
+- Design-system primitives: `client/src/components/ui/`
+- Client helpers and query keys: `client/src/lib/`
+
+Do not add a second helper folder. Do not name a split `Extra`, `More`, or `A`.
+
+The four task screens stay separate: `pages/TaskDetail`, `components/TechnicianTaskDetail`, `components/MobileTaskDetail`, and `components/TaskDetailPanel`.
+
+# How domains connect
+
+`server/storage/index.ts` is the existing barrel. Do not add methods to it, and do not delete it. New code imports `server/storage/<domain>` directly.
+
+A storage module does not import another domain's storage to build a view. Pass the display name in from the route. The two current exceptions stay until a test covers them: task notes and time entries fill a missing user name, and a new service request fills a missing requester or property name.
+
+These links are allowed:
+
+- A purchase is saved in `server/storage/purchases.ts`. A task, vehicle, equipment, tool, property, or project is linked by id.
+- Tasks write `partsUsed`. The table stays with inventory.
+- Completing a vehicle task may append a vehicle maintenance log and include an approved quote cost.
+- `server/storage/entityCleanup.ts` is the only module that reads many domains to delete a record.
+
+# Proof
+
+Before moving or splitting a file, run the test that locks the current behavior. After the change, the same assertions pass. An assertion changes only for a named bug fix. Do not split a file only because it is long. Split one parent file at a time.

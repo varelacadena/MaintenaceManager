@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { EditableDateCell } from "@/components/EditableDateCell";
 import { TimeLogEntryRow } from "@/components/TimeLogEntryRow";
-import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/utils/taskUtils";
+import { taskTypeLabels, getAvatarHexColor as getAvatarColorForId, formatTaskDate, formatTaskDateTime } from "@/lib/taskUtils";
 import type { User } from "@shared/schema";
 import type { TaskDetailPanelContext } from "./useTaskDetailPanel";
 import { PanelResourcesSection } from "./PanelResourcesSection";

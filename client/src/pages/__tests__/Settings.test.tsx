@@ -17,7 +17,7 @@ vi.mock("wouter", () => ({
   useLocation: () => ["/settings", wouterState.navigate],
   useSearch: () => wouterState.search,
 }));
-vi.mock("../EmergencyContacts", () => ({
+vi.mock("../Settings/EmergencyContacts", () => ({
   default: () => <div data-testid="mock-emergency-contacts">Emergency Contacts Editor</div>,
 }));
 

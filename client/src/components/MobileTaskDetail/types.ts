@@ -24,16 +24,7 @@ export const statusPillStyles: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: "#FEF2F2", text: "#D94F4F" },
 };
 
-export const statusLabels: Record<string, string> = {
-  not_started: "Not Started",
-  needs_estimate: "Needs Estimate",
-  waiting_approval: "Waiting Approval",
-  ready: "Ready",
-  in_progress: "In Progress",
-  on_hold: "On Hold",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
+export { taskStatusLabels as statusLabels } from "@/lib/taskStatusLabels";
 
 export const priorityColors: Record<string, string> = {
   high: "#D94F4F",

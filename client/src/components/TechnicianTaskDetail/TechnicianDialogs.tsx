@@ -2,7 +2,6 @@ import {
   Check,
   Pause,
   X,
-  Plus,
   Search,
   QrCode,
   MapPin,
@@ -21,7 +20,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { toDisplayUrl } from "@/lib/imageUtils";
 import { openResourceUrl, useImagePreview } from "@/components/ImagePreviewProvider";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
-import type { Task, Quote, InventoryItem } from "@shared/schema";
+import type { Task, InventoryItem } from "@shared/schema";
 import { GrowingNoteField } from "./GrowingNoteField";
 
 export interface TechnicianDialogsProps {
@@ -36,7 +35,6 @@ export interface TechnicianDialogsProps {
   handlePauseConfirm: () => void;
   handleMarkComplete: () => void;
   stopTimerMutation: any;
-  estimateBlocksCompletion: boolean;
   completionNoteValue: string;
   completionNoteError: boolean;
   notesReady: boolean;
@@ -45,10 +43,6 @@ export interface TechnicianDialogsProps {
   getUploadParameters: () => Promise<{ method: "PUT"; url: string; objectPath?: string }>;
   handleAutoSaveUpload: (result: any) => void;
   addUploadMutation: { isPending: boolean };
-  isEstimateSheetOpen: boolean;
-  setIsEstimateSheetOpen: (v: boolean) => void;
-  quotes: Quote[];
-  setIsAddQuoteDialogOpen: (v: boolean) => void;
   isPartModalOpen: boolean;
   setIsPartModalOpen: (v: boolean) => void;
   inventorySearchQuery: string;
@@ -84,7 +78,6 @@ export function TechnicianDialogs({
   handlePauseConfirm,
   handleMarkComplete,
   stopTimerMutation,
-  estimateBlocksCompletion,
   completionNoteValue,
   completionNoteError,
   notesReady,
@@ -93,10 +86,6 @@ export function TechnicianDialogs({
   getUploadParameters,
   handleAutoSaveUpload,
   addUploadMutation,
-  isEstimateSheetOpen,
-  setIsEstimateSheetOpen,
-  quotes,
-  setIsAddQuoteDialogOpen,
   isPartModalOpen,
   setIsPartModalOpen,
   inventorySearchQuery,
@@ -396,25 +385,20 @@ export function TechnicianDialogs({
                 </button>
               )}
               <button
-                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${estimateBlocksCompletion || !notesReady || !photoReady ? "bg-muted-foreground opacity-70" : "bg-green-700 dark:bg-green-600"}`}
+                className={`w-full py-3 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 ${!notesReady || !photoReady ? "bg-muted-foreground opacity-70" : "bg-green-700 dark:bg-green-600"}`}
                 onClick={handleMarkComplete}
-                disabled={isPending || !!estimateBlocksCompletion || !notesReady || !photoReady}
+                disabled={isPending || !notesReady || !photoReady}
                 data-testid="button-mark-complete"
               >
                 <Check className="w-4 h-4" />
                 {isPending ? "Completing..." : "Mark as complete"}
               </button>
-              {estimateBlocksCompletion && (
-                <p className="text-xs text-center mt-1 text-amber-600 dark:text-amber-400" data-testid="text-estimate-block-reason">
-                  Estimate must be approved before completing
-                </p>
-              )}
-              {!estimateBlocksCompletion && !photoReady && (
+              {!photoReady && (
                 <p className="text-xs text-center mt-1 text-muted-foreground" data-testid="text-photo-required-hint">
                   Add a photo of the finished work before marking this task complete.
                 </p>
               )}
-              {!estimateBlocksCompletion && !notesReady && (
+              {!notesReady && (
                 <p className="text-xs text-center mt-1 text-muted-foreground" data-testid="text-note-required-hint">
                   {completionNoteValue.trim()
                     ? "Add a bit more detail so the note is a real explanation."
@@ -430,67 +414,6 @@ export function TechnicianDialogs({
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {isEstimateSheetOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
-          onClick={() => setIsEstimateSheetOpen(false)}
-        >
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="relative w-full sm:max-w-lg max-h-[80vh] overflow-y-auto bg-background rounded-t-2xl sm:rounded-2xl p-5 pb-7"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="sheet-estimate"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-foreground">
-                Estimates
-              </p>
-              <button onClick={() => setIsEstimateSheetOpen(false)}>
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-            {quotes.length > 0 && (
-              <div className="space-y-2 mb-4">
-                {quotes.map((quote) => (
-                  <div
-                    key={quote.id}
-                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
-                    data-testid={`estimate-row-${quote.id}`}
-                  >
-                    {quote.vendorName && (
-                      <p className="text-xs text-muted-foreground">
-                        {quote.vendorName}
-                      </p>
-                    )}
-                    <p className="text-sm font-semibold text-foreground">
-                      ${(quote.estimatedCost || 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      {quote.status === "approved" ? "Approved" : "Pending approval"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-            {task.estimateStatus !== "approved" && (
-              <button
-                className="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 border-2 border-dashed border-amber-600 text-amber-600 dark:text-amber-400 dark:border-amber-400 bg-transparent"
-                onClick={() => {
-                  setIsEstimateSheetOpen(false);
-                  setIsAddQuoteDialogOpen(true);
-                }}
-                data-testid="button-add-another-quote"
-              >
-                <Plus className="w-4 h-4" />
-                Add another quote
-              </button>
-            )}
           </div>
         </div>
       )}

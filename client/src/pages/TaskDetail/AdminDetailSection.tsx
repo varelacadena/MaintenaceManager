@@ -47,7 +47,6 @@ export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
     safeNavigate,
     updateStatusMutation, updateTaskMutation,
     isTechnicianOrAdmin, assignedUser,
-    estimateBlocksCompletion,
     totalHours, remainingMins,
     aiScheduleLog, aiScheduleLoading,
     handleRunAiSchedule, handleReviewAiSchedule,
@@ -179,9 +178,7 @@ export function AdminDetailSection({ ctx }: { ctx: TaskDetailContext }) {
                   <SelectItem value="not_started">Not Started</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="on_hold">On Hold</SelectItem>
-                  {!estimateBlocksCompletion && (
-                    <SelectItem value="completed">Completed</SelectItem>
-                  )}
+                  <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
             </div>

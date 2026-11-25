@@ -4,6 +4,8 @@ export * from "./facilities";
 export * from "./serviceRequests";
 export * from "./vendors";
 export * from "./workOrders";
+export * from "./lifeSafety";
+export * from "./vehicleMaintenance";
 export * from "./vehicles";
 export * from "./inventory";
 export * from "./purchases";

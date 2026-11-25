@@ -82,3 +82,28 @@ export const insertEquipmentSchema = createInsertSchema(equipment).omit({
 });
 export type InsertEquipment = z.infer<typeof insertEquipmentSchema>;
 export type Equipment = typeof equipment.$inferSelect;
+
+export const areas = pgTable("areas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAreaSchema = createInsertSchema(areas).omit({ id: true, createdAt: true });
+export type InsertArea = z.infer<typeof insertAreaSchema>;
+export type Area = typeof areas.$inferSelect;
+
+export const subdivisions = pgTable("subdivisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  areaId: varchar("area_id").notNull().references(() => areas.id, { onDelete: "cascade" }),
+  parentId: varchar("parent_id").references((): any => subdivisions.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  gpsLatitude: varchar("gps_latitude", { length: 50 }),
+  gpsLongitude: varchar("gps_longitude", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSubdivisionSchema = createInsertSchema(subdivisions).omit({ id: true, createdAt: true });
+export type InsertSubdivision = z.infer<typeof insertSubdivisionSchema>;
+export type Subdivision = typeof subdivisions.$inferSelect;

@@ -39,7 +39,7 @@ import type { TaskDetailContext } from "./useTaskDetail";
 export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
   const {
     task, activeTimer, taskIsHelper, isParentTask, subTasks, completedSubTasks,
-    estimateBlocksCompletion, handleStartOrPause, handleComplete,
+    handleStartOrPause, handleComplete,
     startTimerMutation, stopTimerMutation, updateStatusMutation,
     setIsScanEquipmentOpen, isEquipmentLoading,
   } = ctx;
@@ -114,12 +114,11 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
               size="lg"
               className="h-14 min-w-0 flex-1 px-3 text-base font-bold bg-green-600 text-white border-green-600 [&_svg]:!size-5"
               onClick={handleComplete}
-              disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
-              title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
+              disabled={stopTimerMutation.isPending}
               data-testid="bottom-button-complete"
             >
               <CheckCircle2 className="w-5 h-5" />
-              <span className="truncate">{estimateBlocksCompletion ? "Estimate Required" : "Mark Complete"}</span>
+              <span className="truncate">Mark Complete</span>
             </Button>
           </>
         ) : task.status === "in_progress" ? (
@@ -138,23 +137,13 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
               size="lg"
               className="h-14 min-w-0 flex-1 px-3 text-base font-bold bg-green-600 text-white border-green-600 [&_svg]:!size-5"
               onClick={handleComplete}
-              disabled={updateStatusMutation.isPending || !!estimateBlocksCompletion}
-              title={estimateBlocksCompletion ? "Estimates must be approved first" : undefined}
+              disabled={updateStatusMutation.isPending}
               data-testid="bottom-button-complete"
             >
               <CheckCircle2 className="w-5 h-5" />
-              <span className="truncate">{estimateBlocksCompletion ? "Estimate Required" : "Mark Complete"}</span>
+              <span className="truncate">Mark Complete</span>
             </Button>
           </>
-        ) : task.status === "needs_estimate" || task.status === "waiting_approval" ? (
-          <Button
-            size="lg"
-            className="h-14 min-w-0 flex-1 px-4 font-bold"
-            disabled
-            data-testid="bottom-button-estimate-required"
-          >
-            <span className="truncate">Estimate Required</span>
-          </Button>
         ) : (
           <Button
             size="lg"
@@ -189,7 +178,7 @@ export function StudentBottomBar({ ctx }: { ctx: TaskDetailContext }) {
 
 export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
   const { openImagePreview } = useImagePreview();
-  const { activeTimer, estimateBlocksCompletion, stopTimerMutation,
+  const { activeTimer, stopTimerMutation,
     isStopTimerDialogOpen, setIsStopTimerDialogOpen,
     isResourcesSheetOpen, setIsResourcesSheetOpen, allTaskResources,
     isScanEquipmentOpen, setIsScanEquipmentOpen, handleEquipmentScan,
@@ -209,7 +198,7 @@ export function StudentDialogs({ ctx }: { ctx: TaskDetailContext }) {
           <div className="flex flex-col gap-3 py-4">
             <Button variant="outline" className="h-12 w-full justify-start text-base"
               onClick={() => handleComplete()}
-              disabled={stopTimerMutation.isPending || !!estimateBlocksCompletion}
+              disabled={stopTimerMutation.isPending}
               data-testid="button-stop-complete">
               <CheckCircle2 className="w-4 h-4 mr-2" />
               Complete Task

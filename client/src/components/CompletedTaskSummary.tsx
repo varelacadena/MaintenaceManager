@@ -49,7 +49,7 @@ import type {
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { canSeeInventoryCost } from "@/lib/inventoryAccess";
-import { urgencyBadgeStyles as urgencyColors, statusBadgeStyles as statusColors, statusLabels, formatTaskReferenceId, getUserDisplayName } from "@/utils/taskUtils";
+import { urgencyBadgeStyles as urgencyColors, statusBadgeStyles as statusColors, statusLabels, formatTaskReferenceId, getUserDisplayName } from "@/lib/taskUtils";
 
 interface CompletedTaskSummaryProps {
   taskId: string;

@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { statusDotColors } from "@/utils/taskUtils";
+import { statusDotColors } from "@/lib/taskUtils";
 import { buildStatusGroupAriaLabel } from "./workA11y";
 
 interface WorkStatusGroupHeaderProps {

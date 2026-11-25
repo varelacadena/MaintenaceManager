@@ -8,6 +8,7 @@ import {
 import { computeDurationMinutes } from "@shared/studentPortal";
 import { db } from "./db";
 import { createTaskNote } from "./storage/workOrders";
+import { userDisplayName } from "./displayNameFill";
 import { clockOutStudentTimeEntry, listOpenStudentTimeEntries } from "./storage/students";
 import { log } from "./vite";
 
@@ -45,6 +46,7 @@ async function closeDueTaskTimers(now: Date): Promise<number> {
       await createTaskNote({
         taskId: entry.taskId,
         userId: entry.userId,
+        userName: await userDisplayName(entry.userId),
         content: TASK_TIMER_AUTO_STOP_NOTE,
         noteType: "job_note",
       });

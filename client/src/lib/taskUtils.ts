@@ -1,5 +1,6 @@
 
 import { formatUserDisplayName } from "@shared/displayNames";
+import { taskStatusLabel, taskStatusLabels } from "./taskStatusLabels";
 
 export const panelStatusDotStyle: Record<string, string> = {
   not_started: "#9CA3AF",
@@ -23,16 +24,9 @@ export const panelStatusPillStyle: Record<string, { bg: string; text: string }> 
   cancelled: { bg: "#FEF2F2", text: "#D94F4F" },
 };
 
-export const panelStatusLabels: Record<string, string> = {
-  not_started: "NOT STARTED",
-  needs_estimate: "NEEDS ESTIMATE",
-  waiting_approval: "ESTIMATE REVIEW",
-  ready: "READY",
-  in_progress: "IN PROGRESS",
-  on_hold: "ON HOLD",
-  completed: "COMPLETED",
-  cancelled: "CANCELLED",
-};
+export const panelStatusLabels: Record<string, string> = Object.fromEntries(
+  Object.entries(taskStatusLabels).map(([status, label]) => [status, label.toUpperCase()]),
+);
 
 export const priorityConfig: Record<string, { color: string; label: string }> = {
   low: { color: "#9CA3AF", label: "Low" },
@@ -63,16 +57,7 @@ export const statusBadgeStyles: Record<string, string> = {
   cancelled: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
 };
 
-export const statusLabels: Record<string, string> = {
-  not_started: "Not Started",
-  needs_estimate: "Needs Estimate",
-  waiting_approval: "Waiting Approval",
-  ready: "Ready",
-  in_progress: "In Progress",
-  on_hold: "On Hold",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
+export const statusLabels = taskStatusLabels;
 
 export const urgencyConfig: Record<string, { color: string; label: string }> = {
   low: { color: "text-muted-foreground", label: "Low" },
@@ -105,7 +90,7 @@ export const statusDotColors: Record<string, string> = {
 export const taskStatusConfig = [
   { key: "not_started", label: "Not Started" },
   { key: "needs_estimate", label: "Needs Estimate" },
-  { key: "waiting_approval", label: "Estimate Review" },
+  { key: "waiting_approval", label: taskStatusLabel("waiting_approval") },
   { key: "ready", label: "Ready" },
   { key: "in_progress", label: "In Progress" },
   { key: "on_hold", label: "On Hold" },

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Car, ScrollText, CircleCheck, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { isCheckoutWindowOpen } from "@shared/fleetReservationPolicy";
+import { isCheckoutRefreshQueryKey } from "@/lib/fleetQueryInvalidation";
 
 export type Step = "advisory" | "responsibility" | "checkout" | "complete";
 export type CheckoutSubStep = "mileage" | "fuel" | "condition" | "damage" | "photos";
@@ -247,13 +248,7 @@ export function useVehicleCheckOut() {
       }
 
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]?.toString();
-          return !!(key?.startsWith('/api/vehicle-checkout-logs') ||
-            key?.startsWith('/api/vehicles') ||
-            key?.startsWith('/api/vehicle-reservations') ||
-            key?.startsWith('/api/tasks'));
-        }
+        predicate: (query) => isCheckoutRefreshQueryKey(query.queryKey),
       });
 
       advanceStep("complete");

@@ -17,7 +17,7 @@ import { dateInputValueToTaskTimestamp } from "@/lib/taskCalendarDates";
 import { getSignedUploadParameters, inferUploadFileType } from "@/lib/uploadUtils";
 import { preparePhotoForUpload } from "@/lib/preparePhotoForUpload";
 import { sortByName } from "@/lib/propertyDisplayUtils";
-import { getUserDisplayName } from "@/utils/taskUtils";
+import { getUserDisplayName } from "@/lib/taskUtils";
 import type { Equipment, Project, Property, ServiceRequest, Space, User, Vehicle, Vendor } from "@shared/schema";
 
 type RepeatMode = "once" | "daily" | "weekly" | "monthly" | "yearly" | "custom";
@@ -112,7 +112,6 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
   const [contactPhone, setContactPhone] = useState("");
   const [instructions, setInstructions] = useState("");
   const [helpers, setHelpers] = useState<string[]>([]);
-  const [estimate, setEstimate] = useState(false);
   const [lifeSafety, setLifeSafety] = useState(false);
   const [photo, setPhoto] = useState(false);
   const [open, setOpen] = useState<"" | "who" | "due" | "priority" | "property" | "more" | "files">("");
@@ -192,7 +191,6 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
     !!contact,
     whoKind === "student" && !!instructions.trim(),
     helpers.length > 0,
-    estimate,
     lifeSafety,
     photo,
   ].filter(Boolean).length;
@@ -223,7 +221,6 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
     setContactPhone("");
     setInstructions("");
     setHelpers([]);
-    setEstimate(false);
     setLifeSafety(false);
     setPhoto(false);
     setOpen("");
@@ -261,9 +258,7 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
         recurringInterval: interval,
         instructions: whoKind === "student" ? instructions.trim() || undefined : undefined,
         requiresPhoto: photo,
-        requiresEstimate: estimate,
-        estimateStatus: estimate ? "needs_estimate" : undefined,
-        status: estimate ? "needs_estimate" : "not_started",
+        status: "not_started",
         requestId: requestId || undefined,
         projectId: projectId || undefined,
         contactType: requestId ? "requester" : contact ? "other" : undefined,
@@ -584,10 +579,6 @@ export function WorkTaskComposer({ onClose }: { onClose: () => void }) {
                   </button>
                 ))}
                 <div className="space-y-1 border-t pt-1">
-                  <label className={`flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm ${estimate ? "border-primary bg-muted" : "border-transparent"}`}>
-                    <Checkbox checked={estimate} onCheckedChange={(checked) => setEstimate(!!checked)} />
-                    Require cost estimate
-                  </label>
                   <label className={`flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm ${lifeSafety ? "border-primary bg-muted" : "border-transparent"}`}>
                     <Checkbox checked={lifeSafety} onCheckedChange={(checked) => setLifeSafety(!!checked)} />
                     Life safety round

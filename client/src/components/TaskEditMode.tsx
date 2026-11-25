@@ -22,7 +22,7 @@ import { invalidateTaskAfterMutation } from "@/lib/taskQueryInvalidation";
 import { PropertySelectItems } from "@/components/PropertySelectItems";
 import { DatePicker } from "@/components/ui/date-picker";
 import { dateInputValuePreservingTime, dateInputValueToTaskTimestamp, getTaskDateInputValue, toCalendarDate } from "@/lib/taskCalendarDates";
-import { getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/utils/taskUtils";
+import { getUserDisplayName, taskDeleteUrl, type TaskDeleteScope } from "@/lib/taskUtils";
 import { format } from "date-fns";
 import type { Task, InsertTask, User, Property, Equipment, Vehicle, TaskChecklistGroup, TaskChecklistItem, Resource } from "@shared/schema";
 import { TaskAssetListEditor } from "@/components/task-form/TaskAssetListEditor";

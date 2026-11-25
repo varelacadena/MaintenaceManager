@@ -6,7 +6,7 @@ import {
   Car,
 } from "lucide-react";
 import { useGoBack } from "@/hooks/useGoBack";
-import { formatTaskReferenceId } from "@/utils/taskUtils";
+import { formatTaskReferenceId } from "@/lib/taskUtils";
 import { getGradient, getStatusLabel, formatElapsed } from "./types";
 import { TaskScheduleSummary } from "@/components/TaskScheduleSummary";
 import type { Task, Property } from "@shared/schema";
